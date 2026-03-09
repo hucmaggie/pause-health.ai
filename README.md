@@ -32,12 +32,32 @@ py -3 -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
 
-### 3) Install dependencies
+### 3) Configure API Key (Optional but Recommended)
+The application can use ZipCodeAPI.com for real-time ZIP code geocoding. This enables support for **any valid US ZIP code**, not just the ~90 hardcoded ones.
+
+**Get a free API key:**
+1. Sign up at https://www.zipcodeapi.com/
+2. Free tier: 10 requests/hour (sufficient for development)
+3. Create a `.env` file in the project root:
+   ```bash
+   cp .env.example .env
+   ```
+4. Edit `.env` and add your API key:
+   ```
+   ZIPCODEAPI_KEY=your_actual_api_key_here
+   ```
+
+**Without an API key:** The app still works! It uses a three-tier fallback system:
+- First checks in-memory cache
+- Falls back to hardcoded ZIP database (~90 major cities)
+- Final fallback to state-based approximations
+
+### 4) Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4) Run the API (hot reload)
+### 5) Run the API (hot reload)
 ```bash
 uvicorn app:app --reload --port 8000
 ```
@@ -98,13 +118,20 @@ curl -X POST "http://localhost:8000/quote-by-zip" \
 
 ## Supported ZIP Codes
 
-Currently supports these test ZIP codes:
+### With API Key (ZipCodeAPI.com)
+**Supports ANY valid US ZIP code** dynamically via real-time geocoding.
+
+### Without API Key
+Falls back to hardcoded database with ~90 major US cities, including:
 - `90001` - Los Angeles, CA (default origin)
 - `30301` - Atlanta, GA
 - `10001` - New York, NY
 - `60601` - Chicago, IL
 - `73301` - Austin, TX
 - `94105` - San Francisco, CA
+- And ~84 more major metropolitan areas
+
+Unknown ZIPs use state-based approximations as final fallback.
 
 ## Testing
 
@@ -122,7 +149,9 @@ If you use the REST Client extension, open `requests.http` and click **Send Requ
 1. Push this folder to GitHub
 2. In Render: New → Web Service → "Build & deploy from a Git repository"
 3. Select the repo; Render will detect `render.yaml`
-4. First deploy gives you an HTTPS URL (e.g., https://northstar-shipping-zip-api.onrender.com)
+4. **Add environment variable** (optional but recommended):
+   - In Render dashboard → Environment → Add: `ZIPCODEAPI_KEY` = your API key
+5. First deploy gives you an HTTPS URL (e.g., https://northstar-shipping-zip-api.onrender.com)
 
 ### Test deployed API
 ```bash
@@ -142,8 +171,16 @@ curl -X POST "https://your-app-name.onrender.com/quote-by-zip" \
 - Press **⌘⇧P** (macOS) / **Ctrl+Shift+P** (Windows) → *Python: Select Interpreter* → choose `.venv`
 - Use **Chat (CMD+L)** in Cursor to refactor functions or add tests
 
+### Geocoding Architecture
+The app uses a **three-tier ZIP lookup strategy**:
+1. **In-memory cache**: Fast lookups for recently used ZIPs
+2. **ZipCodeAPI.com**: Real-time geocoding for any US ZIP (requires API key)
+3. **Hardcoded ZIP_DB**: ~90 major cities as fallback
+4. **State-based approximation**: Final fallback for unknown ZIPs
+
 ### Customization
-- Replace the in-file `ZIP_DB` with your internal ZIP centroid DB or API
+- **Already integrated**: ZipCodeAPI.com for dynamic ZIP geocoding (just add API key)
+- Alternative: Replace `geocode_zip_via_api()` function to use your internal geocoding service
 - Plug enterprise discounts into your real rate-card service
 - Adjust DIM divisor and per-mode rates to match KA1 precisely
 

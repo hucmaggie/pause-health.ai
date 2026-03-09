@@ -2,6 +2,19 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, Literal, Dict, Tuple
 import math
+import os
+import requests
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Configuration
+ZIPCODEAPI_KEY = os.getenv("ZIPCODEAPI_KEY")
+GEOCODE_TIMEOUT = 3  # seconds
+
+# In-memory cache for geocoded ZIP codes
+_geocode_cache: Dict[str, Tuple[float, float]] = {}
 
 app = FastAPI(title="Northstar Logistics - Shipping Cost by ZIP")
 
@@ -200,13 +213,49 @@ ZIP_DB: Dict[str, Tuple[float, float]] = {
     
 }
 
-def get_zip_coordinates(zip_code: str) -> Tuple[float, float]:
-    """Get coordinates for a ZIP code with fallback to nearest major city"""
-    if zip_code in ZIP_DB:
-        return ZIP_DB[zip_code]
-    
-    # Fallback: Use state-based approximation for unknown ZIP codes
-    # This is a simplified approach - in production, use a proper geocoding service
+def geocode_zip_via_api(zip_code: str) -> Optional[Tuple[float, float]]:
+    """
+    Geocode a ZIP code using ZipCodeAPI.com
+
+    Returns:
+        Tuple of (lat, lon) if successful, None if failed
+    """
+    if not ZIPCODEAPI_KEY:
+        return None
+
+    try:
+        url = f"https://www.zipcodeapi.com/rest/{ZIPCODEAPI_KEY}/info.json/{zip_code}/degrees"
+        response = requests.get(url, timeout=GEOCODE_TIMEOUT)
+
+        # Handle various API error responses
+        if response.status_code == 404:
+            # Invalid ZIP code
+            return None
+        elif response.status_code == 403:
+            # Invalid API key
+            return None
+        elif response.status_code == 429:
+            # Rate limit exceeded
+            return None
+
+        response.raise_for_status()
+        data = response.json()
+
+        # Extract lat/lon from response
+        lat = float(data.get("lat", 0))
+        lng = float(data.get("lng", 0))
+
+        if lat == 0 and lng == 0:
+            return None
+
+        return (lat, lng)
+
+    except (requests.RequestException, ValueError, KeyError):
+        # Network error, timeout, or invalid response format
+        return None
+
+def _state_based_fallback(zip_code: str) -> Tuple[float, float]:
+    """Fallback to state-based approximation for unknown ZIP codes"""
     state_fallbacks = {
         "CA": (34.0522, -118.2437),  # Los Angeles, CA
         "NY": (40.7128, -74.0060),  # New York, NY
@@ -259,18 +308,51 @@ def get_zip_coordinates(zip_code: str) -> Tuple[float, float]:
         "WY": (41.1390, -104.8192), # Cheyenne, WY
         "AK": (61.2181, -149.9003), # Anchorage, AK
     }
-    
+
     # Try to determine state from ZIP code (simplified approach)
     # US ZIP codes: 0xxxx-9xxxx, where first digit indicates region
     first_digit = zip_code[0] if zip_code else "0"
-    
+
     region_mapping = {
-        "0": "NJ", "1": "NY", "2": "DC", "3": "FL", "4": "GA", 
+        "0": "NJ", "1": "NY", "2": "DC", "3": "FL", "4": "GA",
         "5": "CA", "6": "IL", "7": "TX", "8": "CO", "9": "CA"
     }
-    
+
     state = region_mapping.get(first_digit, "CA")
     return state_fallbacks.get(state, (34.0522, -118.2437))  # Default to LA
+
+def get_zip_coordinates(zip_code: str) -> Tuple[float, float]:
+    """
+    Get coordinates for a ZIP code using three-tier lookup strategy:
+    1. Check in-memory cache
+    2. Try ZipCodeAPI.com (if API key configured)
+    3. Fallback to hardcoded ZIP_DB
+    4. Final fallback to state-based approximation
+    """
+    # Tier 1: Check in-memory cache
+    if zip_code in _geocode_cache:
+        return _geocode_cache[zip_code]
+
+    # Tier 2: Try API call (if API key configured)
+    if ZIPCODEAPI_KEY:
+        api_result = geocode_zip_via_api(zip_code)
+        if api_result:
+            # Cache the successful result
+            _geocode_cache[zip_code] = api_result
+            return api_result
+
+    # Tier 3: Fallback to hardcoded ZIP_DB
+    if zip_code in ZIP_DB:
+        coords = ZIP_DB[zip_code]
+        # Cache the hardcoded result for consistency
+        _geocode_cache[zip_code] = coords
+        return coords
+
+    # Tier 4: Final fallback to state-based approximation
+    coords = _state_based_fallback(zip_code)
+    # Cache the fallback result
+    _geocode_cache[zip_code] = coords
+    return coords
 
 def haversine_km(a: Tuple[float, float], b: Tuple[float, float]) -> float:
     (lat1, lon1), (lat2, lon2) = a, b

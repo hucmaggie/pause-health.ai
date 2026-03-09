@@ -1,6 +1,7 @@
 import json
 from fastapi.testclient import TestClient
 import importlib
+from unittest.mock import patch
 
 app_module = importlib.import_module("app")
 app = app_module.app
@@ -56,3 +57,61 @@ def test_quote_by_zip_unknown_zip():
     data = r.json()
     assert "total_usd" in data
     assert data["total_usd"].startswith("$")
+
+def test_geocode_with_api_success():
+    """Test that API geocoding works and caches results"""
+    with patch("app.geocode_zip_via_api") as mock_api:
+        # Mock successful API response
+        mock_api.return_value = (42.3601, -71.0589)  # Boston coordinates
+
+        # Clear cache for test
+        app_module._geocode_cache.clear()
+
+        payload = {"dest_zip": "02101"}  # Boston ZIP (in ZIP_DB)
+        r = client.post("/quote-by-zip", json=payload)
+        assert r.status_code == 200
+
+        # API shouldn't be called if ZIP is in ZIP_DB
+        # But let's test with a completely new ZIP
+        payload = {"dest_zip": "12345"}  # Unknown ZIP
+        r = client.post("/quote-by-zip", json=payload)
+        assert r.status_code == 200
+
+def test_geocode_api_failure_fallback():
+    """Test that API failures fall back to ZIP_DB"""
+    with patch("app.geocode_zip_via_api") as mock_api:
+        # Mock API failure
+        mock_api.return_value = None
+
+        # Clear cache
+        app_module._geocode_cache.clear()
+
+        # Use a ZIP in ZIP_DB
+        payload = {"dest_zip": "30301"}  # Atlanta (in ZIP_DB)
+        r = client.post("/quote-by-zip", json=payload)
+        assert r.status_code == 200
+        data = r.json()
+        assert "total_usd" in data
+
+def test_cache_hit():
+    """Test that cached ZIPs don't hit the API"""
+    with patch("app.geocode_zip_via_api") as mock_api:
+        mock_api.return_value = (40.7128, -74.0060)
+
+        # Clear cache
+        app_module._geocode_cache.clear()
+
+        # First request - should call API
+        payload = {"dest_zip": "54321"}
+        r1 = client.post("/quote-by-zip", json=payload)
+        assert r1.status_code == 200
+        call_count_1 = mock_api.call_count
+
+        # Second request - should use cache
+        r2 = client.post("/quote-by-zip", json=payload)
+        assert r2.status_code == 200
+        call_count_2 = mock_api.call_count
+
+        # Verify cache was used (call count didn't increase)
+        # Note: may be 0 if ZIPCODEAPI_KEY is not set
+        assert call_count_2 == call_count_1

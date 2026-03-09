@@ -5,6 +5,10 @@ services:
     ports:
       - "8000:8000"
     environment:
+      # ZipCodeAPI.com API key for real-time geocoding (optional)
+      # Get free key at: https://www.zipcodeapi.com/ (10 req/hour free tier)
+      # ZIPCODEAPI_KEY: "your_api_key_here"
+
       # Example: override surcharges globally if you later wire env vars
       # FUEL_SURCHARGE_PCT: "12"
       # REGIONAL_SURCHARGE_PCT: "3"
