@@ -65,6 +65,44 @@ uvicorn app:app --reload --port 8000
 - Swagger UI: http://localhost:8000/docs
 - OpenAPI JSON: http://localhost:8000/openapi.json
 
+## Frontend (Salesforce-Inspired Marketing Site)
+
+The repo now includes a standalone Next.js frontend in `frontend/` with a Salesforce-inspired (original) homepage design.
+
+### Frontend prerequisites
+- Node.js 18.18+ (or 20+ recommended)
+- npm 9+
+
+### Install frontend dependencies
+```bash
+cd frontend
+npm install
+```
+
+### Run frontend (hot reload)
+```bash
+cd frontend
+npm run dev
+```
+
+- Frontend URL: http://localhost:3000
+
+### Run backend + frontend together
+Use two terminals:
+
+**Terminal A (API)**
+```bash
+uvicorn app:app --reload --port 8000
+```
+
+**Terminal B (Frontend)**
+```bash
+cd frontend
+npm run dev
+```
+
+This keeps the existing FastAPI API intact while letting you build and iterate on the marketing UI separately.
+
 ## API Usage
 
 ### Minimal Request (Recommended)

@@ -1,0 +1,11 @@
+# Pause-Health.ai code owners
+#
+# Each line is a glob pattern followed by the GitHub user(s) or team(s)
+# that should auto-review changes touching matching files.
+#
+# Reference: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Replace @hucmaggie with the appropriate person/team as the project grows.
+
+# Default owner — applied when no other rule matches.
+* @hucmaggie

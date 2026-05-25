@@ -1,0 +1,99 @@
+name: Vercel Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/vercel-preview.yml"
+
+concurrency:
+  group: vercel-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      pull-requests: write
+      contents: read
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Check Vercel configuration
+        id: vercel-cfg
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Vercel preview skipped. Add VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID repo secrets to enable preview deployments."
+          fi
+
+      - name: Checkout
+        if: steps.vercel-cfg.outputs.configured == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: steps.vercel-cfg.outputs.configured == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Vercel CLI
+        if: steps.vercel-cfg.outputs.configured == 'true'
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel environment
+        if: steps.vercel-cfg.outputs.configured == 'true'
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build project
+        if: steps.vercel-cfg.outputs.configured == 'true'
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel preview
+        if: steps.vercel-cfg.outputs.configured == 'true'
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "preview-url=$url" >> "$GITHUB_OUTPUT"
+          echo "Preview URL: $url"
+
+      - name: Comment preview URL on PR
+        if: steps.vercel-cfg.outputs.configured == 'true'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: pause-health-vercel-preview
+          message: |
+            ### Pause-Health.ai · Vercel preview
+
+            | | |
+            | --- | --- |
+            | **Preview URL** | ${{ steps.deploy.outputs.preview-url }} |
+            | **Commit** | `${{ github.event.pull_request.head.sha }}` |
+            | **Updated** | ${{ github.event.pull_request.updated_at }} |
+
+            Quick links:
+
+            - Landing: ${{ steps.deploy.outputs.preview-url }}/
+            - Investor brief: ${{ steps.deploy.outputs.preview-url }}/proposal
+            - Prototype intake: ${{ steps.deploy.outputs.preview-url }}/demo/intake
+            - About: ${{ steps.deploy.outputs.preview-url }}/about
+
+            This comment auto-updates with each new commit.
