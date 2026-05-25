@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import { NewsletterForm } from "../components/newsletter-form";
 import { NewsletterBanner } from "../components/newsletter-banner";
+import { MobileNav } from "../components/mobile-nav";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://pause-health.ai";
 const SITE_NAME = "Pause-Health.ai";
@@ -112,12 +113,13 @@ export default function RootLayout({
                 <span className="site-logo-wordmark">Pause-Health.ai</span>
               </span>
             </a>
-            <nav className="site-nav" aria-label="Primary">
+            <nav className="site-nav site-nav-desktop" aria-label="Primary">
               <a href="/">Home</a>
               <a href="/about">About</a>
               <a href="/proposal">Investor Brief</a>
               <a href="/demo/intake">Prototype</a>
             </nav>
+            <MobileNav />
           </div>
         </header>
         {children}
