@@ -143,7 +143,7 @@ jobs:
 
       - name: Open or update PR with results
         if: steps.target.outputs.configured == 'true'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: "chore(lighthouse): nightly audit against ${{ steps.target.outputs.url }}"
           branch: lighthouse/nightly
