@@ -1,3 +1,22 @@
+# Pause-Health.ai monorepo
+
+This repository hosts three things:
+
+- `frontend/` — the Next.js marketing site and clickable prototype for
+  [Pause-Health.ai](https://pause-health.ai). See `frontend/README.md`.
+- `pause_ingest/` — the wearable ingest worker that normalizes vendor JSON
+  through [omh-shim](https://github.com/jupyterhealth/omh-shim) and uploads
+  it to a [JupyterHealth Exchange](https://github.com/jupyterhealth/jupyterhealth-exchange)
+  instance as FHIR Observations. See `pause_ingest/README.md`.
+- The original Northstar Shipping Cost API (this file, below). The FastAPI
+  service is still functional and serves as the legacy substrate while the
+  Pause-Health platform is being built.
+
+The JupyterHealth integration design lives at
+[`docs/jupyterhealth-integration.md`](docs/jupyterhealth-integration.md).
+
+---
+
 # Northstar Shipping Cost API (ZIP-based)
 
 FastAPI service that calculates shipping costs using Knowledge Article 1 rules and distance derived from US ZIP codes.

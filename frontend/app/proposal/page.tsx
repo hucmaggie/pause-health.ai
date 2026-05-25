@@ -30,7 +30,9 @@ const partTwoSummaries: Record<string, string> = {
   "/proposal/strategy":
     "Architectural pillars, go-to-market motion, and defensibility flywheel.",
   "/proposal/technology":
-    "Stack, AI approach, evaluation framework, and safety stance."
+    "Stack, AI approach, evaluation framework, and safety stance.",
+  "/proposal/integration":
+    "How Pause composes with JupyterHealth — open FHIR substrate and customer-controlled deployment."
 };
 
 export default function ProposalPage() {

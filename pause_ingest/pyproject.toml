@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pause-ingest"
+version = "0.1.0"
+description = "Pause-Health.ai wearable ingest worker (omh-shim → JupyterHealth Exchange)"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "Pause-Health.ai" }]
+license = { text = "Proprietary" }
+dependencies = [
+  # JupyterHealth Python client used to read observations and obtain tokens.
+  "jupyterhealth-client>=0.1",
+  # omh-shim is published on GitHub (not yet on PyPI). Pin to v1.0.1 per its README.
+  "omh-shim @ git+https://github.com/jupyterhealth/omh-shim.git@v1.0.1",
+  # HTTP client for FHIR POSTs; the JHE client doesn't write Observations directly.
+  "httpx>=0.27",
+  # Config from environment.
+  "python-dotenv>=1.0",
+  "pydantic>=2.6",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "ruff>=0.5",
+]
+
+[project.scripts]
+pause-ingest-smoke = "pause_ingest.examples.oura_sample_upload:main"
+
+[tool.setuptools.packages.find]
+include = ["pause_ingest*", "examples*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

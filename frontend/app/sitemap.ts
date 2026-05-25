@@ -13,6 +13,7 @@ const STATIC_PATHS: { path: string; priority: number; changeFrequency: "yearly" 
   { path: "/proposal/competition", priority: 0.7, changeFrequency: "monthly" },
   { path: "/proposal/strategy", priority: 0.7, changeFrequency: "monthly" },
   { path: "/proposal/technology", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/proposal/integration", priority: 0.7, changeFrequency: "monthly" },
   { path: "/contact", priority: 0.7, changeFrequency: "monthly" },
   { path: "/careers", priority: 0.7, changeFrequency: "weekly" },
   { path: "/press", priority: 0.4, changeFrequency: "monthly" },
