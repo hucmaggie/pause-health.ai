@@ -38,7 +38,9 @@ const partTwoSummaries: Record<string, string> = {
   "/proposal/menopause-society":
     "How Pause composes with The Menopause Society and the MSCP credential — referral, partnership, and earned trust.",
   "/proposal/provider-graph":
-    "A defensible menopause provider graph from CMS NPPES and state board data — ToS-clean, closed-loop, compounding."
+    "A defensible menopause provider graph from CMS NPPES and state board data — ToS-clean, closed-loop, compounding.",
+  "/proposal/agentforce":
+    "Patient intake on Salesforce Agentforce Service Agent — runs on the substrate our health-system customers already operate."
 };
 
 export default function ProposalPage() {

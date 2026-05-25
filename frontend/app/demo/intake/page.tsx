@@ -1,10 +1,13 @@
+import { AgentforceEmbed } from "../../../components/agentforce-embed";
+import { AgentforceFallback } from "../../../components/agentforce-fallback";
 import { DemoShell } from "../../../components/demo-shell";
+import { getAgentforceConfig } from "../../../lib/agentforce";
 import { pageMetadata } from "../../../lib/page-metadata";
 
 export const metadata = pageMetadata({
   title: "Prototype · Intake Dashboard",
   description:
-    "See how Pause-Health.ai prioritizes incoming menopause-care signals from EHR and wearable sources.",
+    "See how Pause-Health.ai prioritizes incoming menopause-care signals from EHR and wearable sources, with an Agentforce Service Agent guiding patient intake.",
   path: "/demo/intake",
   ogImage: "/brand/pause-health-og-prototype.png",
   ogImageAlt: "Pause-Health.ai prototype preview — intake to analytics."
@@ -42,11 +45,21 @@ const queueRows = [
 ];
 
 export default function IntakeDemoPage() {
+  const agentforceConfig = getAgentforceConfig();
+
   return (
     <DemoShell
       title="Midlife Signal Intake"
-      subtitle="Cases are elegantly prioritized for women 40-60 using symptom clusters, endocrine context, and safety-first clinical markers."
+      subtitle="Patients enter through an Agentforce-driven intake assistant. Structured signals are then prioritized for women 40-60 using symptom clusters, endocrine context, and safety-first clinical markers."
     >
+      <section style={{ marginBottom: "1.5rem" }}>
+        {agentforceConfig ? (
+          <AgentforceEmbed config={agentforceConfig} />
+        ) : (
+          <AgentforceFallback />
+        )}
+      </section>
+
       <section className="demo-grid">
         <article className="card">
           <h3>Live menopause care queue</h3>
@@ -89,6 +102,10 @@ export default function IntakeDemoPage() {
             <li>
               <span>Vasomotor symptom burden</span>
               <strong>Route to menopause specialist pathway</strong>
+            </li>
+            <li>
+              <span>Intake substrate</span>
+              <strong>Agentforce Service Agent on Salesforce Service Cloud</strong>
             </li>
             <li>
               <span>Integration context</span>
