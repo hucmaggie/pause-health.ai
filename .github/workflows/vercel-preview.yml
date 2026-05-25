@@ -77,7 +77,7 @@ jobs:
 
       - name: Comment preview URL on PR
         if: steps.vercel-cfg.outputs.configured == 'true'
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: pause-health-vercel-preview
           message: |
