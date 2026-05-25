@@ -2,18 +2,63 @@
 
 This repository hosts three things:
 
-- `frontend/` — the Next.js marketing site and clickable prototype for
-  [Pause-Health.ai](https://pause-health.ai). See `frontend/README.md`.
-- `pause_ingest/` — the wearable ingest worker that normalizes vendor JSON
-  through [omh-shim](https://github.com/jupyterhealth/omh-shim) and uploads
-  it to a [JupyterHealth Exchange](https://github.com/jupyterhealth/jupyterhealth-exchange)
-  instance as FHIR Observations. See `pause_ingest/README.md`.
-- The original Northstar Shipping Cost API (this file, below). The FastAPI
-  service is still functional and serves as the legacy substrate while the
-  Pause-Health platform is being built.
+- **`frontend/`** — Next.js marketing site, investor brief, and clickable
+  prototype for [Pause-Health.ai](https://pause-health.ai). Deployed to
+  Vercel. See `frontend/README.md`.
+- **`pause_ingest/`** — Python wearable ingest worker. Normalizes vendor JSON
+  through [omh-shim](https://github.com/jupyterhealth/omh-shim), computes
+  clinical features via the
+  [Digital Biomarker Discovery Pipeline](https://www.dbdp.org/code-repository)
+  (FLIRT + a Kubios-validated HRV reference port), and uploads the result to
+  a [JupyterHealth Exchange](https://github.com/jupyterhealth/jupyterhealth-exchange)
+  instance as FHIR R5 Observations. See `pause_ingest/README.md`.
+- **Legacy Northstar Shipping Cost API** (this file, below). The FastAPI
+  service is still functional and was the original substrate the repo was
+  created on; it remains here as a historical artifact while the
+  Pause-Health platform is being built out in parallel.
 
-The JupyterHealth integration design lives at
-[`docs/jupyterhealth-integration.md`](docs/jupyterhealth-integration.md).
+## Design docs
+
+- [`docs/jupyterhealth-integration.md`](docs/jupyterhealth-integration.md) —
+  end-to-end design for the JupyterHealth + DBDP data plane, with an
+  architecture diagram, wearable data types we surface, the feature
+  engineering layer, a phased plan, and known gaps (e.g. `devicely` /
+  Empatica E4 deferred to Phase 2 due to Python 3.13 incompatibility).
+
+## Investor brief
+
+The full investor surface lives under `/proposal` on the deployed frontend.
+Deep-dive sections (each a routed page):
+
+- `/proposal/customers` — Health system and payer ICPs, buying committee.
+- `/proposal/insights` — Provider and patient interview synthesis.
+- `/proposal/data` — Menopause data inventory and strategy.
+- `/proposal/competition` — Landscape and positioning.
+- `/proposal/strategy` — Digital strategy and competitive moats.
+- `/proposal/technology` — Stack, AI approach, safety stance.
+- `/proposal/integration` — JupyterHealth FHIR substrate.
+- `/proposal/dbdp` — DBDP feature engineering layer.
+- `/proposal/menopause-society` — The Menopause Society / MSCP strategy
+  (referral, partnership runway, explicit ToS guardrails).
+- `/proposal/provider-graph` — A defensible menopause provider graph built
+  from CMS NPPES and state board data (no scraping of restricted sources).
+
+## Local development
+
+```bash
+# Frontend
+cd frontend
+npm install
+npm run dev                # http://localhost:3000
+
+# Python ingest worker
+cd pause_ingest
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+pytest -q                  # 20 tests covering convert + features + Empatica stub
+```
+
+See each subdirectory's README for full setup and configuration details.
 
 ---
 

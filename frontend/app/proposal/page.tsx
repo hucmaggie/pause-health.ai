@@ -34,7 +34,11 @@ const partTwoSummaries: Record<string, string> = {
   "/proposal/integration":
     "How Pause composes with JupyterHealth — open FHIR substrate and customer-controlled deployment.",
   "/proposal/dbdp":
-    "Wearable feature engineering via the Digital Biomarker Discovery Pipeline (Duke) — production-grade HRV, EDA, and accelerometer signals."
+    "Wearable feature engineering via the Digital Biomarker Discovery Pipeline (Duke) — production-grade HRV, EDA, and accelerometer signals.",
+  "/proposal/menopause-society":
+    "How Pause composes with The Menopause Society and the MSCP credential — referral, partnership, and earned trust.",
+  "/proposal/provider-graph":
+    "A defensible menopause provider graph from CMS NPPES and state board data — ToS-clean, closed-loop, compounding."
 };
 
 export default function ProposalPage() {

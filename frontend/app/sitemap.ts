@@ -15,6 +15,8 @@ const STATIC_PATHS: { path: string; priority: number; changeFrequency: "yearly" 
   { path: "/proposal/technology", priority: 0.7, changeFrequency: "monthly" },
   { path: "/proposal/integration", priority: 0.7, changeFrequency: "monthly" },
   { path: "/proposal/dbdp", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/proposal/menopause-society", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/proposal/provider-graph", priority: 0.7, changeFrequency: "monthly" },
   { path: "/contact", priority: 0.7, changeFrequency: "monthly" },
   { path: "/careers", priority: 0.7, changeFrequency: "weekly" },
   { path: "/press", priority: 0.4, changeFrequency: "monthly" },
