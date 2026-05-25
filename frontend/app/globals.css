@@ -750,3 +750,67 @@ th {
     align-items: stretch;
   }
 }
+
+/* Long-form document prose for /proposal/full and similar pages.
+   Clean, readable, no boxed-paragraph treatment. */
+.proposal-doc {
+  max-width: 72ch;
+  margin: 2rem auto 0;
+  color: var(--text);
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+.proposal-doc > section + section {
+  margin-top: 2.25rem;
+}
+
+.proposal-doc h2 {
+  font-size: clamp(1.4rem, 2vw, 1.85rem);
+  color: var(--brand);
+  margin: 0 0 0.85rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.proposal-doc h3 {
+  font-size: 1.12rem;
+  color: var(--text);
+  margin: 1.5rem 0 0.6rem;
+  font-weight: 600;
+}
+
+.proposal-doc p {
+  margin: 0 0 0.9rem;
+  color: var(--text);
+}
+
+.proposal-doc ul,
+.proposal-doc ol {
+  margin: 0 0 1rem;
+  padding-left: 1.4rem;
+}
+
+.proposal-doc li {
+  margin: 0 0 0.45rem;
+}
+
+.proposal-doc li::marker {
+  color: var(--brand);
+}
+
+.proposal-doc strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.proposal-doc a {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.proposal-doc a:hover {
+  color: #ffd3e8;
+}

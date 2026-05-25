@@ -154,9 +154,7 @@ export default function RootLayout({
                 <h4>Product</h4>
                 <a href="/demo/intake">Prototype</a>
                 <a href="/proposal">Investor Brief</a>
-                <a href="/docs/menopause-clinical-decision-support-proposal.html">
-                  Full Proposal
-                </a>
+                <a href="/proposal/full">Full Proposal</a>
               </div>
               <div>
                 <h4>Resources</h4>

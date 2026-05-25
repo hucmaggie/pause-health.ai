@@ -1,6 +1,20 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  async redirects() {
+    return [
+      {
+        source: "/docs/menopause-clinical-decision-support-proposal.html",
+        destination: "/proposal/full",
+        permanent: true
+      },
+      {
+        source: "/docs/menopause-clinical-decision-support-proposal.md",
+        destination: "/proposal/full",
+        permanent: true
+      }
+    ];
+  },
   webpack: (config, { dev }) => {
     if (dev) {
       config.watchOptions = {

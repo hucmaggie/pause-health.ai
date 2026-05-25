@@ -1,4 +1,5 @@
 import { pageMetadata } from "../../lib/page-metadata";
+import { proposalSections } from "../../components/proposal-shell";
 
 export const metadata = pageMetadata({
   title: "Investor Brief",
@@ -16,6 +17,21 @@ const points = [
   "FHIR-native data and wearable biomarkers create a real-time menopause intelligence layer.",
   "Commercial strategy: provider-first B2B model delivering measurable ROI and durable ARR growth."
 ];
+
+const partTwoSummaries: Record<string, string> = {
+  "/proposal/customers":
+    "Health system and value-based payer ICPs, buying committee, and market sizing.",
+  "/proposal/insights":
+    "Themes from 32 provider and 47 patient interviews — what they said, in their words.",
+  "/proposal/data":
+    "Available menopause datasets, our data strategy, and the moats we accrue over time.",
+  "/proposal/competition":
+    "DTC, employer benefits, EHR AI, generalist LLMs — landscape and where Pause wins.",
+  "/proposal/strategy":
+    "Architectural pillars, go-to-market motion, and defensibility flywheel.",
+  "/proposal/technology":
+    "Stack, AI approach, evaluation framework, and safety stance."
+};
 
 export default function ProposalPage() {
   return (
@@ -35,10 +51,7 @@ export default function ProposalPage() {
           ))}
         </ul>
         <div className="hero-actions">
-          <a
-            href="/docs/menopause-clinical-decision-support-proposal.html"
-            className="btn btn-secondary"
-          >
+          <a href="/proposal/full" className="btn btn-secondary">
             Open Full Investor Proposal
           </a>
           <a href="/demo/intake" className="btn btn-primary">
@@ -48,26 +61,26 @@ export default function ProposalPage() {
             Back to Landing
           </a>
         </div>
-        <section style={{ marginTop: "1.5rem" }} className="card">
-          <h3>Part 2 planned scope</h3>
-          <ul className="metric-list">
-            <li>
-              <span>Customer selection and segmentation deep dive</span>
-            </li>
-            <li>
-              <span>Provider and patient interview insights</span>
-            </li>
-            <li>
-              <span>Data inventory and modeling strategy</span>
-            </li>
-            <li>
-              <span>Competitive positioning and digital strategy</span>
-            </li>
-            <li>
-              <span>Detailed technology architecture and AI choices</span>
-            </li>
-          </ul>
-        </section>
+      </section>
+
+      <section style={{ marginTop: "1.5rem" }}>
+        <p className="eyebrow">Part 2 · Deep dives</p>
+        <div className="card-grid" style={{ marginTop: "0.6rem" }}>
+          {proposalSections.map((section) => (
+            <a
+              key={section.href}
+              href={section.href}
+              className="card"
+              style={{ textDecoration: "none", display: "block" }}
+            >
+              <h3>{section.label}</h3>
+              <p>{partTwoSummaries[section.href]}</p>
+              <p style={{ color: "var(--brand)", fontWeight: 600, marginTop: "0.6rem" }}>
+                Read section →
+              </p>
+            </a>
+          ))}
+        </div>
       </section>
     </main>
   );
