@@ -40,7 +40,9 @@ const partTwoSummaries: Record<string, string> = {
   "/proposal/provider-graph":
     "A defensible menopause provider graph from CMS NPPES and state board data — ToS-clean, closed-loop, compounding.",
   "/proposal/agentforce":
-    "Patient intake on Salesforce Agentforce Service Agent — runs on the substrate our health-system customers already operate."
+    "Patient intake on Salesforce Agentforce Service Agent — runs on the substrate our health-system customers already operate.",
+  "/proposal/mulesoft":
+    "Integration plane on MuleSoft Anypoint — three-tier API-Led Connectivity stitching JupyterHealth, DBDP, and wearables into a single FHIR substrate."
 };
 
 export default function ProposalPage() {

@@ -1,6 +1,6 @@
 # Pause-Health.ai monorepo
 
-This repository hosts three things:
+This repository hosts four things:
 
 - **`frontend/`** — Next.js marketing site, investor brief, and clickable
   prototype for [Pause-Health.ai](https://pause-health.ai). Deployed to
@@ -12,6 +12,12 @@ This repository hosts three things:
   (FLIRT + a Kubios-validated HRV reference port), and uploads the result to
   a [JupyterHealth Exchange](https://github.com/jupyterhealth/jupyterhealth-exchange)
   instance as FHIR R5 Observations. See `pause_ingest/README.md`.
+- **`mulesoft/`** — Reference MuleSoft Anypoint artifacts (Mule 4 Process
+  API flow + DataWeave 2.0 transform) showing the three-tier API-Led
+  Connectivity pattern Pause uses to integrate JupyterHealth, DBDP, and
+  consumer wearables in a customer's Anypoint Platform. See
+  `mulesoft/README.md`. A live mocked Experience API is served by the
+  Next.js frontend at `/api/mulesoft/health`.
 - **Legacy Northstar Shipping Cost API** (this file, below). The FastAPI
   service is still functional and was the original substrate the repo was
   created on; it remains here as a historical artifact while the
@@ -24,6 +30,10 @@ This repository hosts three things:
   architecture diagram, wearable data types we surface, the feature
   engineering layer, a phased plan, and known gaps (e.g. `devicely` /
   Empatica E4 deferred to Phase 2 due to Python 3.13 incompatibility).
+- [`docs/mulesoft-integration.md`](docs/mulesoft-integration.md) —
+  three-tier MuleSoft architecture (System / Process / Experience APIs),
+  named flows, DataWeave transforms, deployment options (CloudHub 2.0 vs
+  Runtime Fabric), phased plan, and reference artifact catalog.
 
 ## Investor brief
 
@@ -42,6 +52,10 @@ Deep-dive sections (each a routed page):
   (referral, partnership runway, explicit ToS guardrails).
 - `/proposal/provider-graph` — A defensible menopause provider graph built
   from CMS NPPES and state board data (no scraping of restricted sources).
+- `/proposal/agentforce` — Patient intake on Salesforce Agentforce Service
+  Agent, with graceful Pause-branded fallback when no org is configured.
+- `/proposal/mulesoft` — Integration plane on MuleSoft Anypoint, with a
+  live mocked Experience API at `/api/mulesoft/health`.
 
 ## Local development
 

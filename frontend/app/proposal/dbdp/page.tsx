@@ -279,6 +279,15 @@ export default function DbdpIntegrationPage() {
           </li>
           <li>
             <span>
+              <a href="/proposal/mulesoft">MuleSoft integration</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              The connectivity plane that triggers DBDP feature compute on every
+              ingest event and routes the result back to JupyterHealth.
+            </strong>
+          </li>
+          <li>
+            <span>
               <a href="/proposal/technology">Technology choices</a>
             </span>
             <strong style={{ fontWeight: 500 }}>

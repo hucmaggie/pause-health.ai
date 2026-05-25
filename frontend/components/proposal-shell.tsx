@@ -18,7 +18,8 @@ export const proposalSections = [
   { href: "/proposal/dbdp", label: "DBDP Feature Engineering" },
   { href: "/proposal/menopause-society", label: "Menopause Society" },
   { href: "/proposal/provider-graph", label: "Provider Graph" },
-  { href: "/proposal/agentforce", label: "Agentforce Intake" }
+  { href: "/proposal/agentforce", label: "Agentforce Intake" },
+  { href: "/proposal/mulesoft", label: "MuleSoft Integration" }
 ];
 
 export function ProposalShell({ eyebrow, title, subtitle, children }: ProposalShellProps) {

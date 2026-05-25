@@ -241,6 +241,13 @@ export default function IntegrationPage() {
           </code>
           . The architecture is reviewable, not aspirational.
         </p>
+        <p style={{ marginTop: "0.6rem" }}>
+          For the integration plane that fronts JupyterHealth in customer deployments, see{" "}
+          <a href="/proposal/mulesoft">MuleSoft integration</a> — the three-tier
+          API-Led Connectivity layer that hosts the actual ingest, transform, and
+          read-bundle flows. The Pause backend never talks to JupyterHealth directly
+          in a customer environment; it goes through the MuleSoft Experience APIs.
+        </p>
       </section>
     </ProposalShell>
   );

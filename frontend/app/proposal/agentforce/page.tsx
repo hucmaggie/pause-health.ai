@@ -240,6 +240,16 @@ export default function AgentforcePage() {
           </li>
           <li>
             <span>
+              <a href="/proposal/mulesoft">MuleSoft integration</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              How the intake&apos;s consent decisions and structured record propagate
+              into JupyterHealth, the DBDP feature pipeline, and any downstream systems
+              via the customer&apos;s Anypoint platform.
+            </strong>
+          </li>
+          <li>
+            <span>
               <a href="/proposal/technology">Technology choices</a>
             </span>
             <strong style={{ fontWeight: 500 }}>

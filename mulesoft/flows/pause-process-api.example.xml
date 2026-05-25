@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Pause-Health.ai  —  pause-ingest-process-api  (REFERENCE, not deployable)
+
+  Process-tier flow in MuleSoft's API-Led Connectivity pattern. Triggered
+  whenever a wearable System API emits a new sample. It:
+
+    1. Validates the incoming Open mHealth (OMH) payload.
+    2. Transforms OMH -> FHIR R5 Observation via DataWeave.
+    3. POSTs the Observation to jhe-system-api (JupyterHealth Exchange).
+    4. Fire-and-forget triggers dbdp-system-api to compute features for
+       the affected sliding window.
+    5. Returns the created Observation id + the feature computation
+       correlation id to the caller (a System API or another Process API).
+
+  This file is intentionally a reference: customer-specific
+  configuration (Anypoint Platform org, secret manager keys, endpoint
+  URLs) lives in the Mule property files, not here. See
+  mulesoft/README.md.
+-->
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:json="http://www.mulesoft.org/schema/mule/json"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core
+          http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http
+          http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+        http://www.mulesoft.org/schema/mule/json
+          http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+        http://www.mulesoft.org/schema/mule/ee/core
+          http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+    <!--
+      HTTP listener config. In production this points at the Runtime Fabric
+      load balancer; in CloudHub 2.0 it points at the dedicated worker port.
+    -->
+    <http:listener-config name="pause-process-api-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="${http.listener.port}" />
+    </http:listener-config>
+
+    <!--
+      Request configs for the two System APIs this Process API depends on.
+      Hostnames + auth come from the customer-managed property files.
+    -->
+    <http:request-config name="jhe-system-api-requestConfig"
+                         basePath="/api/v1">
+        <http:request-connection host="${jhe.system.api.host}"
+                                  port="${jhe.system.api.port}"
+                                  protocol="HTTPS" />
+    </http:request-config>
+
+    <http:request-config name="dbdp-system-api-requestConfig"
+                         basePath="/api/v1">
+        <http:request-connection host="${dbdp.system.api.host}"
+                                  port="${dbdp.system.api.port}"
+                                  protocol="HTTPS" />
+    </http:request-config>
+
+    <!--
+      Main entrypoint:  POST /samples
+      Body: an Open mHealth payload + the source identifier (e.g. "oura").
+    -->
+    <flow name="ingest-sample-flow">
+        <http:listener config-ref="pause-process-api-httpListenerConfig"
+                       path="/samples"
+                       allowedMethods="POST" />
+
+        <!-- 1. Validate the incoming OMH envelope. -->
+        <json:validate-schema doc:name="Validate OMH payload"
+                              schema="schemas/omh-envelope.json" />
+
+        <!-- 2. Transform OMH -> FHIR R5 Observation. -->
+        <ee:transform doc:name="OMH to FHIR R5">
+            <ee:message>
+                <ee:set-payload resource="transforms/omh-to-fhir.dwl" />
+            </ee:message>
+            <ee:variables>
+                <!-- Stash the source for the audit trail. -->
+                <ee:set-variable variableName="source">
+                    <![CDATA[#[payload.source default "unknown"]]]>
+                </ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+
+        <!-- 3. POST the Observation to JupyterHealth Exchange. -->
+        <http:request method="POST"
+                      config-ref="jhe-system-api-requestConfig"
+                      path="/Observation"
+                      doc:name="POST FHIR Observation to JHE">
+            <http:headers>
+                <![CDATA[#[output application/java
+                  ---
+                  {
+                    "Content-Type": "application/fhir+json",
+                    "Authorization": "Bearer " ++ vars.jheAccessToken
+                  }
+                ]]]>
+            </http:headers>
+        </http:request>
+
+        <!-- Capture the FHIR Observation id from the JHE response. -->
+        <ee:transform doc:name="Capture observation id">
+            <ee:variables>
+                <ee:set-variable variableName="observationId">
+                    <![CDATA[#[payload.id]]]>
+                </ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+
+        <!-- 4. Fire-and-forget: trigger DBDP feature compute. -->
+        <async doc:name="Trigger DBDP feature compute">
+            <http:request method="POST"
+                          config-ref="dbdp-system-api-requestConfig"
+                          path="/features/hrv:compute"
+                          doc:name="POST /features/hrv:compute">
+                <http:headers>
+                    <![CDATA[#[{ "Content-Type": "application/json" }]]]>
+                </http:headers>
+                <http:body>
+                    <![CDATA[#[output application/json
+                      ---
+                      {
+                        observationId: vars.observationId,
+                        source: vars.source,
+                        windowSec: 180
+                      }
+                    ]]]>
+                </http:body>
+            </http:request>
+        </async>
+
+        <!-- 5. Return the success envelope to the caller. -->
+        <ee:transform doc:name="Build response">
+            <ee:message>
+                <ee:set-payload>
+                    <![CDATA[#[output application/json
+                      ---
+                      {
+                        status: "accepted",
+                        observationId: vars.observationId,
+                        source: vars.source,
+                        featureComputeTriggered: true
+                      }
+                    ]]]>
+                </ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+        <!--
+          Standard error handling: anything thrown above falls through to
+          this scope. Real production flows wire per-error-type handlers
+          (HTTP:CONNECTIVITY, SCHEMA:VALIDATION, etc.). Reference omitted
+          for clarity.
+        -->
+        <error-handler>
+            <on-error-propagate type="ANY" doc:name="Bubble to API kit">
+                <ee:transform doc:name="Error response envelope">
+                    <ee:message>
+                        <ee:set-payload>
+                            <![CDATA[#[output application/json
+                              ---
+                              {
+                                status: "error",
+                                error: error.description,
+                                errorType: error.errorType.identifier
+                              }
+                            ]]]>
+                        </ee:set-payload>
+                    </ee:message>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+</mule>
