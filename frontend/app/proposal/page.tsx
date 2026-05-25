@@ -32,7 +32,9 @@ const partTwoSummaries: Record<string, string> = {
   "/proposal/technology":
     "Stack, AI approach, evaluation framework, and safety stance.",
   "/proposal/integration":
-    "How Pause composes with JupyterHealth — open FHIR substrate and customer-controlled deployment."
+    "How Pause composes with JupyterHealth — open FHIR substrate and customer-controlled deployment.",
+  "/proposal/dbdp":
+    "Wearable feature engineering via the Digital Biomarker Discovery Pipeline (Duke) — production-grade HRV, EDA, and accelerometer signals."
 };
 
 export default function ProposalPage() {

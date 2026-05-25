@@ -30,21 +30,26 @@ We do not fork JupyterHealth. We compose with it.
 ## Architecture
 
 ```
-Patient wearables (Oura / Apple Health / Whoop / Garmin)
-   │  vendor JSON
+Patient wearables (Oura / Apple Health / Whoop / Garmin / Empatica E4)
+   │  vendor JSON / zip
    ▼
 Pause-Health ingest worker
-   │  omh-shim → Open mHealth JSON
+   │  omh-shim → Open mHealth JSON  (normalization)
+   │       │
+   │       ▼
+   │  pause_ingest.features → FLIRT + DBDP HRV  (feature engineering)
+   │  sliding-window HRV / EDA / ACC metrics
    ▼
 JupyterHealth Exchange  (customer-hosted, per-tenant VPC)
    ├─ FHIR R5 Patient / Observation / Group / Consent
    ├─ OAuth2 + OIDC
-   └─ Scope-based authorization
+   ├─ Raw OMH Observations (one per sample window)
+   └─ Computed feature Observations (one per metric per window)
    │
    │  FHIR REST API (OAuth2 bearer)
    ▼
 Pause-Health backend  (FastAPI)
-   ├─ jupyterhealth-client: read patient timeline
+   ├─ jupyterhealth-client: read patient timeline + features
    ├─ Menopause classifiers + RAG over guideline corpus
    └─ Writes recommendations back as FHIR
      Observation / CarePlan / DocumentReference
@@ -132,6 +137,72 @@ shipped dispatch table) covers most of what we care about for menopause:
   contribute both a converter and the corresponding Open mHealth schema
   proposal.
 
+## Feature engineering layer (DBDP)
+
+The [Digital Biomarker Discovery Pipeline](https://www.dbdp.org/code-repository)
+(DBDP) is a Duke University-led open-source ecosystem of wearable feature
+engineering tools. We compose with the DBDP layer between `omh-shim`
+(normalization) and our menopause models (inference). Features are
+computed at ingest time and persisted alongside the raw OMH data inside
+JupyterHealth Exchange, so the provider read path never has to recompute
+them and every feature is traceable to a specific raw window.
+
+### What we use today
+
+| Project | License | Status | Where it lives in pause_ingest |
+|---|---|---|---|
+| [FLIRT](https://github.com/im-ethz/flirt) (PyPI: `flirt`) | MIT | **In use** — Phase 1 | `pause_ingest.features.hrv_features_flirt` |
+| [DBDP `Heart-Rate-Variability`](https://github.com/DigitalBiomarkerDiscoveryPipeline/Heart-Rate-Variability) (Kubios-validated) | Apache-2.0 | **Ported** as a dependency-light fallback | `pause_ingest.features.hrv_time_domain_fallback` |
+| [DBDP `Digital_Health_Data_Repository`](https://github.com/DigitalBiomarkerDiscoveryPipeline/Digital_Health_Data_Repository) | Apache-2.0 | **In use** for test fixtures | `pause_ingest/examples/fixtures/dhdr_ibi_sample.csv` |
+| [devicely](https://github.com/hpi-dhc/devicely) (Empatica E4 reader) | MIT | **Scoped, Phase 2** — see gating note below | `pause_ingest.empatica` (stub) |
+
+### Why two HRV implementations
+
+The FLIRT-backed path is the production default — it does proper
+sliding-window feature generation across time, frequency, and statistical
+domains, which is what the menopause classifiers actually consume.
+
+The hand-rolled `hrv_time_domain_fallback` exists for three reasons:
+
+1. It runs without `flirt`, `scipy`, or `numba` installed. Useful in
+   lightweight serverless contexts and in CI where install time matters.
+2. It is small enough to read end-to-end and reason about, so it serves
+   as a deterministic reference in tests. The closed-form RMSSD test
+   (`test_fallback_alternating_ibi_has_closed_form_rmssd`) is what
+   catches regressions if anyone "improves" the formula.
+3. It directly mirrors the DBDP HRV calculator, which was validated
+   against Kubios (the clinical HRV reference). That gives us
+   defensible numbers to show a clinical advisor.
+
+### Phase 2 gating: Empatica E4
+
+`devicely` is the most natural reader for Empatica E4 archives and is
+what the DBDP `Pre-process` repo recommends. As of this writing it pins
+`numpy<2.0` and `pandas<2.0`, which is incompatible with the rest of the
+Python 3.13 scientific stack we already depend on (jupyterhealth-client,
+omh-shim, flirt all run on numpy 2.x). Until `devicely` is updated or we
+isolate the Empatica path into its own subprocess with a pinned environment,
+`pause_ingest.empatica.ingest_empatica_e4_zip` raises a loud
+`EmpaticaIngestNotImplemented`. FLIRT's own `flirt.with_.empatica(zip_path)`
+already runs on the modern stack, so Phase 2 will wire that in directly and
+treat `devicely` as the de-identification step we can opt into per pilot.
+
+### How features become FHIR
+
+Each sliding-window feature row from `hrv_features_flirt` becomes one or
+more FHIR R5 `Observation` resources:
+
+- `code` — LOINC where available (e.g. RMSSD has no LOINC code yet, so we
+  use a custom CodeableConcept in the Pause code system and link to the
+  FLIRT feature name as a secondary coding).
+- `effectivePeriod` — start = window start, end = window end.
+- `derivedFrom` — references the raw IBI `Observation` resources that fed
+  the window. This is the audit trail.
+- `device` — registered Data Source in JHE that produced the raw signal.
+
+This pattern keeps Pause's read path fast (no recompute) while preserving
+full lineage — exactly what a security review wants to see.
+
 ## Phased plan
 
 ### Phase 1 — Local dev loop  *(1–2 weeks)*
@@ -199,3 +270,8 @@ next customer's procurement team.
 - [Open mHealth schemas](https://www.openmhealth.org/documentation/#/overview/get-started)
 - [HL7 FHIR R5](https://hl7.org/fhir/R5/)
 - [IEEE 1752.1 (digital health data envelope)](https://standards.ieee.org/ieee/1752.1/)
+- [Digital Biomarker Discovery Pipeline (DBDP)](https://www.dbdp.org/code-repository)
+- [FLIRT — feature generation toolkit for wearable data](https://github.com/im-ethz/flirt) ([paper](https://doi.org/10.1016/j.cmpb.2021.106461))
+- [DBDP Heart Rate Variability (Kubios-validated)](https://github.com/DigitalBiomarkerDiscoveryPipeline/Heart-Rate-Variability)
+- [DBDP Digital Health Data Repository (DHDR)](https://github.com/DigitalBiomarkerDiscoveryPipeline/Digital_Health_Data_Repository)
+- [devicely (Empatica E4 reader)](https://github.com/hpi-dhc/devicely)

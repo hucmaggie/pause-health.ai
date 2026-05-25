@@ -14,7 +14,8 @@ export const proposalSections = [
   { href: "/proposal/competition", label: "Competition" },
   { href: "/proposal/strategy", label: "Digital Strategy" },
   { href: "/proposal/technology", label: "Technology Choices" },
-  { href: "/proposal/integration", label: "JupyterHealth Integration" }
+  { href: "/proposal/integration", label: "JupyterHealth Integration" },
+  { href: "/proposal/dbdp", label: "DBDP Feature Engineering" }
 ];
 
 export function ProposalShell({ eyebrow, title, subtitle, children }: ProposalShellProps) {
