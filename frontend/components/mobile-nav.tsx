@@ -2,13 +2,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type NavLink = { href: string; label: string };
+type NavLink = { href: string; label: string; external?: boolean };
 
 const links: NavLink[] = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
   { href: "/proposal", label: "Investor Brief" },
-  { href: "/demo/intake", label: "Prototype" }
+  { href: "/demo/intake", label: "Prototype" },
+  {
+    href: "https://github.com/hucmaggie/pause-health.ai",
+    label: "Code Repository",
+    external: true
+  }
 ];
 
 const PANEL_ID = "mobile-nav-panel";
@@ -66,7 +71,13 @@ export function MobileNav() {
         <ul>
           {links.map((link) => (
             <li key={link.href}>
-              <a href={link.href} onClick={close}>
+              <a
+                href={link.href}
+                onClick={close}
+                {...(link.external
+                  ? { target: "_blank", rel: "noopener noreferrer" }
+                  : {})}
+              >
                 {link.label}
               </a>
             </li>

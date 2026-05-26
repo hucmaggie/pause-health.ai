@@ -118,6 +118,13 @@ export default function RootLayout({
               <a href="/about">About</a>
               <a href="/proposal">Investor Brief</a>
               <a href="/demo/intake">Prototype</a>
+              <a
+                href="https://github.com/hucmaggie/pause-health.ai"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Code Repository
+              </a>
             </nav>
             <MobileNav />
           </div>
