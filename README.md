@@ -74,6 +74,13 @@ Deep-dive sections (each a routed page):
   MuleSoft Process API) wired through Google A2A + MCP, orchestrated
   and governed by a MuleSoft Agent Fabric mock. Live console at
   `/demo/agent-fabric`.
+- `/proposal/data-360` — Salesforce Data 360 grounding layer. Zero-copy
+  federated patient view across JupyterHealth FHIR, DBDP features,
+  Agentforce intake history, and the customer's EHR-of-record.
+  Calculated insights + identity resolution + segments. The Care Router
+  reads grounding from Data 360 before every routing decision; the
+  Agent Fabric trace shows the full four-span flow (intake → IR →
+  federated query → A2A handoff).
 
 ## Local development
 

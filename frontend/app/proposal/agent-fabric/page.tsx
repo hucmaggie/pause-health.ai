@@ -366,6 +366,15 @@ export default function AgentFabricInvestorPage() {
           </li>
           <li>
             <span>
+              <a href="/proposal/data-360">Data 360 grounding</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              The unified patient memory layer Pause grounds the Care Router on
+              before every routing decision.
+            </strong>
+          </li>
+          <li>
+            <span>
               <a
                 href="https://google-a2a.github.io/A2A/"
                 target="_blank"

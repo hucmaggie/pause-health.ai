@@ -7,7 +7,11 @@ import {
   newTaskId,
   nowIso
 } from "../../../../../lib/a2a";
-import { route, type IntakeRecord } from "../../../../../lib/care-router";
+import {
+  route,
+  type Data360GroundingHint,
+  type IntakeRecord
+} from "../../../../../lib/care-router";
 import {
   evaluateGovernance,
   recordInstantSpan
@@ -77,11 +81,17 @@ export async function POST(req: Request) {
       : undefined;
 
   const dataPart = params.message?.parts?.find((p) => p.type === "data");
-  const intake: IntakeRecord =
+  const dataPayload =
     dataPart && dataPart.type === "data" && typeof dataPart.data === "object"
-      ? ((dataPart.data as { intake?: IntakeRecord }).intake ??
-        (dataPart.data as IntakeRecord))
-      : {};
+      ? (dataPart.data as {
+          intake?: IntakeRecord;
+          data360Grounding?: Data360GroundingHint;
+        })
+      : undefined;
+  const intake: IntakeRecord =
+    dataPayload?.intake ?? (dataPayload as IntakeRecord) ?? {};
+  const grounding: Data360GroundingHint | undefined =
+    dataPayload?.data360Grounding;
 
   const governance = evaluateGovernance({
     agentId: "care-router-claude",
@@ -135,7 +145,7 @@ export async function POST(req: Request) {
   }
 
   const startedAt = Date.now();
-  const decision = await route(intake);
+  const decision = await route(intake, grounding);
   const finishedAt = Date.now();
 
   const span = recordInstantSpan({
@@ -156,7 +166,11 @@ export async function POST(req: Request) {
       durationMs: finishedAt - startedAt,
       ageBand: intake.ageBand,
       primarySymptom: intake.primarySymptom,
-      severity: intake.severity
+      severity: intake.severity,
+      data360Grounded: grounding !== undefined,
+      data360UnifiedPatientId: grounding?.unifiedPatientId,
+      data360InsightsCited: decision.groundingUsed?.insightsCited ?? [],
+      data360Cohort: decision.groundingUsed?.cohortName
     }
   });
 

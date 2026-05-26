@@ -46,7 +46,9 @@ const partTwoSummaries: Record<string, string> = {
   "/proposal/mcp":
     "Pause as a tool surface for AI agents — a Model Context Protocol server fronting the MuleSoft Experience APIs for Claude Desktop, Cursor, and Agentforce.",
   "/proposal/agent-fabric":
-    "Four agents, two open protocols, one governed control plane — Agentforce + Anthropic Claude + Pause MCP + MuleSoft, orchestrated by Agent Fabric."
+    "Four agents, two open protocols, one governed control plane — Agentforce + Anthropic Claude + Pause MCP + MuleSoft, orchestrated by Agent Fabric.",
+  "/proposal/data-360":
+    "Unified patient memory grounded in Salesforce Data 360 — zero-copy federation across JupyterHealth, DBDP, and the EHR-of-record, making every agent visibly smarter."
 };
 
 export default function ProposalPage() {

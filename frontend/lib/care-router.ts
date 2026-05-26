@@ -41,6 +41,34 @@ export type IntakeRecord = {
   notes?: string;
 };
 
+/**
+ * Subset of the Salesforce Data 360 grounding context the Care Router
+ * cares about. Matches the GroundingContext shape in lib/data-360.ts
+ * but typed loosely here so we don't create a cross-lib cycle.
+ */
+export type Data360GroundingHint = {
+  unifiedPatientId?: string;
+  calculatedInsights?: Array<{
+    id: string;
+    name: string;
+    value: number | string;
+    unit?: string;
+  }>;
+  longitudinalObservations?: Array<{
+    display: string;
+    value: number;
+    unit: string;
+    trend?: string;
+  }>;
+  lastClinicianContact?: { daysAgo: number; clinicianType: string };
+  cohortComparison?: {
+    cohortName: string;
+    cohortSize: number;
+    patientPercentile: number;
+    metric: string;
+  };
+};
+
 export type RoutingDecision = {
   pathway: CarePathway;
   pathwayLabel: string;
@@ -53,7 +81,64 @@ export type RoutingDecision = {
     model: string;
     via: "claude-api" | "scripted-fallback";
   };
+  /** Data 360 signals that influenced the decision (when grounding present). */
+  groundingUsed?: {
+    insightsCited: string[];
+    cohortName?: string;
+    lastClinicianContactDaysAgo?: number;
+  };
 };
+
+function numericInsight(
+  grounding: Data360GroundingHint | undefined,
+  id: string
+): number | undefined {
+  if (!grounding?.calculatedInsights) return undefined;
+  const hit = grounding.calculatedInsights.find((i) => i.id === id);
+  if (!hit) return undefined;
+  return typeof hit.value === "number" ? hit.value : Number(hit.value) || undefined;
+}
+
+function groundingRationale(
+  grounding: Data360GroundingHint | undefined
+): { rationale: string[]; insightsCited: string[] } {
+  if (!grounding) return { rationale: [], insightsCited: [] };
+  const out: string[] = [];
+  const cited: string[] = [];
+
+  const hrvZ = numericInsight(grounding, "insight.hrv-zscore-30d");
+  if (typeof hrvZ === "number" && hrvZ >= 1.0) {
+    out.push(
+      `Data 360 grounding: 30-day HRV variability z-score is ${hrvZ.toFixed(2)} (above 1.0 reference); biomarker drift consistent with active menopause transition.`
+    );
+    cited.push("insight.hrv-zscore-30d");
+  }
+
+  const vasoBurden = numericInsight(grounding, "insight.vasomotor-burden-30d");
+  if (typeof vasoBurden === "number" && vasoBurden >= 50) {
+    out.push(
+      `Data 360 grounding: vasomotor burden index is ${vasoBurden} (>=50 indicates clinically significant burden over the last 30 days).`
+    );
+    cited.push("insight.vasomotor-burden-30d");
+  }
+
+  const daysSinceMscp = numericInsight(grounding, "insight.days-since-mscp-contact");
+  if (typeof daysSinceMscp === "number" && daysSinceMscp >= 365) {
+    out.push(
+      `Data 360 grounding: no MSCP-credentialed clinician contact in ${daysSinceMscp} days. Pathway should favor an MSCP touchpoint when symptoms warrant.`
+    );
+    cited.push("insight.days-since-mscp-contact");
+  }
+
+  if (grounding.cohortComparison) {
+    const c = grounding.cohortComparison;
+    out.push(
+      `Data 360 cohort: patient sits at the ${c.patientPercentile}th percentile of ${c.cohortName} (n=${c.cohortSize}) by ${c.metric}.`
+    );
+  }
+
+  return { rationale: out, insightsCited: cited };
+}
 
 const PATHWAY_LABELS: Record<CarePathway, string> = {
   "self-care-tracking": "Self-care + symptom tracking",
@@ -95,8 +180,15 @@ function isRedFlagFlagged(intake: IntakeRecord): boolean {
  * Deterministic policy engine. Mirrors the decision a clinician (or a
  * well-calibrated LLM) would make on the same intake, using ACOG +
  * Menopause Society clinical guidance as the underlying rubric.
+ *
+ * Optional `grounding` (from Salesforce Data 360) enriches the
+ * rationale and lets us "promote" virtual MSCP visits to in-person
+ * when longitudinal biomarkers warrant it.
  */
-export function scriptedRoute(intake: IntakeRecord): RoutingDecision {
+export function scriptedRoute(
+  intake: IntakeRecord,
+  grounding?: Data360GroundingHint
+): RoutingDecision {
   const rationale: string[] = [];
   const redFlagsTriggered: string[] = [];
 
@@ -165,18 +257,42 @@ export function scriptedRoute(intake: IntakeRecord): RoutingDecision {
     );
   }
 
+  // Data 360 grounding adjustments: a virtual visit becomes an
+  // in-person visit when longitudinal biomarkers + cohort percentile
+  // suggest the patient is at the higher-burden end of her cohort.
+  const groundingExtras = groundingRationale(grounding);
+  const vasoBurden = numericInsight(grounding, "insight.vasomotor-burden-30d");
+  const cohortPctile = grounding?.cohortComparison?.patientPercentile;
+  if (
+    pathway === "mscp-virtual-visit" &&
+    ((typeof vasoBurden === "number" && vasoBurden >= 60) ||
+      (typeof cohortPctile === "number" && cohortPctile >= 75))
+  ) {
+    pathway = "mscp-in-person";
+    rationale.push(
+      "Data 360 longitudinal context shifted this case from virtual to in-person MSCP visit (burden and cohort percentile both elevated)."
+    );
+  }
+
   return {
     pathway,
     pathwayLabel: pathwayLabel(pathway),
     acuity: PATHWAY_ACUITY[pathway],
-    rationale,
+    rationale: [...rationale, ...groundingExtras.rationale],
     redFlagsTriggered,
     recommendedTargetResponse: PATHWAY_TARGETS[pathway],
     modelProvenance: {
       provider: "pause-scripted",
       model: "pause-care-router-policy@1.0",
       via: "scripted-fallback"
-    }
+    },
+    groundingUsed: grounding
+      ? {
+          insightsCited: groundingExtras.insightsCited,
+          cohortName: grounding.cohortComparison?.cohortName,
+          lastClinicianContactDaysAgo: grounding.lastClinicianContact?.daysAgo
+        }
+      : undefined
   };
 }
 
@@ -189,10 +305,13 @@ export function scriptedRoute(intake: IntakeRecord): RoutingDecision {
  * RoutingDecision shape; on any parsing or transport error we fall
  * back to scriptedRoute() and tag provenance accordingly.
  */
-export async function claudeRoute(intake: IntakeRecord): Promise<RoutingDecision> {
+export async function claudeRoute(
+  intake: IntakeRecord,
+  grounding?: Data360GroundingHint
+): Promise<RoutingDecision> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    const scripted = scriptedRoute(intake);
+    const scripted = scriptedRoute(intake, grounding);
     return {
       ...scripted,
       rationale: [
@@ -212,7 +331,7 @@ export async function claudeRoute(intake: IntakeRecord): Promise<RoutingDecision
 
     const systemPrompt = [
       "You are the Pause-Health.ai Care Router agent.",
-      "Given a structured menopause intake record, choose exactly one care pathway:",
+      "Given a structured menopause intake record AND optional Salesforce Data 360 longitudinal grounding context, choose exactly one care pathway:",
       "  self-care-tracking | mscp-virtual-visit | mscp-in-person |",
       "  urgent-gynecology | behavioral-health-handoff | ed-referral.",
       "Honor these clinical rules without exception:",
@@ -221,12 +340,20 @@ export async function claudeRoute(intake: IntakeRecord): Promise<RoutingDecision
       "  - Any other red-flag acknowledgment -> ed-referral.",
       "  - Unexpected bleeding (any severity) -> urgent-gynecology.",
       "  - Age <40 with menopause-pattern symptoms -> mscp-in-person (rule out POI).",
+      "When Data 360 grounding is provided, you SHOULD:",
+      "  - Cite specific calculated insights or longitudinal observations in your rationale.",
+      "  - Prefer mscp-in-person over mscp-virtual-visit when the patient sits at >=75th percentile of her cohort by vasomotor burden, OR when 30-day vasomotor burden >= 60.",
+      "  - Note 'days since MSCP contact' when >365 days in your rationale.",
       "Reply with a single JSON object matching this exact TypeScript type:",
       "  { pathway: CarePathway; rationale: string[]; redFlagsTriggered: string[] }",
       "Do not include any prose outside the JSON. Do not include code fences."
     ].join("\n");
 
-    const userPrompt = JSON.stringify(intake, null, 2);
+    const userPrompt = JSON.stringify(
+      { intake, data360Grounding: grounding ?? null },
+      null,
+      2
+    );
 
     const resp = await client.messages.create({
       model,
@@ -250,6 +377,7 @@ export async function claudeRoute(intake: IntakeRecord): Promise<RoutingDecision
       throw new Error(`Claude returned unknown pathway: ${parsed.pathway}`);
     }
 
+    const groundingExtras = groundingRationale(grounding);
     return {
       pathway: parsed.pathway,
       pathwayLabel: PATHWAY_LABELS[parsed.pathway],
@@ -261,10 +389,17 @@ export async function claudeRoute(intake: IntakeRecord): Promise<RoutingDecision
         provider: "anthropic",
         model,
         via: "claude-api"
-      }
+      },
+      groundingUsed: grounding
+        ? {
+            insightsCited: groundingExtras.insightsCited,
+            cohortName: grounding.cohortComparison?.cohortName,
+            lastClinicianContactDaysAgo: grounding.lastClinicianContact?.daysAgo
+          }
+        : undefined
     };
   } catch (err) {
-    const scripted = scriptedRoute(intake);
+    const scripted = scriptedRoute(intake, grounding);
     return {
       ...scripted,
       rationale: [
@@ -281,9 +416,12 @@ export async function claudeRoute(intake: IntakeRecord): Promise<RoutingDecision
  * always includes modelProvenance so the Agent Fabric trace viewer can
  * show which path was taken.
  */
-export async function route(intake: IntakeRecord): Promise<RoutingDecision> {
+export async function route(
+  intake: IntakeRecord,
+  grounding?: Data360GroundingHint
+): Promise<RoutingDecision> {
   if (process.env.ANTHROPIC_API_KEY) {
-    return claudeRoute(intake);
+    return claudeRoute(intake, grounding);
   }
-  return scriptedRoute(intake);
+  return scriptedRoute(intake, grounding);
 }

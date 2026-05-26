@@ -270,6 +270,15 @@ export default function AgentforcePage() {
           </li>
           <li>
             <span>
+              <a href="/proposal/data-360">Data 360 grounding</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              Every intake is resolved to a unified Data 360 patient id and
+              enriched with longitudinal context before the Care Router decides.
+            </strong>
+          </li>
+          <li>
+            <span>
               <a href="/proposal/technology">Technology choices</a>
             </span>
             <strong style={{ fontWeight: 500 }}>

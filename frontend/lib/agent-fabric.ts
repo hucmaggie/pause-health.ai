@@ -31,7 +31,12 @@ import { nowIso } from "./a2a";
 export type AgentRecord = {
   id: string;
   name: string;
-  kind: "agentforce" | "anthropic-claude" | "mcp-server" | "mulesoft-process";
+  kind:
+    | "agentforce"
+    | "anthropic-claude"
+    | "mcp-server"
+    | "mulesoft-process"
+    | "salesforce-data-360";
   protocol: "a2a" | "mcp" | "rest";
   endpoint: string;
   version: string;
@@ -39,7 +44,12 @@ export type AgentRecord = {
   capabilities: string[];
   policies: string[];
   provider: string;
-  governanceTier: "patient-facing" | "clinical-decision" | "data-plane" | "integration";
+  governanceTier:
+    | "patient-facing"
+    | "clinical-decision"
+    | "data-plane"
+    | "integration"
+    | "data-grounding";
 };
 
 export type PolicyRecord = {
@@ -155,6 +165,29 @@ const REGISTRY: AgentRecord[] = [
     ],
     provider: "MuleSoft Anypoint",
     governanceTier: "integration"
+  },
+  {
+    id: "salesforce-data-360",
+    name: "Salesforce Data 360 · Unified Patient Grounding",
+    kind: "salesforce-data-360",
+    protocol: "rest",
+    endpoint: "/api/data-360",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Zero-copy federated query across JupyterHealth FHIR, DBDP features, Agentforce intake history, and the customer EHR-of-record",
+      "Calculated Insights (30-day HRV z-score, vasomotor burden index, sleep disruption, days since MSCP contact)",
+      "Identity Resolution with confidence scoring across federated sources",
+      "Population Segments activated to Agentforce, the Agent Fabric, and Health Cloud"
+    ],
+    policies: [
+      "policy.data360.zero-copy-federation",
+      "policy.data360.consent-required-before-grounding",
+      "policy.data360.segment-activation-allowlist",
+      "policy.audit.hipaa-log-every-turn"
+    ],
+    provider: "Salesforce",
+    governanceTier: "data-grounding"
   }
 ];
 
@@ -182,7 +215,13 @@ const POLICIES: PolicyRecord[] = [
     name: "HIPAA audit log",
     description:
       "Every agent turn is logged with a tamper-evident correlation id. Logs are exported to the customer's SIEM via MuleSoft.",
-    appliesTo: ["agentforce-intake", "care-router-claude", "pause-mcp", "mulesoft-ingest"],
+    appliesTo: [
+      "agentforce-intake",
+      "care-router-claude",
+      "pause-mcp",
+      "mulesoft-ingest",
+      "salesforce-data-360"
+    ],
     enforcement: "audit",
     status: "enforced"
   },
@@ -264,6 +303,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "Clinical data crossing MuleSoft Process / Experience tiers must be FHIR R5. Non-conforming payloads are rejected.",
     appliesTo: ["mulesoft-ingest", "pause-mcp"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.data360.zero-copy-federation",
+    name: "Zero-copy federation only",
+    description:
+      "Data 360 must federate into JupyterHealth, the customer's EHR, and the DBDP feature store via the Federation / Iceberg connector. Bulk ingestion of PHI into Salesforce is disallowed.",
+    appliesTo: ["salesforce-data-360"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.data360.consent-required-before-grounding",
+    name: "Consent required before grounding",
+    description:
+      "Care Router grounding calls must be accompanied by an active 'ai-decision-support' consent in the patient's Data 360 consent ledger. Calls without consent are rejected with a redaction.",
+    appliesTo: ["salesforce-data-360", "care-router-claude"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.data360.segment-activation-allowlist",
+    name: "Segment activation allow-list",
+    description:
+      "Data 360 segments may activate only to the customer's approved downstream channels (Agentforce, Agent Fabric, Health Cloud, Marketing Cloud). Activations to unapproved channels are blocked.",
+    appliesTo: ["salesforce-data-360"],
     enforcement: "block",
     status: "enforced"
   }

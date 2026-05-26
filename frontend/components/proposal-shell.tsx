@@ -21,7 +21,8 @@ export const proposalSections = [
   { href: "/proposal/agentforce", label: "Agentforce Intake" },
   { href: "/proposal/mulesoft", label: "MuleSoft Integration" },
   { href: "/proposal/mcp", label: "MCP Server" },
-  { href: "/proposal/agent-fabric", label: "Agent Fabric" }
+  { href: "/proposal/agent-fabric", label: "Agent Fabric" },
+  { href: "/proposal/data-360", label: "Data 360" }
 ];
 
 export function ProposalShell({ eyebrow, title, subtitle, children }: ProposalShellProps) {

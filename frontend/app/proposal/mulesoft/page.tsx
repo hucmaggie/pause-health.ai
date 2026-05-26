@@ -313,6 +313,15 @@ export default function MulesoftPage() {
           </li>
           <li>
             <span>
+              <a href="/proposal/data-360">Data 360 grounding</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              Salesforce Data 360 federates over the same FHIR substrate
+              MuleSoft writes to — unified patient memory without moving PHI.
+            </strong>
+          </li>
+          <li>
+            <span>
               <a
                 href="https://www.mulesoft.com/api-led-connectivity"
                 target="_blank"

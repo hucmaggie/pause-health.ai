@@ -314,6 +314,30 @@ function AgentFabricConsoleInner() {
         <p style={{ marginTop: "0.4rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
           taskId = <code>{activeTaskId || "(none selected)"}</code>
         </p>
+        {(() => {
+          const data360Span = spans.find(
+            (s) => s.agentId === "salesforce-data-360"
+          );
+          const unifiedId =
+            data360Span?.attributes &&
+            (data360Span.attributes as Record<string, unknown>).unifiedPatientId;
+          if (typeof unifiedId === "string" && unifiedId.length > 0) {
+            return (
+              <p style={{ marginTop: "0.4rem" }}>
+                <a
+                  href={`/api/data-360/patient/${encodeURIComponent(unifiedId)}/record`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary"
+                  style={{ fontSize: "0.82rem" }}
+                >
+                  View Data 360 federated record (JSON)
+                </a>
+              </p>
+            );
+          }
+          return null;
+        })()}
         {spans.length === 0 ? (
           <p style={{ color: "var(--muted)", marginTop: "0.6rem" }}>
             No spans for this task yet.
