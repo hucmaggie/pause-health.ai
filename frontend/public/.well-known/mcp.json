@@ -1,0 +1,71 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schemas/mcp-server-descriptor/draft-1.json",
+  "name": "pause-health-mcp",
+  "displayName": "Pause-Health.ai MCP",
+  "version": "0.1.0",
+  "vendor": {
+    "name": "Pause-Health.ai",
+    "url": "https://pause-health.ai"
+  },
+  "description": "MCP server that exposes the Pause-Health.ai MuleSoft Experience APIs (patient timeline, intake, provider directory) as tools for AI agents. Today fronts a mocked Experience API plane; in production it transparently fronts a customer's MuleSoft Anypoint Experience tier (no client changes -- only PAUSE_MCP_BASE_URL changes).",
+  "homepage": "https://pause-health.ai/proposal/mcp",
+  "license": "UNLICENSED",
+  "transport": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "@pause-health/mcp"]
+  },
+  "configuration": {
+    "env": [
+      {
+        "name": "PAUSE_MCP_BASE_URL",
+        "description": "Base URL for the Experience APIs. Default https://pause-health.ai.",
+        "required": false,
+        "default": "https://pause-health.ai"
+      },
+      {
+        "name": "PAUSE_MCP_API_KEY",
+        "description": "Optional bearer token sent as Authorization: Bearer <key>.",
+        "required": false,
+        "secret": true
+      }
+    ]
+  },
+  "tools": [
+    {
+      "name": "get_patient_timeline",
+      "description": "Return a FHIR R5 Bundle for a patient: Patient resource + raw wearable Observations + DBDP-computed feature Observation with derivedFrom provenance.",
+      "productionApi": "MuleSoft pause-patient-bundle-process-api"
+    },
+    {
+      "name": "get_patient_intake",
+      "description": "Return the structured intake record produced by the Salesforce Agentforce Service Agent (chief complaint, symptom cluster, red-flag screen, triage recommendation).",
+      "productionApi": "MuleSoft pause-intake-process-api"
+    },
+    {
+      "name": "find_menopause_providers",
+      "description": "Search Pause's provider directory by ZIP and menopause-certified flag. Returns providers ranked by Pause's internal graph score.",
+      "productionApi": "MuleSoft pause-provider-directory-experience-api"
+    },
+    {
+      "name": "experience_api_health",
+      "description": "Liveness check for the Experience API plane.",
+      "productionApi": "MuleSoft pause-patient-bundle-process-api"
+    }
+  ],
+  "mockedExperienceApis": {
+    "baseUrl": "https://pause-health.ai",
+    "endpoints": [
+      "/api/mulesoft/health",
+      "/api/mulesoft/patient/{id}/timeline",
+      "/api/mulesoft/patient/{id}/intake",
+      "/api/mulesoft/providers?zip={zip}&menopause=true&limit={n}"
+    ],
+    "note": "These endpoints are deterministic mocks served by the Next.js frontend. In production they are replaced by MuleSoft Anypoint Experience APIs running on the customer's Runtime Fabric or CloudHub 2.0. The MCP tool surface does not change."
+  },
+  "registerInClient": {
+    "claudeDesktop": "Add to ~/Library/Application Support/Claude/claude_desktop_config.json under mcpServers.pause-health using transport.command and transport.args.",
+    "cursor": "Add to ~/.cursor/mcp.json (or the project-local .cursor/mcp.json) under mcpServers.pause-health using transport.command and transport.args.",
+    "agentforce": "Register behind the Salesforce External Services connector or Agentforce MCP gateway; point PAUSE_MCP_BASE_URL at the customer's Anypoint Experience-tier base URL."
+  }
+}

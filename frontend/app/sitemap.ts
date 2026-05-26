@@ -19,6 +19,7 @@ const STATIC_PATHS: { path: string; priority: number; changeFrequency: "yearly" 
   { path: "/proposal/provider-graph", priority: 0.7, changeFrequency: "monthly" },
   { path: "/proposal/agentforce", priority: 0.7, changeFrequency: "monthly" },
   { path: "/proposal/mulesoft", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/proposal/mcp", priority: 0.7, changeFrequency: "monthly" },
   { path: "/contact", priority: 0.7, changeFrequency: "monthly" },
   { path: "/careers", priority: 0.7, changeFrequency: "weekly" },
   { path: "/press", priority: 0.4, changeFrequency: "monthly" },

@@ -1,0 +1,398 @@
+/**
+ * Shared fixtures for the mocked Pause-Health.ai Experience APIs.
+ *
+ * In production these payloads are served by MuleSoft Process / Experience
+ * APIs running on the customer's Anypoint Runtime Fabric or CloudHub 2.0.
+ * Here they are deterministic mocks so prospects, partners, MCP clients,
+ * and reviewers can `curl` real-shape responses without any deployment.
+ *
+ * Keep these fixtures dependency-free and pure JSON-serializable.
+ */
+
+export const DEMO_PATIENT_ID = "pause-demo-patient-001";
+const RAW_HRV_ID = "obs-hrv-raw-001";
+
+export function buildPatientTimelineBundle(patientId: string = DEMO_PATIENT_ID) {
+  return {
+    resourceType: "Bundle",
+    type: "searchset",
+    meta: {
+      lastUpdated: "2026-05-25T18:00:00Z",
+      source: "urn:pause-health:mulesoft:pause-patient-bundle-process-api"
+    },
+    entry: [
+      {
+        fullUrl: `urn:uuid:${patientId}`,
+        resource: {
+          resourceType: "Patient",
+          id: patientId,
+          meta: { profile: ["http://hl7.org/fhir/StructureDefinition/Patient"] },
+          identifier: [
+            { system: "urn:pause-health:demo-cohort", value: patientId }
+          ],
+          active: true,
+          gender: "female",
+          birthDate: "1974-08-12",
+          extension: [
+            {
+              url: "urn:pause-health:extension:menopause-stage",
+              valueString: "late-perimenopause"
+            }
+          ]
+        }
+      },
+      {
+        fullUrl: "urn:uuid:obs-heart-rate-001",
+        resource: {
+          resourceType: "Observation",
+          id: "obs-heart-rate-001",
+          status: "final",
+          category: [
+            {
+              coding: [
+                {
+                  system:
+                    "http://terminology.hl7.org/CodeSystem/observation-category",
+                  code: "vital-signs",
+                  display: "Vital Signs"
+                }
+              ]
+            }
+          ],
+          code: {
+            coding: [
+              {
+                system: "http://loinc.org",
+                code: "8867-4",
+                display: "Heart rate"
+              }
+            ]
+          },
+          subject: { reference: `Patient/${patientId}` },
+          effectiveDateTime: "2026-05-25T07:30:00Z",
+          valueQuantity: {
+            value: 72,
+            unit: "/min",
+            system: "http://unitsofmeasure.org",
+            code: "/min"
+          },
+          device: { display: "Oura Ring Gen3" },
+          extension: [
+            {
+              url: "urn:pause-health:extension:mulesoft-pipeline-version",
+              valueString: "pause-ingest-process-api@1.0"
+            }
+          ]
+        }
+      },
+      {
+        fullUrl: "urn:uuid:obs-sleep-duration-001",
+        resource: {
+          resourceType: "Observation",
+          id: "obs-sleep-duration-001",
+          status: "final",
+          category: [
+            {
+              coding: [
+                {
+                  system:
+                    "http://terminology.hl7.org/CodeSystem/observation-category",
+                  code: "activity",
+                  display: "Activity"
+                }
+              ]
+            }
+          ],
+          code: {
+            coding: [
+              {
+                system: "http://loinc.org",
+                code: "93832-4",
+                display: "Sleep duration"
+              }
+            ]
+          },
+          subject: { reference: `Patient/${patientId}` },
+          effectivePeriod: {
+            start: "2026-05-24T23:14:00Z",
+            end: "2026-05-25T06:42:00Z"
+          },
+          valueQuantity: {
+            value: 6.5,
+            unit: "h",
+            system: "http://unitsofmeasure.org",
+            code: "h"
+          },
+          device: { display: "Oura Ring Gen3" }
+        }
+      },
+      {
+        fullUrl: `urn:uuid:${RAW_HRV_ID}`,
+        resource: {
+          resourceType: "Observation",
+          id: RAW_HRV_ID,
+          status: "final",
+          category: [
+            {
+              coding: [
+                {
+                  system:
+                    "http://terminology.hl7.org/CodeSystem/observation-category",
+                  code: "vital-signs",
+                  display: "Vital Signs"
+                }
+              ]
+            }
+          ],
+          code: {
+            coding: [
+              {
+                system: "http://loinc.org",
+                code: "80404-7",
+                display: "R-R interval by EKG"
+              }
+            ]
+          },
+          subject: { reference: `Patient/${patientId}` },
+          effectivePeriod: {
+            start: "2026-05-25T02:00:00Z",
+            end: "2026-05-25T02:03:00Z"
+          },
+          component: Array.from({ length: 6 }, (_, idx) => ({
+            code: { text: `RR interval ${idx + 1}` },
+            valueQuantity: {
+              value: [812, 798, 825, 841, 833, 820][idx],
+              unit: "ms",
+              system: "http://unitsofmeasure.org",
+              code: "ms"
+            }
+          })),
+          device: { display: "Oura Ring Gen3" }
+        }
+      },
+      {
+        fullUrl: "urn:uuid:obs-feature-rmssd-001",
+        resource: {
+          resourceType: "Observation",
+          id: "obs-feature-rmssd-001",
+          status: "final",
+          category: [
+            {
+              coding: [
+                {
+                  system:
+                    "http://terminology.hl7.org/CodeSystem/observation-category",
+                  code: "survey",
+                  display: "Survey"
+                }
+              ]
+            }
+          ],
+          code: {
+            coding: [
+              {
+                system: "urn:pause-health:code:dbdp-features",
+                code: "hrv_rmssd_sliding_180s",
+                display: "HRV RMSSD (sliding 180s window, DBDP/FLIRT)"
+              }
+            ],
+            text: "Sliding-window RMSSD"
+          },
+          subject: { reference: `Patient/${patientId}` },
+          effectivePeriod: {
+            start: "2026-05-25T02:00:00Z",
+            end: "2026-05-25T02:03:00Z"
+          },
+          valueQuantity: {
+            value: 18.4,
+            unit: "ms",
+            system: "http://unitsofmeasure.org",
+            code: "ms"
+          },
+          derivedFrom: [{ reference: `Observation/${RAW_HRV_ID}` }],
+          extension: [
+            {
+              url: "urn:pause-health:extension:feature-source",
+              valueString: "pause_ingest.features.hrv_features_flirt"
+            },
+            {
+              url: "urn:pause-health:extension:mulesoft-pipeline-version",
+              valueString: "pause-ingest-process-api@1.0"
+            }
+          ]
+        }
+      }
+    ]
+  };
+}
+
+/**
+ * Structured intake record produced by the Salesforce Agentforce Service
+ * Agent (or the local fallback) and persisted by the MuleSoft Process API
+ * `pause-intake-process-api`. The shape is intentionally flat and
+ * boring -- this is what a downstream EHR or clinician dashboard
+ * consumes, not a raw chat transcript.
+ */
+export function buildPatientIntakeRecord(patientId: string = DEMO_PATIENT_ID) {
+  return {
+    patientId,
+    capturedAt: "2026-05-25T17:42:00Z",
+    capturedBy: {
+      channel: "agentforce-service-agent",
+      agentVersion: "pause-intake-agent@2.1",
+      operator: "self-service"
+    },
+    chiefComplaint:
+      "Frequent night-time hot flashes (4-6 per night) and persistent sleep disruption for ~5 months.",
+    symptoms: [
+      { code: "vasomotor.hot_flashes", severity: 7, frequencyPerWeek: 35 },
+      { code: "sleep.disruption", severity: 8, frequencyPerWeek: 28 },
+      { code: "mood.irritability", severity: 5, frequencyPerWeek: 14 },
+      { code: "cognitive.brain_fog", severity: 4, frequencyPerWeek: 10 }
+    ],
+    menopauseStage: "late-perimenopause",
+    lastMenstrualPeriod: "2025-11-02",
+    redFlagScreen: {
+      postmenopausalBleeding: false,
+      severeChestPain: false,
+      newNeurologicalDeficit: false,
+      suicidalIdeation: false,
+      passed: true
+    },
+    currentMedications: [
+      { name: "Vitamin D3", dose: "2000 IU", route: "oral", daily: true }
+    ],
+    allergies: [],
+    triageRecommendation: {
+      acuity: "routine",
+      suggestedSpecialty: "menopause-certified-practitioner",
+      rationale:
+        "Symptom cluster consistent with vasomotor menopause phenotype; no red-flag findings; HRV biomarker drift confirmed via wearable feed."
+    },
+    provenance: {
+      processApi: "pause-intake-process-api@1.3",
+      experienceApi: "pause-clinical-experience-api@1.0",
+      hipaaAuditId: "audit-2026-05-25-17-42-001"
+    }
+  };
+}
+
+/**
+ * Slice of the provider graph (Path B from /proposal/menopause-society):
+ * a future defensible directory of menopause-experienced clinicians
+ * synthesized from CMS NPPES, state board registries, and the MSCP
+ * credential list. Today this is hand-curated synthetic data so the
+ * shape and filtering UX are real, even though the directory is not.
+ *
+ * Filters honored: zip (3-digit prefix match), menopauseOnly (boolean).
+ */
+export type ProviderRecord = {
+  npi: string;
+  name: string;
+  credentials: string[];
+  specialty: string;
+  menopauseCertified: boolean;
+  city: string;
+  state: string;
+  zip: string;
+  acceptingNewPatients: boolean;
+  telehealth: boolean;
+  graphScore: number;
+};
+
+const PROVIDER_DIRECTORY: ProviderRecord[] = [
+  {
+    npi: "1730155570",
+    name: "Dr. Priya Anand, MD, MSCP",
+    credentials: ["MD", "MSCP", "FACOG"],
+    specialty: "Obstetrics & Gynecology",
+    menopauseCertified: true,
+    city: "Irvine",
+    state: "CA",
+    zip: "92614",
+    acceptingNewPatients: true,
+    telehealth: true,
+    graphScore: 0.94
+  },
+  {
+    npi: "1457390021",
+    name: "Dr. Helen Okafor, DO, MSCP",
+    credentials: ["DO", "MSCP"],
+    specialty: "Internal Medicine — Women's Health",
+    menopauseCertified: true,
+    city: "Newport Beach",
+    state: "CA",
+    zip: "92660",
+    acceptingNewPatients: true,
+    telehealth: true,
+    graphScore: 0.91
+  },
+  {
+    npi: "1881903422",
+    name: "Dr. Marisol Reyes, MD",
+    credentials: ["MD", "FACOG"],
+    specialty: "Obstetrics & Gynecology",
+    menopauseCertified: false,
+    city: "Santa Ana",
+    state: "CA",
+    zip: "92705",
+    acceptingNewPatients: false,
+    telehealth: false,
+    graphScore: 0.71
+  },
+  {
+    npi: "1306188891",
+    name: "Dr. Aileen Chen, NP, MSCP",
+    credentials: ["NP", "MSCP"],
+    specialty: "Family Medicine — Midlife Health",
+    menopauseCertified: true,
+    city: "Brooklyn",
+    state: "NY",
+    zip: "11215",
+    acceptingNewPatients: true,
+    telehealth: true,
+    graphScore: 0.89
+  },
+  {
+    npi: "1922450088",
+    name: "Dr. Samuel Levin, MD, MSCP",
+    credentials: ["MD", "MSCP"],
+    specialty: "Endocrinology",
+    menopauseCertified: true,
+    city: "Manhattan",
+    state: "NY",
+    zip: "10024",
+    acceptingNewPatients: false,
+    telehealth: true,
+    graphScore: 0.87
+  }
+];
+
+export function queryProviderDirectory(opts: {
+  zip?: string;
+  menopauseOnly?: boolean;
+  limit?: number;
+}) {
+  const { zip, menopauseOnly, limit } = opts;
+  let rows = PROVIDER_DIRECTORY.slice();
+  if (menopauseOnly) {
+    rows = rows.filter((r) => r.menopauseCertified);
+  }
+  if (zip && zip.length >= 3) {
+    const prefix = zip.slice(0, 3);
+    rows = rows.filter((r) => r.zip.startsWith(prefix));
+  }
+  rows.sort((a, b) => b.graphScore - a.graphScore);
+  const total = rows.length;
+  if (limit && limit > 0) rows = rows.slice(0, limit);
+  return {
+    query: { zip: zip ?? null, menopauseOnly: !!menopauseOnly, limit: limit ?? null },
+    total,
+    returned: rows.length,
+    providers: rows,
+    provenance: {
+      sources: ["CMS NPPES (synthetic slice)", "MSCP credential list (synthetic)"],
+      experienceApi: "pause-provider-directory-experience-api@0.4"
+    }
+  };
+}

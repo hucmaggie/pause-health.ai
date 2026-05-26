@@ -250,6 +250,16 @@ export default function AgentforcePage() {
           </li>
           <li>
             <span>
+              <a href="/proposal/mcp">MCP server</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              In production, the Agentforce Service Agent consumes the Pause MCP server
+              to call <code>get_patient_timeline</code>, <code>get_patient_intake</code>,
+              and <code>find_menopause_providers</code> as native tools.
+            </strong>
+          </li>
+          <li>
+            <span>
               <a href="/proposal/technology">Technology choices</a>
             </span>
             <strong style={{ fontWeight: 500 }}>

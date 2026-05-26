@@ -19,7 +19,8 @@ export const proposalSections = [
   { href: "/proposal/menopause-society", label: "Menopause Society" },
   { href: "/proposal/provider-graph", label: "Provider Graph" },
   { href: "/proposal/agentforce", label: "Agentforce Intake" },
-  { href: "/proposal/mulesoft", label: "MuleSoft Integration" }
+  { href: "/proposal/mulesoft", label: "MuleSoft Integration" },
+  { href: "/proposal/mcp", label: "MCP Server" }
 ];
 
 export function ProposalShell({ eyebrow, title, subtitle, children }: ProposalShellProps) {

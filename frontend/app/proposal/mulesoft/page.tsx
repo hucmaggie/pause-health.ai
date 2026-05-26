@@ -294,6 +294,15 @@ export default function MulesoftPage() {
           </li>
           <li>
             <span>
+              <a href="/proposal/mcp">MCP server</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              The agent-side surface that turns these MuleSoft Experience APIs into
+              tools for Claude, Cursor, and Agentforce.
+            </strong>
+          </li>
+          <li>
+            <span>
               <a
                 href="https://www.mulesoft.com/api-led-connectivity"
                 target="_blank"

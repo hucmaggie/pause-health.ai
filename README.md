@@ -1,10 +1,12 @@
 # Pause-Health.ai monorepo
 
-This repository hosts four things:
+This repository hosts five things:
 
 - **`frontend/`** — Next.js marketing site, investor brief, and clickable
   prototype for [Pause-Health.ai](https://pause-health.ai). Deployed to
-  Vercel. See `frontend/README.md`.
+  Vercel. Also serves the mocked MuleSoft Experience APIs under
+  `/api/mulesoft/*` and the MCP descriptor at `/.well-known/mcp.json`. See
+  `frontend/README.md`.
 - **`pause_ingest/`** — Python wearable ingest worker. Normalizes vendor JSON
   through [omh-shim](https://github.com/jupyterhealth/omh-shim), computes
   clinical features via the
@@ -16,8 +18,17 @@ This repository hosts four things:
   API flow + DataWeave 2.0 transform) showing the three-tier API-Led
   Connectivity pattern Pause uses to integrate JupyterHealth, DBDP, and
   consumer wearables in a customer's Anypoint Platform. See
-  `mulesoft/README.md`. A live mocked Experience API is served by the
-  Next.js frontend at `/api/mulesoft/health`.
+  `mulesoft/README.md`. Live mocked Experience APIs are served by the
+  Next.js frontend at `/api/mulesoft/health`,
+  `/api/mulesoft/patient/{id}/timeline`,
+  `/api/mulesoft/patient/{id}/intake`, and `/api/mulesoft/providers`.
+- **`mcp/`** — [Model Context Protocol](https://modelcontextprotocol.io/)
+  server (`@pause-health/mcp`) that exposes the MuleSoft Experience APIs as
+  four tools (`get_patient_timeline`, `get_patient_intake`,
+  `find_menopause_providers`, `experience_api_health`) for Claude Desktop,
+  Cursor, the Salesforce Agentforce Service Agent, and any MCP-compliant
+  client. Today fronts the mocks; in production fronts a customer's
+  Anypoint Experience tier via `PAUSE_MCP_BASE_URL`. See `mcp/README.md`.
 - **Legacy Northstar Shipping Cost API** (this file, below). The FastAPI
   service is still functional and was the original substrate the repo was
   created on; it remains here as a historical artifact while the
@@ -56,11 +67,13 @@ Deep-dive sections (each a routed page):
   Agent, with graceful Pause-branded fallback when no org is configured.
 - `/proposal/mulesoft` — Integration plane on MuleSoft Anypoint, with a
   live mocked Experience API at `/api/mulesoft/health`.
+- `/proposal/mcp` — Pause as a tool surface for AI agents. MCP server
+  registration snippets for Claude Desktop, Cursor, and Agentforce.
 
 ## Local development
 
 ```bash
-# Frontend
+# Frontend (and the mocked MuleSoft Experience APIs + MCP descriptor)
 cd frontend
 npm install
 npm run dev                # http://localhost:3000
@@ -70,6 +83,12 @@ cd pause_ingest
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pytest -q                  # 20 tests covering convert + features + Empatica stub
+
+# MCP server (wraps the mocked Experience APIs)
+cd mcp
+npm install                # also runs `npm run build`
+PAUSE_MCP_BASE_URL=http://localhost:3000 node scripts/smoke.mjs
+# Then register in Claude Desktop / Cursor / Agentforce -- see mcp/README.md.
 ```
 
 See each subdirectory's README for full setup and configuration details.

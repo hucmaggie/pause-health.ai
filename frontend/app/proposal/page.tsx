@@ -42,7 +42,9 @@ const partTwoSummaries: Record<string, string> = {
   "/proposal/agentforce":
     "Patient intake on Salesforce Agentforce Service Agent — runs on the substrate our health-system customers already operate.",
   "/proposal/mulesoft":
-    "Integration plane on MuleSoft Anypoint — three-tier API-Led Connectivity stitching JupyterHealth, DBDP, and wearables into a single FHIR substrate."
+    "Integration plane on MuleSoft Anypoint — three-tier API-Led Connectivity stitching JupyterHealth, DBDP, and wearables into a single FHIR substrate.",
+  "/proposal/mcp":
+    "Pause as a tool surface for AI agents — a Model Context Protocol server fronting the MuleSoft Experience APIs for Claude Desktop, Cursor, and Agentforce."
 };
 
 export default function ProposalPage() {
