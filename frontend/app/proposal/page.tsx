@@ -44,7 +44,9 @@ const partTwoSummaries: Record<string, string> = {
   "/proposal/mulesoft":
     "Integration plane on MuleSoft Anypoint — three-tier API-Led Connectivity stitching JupyterHealth, DBDP, and wearables into a single FHIR substrate.",
   "/proposal/mcp":
-    "Pause as a tool surface for AI agents — a Model Context Protocol server fronting the MuleSoft Experience APIs for Claude Desktop, Cursor, and Agentforce."
+    "Pause as a tool surface for AI agents — a Model Context Protocol server fronting the MuleSoft Experience APIs for Claude Desktop, Cursor, and Agentforce.",
+  "/proposal/agent-fabric":
+    "Four agents, two open protocols, one governed control plane — Agentforce + Anthropic Claude + Pause MCP + MuleSoft, orchestrated by Agent Fabric."
 };
 
 export default function ProposalPage() {

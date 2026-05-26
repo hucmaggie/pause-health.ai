@@ -303,6 +303,16 @@ export default function MulesoftPage() {
           </li>
           <li>
             <span>
+              <a href="/proposal/agent-fabric">Agent Fabric control plane</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              MuleSoft Agent Fabric layered on top of this integration plane:
+              agent registry, policy enforcement, end-to-end multi-agent
+              traces, identity-based security across A2A and MCP.
+            </strong>
+          </li>
+          <li>
+            <span>
               <a
                 href="https://www.mulesoft.com/api-led-connectivity"
                 target="_blank"

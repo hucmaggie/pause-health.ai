@@ -1,0 +1,201 @@
+import { NextResponse } from "next/server";
+import {
+  type A2ARpcRequest,
+  type A2ATask,
+  type A2ATasksSendParams,
+  agentMessage,
+  newTaskId,
+  nowIso
+} from "../../../../../lib/a2a";
+import { route, type IntakeRecord } from "../../../../../lib/care-router";
+import {
+  evaluateGovernance,
+  recordInstantSpan
+} from "../../../../../lib/agent-fabric";
+
+/**
+ * Google A2A `tasks/send` endpoint for the Pause Care Router agent.
+ *
+ *   POST /api/agents/care-router/tasks
+ *   Content-Type: application/json
+ *
+ * Body is the JSON-RPC envelope. params must include:
+ *   - id: client-chosen task id (we reuse for the trace)
+ *   - sessionId: optional grouping (e.g. one patient session)
+ *   - message: A2A Message with at least one data part containing the
+ *     IntakeRecord under message.parts[*].data.intake.
+ *   - metadata: optional. Pause respects metadata.parentSpanId to
+ *     stitch this task into the upstream agent's trace.
+ *
+ * Flow:
+ *   1. Pre-flight governance evaluation via the Agent Fabric.
+ *      If policies block, return a JSON-RPC error and an A2A task
+ *      in state `failed`.
+ *   2. Call route() -- real Claude when ANTHROPIC_API_KEY is set,
+ *      scripted fallback otherwise.
+ *   3. Record one span on the Agent Fabric trace, capturing duration,
+ *      model provenance, pathway, and red-flags.
+ *   4. Return a completed A2ATask with the RoutingDecision attached
+ *      as an artifact and as a data part on the final agent message.
+ */
+export async function POST(req: Request) {
+  let body: A2ARpcRequest<A2ATasksSendParams>;
+  try {
+    body = (await req.json()) as A2ARpcRequest<A2ATasksSendParams>;
+  } catch {
+    return NextResponse.json(
+      {
+        jsonrpc: "2.0",
+        id: null,
+        error: { code: -32700, message: "Parse error" }
+      },
+      { status: 400 }
+    );
+  }
+
+  if (body.jsonrpc !== "2.0" || body.method !== "tasks/send" || !body.params) {
+    return NextResponse.json(
+      {
+        jsonrpc: "2.0",
+        id: body?.id ?? null,
+        error: {
+          code: -32600,
+          message:
+            "Invalid Request -- expected JSON-RPC 2.0 with method=tasks/send"
+        }
+      },
+      { status: 400 }
+    );
+  }
+
+  const params = body.params;
+  const taskId = params.id || newTaskId("care-router");
+  const sessionId = params.sessionId;
+  const parentSpanId =
+    typeof params.metadata?.parentSpanId === "string"
+      ? (params.metadata.parentSpanId as string)
+      : undefined;
+
+  const dataPart = params.message?.parts?.find((p) => p.type === "data");
+  const intake: IntakeRecord =
+    dataPart && dataPart.type === "data" && typeof dataPart.data === "object"
+      ? ((dataPart.data as { intake?: IntakeRecord }).intake ??
+        (dataPart.data as IntakeRecord))
+      : {};
+
+  const governance = evaluateGovernance({
+    agentId: "care-router-claude",
+    task: {
+      hasRedFlagScreen: intake.redFlagsAcknowledged !== undefined,
+      requestedModel:
+        process.env.PAUSE_CARE_ROUTER_MODEL ?? "claude-sonnet-4-5-20250929",
+      hasRationaleField: true
+    }
+  });
+
+  if (governance.decision === "block") {
+    recordInstantSpan({
+      taskId,
+      parentSpanId,
+      agentId: "care-router-claude",
+      operation: "a2a.tasks/send.blocked",
+      protocol: "a2a",
+      status: "error",
+      attributes: {
+        violations: governance.blockingViolations,
+        policiesEvaluated: governance.appliesPolicies.length
+      }
+    });
+    const failed: A2ATask = {
+      id: taskId,
+      sessionId,
+      status: {
+        state: "failed",
+        timestamp: nowIso(),
+        message: agentMessage(
+          `Pause Agent Fabric blocked this task: ${governance.blockingViolations
+            .map((v) => `${v.policyId} (${v.reason})`)
+            .join("; ")}`,
+          { blockingViolations: governance.blockingViolations }
+        )
+      },
+      metadata: {
+        agentFabric: {
+          decision: "block",
+          policiesEvaluated: governance.appliesPolicies.map((p) => p.id),
+          violations: governance.blockingViolations
+        }
+      }
+    };
+    return NextResponse.json({
+      jsonrpc: "2.0",
+      id: body.id,
+      result: failed
+    });
+  }
+
+  const startedAt = Date.now();
+  const decision = await route(intake);
+  const finishedAt = Date.now();
+
+  const span = recordInstantSpan({
+    taskId,
+    parentSpanId,
+    agentId: "care-router-claude",
+    operation: "a2a.tasks/send",
+    protocol: "a2a",
+    status: "ok",
+    attributes: {
+      pathway: decision.pathway,
+      acuity: decision.acuity,
+      redFlagsTriggered: decision.redFlagsTriggered,
+      provider: decision.modelProvenance.provider,
+      model: decision.modelProvenance.model,
+      via: decision.modelProvenance.via,
+      policiesEvaluated: governance.appliesPolicies.length,
+      durationMs: finishedAt - startedAt,
+      ageBand: intake.ageBand,
+      primarySymptom: intake.primarySymptom,
+      severity: intake.severity
+    }
+  });
+
+  const completed: A2ATask = {
+    id: taskId,
+    sessionId,
+    status: {
+      state: "completed",
+      timestamp: nowIso(),
+      message: agentMessage(
+        `Recommended pathway: ${decision.pathwayLabel} (${decision.acuity}). ${decision.rationale[0] ?? ""}`,
+        { decision }
+      )
+    },
+    history: [params.message],
+    artifacts: [
+      {
+        name: "RoutingDecision",
+        description:
+          "Care pathway decision for the supplied menopause intake record.",
+        index: 0,
+        parts: [
+          { type: "data", data: decision as unknown as Record<string, unknown> }
+        ]
+      }
+    ],
+    metadata: {
+      agentFabric: {
+        decision: "allow",
+        policiesEvaluated: governance.appliesPolicies.map((p) => p.id),
+        traceSpanId: span.id,
+        traceTaskId: span.taskId
+      }
+    }
+  };
+
+  return NextResponse.json({
+    jsonrpc: "2.0",
+    id: body.id,
+    result: completed
+  });
+}

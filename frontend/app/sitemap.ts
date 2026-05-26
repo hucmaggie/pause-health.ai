@@ -20,6 +20,7 @@ const STATIC_PATHS: { path: string; priority: number; changeFrequency: "yearly" 
   { path: "/proposal/agentforce", priority: 0.7, changeFrequency: "monthly" },
   { path: "/proposal/mulesoft", priority: 0.7, changeFrequency: "monthly" },
   { path: "/proposal/mcp", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/proposal/agent-fabric", priority: 0.75, changeFrequency: "monthly" },
   { path: "/contact", priority: 0.7, changeFrequency: "monthly" },
   { path: "/careers", priority: 0.7, changeFrequency: "weekly" },
   { path: "/press", priority: 0.4, changeFrequency: "monthly" },
@@ -32,7 +33,8 @@ const STATIC_PATHS: { path: string; priority: number; changeFrequency: "yearly" 
   { path: "/demo/intake", priority: 0.6, changeFrequency: "monthly" },
   { path: "/demo/patient", priority: 0.6, changeFrequency: "monthly" },
   { path: "/demo/routing", priority: 0.6, changeFrequency: "monthly" },
-  { path: "/demo/analytics", priority: 0.6, changeFrequency: "monthly" }
+  { path: "/demo/analytics", priority: 0.6, changeFrequency: "monthly" },
+  { path: "/demo/agent-fabric", priority: 0.65, changeFrequency: "weekly" }
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

@@ -397,6 +397,15 @@ export default function McpPage() {
           </li>
           <li>
             <span>
+              <a href="/proposal/agent-fabric">Agent Fabric control plane</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              How MCP tool calls and A2A handoffs are jointly governed, traced,
+              and secured across every Pause agent.
+            </strong>
+          </li>
+          <li>
+            <span>
               <a
                 href="https://modelcontextprotocol.io/"
                 target="_blank"

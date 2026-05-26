@@ -1,4 +1,5 @@
 import { DemoShell } from "../../../components/demo-shell";
+import { LatestCareRouterDecision } from "../../../components/latest-care-router-decision";
 import {
   MSCP_DIRECTORY_LABELS,
   mscpDirectoryUrl
@@ -41,8 +42,12 @@ export default function RoutingDemoPage() {
   return (
     <DemoShell
       title="Smart Care Pathway Routing"
-      subtitle="Recommendations translate into polished, policy-aware menopause care pathways with clear response targets."
+      subtitle="Recommendations translate into polished, policy-aware menopause care pathways with clear response targets. Each decision is produced by the Anthropic-backed Care Router agent (or its deterministic fallback) and audited by the Pause Agent Fabric."
     >
+      <section style={{ marginBottom: "1.5rem" }}>
+        <LatestCareRouterDecision />
+      </section>
+
       <section className="demo-grid">
         <article className="card">
           <h3>Care routing matrix</h3>

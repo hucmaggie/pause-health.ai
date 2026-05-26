@@ -4,6 +4,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AGENTFORCE_COPY } from "../lib/agentforce";
 
+type RoutingArtifact = {
+  pathway: string;
+  pathwayLabel: string;
+  acuity: string;
+  rationale: string[];
+  redFlagsTriggered: string[];
+  recommendedTargetResponse: string;
+  modelProvenance: { provider: string; model: string; via: string };
+};
+
 /**
  * Pause-Health.ai Intake Assistant — scripted fallback.
  *
@@ -148,6 +158,11 @@ export function AgentforceFallback() {
       text: SCRIPT[0].prompt
     }
   ]);
+  const [a2aStatus, setA2aStatus] = useState<
+    "idle" | "handing-off" | "completed" | "failed"
+  >("idle");
+  const [routing, setRouting] = useState<RoutingArtifact | null>(null);
+  const [traceTaskId, setTraceTaskId] = useState<string | null>(null);
 
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const currentStep = SCRIPT[stepIndex];
@@ -159,6 +174,47 @@ export function AgentforceFallback() {
       transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
     }
   }, [messages]);
+
+  useEffect(() => {
+    if (!isComplete || a2aStatus !== "idle") return;
+    let cancelled = false;
+    const intake = {
+      preferredName: captured.preferredName,
+      ageBand: captured.ageBand,
+      cycleStatus: captured.cycleStatus,
+      primarySymptom: captured.primarySymptom,
+      severity: captured.severity,
+      redFlagsAcknowledged: captured.redFlagsAcknowledged
+    };
+    setA2aStatus("handing-off");
+    (async () => {
+      try {
+        const res = await fetch("/api/intake/route-to-care-router", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ intake })
+        });
+        if (!res.ok) throw new Error(`handoff failed: ${res.status}`);
+        const payload = (await res.json()) as {
+          taskId?: string;
+          decision?: RoutingArtifact | null;
+        };
+        if (cancelled) return;
+        if (payload.decision) {
+          setRouting(payload.decision);
+          setTraceTaskId(payload.taskId ?? null);
+          setA2aStatus("completed");
+        } else {
+          setA2aStatus("failed");
+        }
+      } catch {
+        if (!cancelled) setA2aStatus("failed");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isComplete, a2aStatus, captured]);
 
   const advance = useCallback(
     (rawAnswer: string) => {
@@ -231,6 +287,9 @@ export function AgentforceFallback() {
     setCaptured({});
     setTextDraft("");
     setErrorMessage(null);
+    setRouting(null);
+    setTraceTaskId(null);
+    setA2aStatus("idle");
     setMessages([
       {
         id: generateId("m"),
@@ -337,6 +396,56 @@ export function AgentforceFallback() {
                   ? "Urgent escalation flagged. Pause routes this case to the urgent gynecology pathway."
                   : "Intake captured. The care team will review and reach out within one business day."}
               </p>
+
+              <div className="agentforce-a2a-status" aria-live="polite">
+                {a2aStatus === "handing-off" && (
+                  <p>
+                    <strong>A2A handoff in progress…</strong> Agentforce is sending
+                    this intake to the Pause Care Router via Google A2A
+                    (<code>tasks/send</code>). The MuleSoft Agent Fabric is
+                    recording the trace.
+                  </p>
+                )}
+                {a2aStatus === "completed" && routing && (
+                  <>
+                    <p>
+                      <strong>Care Router decision:</strong>{" "}
+                      {routing.pathwayLabel}{" "}
+                      <em>({routing.acuity})</em>
+                    </p>
+                    <p style={{ fontSize: "0.88rem", marginTop: "0.3rem" }}>
+                      {routing.rationale[0]}
+                    </p>
+                    <p
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--muted)",
+                        marginTop: "0.3rem"
+                      }}
+                    >
+                      Decided by {routing.modelProvenance.provider} /{" "}
+                      <code>{routing.modelProvenance.model}</code> ({routing.modelProvenance.via})
+                    </p>
+                    {traceTaskId && (
+                      <p style={{ marginTop: "0.5rem" }}>
+                        <a
+                          href={`/demo/agent-fabric?taskId=${encodeURIComponent(traceTaskId)}`}
+                          className="btn btn-secondary"
+                        >
+                          View multi-agent trace in Agent Fabric
+                        </a>
+                      </p>
+                    )}
+                  </>
+                )}
+                {a2aStatus === "failed" && (
+                  <p style={{ color: "var(--alert, #b00020)" }}>
+                    A2A handoff to the Care Router failed. The Pause team will
+                    follow up manually.
+                  </p>
+                )}
+              </div>
+
               <button type="button" className="btn btn-secondary" onClick={restart}>
                 Restart intake
               </button>

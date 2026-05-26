@@ -69,6 +69,11 @@ Deep-dive sections (each a routed page):
   live mocked Experience API at `/api/mulesoft/health`.
 - `/proposal/mcp` — Pause as a tool surface for AI agents. MCP server
   registration snippets for Claude Desktop, Cursor, and Agentforce.
+- `/proposal/agent-fabric` — Multi-agent control plane. Four agents
+  (Agentforce intake, Anthropic Claude Care Router, Pause MCP server,
+  MuleSoft Process API) wired through Google A2A + MCP, orchestrated
+  and governed by a MuleSoft Agent Fabric mock. Live console at
+  `/demo/agent-fabric`.
 
 ## Local development
 

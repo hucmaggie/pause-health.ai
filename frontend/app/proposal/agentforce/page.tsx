@@ -260,6 +260,16 @@ export default function AgentforcePage() {
           </li>
           <li>
             <span>
+              <a href="/proposal/agent-fabric">Multi-agent control plane</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              The Agentforce intake hands off over Google A2A to the Anthropic
+              Care Router; the whole multi-agent flow is governed and traced by
+              the MuleSoft Agent Fabric.
+            </strong>
+          </li>
+          <li>
+            <span>
               <a href="/proposal/technology">Technology choices</a>
             </span>
             <strong style={{ fontWeight: 500 }}>
