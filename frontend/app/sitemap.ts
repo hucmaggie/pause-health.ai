@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "../lib/site";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://pause-health.ai";
+const BASE_URL = SITE_URL;
 
 const STATIC_PATHS: { path: string; priority: number; changeFrequency: "yearly" | "monthly" | "weekly" }[] = [
   { path: "/", priority: 1.0, changeFrequency: "weekly" },

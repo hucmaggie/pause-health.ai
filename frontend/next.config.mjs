@@ -1,4 +1,27 @@
-/** @type {import('next').NextConfig} */
+/**
+ * Canonical-domain note:
+ *
+ *   We deliberately do NOT set `assetPrefix` to https://pause-health.ai
+ *   here. `assetPrefix` only rewrites the URLs of _next/static/* bundles
+ *   (JS chunks, CSS, fonts). Setting it to the production apex would
+ *   make Vercel preview deployments load production bundles instead of
+ *   the PR's bundles -- silently breaking previews -- and would break
+ *   `npm run dev` for anyone who doesn't happen to have pause-health.ai
+ *   running locally.
+ *
+ *   Canonical-domain control for SEO / OpenGraph / Twitter / sitemap /
+ *   robots lives in the metadata layer, not the asset-serving layer:
+ *
+ *     - lib/site.ts          (single source of SITE_URL + absoluteUrl)
+ *     - app/layout.tsx       (metadataBase + root OG)
+ *     - lib/page-metadata.ts (per-page canonical + absolute OG image)
+ *     - app/sitemap.ts       (absolute sitemap entries)
+ *     - app/robots.ts        (sitemap URL + host)
+ *
+ *   Override per-environment with NEXT_PUBLIC_SITE_URL.
+ *
+ * @type {import('next').NextConfig}
+ */
 const nextConfig = {
   reactStrictMode: true,
   async redirects() {

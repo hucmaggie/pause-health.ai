@@ -5,11 +5,12 @@ import Image from "next/image";
 import { NewsletterForm } from "../components/newsletter-form";
 import { NewsletterBanner } from "../components/newsletter-banner";
 import { MobileNav } from "../components/mobile-nav";
+import { SITE_URL, absoluteUrl } from "../lib/site";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://pause-health.ai";
 const SITE_NAME = "Pause-Health.ai";
 const SITE_DESCRIPTION =
   "Premium menopause intelligence for modern provider organizations — explainable AI triage for women in midlife.";
+const ROOT_OG_IMAGE = absoluteUrl("/brand/pause-health-og.png");
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -45,7 +46,7 @@ export const metadata: Metadata = {
     locale: "en_US",
     images: [
       {
-        url: "/brand/pause-health-og.png",
+        url: ROOT_OG_IMAGE,
         width: 1200,
         height: 630,
         alt: "Pause-Health.ai — AI triage for providers serving women in midlife."
@@ -56,7 +57,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: SITE_NAME,
     description: SITE_DESCRIPTION,
-    images: ["/brand/pause-health-og.png"]
+    images: [ROOT_OG_IMAGE]
   },
   robots: {
     index: true,
