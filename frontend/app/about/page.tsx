@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { pageMetadata } from "../../lib/page-metadata";
 
 export const metadata = pageMetadata({
@@ -33,11 +34,6 @@ const values = [
 ];
 
 const team = [
-  {
-    name: "Maggie C. Hu",
-    role: "Founder & CEO — Product, vision, and provider partnerships",
-    bio: "Background in health-tech product leadership, focused on building AI that clinicians actually want to use."
-  },
   {
     name: "Chief Medical Officer",
     role: "Clinical strategy and evidence",
@@ -120,10 +116,69 @@ export default function AboutPage() {
       </section>
 
       <section style={{ marginTop: "1.5rem" }}>
-        <p className="eyebrow">Team</p>
+        <p className="eyebrow">Founder</p>
+        <article className="card founder-card" style={{ marginTop: "0.6rem" }}>
+          <Image
+            src="/team/maggie-c-hu.jpg"
+            alt="Portrait of Maggie C. Hu, Founder & CEO of Pause-Health.ai."
+            width={200}
+            height={200}
+            sizes="(max-width: 600px) 160px, 200px"
+            className="founder-photo"
+          />
+          <div>
+            <h3 style={{ marginBottom: "0.25rem" }}>Maggie C. Hu</h3>
+            <p
+              style={{
+                color: "var(--brand)",
+                fontWeight: 600,
+                marginBottom: "0.6rem"
+              }}
+            >
+              Founder &amp; CEO
+            </p>
+            <p style={{ marginBottom: "0.5rem" }}>
+              Maggie leads product, vision, and provider partnerships at
+              Pause-Health.ai. Her background spans health-tech product
+              leadership and applied AI, with a focus on building clinical
+              software that care teams actually want to use.
+            </p>
+            <p style={{ color: "var(--muted)" }}>
+              She founded Pause-Health.ai to bring the same standard of
+              precision, rigor, and empathy to menopause care that other
+              transitions in modern medicine already enjoy.
+            </p>
+            <p className="founder-links" style={{ marginTop: "0.75rem" }}>
+              <a
+                href="https://www.linkedin.com/in/hucmaggie/"
+                target="_blank"
+                rel="noopener noreferrer me"
+                aria-label="Maggie C. Hu on LinkedIn (opens in a new tab)"
+              >
+                <svg
+                  className="founder-social-icon"
+                  viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
+                  fill="currentColor"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="M20.45 20.45h-3.55v-5.56c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.95v5.65H9.36V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.61 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45zM22.23 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.72V1.72C24 .77 23.21 0 22.23 0z" />
+                </svg>
+                <span>LinkedIn</span>
+              </a>
+            </p>
+          </div>
+        </article>
+      </section>
+
+      <section style={{ marginTop: "1.5rem" }}>
+        <p className="eyebrow">Team we&apos;re building</p>
         <p style={{ color: "var(--muted)", maxWidth: "65ch", marginBottom: "0.75rem" }}>
-          A small, mission-driven team across product, clinical, AI, and design. Detailed bios and
-          headshots coming soon as the team grows.
+          A small, mission-driven team across product, clinical, AI, and design.
+          These are the founding roles we&apos;re actively hiring for; detailed
+          bios and headshots will land here as the team grows.
         </p>
         <div className="card-grid">
           {team.map((member) => (
