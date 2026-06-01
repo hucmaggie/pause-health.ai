@@ -12,6 +12,61 @@ const SITE_DESCRIPTION =
   "Premium menopause intelligence for modern provider organizations — explainable AI triage for women in midlife.";
 const ROOT_OG_IMAGE = absoluteUrl("/brand/pause-health-og.png");
 
+/**
+ * Schema.org JSON-LD describing Pause-Health.ai as an organization.
+ *
+ * Why not MedicalOrganization: schema.org defines MedicalOrganization
+ * as "a medical organization (physical or not), such as hospital,
+ * institute, or doctor's office." Pause is a medical software vendor,
+ * not a care-providing entity, so plain Organization is the accurate
+ * type today. Promote to MedicalOrganization when there is a CMO and
+ * formal clinical operations attached.
+ *
+ * sameAs entries link the org's identity to other public surfaces;
+ * inbound links from this graph improve recognition by Zscaler /
+ * Cisco Talos / Palo Alto URL classifiers and by Google Knowledge
+ * Graph.
+ */
+const ORGANIZATION_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": `${SITE_URL}/#organization`,
+  name: SITE_NAME,
+  legalName: "Pause-Health.ai",
+  url: SITE_URL,
+  logo: absoluteUrl("/brand/pause-health-logo.png"),
+  image: ROOT_OG_IMAGE,
+  description: SITE_DESCRIPTION,
+  foundingDate: "2026",
+  industry: "Healthcare Software",
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Irvine",
+    addressRegion: "CA",
+    addressCountry: "US"
+  },
+  founder: {
+    "@type": "Person",
+    "@id": "https://www.linkedin.com/in/hucmaggie/",
+    name: "Maggie C. Hu",
+    jobTitle: "Founder & CEO",
+    image: absoluteUrl("/team/maggie-c-hu.jpg"),
+    sameAs: ["https://www.linkedin.com/in/hucmaggie/"]
+  },
+  sameAs: [
+    "https://www.linkedin.com/in/hucmaggie/",
+    "https://github.com/hucmaggie/pause-health.ai"
+  ],
+  knowsAbout: [
+    "Menopause",
+    "Perimenopause",
+    "Women's health",
+    "Clinical decision support",
+    "AI triage",
+    "Midlife health"
+  ]
+} as const;
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -88,6 +143,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        {/*
+          Organization JSON-LD. Static, no user input -- the
+          dangerouslySetInnerHTML usage here is the standard Next.js
+          pattern for emitting application/ld+json (React won't render
+          <script> children any other way).
+        */}
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(ORGANIZATION_JSON_LD)
+          }}
+        />
         <NewsletterBanner />
         <header className="site-header">
           <div className="container site-header-row">
