@@ -85,30 +85,37 @@ const traceFlow = [
 
 const protoVsProd = [
   {
-    aspect: "Federated query target",
-    proto:
-      "In-memory mocked patient store (frontend/lib/data-360.ts) returning a clinically realistic shape.",
-    prod:
-      "Real Salesforce Data 360 Federated Query API against the customer's JupyterHealth FHIR store, DBDP feature warehouse, and EHR-of-record."
-  },
-  {
     aspect: "Identity Resolution",
     proto:
-      "Stub that always returns the demo unified id with high confidence.",
+      "LIVE today: deterministic match against real seeded Health Cloud Contacts in our Salesforce dev org. Returns the real Salesforce Contact.Id as the unified patient id. Mock falls back automatically if the org is unreachable.",
     prod:
       "Configurable Data 360 IR ruleset across federated sources, returning ranked match candidates with confidence scores."
   },
   {
-    aspect: "Calculated insights",
+    aspect: "Grounding query target",
     proto:
-      "Deterministic fixtures (30-day HRV z-score, vasomotor burden index, sleep disruption, days since MSCP contact).",
+      "LIVE today: real SOQL against Salesforce Health Cloud (Contact + CareProgramEnrollee + CarePlan + Case). Returns real enrollment status, real care-plan status, real days-since-last-clinical-contact, real cohort size.",
     prod:
-      "Calculated Insights jobs on Data 360, recomputed nightly (or streaming) over federated sources."
+      "Real Salesforce Data 360 Federated Query API against the customer's JupyterHealth FHIR store, DBDP feature warehouse, and EHR-of-record. Phase 1 SOQL pattern stays — the federation target swaps."
+  },
+  {
+    aspect: "Calculated insights — Salesforce-native",
+    proto:
+      "LIVE today: \"Active care program enrollment\", \"Days since last clinical contact\", \"Active care plan status\" — built from real Health Cloud objects on every Care Router call.",
+    prod:
+      "Same insights plus Data 360 Calculated Insights jobs recomputed nightly/streaming over the federated sources."
+  },
+  {
+    aspect: "Calculated insights — wearable / EHR",
+    proto:
+      "MOCKED (Phase 2 work): HRV variability z-score, vasomotor burden composite, sleep disruption index. Marked as 'intake-only baseline' in the API so it's clear which insights are real vs which await Data Cloud federation.",
+    prod:
+      "Real Data 360 Calculated Insights jobs against the customer's JupyterHealth FHIR observations and DBDP feature warehouse."
   },
   {
     aspect: "Segments",
     proto:
-      "Four hand-curated segments returned by /api/data-360/segments.",
+      "Four hand-curated segments returned by /api/data-360/segments (mocked).",
     prod:
       "Population segments authored in the Data 360 console by the customer's clinical-data team, with activation routes configured per segment."
   },
@@ -123,25 +130,25 @@ const protoVsProd = [
 
 const phases = [
   {
-    name: "Phase 0 — Mocked Data 360 grounding",
-    duration: "Today",
+    name: "Phase 1 — Real Health Cloud grounding (LIVE)",
+    duration: "Shipped",
     detail:
-      "Data 360 registered on the Agent Fabric. Mocked federated grounding + IR + segments endpoints. Care Router reads grounding from the A2A message and cites insights in its rationale. Trace shows the full four-span flow."
+      "Pause's Care Router is now grounded on real Salesforce Health Cloud objects from a connected dev org: real Contact, real CareProgramEnrollee, real CarePlan, real Case. OAuth 2.0 Client Credentials Flow via an External Client App. The Agent Fabric console shows a LIVE badge on every span served by the real org. Zero-credential mock path remains the default for previews and CI."
   },
   {
-    name: "Phase 1 — Real Data 360 sandbox",
+    name: "Phase 2 — Data Cloud unified profile",
     duration: "2–3 weeks",
     detail:
-      "Stand up a Salesforce Data 360 trial org. Federate one real source (JupyterHealth FHIR test instance) via the Iceberg connector. Author the four calculated insights as real Data 360 jobs. Wire Pause's handoff endpoint to the real Federated Query API; flip a single env var to switch the prototype off the mocks."
+      "Stand up a Data Cloud Data Stream → Data Model Object → UnifiedIndividual mapping in the same org. Federate one wearable source (JupyterHealth FHIR test instance) via the Iceberg connector. Author the four wearable/EHR Calculated Insights as real Data Cloud jobs. The grounding fetcher swaps its SOQL backend for the Data Cloud Federated Query API; the Care Router interface doesn't change."
   },
   {
-    name: "Phase 2 — First customer deployment",
+    name: "Phase 3 — First customer deployment",
     duration: "4–6 weeks with customer",
     detail:
       "Federate the customer's EHR-of-record (Epic / Cerner / Athena) and their DBDP feature warehouse. Author the customer's IR ruleset. Wire consent enforcement to the customer's existing consent ledger. Roll the Care Router onto real-customer grounding."
   },
   {
-    name: "Phase 3 — Cohort analytics & activation",
+    name: "Phase 4 — Cohort analytics & activation",
     duration: "Ongoing",
     detail:
       "Population segments activate to Agentforce for proactive outreach (\"women in your cohort who saw an MSCP within 14 days had 71% symptom resolution\"). Health Cloud cards on the patient timeline. Marketing Cloud for educational journeys."

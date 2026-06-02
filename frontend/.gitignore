@@ -7,3 +7,13 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .DS_Store
+
+# Environment files containing secrets.
+# .env.example IS tracked (template, no secrets). Everything else is ignored.
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+!.env.example

@@ -11,6 +11,11 @@ import {
   getGroundingContext,
   resolveIdentity
 } from "../../../../lib/data-360";
+import {
+  getGroundingContextPreferReal,
+  resolveIdentityFromOrg
+} from "../../../../lib/salesforce/grounding";
+import { isSalesforceConfigured } from "../../../../lib/salesforce/auth";
 
 /**
  * Server-side A2A handoff from the (mocked) Agentforce Service Agent
@@ -64,13 +69,35 @@ export async function POST(req: Request) {
   });
 
   // 1. Identity resolution via Data 360 -- maps the partial intake
-  //    identity to the unified patient id.
+  //    identity to the unified patient id. Prefer real-org resolution
+  //    when SF is configured; degrade silently to the deterministic mock
+  //    on any failure so the trace never breaks for a transient network
+  //    blip against the org.
   const idStartedAt = Date.now();
-  const identity = resolveIdentity({
+  let identitySource: "real" | "mock" = "mock";
+  let identity = resolveIdentity({
     preferredName: intake.preferredName,
     ageBand: intake.ageBand,
     cycleStatus: intake.cycleStatus
   });
+  if (isSalesforceConfigured()) {
+    try {
+      const real = await resolveIdentityFromOrg({
+        preferredName: intake.preferredName,
+        ageBand: intake.ageBand,
+        cycleStatus: intake.cycleStatus
+      });
+      if (real) {
+        identity = real;
+        identitySource = "real";
+      }
+    } catch (err) {
+      console.warn(
+        "[intake/route-to-care-router] real-org identity resolution failed; degrading to mock:",
+        err instanceof Error ? err.message : err
+      );
+    }
+  }
   const idFinishedAt = Date.now();
   const identitySpan = recordInstantSpan({
     taskId,
@@ -79,6 +106,7 @@ export async function POST(req: Request) {
     operation: "data360.identity.resolve",
     protocol: "rest",
     attributes: {
+      _source: identitySource,
       unifiedPatientId: identity.unifiedPatientId,
       confidence: identity.confidence,
       matchedSources: identity.matchedSources,
@@ -87,11 +115,12 @@ export async function POST(req: Request) {
     }
   });
 
-  // 2. Federated grounding query against the Data 360 unified
-  //    patient view. Returns calculated insights + longitudinal
-  //    observations + cohort + last clinician contact + IR provenance.
+  // 2. Federated grounding query. Prefer real Health Cloud grounding
+  //    (Phase 1: Contact + CareProgramEnrollee + CarePlan + Case); fall
+  //    back to the deterministic mock. The returned shape is identical
+  //    so the Care Router code path doesn't branch.
   const groundingStartedAt = Date.now();
-  const grounding = getGroundingContext({
+  const { source: groundingSource, grounding } = await getGroundingContextPreferReal({
     patientId: identity.unifiedPatientId || DEMO_DATA360_PATIENT_ID,
     hint: {
       ageBand: intake.ageBand,
@@ -107,6 +136,7 @@ export async function POST(req: Request) {
     operation: "data360.grounding.federated-query",
     protocol: "rest",
     attributes: {
+      _source: groundingSource,
       unifiedPatientId: grounding.unifiedPatientId,
       computedInsightsCount: grounding.groundingProvenance.computedInsightsCount,
       sourcesQueried: grounding.groundingProvenance.sourcesQueried,
@@ -148,13 +178,17 @@ export async function POST(req: Request) {
         _taskId: taskId,
         _sessionId: sessionId,
         _careRouterUrl: careRouterUrl,
-        _data360UnifiedPatientId: identity.unifiedPatientId
+        _data360UnifiedPatientId: identity.unifiedPatientId,
+        _data360IdentitySource: identitySource,
+        _data360GroundingSource: groundingSource,
+        _salesforceConfigured: isSalesforceConfigured()
       },
       taskId,
       sessionId,
       task,
       decision,
       data360: {
+        source: { identity: identitySource, grounding: groundingSource },
         identity,
         grounding
       }

@@ -74,13 +74,15 @@ Deep-dive sections (each a routed page):
   MuleSoft Process API) wired through Google A2A + MCP, orchestrated
   and governed by a MuleSoft Agent Fabric mock. Live console at
   `/demo/agent-fabric`.
-- `/proposal/data-360` — Salesforce Data 360 grounding layer. Zero-copy
-  federated patient view across JupyterHealth FHIR, DBDP features,
-  Agentforce intake history, and the customer's EHR-of-record.
-  Calculated insights + identity resolution + segments. The Care Router
-  reads grounding from Data 360 before every routing decision; the
-  Agent Fabric trace shows the full four-span flow (intake → IR →
-  federated query → A2A handoff).
+- `/proposal/data-360` — Salesforce Data 360 grounding layer. Phase 1
+  is LIVE: when `SF_INSTANCE_URL` / `SF_CLIENT_ID` / `SF_CLIENT_SECRET`
+  are configured, the Care Router grounds on real Salesforce Health
+  Cloud objects (Contact + CareProgramEnrollee + CarePlan + Case) from
+  a connected dev org via OAuth Client Credentials Flow. The Agent
+  Fabric console shows a "LIVE" badge on every span served by the org.
+  When env vars are unset, the deterministic mock takes over so
+  previews/CI run with zero credentials. Phase 2 (Data Cloud unified
+  profile + wearable / EHR federation) is documented but not wired.
 
 ## Local development
 
@@ -102,6 +104,57 @@ npm install                # also runs `npm run build`
 PAUSE_MCP_BASE_URL=http://localhost:3000 node scripts/smoke.mjs
 # Then register in Claude Desktop / Cursor / Agentforce -- see mcp/README.md.
 ```
+
+## Optional: Wire the prototype to a real Salesforce org
+
+Without any Salesforce credentials the prototype runs end-to-end against
+deterministic mocks. To switch the Care Router's grounding onto a real
+Salesforce Health Cloud org (the Phase 1 "Data 360 grounding" path
+described in `/proposal/data-360`):
+
+```bash
+# 1. Install + authorize the Salesforce CLI
+npm install -g @salesforce/cli
+sf org login web --alias your-dev-org --set-default
+sf config set target-org=your-dev-org --global
+
+# 2. Create an External Client App in Setup with Client Credentials Flow
+#    enabled, then a Policy with Run-As user pre-authorized via permission
+#    set. Capture the Consumer Key and Secret.
+
+# 3. Drop credentials into frontend/.env.local (gitignored):
+#    SF_INSTANCE_URL=https://your-domain.my.salesforce.com
+#    SF_CLIENT_ID=3MVG...
+#    SF_CLIENT_SECRET=...
+
+# 4. Verify auth round-trip:
+cd frontend
+node scripts/salesforce-smoke.mjs
+
+# 5. Seed the menopause-specific Health Cloud cohort:
+node scripts/salesforce-seed.mjs
+# Optional cleanup later:
+# node scripts/salesforce-seed.mjs --cleanup
+
+# 6. Verify grounding queries:
+node scripts/grounding-smoke.mjs
+
+# 7. Start the dev server and watch the Agent Fabric console for
+#    LIVE-badged spans:
+npm run dev
+# Open http://localhost:3000/demo/agent-fabric and trigger a test intake.
+```
+
+The seeder creates 1 CareProgram + 6 patient personas (each with
+Account / Contact / CareProgramEnrollee / Case / CarePlan), all tagged
+`Pause Demo` for easy identification and cleanup. The Care Router uses
+intake hints (preferredName, ageBand) to match a seeded persona and
+grounds its routing decision on that persona's real org data.
+
+If the org becomes unreachable or any SOQL query fails, callers
+degrade silently to the mocked grounding path so the prototype never
+appears broken to a visitor. The Agent Fabric console reports
+`source=real` vs `source=mock` per span.
 
 See each subdirectory's README for full setup and configuration details.
 

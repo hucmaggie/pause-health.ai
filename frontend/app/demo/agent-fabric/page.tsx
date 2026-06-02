@@ -315,6 +315,53 @@ function AgentFabricConsoleInner() {
           taskId = <code>{activeTaskId || "(none selected)"}</code>
         </p>
         {(() => {
+          // Surface a single trace-level banner that reports whether this
+          // run's Data 360 spans were served by the real Salesforce org or
+          // by the deterministic mock. Helpful for investor demos because
+          // it makes "this is real, not synthetic" visible at a glance.
+          const data360Spans = spans.filter(
+            (s) => s.agentId === "salesforce-data-360"
+          );
+          if (data360Spans.length === 0) return null;
+          const sources = data360Spans.map(
+            (s) =>
+              (s.attributes as Record<string, unknown> | undefined)?._source
+          );
+          const anyReal = sources.some((s) => s === "real");
+          const allReal = sources.length > 0 && sources.every((s) => s === "real");
+          const label = allReal
+            ? "LIVE · grounded on Salesforce Health Cloud"
+            : anyReal
+              ? "MIXED · part live, part mocked"
+              : "MOCKED · zero-credential demo path";
+          const bg = allReal
+            ? "rgba(34,139,34,0.12)"
+            : anyReal
+              ? "rgba(255,165,0,0.12)"
+              : "rgba(120,120,120,0.10)";
+          const border = allReal
+            ? "1px solid rgba(34,139,34,0.45)"
+            : anyReal
+              ? "1px solid rgba(255,165,0,0.45)"
+              : "1px solid rgba(120,120,120,0.30)";
+          return (
+            <p
+              style={{
+                marginTop: "0.5rem",
+                padding: "0.35rem 0.6rem",
+                background: bg,
+                border,
+                borderRadius: "0.35rem",
+                fontSize: "0.78rem",
+                fontWeight: 600,
+                display: "inline-block"
+              }}
+            >
+              {label}
+            </p>
+          );
+        })()}
+        {(() => {
           const data360Span = spans.find(
             (s) => s.agentId === "salesforce-data-360"
           );
@@ -375,6 +422,37 @@ function AgentFabricConsoleInner() {
                     {span.protocol.toUpperCase()} · {span.operation} ·{" "}
                     {span.status}
                   </span>
+                  {(() => {
+                    const src = (
+                      span.attributes as Record<string, unknown> | undefined
+                    )?._source;
+                    if (src !== "real" && src !== "mock") return null;
+                    return (
+                      <span
+                        title={
+                          src === "real"
+                            ? "Served by your configured Salesforce org"
+                            : "Served by the deterministic mock (no real-org call)"
+                        }
+                        style={{
+                          marginLeft: "0.4rem",
+                          padding: "0.05rem 0.4rem",
+                          background:
+                            src === "real"
+                              ? "rgba(34,139,34,0.15)"
+                              : "rgba(120,120,120,0.15)",
+                          color:
+                            src === "real" ? "#1b6b1b" : "var(--muted)",
+                          borderRadius: "0.25rem",
+                          fontSize: "0.7rem",
+                          fontWeight: 600,
+                          textTransform: "uppercase"
+                        }}
+                      >
+                        {src === "real" ? "live" : "mock"}
+                      </span>
+                    );
+                  })()}
                 </p>
                 <p
                   style={{
