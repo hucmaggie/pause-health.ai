@@ -265,6 +265,57 @@ export default function Data360Page() {
       </section>
 
       <section className="card" style={{ marginTop: "1.5rem" }}>
+        <p className="eyebrow">Where Phase 1 is wired</p>
+        <p style={{ marginTop: "0.4rem" }}>
+          The real-Salesforce grounding path is activated by three env vars
+          (<code>SF_INSTANCE_URL</code>, <code>SF_CLIENT_ID</code>,
+          {" "}<code>SF_CLIENT_SECRET</code>). When set, the Care Router
+          queries a connected Health Cloud org via OAuth 2.0 Client
+          Credentials Flow. When unset, every API route silently falls back
+          to the deterministic mock and the prototype runs end-to-end with
+          zero credentials.
+        </p>
+        <div className="table-wrap" style={{ marginTop: "0.8rem" }}>
+          <table>
+            <thead>
+              <tr>
+                <th>Environment</th>
+                <th>SF env vars</th>
+                <th>Active grounding path</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Local dev</strong> (founder&apos;s machine)</td>
+                <td>Set in <code>frontend/.env.local</code></td>
+                <td>LIVE Salesforce Health Cloud (real Contact / CareProgramEnrollee / CarePlan / Case)</td>
+              </tr>
+              <tr>
+                <td><strong>Vercel preview / production</strong> (<code>pause-health.ai</code>)</td>
+                <td>Deliberately unset</td>
+                <td>Deterministic mock (shape-identical to live path)</td>
+              </tr>
+              <tr>
+                <td><strong>Investor demo session</strong></td>
+                <td>Temporarily set in Vercel, then unset after</td>
+                <td>LIVE for the duration of the demo</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p style={{ marginTop: "0.7rem", color: "var(--muted)", fontSize: "0.92rem" }}>
+          Why the public site is mock-by-default: the connected dev org is
+          a Trailhead Playground (not production-grade), and routing public
+          intake traffic at it would (a) exhaust its API limits, (b) create
+          unbounded demo records, and (c) tie investor demo quality to
+          whoever last did a write against the org. The mock is identical
+          in shape and clinically realistic, so the public surface stays
+          investor-ready without any of those risks. The first paying
+          customer brings their own Salesforce org and their own env vars.
+        </p>
+      </section>
+
+      <section className="card" style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Prototype vs production</p>
         <div className="table-wrap" style={{ marginTop: "0.6rem" }}>
           <table>

@@ -156,6 +156,35 @@ degrade silently to the mocked grounding path so the prototype never
 appears broken to a visitor. The Agent Fabric console reports
 `source=real` vs `source=mock` per span.
 
+### Deploying real-org grounding to Vercel (deliberate non-default)
+
+The three `SF_*` env vars are intentionally **not** set in Vercel's
+project environment. As a result, every preview deploy and the
+production site at `pause-health.ai` run the deterministic mock path.
+This is by design — the connected dev org is a Trailhead Playground,
+and pointing public traffic at it would exhaust its API limits and
+generate unbounded demo records.
+
+To enable real-org grounding on a Vercel deploy (e.g. for a scheduled
+investor demo):
+
+```bash
+# Add the three vars in: Vercel dashboard → project → Settings →
+# Environment Variables. Scope them to "Production" (or "Preview" for a
+# specific PR demo). Then trigger a redeploy.
+#
+# After the demo, REMOVE the env vars (or rotate the Client Secret in
+# Salesforce Setup) and redeploy to return to mock-only behavior.
+```
+
+The recommended posture for any non-trivial demo: spin up a clean
+Salesforce dev org per-customer (or per-investor-session), seed it
+with that customer's pilot cohort using
+`frontend/scripts/salesforce-seed.mjs`, and rotate credentials between
+sessions. The first paying customer's deployment uses their own
+Salesforce org and their own env vars — Pause never co-mingles
+customer data in a single org.
+
 See each subdirectory's README for full setup and configuration details.
 
 ---
