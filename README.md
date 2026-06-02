@@ -82,7 +82,21 @@ Deep-dive sections (each a routed page):
   Fabric console shows a "LIVE" badge on every span served by the org.
   When env vars are unset, the deterministic mock takes over so
   previews/CI run with zero credentials. Phase 2 (Data Cloud unified
-  profile + wearable / EHR federation) is documented but not wired.
+  profile + wearable / EHR federation) is documented but not wired —
+  the org's Data Cloud workspace is provisioned with 31 unified DMOs
+  (`ssot__Individual__dlm` etc.) but no Data Streams currently feed
+  them; activation is a 2-4 hour Setup UI exercise.
+- `/demo/intake` — Agentforce Embedded Messaging intake. The
+  `lib/agentforce.ts` + `components/agentforce-embed.tsx` integration
+  reads four `NEXT_PUBLIC_AGENTFORCE_*` env vars; when set, the page
+  loads the real Salesforce-served chat launcher. When unset (the
+  default), a Pause-branded scripted intake renders. Verified end-to-end
+  against the org's SDO sample deployment on 2026-06-02: bootstrap loads,
+  init succeeds, launcher mounts in the DOM. The SDO sample's runtime
+  config endpoint blocks external origins via CORS + frame-ancestors CSP,
+  so the launcher renders inert until a Pause-Health-owned deployment is
+  authored. See [`docs/PHASE_3_RUNBOOK.md`](docs/PHASE_3_RUNBOOK.md) for
+  the 2-4 hour next-session playbook.
 
 ## Local development
 

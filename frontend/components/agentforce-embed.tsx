@@ -50,22 +50,23 @@ type AgentforceEmbedProps = {
 };
 
 export function AgentforceEmbed({ config }: AgentforceEmbedProps) {
-  const targetRef = useRef<HTMLDivElement | null>(null);
   const initializedRef = useRef(false);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (initializedRef.current) return;
-    if (!targetRef.current) return;
 
     const tryInit = () => {
       const bootstrap = window.embeddedservice_bootstrap;
-      if (!bootstrap || !targetRef.current) return false;
+      if (!bootstrap) return false;
       try {
         bootstrap.settings.language = config.language;
-        bootstrap.settings.displayMode = "inline";
-        bootstrap.settings.targetElement = targetRef.current;
+        // Floating-launcher mode is the V2 default and the only mode our
+        // out-of-the-box SDO deployment supports without extra Setup
+        // configuration. The launcher appears bottom-right of the page;
+        // clicking it opens the chat panel as a modal-like overlay.
+        bootstrap.settings.displayMode = "floating";
 
         bootstrap.init(config.orgId, config.deploymentApiName, config.siteUrl, {
           scrt2URL: config.scrt2Url
@@ -123,14 +124,29 @@ export function AgentforceEmbed({ config }: AgentforceEmbedProps) {
         {AGENTFORCE_COPY.brandedSubtitle}
       </p>
 
-      <div className="agentforce-embed-host" ref={targetRef} aria-live="polite">
+      <div className="agentforce-launcher-callout" aria-live="polite">
         {status === "loading" && (
-          <p style={{ color: "var(--muted)", padding: "1rem" }}>
-            Connecting to the live agent…
+          <p style={{ color: "var(--muted)", margin: 0 }}>
+            Loading the live Pause Intake agent…
           </p>
         )}
+        {status === "ready" && (
+          <>
+            <span aria-hidden="true" style={{ fontSize: "1.4rem" }}>↘</span>
+            <div>
+              <strong style={{ display: "block" }}>
+                The live agent is ready.
+              </strong>
+              <span style={{ color: "var(--muted)" }}>
+                Click the chat launcher in the bottom-right corner to start
+                an intake conversation. Salesforce-hosted, real-time, with
+                full session history on the Service Cloud side.
+              </span>
+            </div>
+          </>
+        )}
         {status === "error" && (
-          <p role="alert" style={{ color: "#ffb6c8", padding: "1rem" }}>
+          <p role="alert" style={{ color: "#ffb6c8", margin: 0 }}>
             {errorMessage ??
               "The live agent could not load. Please refresh, or contact your Pause-Health.ai administrator."}
           </p>

@@ -1193,6 +1193,31 @@ th {
   padding: 0.5rem;
 }
 
+/* Compact launcher callout shown after the floating Agentforce widget has
+   initialised. The widget itself renders in the bottom-right corner of the
+   viewport; this card just tells the visitor it's there. Keeps the page
+   layout tight and the LIVE AGENT badge meaningful. */
+.agentforce-launcher-callout {
+  margin-top: 1rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(25, 11, 22, 0.55);
+}
+
+/* Salesforce Embedded Messaging (V2) widget — minimal z-index defence.
+   The Salesforce bootstrap injects #embedded-messaging into <body> and
+   positions its launcher fixed bottom-right. Our .toast-region also sits
+   bottom-right with z-index 100; raise the launcher above it. We do NOT
+   touch the launcher's children, position, or sizing — those are owned
+   by Salesforce's own minified CSS and must not be overridden. */
+#embedded-messaging {
+  z-index: 9999;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
