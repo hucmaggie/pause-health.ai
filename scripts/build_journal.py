@@ -94,9 +94,15 @@ ARCH_DIAGRAM = """\
                                   ▼
    ┌────────────┐                 ┌────────────────────────────────────┐
    │ Salesforce │ <───── REST ─── │ Pause Care Router (Anthropic Claude)│
-   │  Data 360  │  IR + grounding │ Real Claude when ANTHROPIC_API_KEY  │
-   │   (mock)   │ federated query │ set; deterministic policy fallback  │
+   │ Health     │  IR + grounding │ Real Claude when ANTHROPIC_API_KEY  │
+   │ Cloud      │ federated query │ set; deterministic policy fallback  │
+   │ (LIVE)*    │                 │                                     │
    └────────────┘                 └────────────────────────────────────┘
+       │ * Real OAuth 2.0 client credentials against a connected
+       │   Salesforce Developer Edition org. SOQL against Contact +
+       │   CareProgramEnrollee + CarePlan + Case. Falls back to the
+       │   mocked Data 360 fixtures when SF_INSTANCE_URL / SF_CLIENT_ID
+       │   / SF_CLIENT_SECRET are unset (zero-credential default).
                                   │
                                   │  Tool calls over MCP
                                   ▼
@@ -125,6 +131,12 @@ ARCH_DIAGRAM = """\
        policies, end-to-end traces, /demo/agent-fabric live console.
      • Salesforce Data 360 sits as a fifth agent on the Fabric and
        grounds the Care Router with longitudinal calculated insights.
+       The Health Cloud layer (Phase 1) is LIVE against a real org;
+       the Data Cloud unified-profile layer (Phase 2) is provisioned
+       but deferred — 31 unified DMOs exist with no Data Streams.
+     • A real Anypoint Platform org is connected for future MuleSoft
+       work; today every Experience API is still served by the Next.js
+       mock. Next-session plan lives in docs/MULESOFT_RUNBOOK.md.
 """
 
 MONOREPO_LAYOUT = """\
@@ -140,8 +152,12 @@ shipping-quote-by-zip-api/                  ← legacy repo name; retained
 │   │       ├── intake/route-to-care-router/  Handoff orchestrator
 │   │       ├── mulesoft/                     Mocked Experience APIs
 │   │       └── data-360/                     Mocked Salesforce Data 360
-│   ├── components/                           UI components + intake fallback
+│   ├── components/                           UI components + intake fallback + agentforce-embed
 │   ├── lib/                                  a2a, care-router, agent-fabric, data-360, mulesoft-mocks
+│   │   └── salesforce/                       auth.ts (OAuth client creds), grounding.ts (real SOQL),
+│   │                                         auth.test.ts, grounding.test.ts (vitest)
+│   ├── scripts/                              salesforce-smoke.mjs, salesforce-seed.mjs,
+│   │                                         grounding-smoke.mjs (idempotent demo data)
 │   └── public/.well-known/mcp.json           MCP discovery descriptor
 │
 ├── pause_ingest/                           ← Python wearable ingest worker
@@ -155,6 +171,12 @@ shipping-quote-by-zip-api/                  ← legacy repo name; retained
 ├── mulesoft/                               ← MuleSoft reference artifacts
 │   ├── system-api/, process-api/, experience-api/   API-led tiers
 │   └── dataweave/omh-to-fhir.dwl             OMH → FHIR R5 transform
+│
+├── docs/                                   ← Engineering runbooks alongside design docs
+│   ├── mulesoft-integration.md               Three-tier API-Led architecture
+│   ├── jupyterhealth-integration.md          Clinical substrate design
+│   ├── PHASE_3_RUNBOOK.md                    Next-session Agentforce deployment plan
+│   └── MULESOFT_RUNBOOK.md                   Next-session Anypoint deployment plan
 │
 ├── app.py                                  ← Legacy FastAPI service (still functional)
 ├── requirements.txt                          Python runtime deps
@@ -613,6 +635,400 @@ PHASES = [
             "block/enforced.",
         ],
     },
+    {
+        "title": (
+            "Phase 12 — Real Salesforce org integration: Health Cloud "
+            "grounding (Full Path A, Phase 1)"
+        ),
+        "ask": (
+            "User stated: 'I have a Salesforce org that I could hook up "
+            "the prototype with.' Phase 11 Data 360 was entirely mocked; "
+            "this pivot moved the grounding plane from in-memory "
+            "fixtures to a real, connected Salesforce Developer Edition "
+            "org. Scope agreed: Full Path A (Health Cloud objects + Data "
+            "Cloud unified profile + real Agentforce intake), executed "
+            "as three sub-phases. Phase 12 covers sub-phase 1: real "
+            "Health Cloud grounding."
+        ),
+        "decisions": [
+            "Authentication: OAuth 2.0 Client Credentials Flow via "
+            "Salesforce External Client App (modern replacement for the "
+            "legacy Connected App). Server-to-server only; no user "
+            "redirect, no browser dependency. The same pattern carries "
+            "over to MuleSoft, Anypoint, and any future server-to-server "
+            "integration.",
+            "Real data: six menopause-specific Health Cloud records "
+            "seeded into the org via a dedicated idempotent script "
+            "(scripts/salesforce-seed.mjs). Used Contact + CarePlan + "
+            "CareProgramEnrollee + Case rather than fabricating custom "
+            "objects, so the demo composes with any future Health Cloud "
+            "package without remapping.",
+            "Schema reality forced two adjustments: linked "
+            "CareProgramEnrollee to Account (not Contact); dropped the "
+            "non-existent EnrolleeType column. The seeding script "
+            "introspects the org's actual schema rather than assuming "
+            "any documented field.",
+            "Graceful degradation preserved: when SF_INSTANCE_URL / "
+            "SF_CLIENT_ID / SF_CLIENT_SECRET are unset, the API routes "
+            "fall back to the deterministic Data 360 mock. Reviewers, "
+            "Vercel previews, and CI run with zero credentials. When set, "
+            "every Care Router decision is grounded in real org data and "
+            "the Agent Fabric trace span carries _source: 'real'.",
+            "Zscaler hit once on the way: the corporate proxy intercepted "
+            "*.c360a.salesforce.com (Data Cloud's hostname family) with a "
+            "504 Gateway Timeout. Pausing Zscaler resolved it; documented "
+            "as a known constraint for any future Salesforce-edge work.",
+        ],
+        "built": [
+            "frontend/lib/salesforce/auth.ts — OAuth client credentials "
+            "token acquisition, in-memory caching with expiry, request "
+            "deduplication, isSalesforceConfigured() guard.",
+            "frontend/lib/salesforce/grounding.ts — real SOQL fetcher "
+            "and identity resolver against Contact + CarePlan + "
+            "CareProgramEnrollee + Case; preserves the GroundingContext "
+            "shape the Care Router already consumes.",
+            "frontend/scripts/salesforce-smoke.mjs — standalone "
+            "auth-and-query smoke test runnable independently of Next.js.",
+            "frontend/scripts/salesforce-seed.mjs — idempotent demo-data "
+            "seeder (six Contacts + linked CarePlan/Enrollee/Case rows) "
+            "with explicit cleanup logic.",
+            "frontend/scripts/grounding-smoke.mjs — end-to-end smoke of "
+            "the real grounding fetcher.",
+            "Wiring in /api/data-360/identity/resolve and "
+            "/api/intake/route-to-care-router to use real Salesforce data "
+            "when configured, mock otherwise.",
+            "Agent Fabric console (/demo/agent-fabric) extended with a "
+            "trace-level _source banner: every span shows 'real' or "
+            "'mock' so the demo never lies about provenance.",
+            "/proposal/data-360 investor page updated to mark Phase 1 "
+            "as LIVE with a banner.",
+            "README.md updated with the new live integrations section "
+            "and the External Client App setup walkthrough.",
+            ".env.example documented SF_INSTANCE_URL, SF_CLIENT_ID, "
+            "SF_CLIENT_SECRET, SF_API_VERSION with comments explaining "
+            "the OAuth client credentials policy and the My Domain URL "
+            "requirement.",
+        ],
+        "verified": [
+            "salesforce-smoke.mjs returns a valid access token against "
+            "the connected org.",
+            "salesforce-seed.mjs seeds six demo Contacts + linked "
+            "Health Cloud records on a fresh run, then re-running "
+            "produces zero diffs (idempotent).",
+            "grounding-smoke.mjs returns a populated GroundingContext.",
+            "End-to-end: POST a moderate hot-flash intake -> trace span "
+            "for data360.grounding.federated-query shows _source: 'real' "
+            "with citations pulled from the live org -> Care Router "
+            "decision visibly changes vs the mocked-only path.",
+            "When env vars are removed, the same flow re-runs and the "
+            "trace span flips back to _source: 'mock' without code "
+            "changes — graceful degradation verified both directions.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 13 — Polish: schema cleanup, auth unit tests, "
+            "warn-once deduplication"
+        ),
+        "ask": (
+            "Before moving to the next sub-phase of the Salesforce "
+            "integration, polish three things the Phase 12 implementation "
+            "left rough: (1) the seeded Contact.LastName was awkwardly "
+            "encoded ('Pause Demo Patient:<name>'); (2) lib/salesforce/"
+            "auth.ts had no unit tests; (3) the fallback path warned on "
+            "every request when Salesforce was misconfigured, drowning "
+            "the dev console."
+        ),
+        "decisions": [
+            "Contact schema fix: chose the delete_reseed approach (user "
+            "preference) rather than in-place update. New schema uses "
+            "Contact.Title = 'Pause Demo Patient' and Contact.Department "
+            "= 'Pause Demo' for demo tagging, with LastName carrying the "
+            "actual surname. The cleanup predicate ORs across old and "
+            "new tagging so a re-run safely deletes either generation.",
+            "Auth tests with vitest covering happy-path, cached token "
+            "reuse, in-flight deduplication, error propagation, expiry "
+            "handling. Seventeen tests total.",
+            "Warn-once helper (warnSalesforceDegradationOnce) keys on "
+            "context + error name + error message prefix. Dev console "
+            "stays usable even when the org is intentionally unconfigured "
+            "for an entire session; the first failure of each category "
+            "still surfaces.",
+        ],
+        "built": [
+            "frontend/lib/salesforce/auth.test.ts — 17 unit tests "
+            "covering getSalesforceConfig, isSalesforceConfigured, "
+            "getAccessToken (cache hit, in-flight dedup, error paths, "
+            "expiry).",
+            "frontend/lib/salesforce/grounding.test.ts — 6 tests for "
+            "warnSalesforceDegradationOnce dedup behavior.",
+            "Updated scripts/salesforce-seed.mjs with the new tagging "
+            "schema and a unified cleanup predicate.",
+            "Updated scripts/grounding-smoke.mjs SOQL to match the new "
+            "tagging.",
+            "Updated /api/data-360/identity/resolve/route.ts and "
+            "/api/intake/route-to-care-router/route.ts to use the "
+            "warn-once helper.",
+        ],
+        "verified": [
+            "npm test (vitest) passes including all 23 new salesforce/* "
+            "tests.",
+            "salesforce-seed.mjs delete + reseed cycle leaves zero "
+            "stragglers in the org.",
+            "Dev console during a Salesforce-unconfigured run shows one "
+            "warn per failure category instead of one warn per request.",
+            "Committed and pushed to main.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 14 — Salesforce Data Cloud (Phase 2): investigation "
+            "and deferral"
+        ),
+        "ask": (
+            "Move to sub-phase 2 of the Full Path A integration: real "
+            "Data Cloud unified-profile layer feeding the Care Router."
+        ),
+        "decisions": [
+            "Investigation confirmed the org's Data Cloud workspace is "
+            "PROVISIONED but EMPTY: 31 unified DMOs exist "
+            "(ssot__Individual__dlm etc.) with no Data Streams currently "
+            "feeding them. Activation requires creating Data Streams, "
+            "DLO mappings, Identity Resolution rules, and Calculated "
+            "Insights — a 2-4 hour Setup UI exercise that produces no "
+            "engineering artifact in the repo.",
+            "Two OAuth scope additions were required to make Data Cloud "
+            "even introspectable from outside Salesforce: cdp_api, "
+            "cdp_profile_api, cdp_ingest_api on the External Client App. "
+            "The /services/a360/token endpoint rejected calls without "
+            "them.",
+            "Decision: defer Phase 2 to a dedicated session with screen-"
+            "share clickthrough. The engineering side is ready (lib/"
+            "salesforce/auth.ts handles CDP scopes; the grounding fetcher "
+            "is structured to accept a unified Individual record); the "
+            "remaining work is entirely UI configuration inside the "
+            "Salesforce org.",
+        ],
+        "built": [
+            "Updated External Client App scopes documented in .env.example.",
+            "README.md updated to mark Phase 2 as 'Data Cloud workspace "
+            "provisioned but no Data Streams currently feed it; "
+            "activation is a 2-4 hour Setup UI exercise.'",
+            "/proposal/data-360 still accurately reflects Phase 1 LIVE / "
+            "Phase 2 documented-but-deferred.",
+        ],
+        "verified": [
+            "OAuth token request against /services/a360/token returns 200 "
+            "with the new cdp_* scopes (was 'invalid_scope' before).",
+            "SOQL against ssot__Individual__dlm and similar unified DMOs "
+            "succeeds but returns zero rows — proving the schema exists "
+            "and no Data Streams have hydrated it.",
+            "No regression on Phase 1: Health Cloud grounding still "
+            "shows _source: 'real' on every span.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 15 — Real Agentforce embedded chat (Phase 3): "
+            "investigation, partial wiring, deferral with runbook"
+        ),
+        "ask": (
+            "Pivot from Phase 2 to sub-phase 3: replace the scripted "
+            "/demo/intake fallback with the real Salesforce Agentforce "
+            "Embedded Messaging widget, served from a configured "
+            "Experience Cloud site."
+        ),
+        "decisions": [
+            "Investigation found the org already had: a Messaging "
+            "channel, an Experience site, three agents, and an "
+            "Embedded Service deployment named SDO_Messaging_for_Web. "
+            "Plumbing this in took ~80% of the session.",
+            "All four NEXT_PUBLIC_AGENTFORCE_* env vars set; "
+            "components/agentforce-embed.tsx switched from inline to "
+            "floating displayMode after extensive DOM debugging; "
+            "globals.css updated with a compact launcher-callout and a "
+            "minimal #embedded-messaging z-index defence.",
+            "Hit a HARD CEILING that we don't control: the SDO sample "
+            "deployment's runtime config endpoint (salesforce-scrt.com) "
+            "blocks external origins via missing Access-Control-Allow-"
+            "Origin, AND the Experience site's commcsp policy hardcodes "
+            "frame-ancestors to a DIFFERENT org's domain. Neither is "
+            "modifiable from the consumer side. The launcher mounts in "
+            "the DOM but its inner iframe stays display:none after the "
+            "config fetch is CORS-blocked.",
+            "Three Salesforce-side fixes attempted and verified: added "
+            "http://localhost:3000 to CorsWhitelistEntry; set "
+            "AreGuestUsersAllowed = true via Tooling API (the field is "
+            "not directly writable, had to PATCH the Metadata field); "
+            "switched the Experience site deployment from V1 to V2. None "
+            "lifted the SDO-sample restrictions.",
+            "Decision: defer to a dedicated session where the user "
+            "authors a Pause-Health-owned Embedded Service deployment "
+            "+ Experience site + agent. Captured the full sequence in "
+            "docs/PHASE_3_RUNBOOK.md so the next session is "
+            "click-through-only rather than re-investigation.",
+        ],
+        "built": [
+            "components/agentforce-embed.tsx — production-shape React "
+            "wrapper around the V2 embedded_service_bootstrap, with "
+            "floating displayMode and a status-driven launcher callout "
+            "(loading / ready / error states).",
+            "components/agentforce-fallback.tsx — refined Pause-branded "
+            "scripted intake; emits the same intake.completed event as "
+            "the real widget so downstream A2A + Care Router + Agent "
+            "Fabric flows are unaffected.",
+            "globals.css — agentforce-launcher-callout styles plus a "
+            "minimal z-index override for #embedded-messaging so the "
+            "Salesforce-injected launcher sits above Pause's toast "
+            "region (no other overrides — Salesforce owns its own "
+            "internal CSS).",
+            "lib/agentforce.ts — getAgentforceConfig() helper that "
+            "reads and validates the four NEXT_PUBLIC_AGENTFORCE_* env "
+            "vars; returns null when any is missing (drives the "
+            "fallback).",
+            "docs/PHASE_3_RUNBOOK.md — the 2-4 hour next-session "
+            "playbook with the exact Salesforce restrictions documented "
+            "verbatim from the DevTools Console (CORS missing-header, "
+            "commcsp frame-ancestors directive).",
+            ".env.example and .env.local annotated with multi-paragraph "
+            "comments explaining the SDO-sample restrictions, so the "
+            "next agent or developer does not waste a session on the "
+            "same dead end.",
+            "README.md updated with the /demo/intake status section.",
+        ],
+        "verified": [
+            "Bootstrap script downloads and embedded_service_bootstrap "
+            ".init succeeds — the integration code is correct.",
+            "DevTools Console reproduces the two specific Salesforce-"
+            "side blockers (CORS and CSP frame-ancestors) deterministically.",
+            "With env vars unset, /demo/intake renders the polished "
+            "Pause-branded scripted fallback end-to-end.",
+            "Committed and pushed: floating-mode wiring + investigation "
+            "findings + next-session runbook.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 16 — MuleSoft Anypoint integration: investigation "
+            "and next-session runbook"
+        ),
+        "ask": (
+            "User stated: 'I have a MuleSoft org to be used for the "
+            "prototype.' Scope agreed: investigate-only (~30 minutes), "
+            "no Anypoint UI clickthrough, no commits to wiring. Produce "
+            "a runbook calibrated against the Salesforce Phase 1 / "
+            "Phase 3 lessons."
+        ),
+        "decisions": [
+            "Inventoried the existing MuleSoft surface area: 4 mocked "
+            "Experience-API routes, real Mule 4 reference flow, real "
+            "DataWeave 2.0 transform (OMH -> FHIR R5), MCP server "
+            "already supporting PAUSE_MCP_BASE_URL for swapping to a "
+            "real Anypoint runtime, polished investor page, and full "
+            "design doc. The story is more developed than Salesforce "
+            "was at the same point — only the live runtime is missing.",
+            "Probed Anypoint Platform hostnames. anypoint.mulesoft.com, "
+            "eu1, gov, the OAuth token endpoint, us-e1.cloudhub.io, "
+            "us-east-1.cloudhub.io, mq-us-east-1.anypoint.mulesoft.com, "
+            "and the Exchange asset CDN all resolve and return their "
+            "expected status codes. The Anypoint OAuth endpoint cleanly "
+            "returns 401 to bogus client credentials — same shape as "
+            "Salesforce, which means the auth pattern carries over.",
+            "Headline network finding: Anypoint resolves through "
+            "*.edge2.salesforce.com — the same edge family as the user's "
+            "Salesforce org. Good news (Zscaler exception likely "
+            "covers both), risk (if Zscaler tightens *.salesforce.com "
+            "later, both Salesforce and MuleSoft break).",
+            "Recommended scope: replace ONE mocked Experience API "
+            "(/api/mulesoft/health) with a real Mule app deployed to "
+            "CloudHub 2.0. Reasons: canonical demo URL linked from "
+            "everywhere; payload fully synthetic so safe on a public "
+            "worker; no upstream dependencies (the bundle does not "
+            "need live JHE or pause_ingest); MCP server already supports "
+            "the swap; tells the right investor story (one URL flips "
+            "from 'mocked' to 'live on Anypoint Platform').",
+            "Calibration against Salesforce: this looks like Phase 1 "
+            "(server-to-server OAuth, no embedding, graceful "
+            "degradation pattern proven) rather than Phase 3 (CORS/CSP-"
+            "bound widget). High confidence the next session ships in "
+            "one sitting.",
+        ],
+        "built": [
+            "docs/MULESOFT_RUNBOOK.md (357 lines) — surface-area "
+            "inventory, Zscaler probe results table, recommended scope, "
+            "7-step playbook (Connected App -> Code Builder/Studio -> "
+            "deploy -> wire with graceful degradation -> investor-page "
+            "and Agent Fabric trace update -> MCP wiring note -> "
+            "verification + commit), iteration 2+ priorities, "
+            "calibration table vs Salesforce Phase 1/3, open questions "
+            "for the user.",
+            "README.md — one-paragraph pointer to the new runbook on "
+            "the /proposal/mulesoft line.",
+        ],
+        "verified": [
+            "All Anypoint hostnames reachable (recorded with HTTP code, "
+            "TLS verify result, IP, and notes).",
+            "Anypoint OAuth endpoint returns Unauthorized to bogus "
+            "credentials — auth surface confirmed healthy.",
+            "No code changes, no new env vars in .env.local, no new "
+            "dependencies — investigation-only scope honored.",
+            "Committed and pushed as 59c5d9a.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 17 — Site polish and recognition: profile, social "
+            "links, security.txt, JSON-LD, canonical domain"
+        ),
+        "ask": (
+            "Scattered across phases 12-16: lift the production site's "
+            "polish and machine-readability so URL classifiers and "
+            "social previews recognize Pause-Health.ai correctly, and "
+            "fix the canonical domain so the deployed site advertises "
+            "itself as pause-health.ai rather than pause-health-ai.vercel"
+            ".app."
+        ),
+        "decisions": [
+            "Canonical URLs handled via NEXT_PUBLIC_SITE_URL + an "
+            "absoluteUrl() helper, NOT via assetPrefix. assetPrefix is "
+            "for asset paths; we wanted the canonical/OG/sitemap URLs "
+            "themselves to be on the apex domain. One environment "
+            "variable, every page picks it up.",
+            "Find-and-replace pause-health-ai.vercel.app -> pause-health"
+            ".ai turned out to be a Vercel project setting + DNS work, "
+            "not a code change. Documented the DNS + Zscaler unblocking "
+            "steps for the next time the production domain is migrated.",
+            "About page: added Maggie C. Hu's profile picture and "
+            "LinkedIn social link. Real founder presence rather than a "
+            "placeholder.",
+            "security.txt + Organization JSON-LD added so URL "
+            "classifiers (Slack, LinkedIn, Twitter, Google Search) "
+            "recognize Pause-Health.ai as a legitimate organization "
+            "rather than as an unverified Vercel preview URL.",
+        ],
+        "built": [
+            "lib/page-metadata.ts (or equivalent) wired to "
+            "NEXT_PUBLIC_SITE_URL via the absoluteUrl helper; every "
+            "page's metadata.canonical, openGraph.url, twitter.url, and "
+            "the sitemap entries derive from one source.",
+            "About page updated with the founder profile picture and "
+            "LinkedIn link.",
+            "frontend/public/.well-known/security.txt — security contact "
+            "and policy URL.",
+            "Organization JSON-LD on the homepage so classifiers see "
+            "name, logo, sameAs (LinkedIn, GitHub), and URL.",
+            "README.md and Vercel docs updated with the DNS + Zscaler "
+            "guidance for canonical-domain migrations.",
+        ],
+        "verified": [
+            "Production pages return the correct canonical/OG URLs.",
+            "security.txt resolves over HTTPS with the right content type.",
+            "Organization JSON-LD validates in Google's Rich Results "
+            "test.",
+            "About page renders the founder picture and LinkedIn link "
+            "on both desktop and mobile.",
+        ],
+    },
 ]
 
 OPERATIONS_LOG = {
@@ -682,6 +1098,78 @@ OPERATIONS_LOG = {
             ),
         },
         {
+            "name": "Server-to-server OAuth Client Credentials as the default integration shape",
+            "detail": (
+                "Salesforce Health Cloud (Phase 12), Salesforce Data "
+                "Cloud (Phase 14, scope-add only), and the recommended "
+                "MuleSoft Anypoint integration (Phase 16) all use the "
+                "same auth shape: server-side OAuth 2.0 Client "
+                "Credentials Flow via a per-integration Connected/External "
+                "Client App, cached token in process memory, in-flight "
+                "request deduplication. lib/salesforce/auth.ts is the "
+                "canonical template; the same ~120 lines will work for "
+                "Anypoint by swapping the token URL and scope names. "
+                "Avoid embedding-style integrations (browser widgets, "
+                "iframe-based UIs) — those drag in CORS, CSP "
+                "frame-ancestors, and Experience-site restrictions that "
+                "cost a session each."
+            ),
+        },
+        {
+            "name": "Zscaler intercepts on Salesforce-edge hostnames",
+            "detail": (
+                "Corporate Zscaler proxy intercepted *.c360a.salesforce"
+                ".com (Data Cloud) with a 504 Gateway Timeout during "
+                "Phase 14 investigation. Pausing Zscaler resolved it. "
+                "Anypoint Platform hostnames resolve through the SAME "
+                "*.edge2.salesforce.com edge family (verified in Phase "
+                "16) so the same Zscaler posture covers both. Risk "
+                "documented: if Zscaler tightens *.salesforce.com later, "
+                "Salesforce AND MuleSoft integrations break together — "
+                "treat them as one dependency for security-posture "
+                "conversations."
+            ),
+        },
+        {
+            "name": "Embedded widgets are a hard-ceiling integration shape",
+            "detail": (
+                "Phase 15 invested a full session in Agentforce Embedded "
+                "Messaging. Every piece on the consumer side worked: "
+                "env vars set, bootstrap loads, init succeeds, launcher "
+                "mounts in DOM. The blockers were two Salesforce-side "
+                "policies on the SDO sample deployment that cannot be "
+                "modified from outside the deployment's own org: (1) "
+                "salesforce-scrt.com's runtime config endpoint omits "
+                "Access-Control-Allow-Origin for external origins; (2) "
+                "the Experience site's commcsp policy hardcodes "
+                "frame-ancestors to the DEPLOYING org's domain. CORS "
+                "allowlists, AreGuestUsersAllowed flips, and V1->V2 "
+                "switches do NOT lift either restriction. Lesson: "
+                "embedded-widget integrations require BOTH the customer-"
+                "side wiring AND a deployment authored in the embedding "
+                "domain's own org. Document this verbatim in the "
+                "runbook so the next attempt is click-through, not "
+                "investigation."
+            ),
+        },
+        {
+            "name": "Investigate-only sessions with a runbook deliverable",
+            "detail": (
+                "Phases 14, 15, and 16 each ended with a deferred "
+                "implementation and a deliverable runbook (PHASE_3_"
+                "RUNBOOK.md, MULESOFT_RUNBOOK.md, or in-line notes in "
+                ".env.example/.env.local for Phase 14). The pattern: "
+                "ask up front for scope (investigate-only vs investigate"
+                "+execute vs full session), do the discovery, write the "
+                "runbook so the NEXT session is click-through only, "
+                "commit the runbook (docs are cheap to roll back). "
+                "Avoids the failure mode of starting an implementation, "
+                "hitting a hard ceiling mid-session, and leaving the "
+                "next agent or developer to rediscover the same "
+                "blockers."
+            ),
+        },
+        {
             "name": "Commit discipline",
             "detail": (
                 "One commit per coherent feature. Every commit message "
@@ -696,14 +1184,16 @@ OPERATIONS_LOG = {
 CURRENT_STATE = {
     "title": "Current state — what is live, what is mocked",
     "live": [
-        "Marketing site, About page, blog and press scaffolds, footer, "
-        "legal pages, SEO surface (sitemap, robots, OG, Twitter).",
+        "Marketing site, About page (with founder picture + LinkedIn), "
+        "blog and press scaffolds, footer, legal pages, SEO surface "
+        "(sitemap, robots, OG, Twitter, security.txt, Organization "
+        "JSON-LD), canonical URLs on the pause-health.ai apex domain.",
         "Investor brief: 14 deep-dive pages plus the /proposal/full "
         "single-document narrative.",
-        "Clickable prototype: /demo/intake (Agentforce real or scripted "
+        "Clickable prototype: /demo/intake (Agentforce real-or-scripted "
         "fallback), /demo/patient, /demo/routing (with live Care Router "
         "decision card), /demo/analytics, /demo/agent-fabric (live "
-        "console).",
+        "console with real-vs-mock source banners on every span).",
         "Real Code Repository nav link to the GitHub repo.",
         "Python wearable-ingest worker (pause_ingest/) — FLIRT-based, "
         "pytest-covered.",
@@ -712,33 +1202,70 @@ CURRENT_STATE = {
         "Multi-agent control plane: real A2A handoff, real Agent Fabric "
         "trace store, real governance evaluation, real Anthropic path "
         "when configured.",
-        "Salesforce Data 360 grounding wired into every Care Router "
-        "decision; four-span trace verified end-to-end.",
+        "Salesforce Health Cloud grounding (Phase 12) — LIVE against a "
+        "real connected Developer Edition org via OAuth client "
+        "credentials. SOQL against Contact + CareProgramEnrollee + "
+        "CarePlan + Case. Six seeded demo Contacts with menopause-"
+        "specific care plans. Agent Fabric trace spans show _source: "
+        "'real' on the federated-query span when env vars are set; "
+        "fall back to mock when unset (zero-credential default).",
+        "lib/salesforce/auth.ts test suite: 17 vitest tests covering "
+        "token acquisition, caching, in-flight dedup, expiry, error "
+        "paths. Plus 6 tests for the warn-once dedup helper.",
         "GitHub Actions: frontend-check, codeql, dependabot, vercel-"
         "preview, lighthouse-nightly.",
-        "Production deployment on Vercel.",
+        "Production deployment on Vercel at pause-health.ai.",
     ],
     "mocked": [
-        "Salesforce Agentforce — real when env vars are set, scripted "
-        "fallback otherwise. The scripted path emits the same events as "
-        "the real one.",
-        "MuleSoft Experience APIs — fixture-backed Next.js routes. "
-        "Production swaps the base URL for the customer's Anypoint "
-        "deployment without contract changes.",
+        "Salesforce Agentforce Embedded Messaging on /demo/intake — "
+        "investigated end-to-end in Phase 15. The integration code is "
+        "complete and correct; the SDO sample deployment in the org "
+        "cannot be embedded on external origins because of two "
+        "Salesforce-side restrictions on its CORS and frame-ancestors "
+        "CSP that we do not control. Scripted Pause-branded fallback "
+        "runs by default and emits the same intake.completed event the "
+        "real widget would. Next-session playbook (author a Pause-Health-"
+        "owned deployment, 2-4 hours UI clickthrough) lives in "
+        "docs/PHASE_3_RUNBOOK.md.",
+        "Salesforce Data Cloud unified-profile layer (Phase 14) — "
+        "PROVISIONED but EMPTY. 31 unified DMOs exist; no Data Streams "
+        "currently feed them. External Client App scopes are pre-"
+        "configured (cdp_api, cdp_profile_api, cdp_ingest_api) so the "
+        "OAuth side is ready. Activation is a 2-4 hour Setup UI exercise "
+        "(Data Streams + DLO mappings + Identity Resolution + Calculated "
+        "Insights) deferred to a dedicated session.",
+        "MuleSoft Experience APIs (Phase 7) — fixture-backed Next.js "
+        "routes. A real Anypoint Platform org is now available (Phase "
+        "16) but no Mule app is deployed yet. Production swaps the base "
+        "URL for the customer's Anypoint deployment without contract "
+        "changes; the MCP server's PAUSE_MCP_BASE_URL already supports "
+        "the swap. Next-session 3-5 hour playbook in "
+        "docs/MULESOFT_RUNBOOK.md.",
         "MuleSoft Agent Fabric — in-memory registry, policy catalog, "
         "trace store. Production swaps for the real Anypoint Agent "
         "Fabric service.",
-        "Salesforce Data 360 — in-memory federated patient store, "
-        "calculated insights as deterministic fixtures, IR stub, four "
-        "hand-curated segments. Production swaps for the Data 360 "
-        "Federated Query API against the customer's real federated "
-        "sources.",
+        "Salesforce Data 360 federated reads beyond Health Cloud — the "
+        "in-memory federated patient store and four calculated insights "
+        "from Phase 11 still serve any code path that asks for data the "
+        "real Health Cloud org doesn't have (wearable HRV time series, "
+        "cohort comparisons, population segments). Hybrid: Health Cloud "
+        "live, everything else mocked, both surface together through "
+        "the same GroundingContext type.",
         "Anthropic Claude — real when ANTHROPIC_API_KEY is set, "
         "deterministic policy engine fallback otherwise.",
         "JupyterHealth + DBDP — design documented and reference "
         "scaffolds present; live federation happens when a customer "
         "deployment wires the System APIs to their real JupyterHealth "
         "instance and DBDP feature warehouse.",
+    ],
+    "deferred_with_runbook": [
+        "Phase 2 (Salesforce Data Cloud activation) — README.md status "
+        "section + .env.example comments; estimated 2-4 hours UI work.",
+        "Phase 3 (Pause-owned Agentforce Embedded Messaging deployment) "
+        "— docs/PHASE_3_RUNBOOK.md; estimated 2-4 hours UI work.",
+        "MuleSoft Phase 1 (one live CloudHub 2.0 Experience API "
+        "replacing /api/mulesoft/health) — docs/MULESOFT_RUNBOOK.md; "
+        "estimated 3-5 hours combined UI + wiring.",
     ],
 }
 
@@ -912,6 +1439,8 @@ def render(doc: Document):
     add_bullets(doc, CURRENT_STATE["live"])
     add_h2(doc, "Mocked, with documented production shape")
     add_bullets(doc, CURRENT_STATE["mocked"])
+    add_h2(doc, "Deferred to a dedicated session, with a runbook checked in")
+    add_bullets(doc, CURRENT_STATE["deferred_with_runbook"])
 
     add_h2(doc, "Closing note")
     add_paragraph(
@@ -919,11 +1448,24 @@ def render(doc: Document):
         "The prototype is intentionally honest about every mock. Every "
         "mocked API response carries a meta._note explaining what it is "
         "and what replaces it in production; every investor page includes "
-        "a prototype-vs-production table. A reviewer can run the full "
-        "intake -> A2A -> Care Router -> Data 360 grounding flow locally "
-        "with no credentials, see the four-span trace in the live Agent "
-        "Fabric console, and open the federated Data 360 record JSON for "
-        "the patient — all from a single npm run dev.",
+        "a prototype-vs-production table; every Agent Fabric trace span "
+        "shows _source: 'real' or 'mock' so the demo never lies about "
+        "provenance even when one path is live. A reviewer can run the "
+        "full intake -> A2A -> Care Router -> Data 360 grounding flow "
+        "locally with no credentials and see the four-span trace in the "
+        "live Agent Fabric console; the same reviewer with the three "
+        "Salesforce env vars set sees the federated-query span flip to "
+        "real Health Cloud data without any code change.",
+    )
+    add_paragraph(
+        doc,
+        "Three integrations are deferred to dedicated sessions with "
+        "checked-in runbooks: Salesforce Data Cloud activation, "
+        "Pause-owned Agentforce Embedded Messaging deployment, and the "
+        "first live MuleSoft Anypoint Experience API. Each runbook was "
+        "written immediately after an investigation session so the next "
+        "session is click-through-only rather than re-investigation — "
+        "the most expensive failure mode discovered during the build.",
     )
 
 
