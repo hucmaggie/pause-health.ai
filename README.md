@@ -66,7 +66,12 @@ Deep-dive sections (each a routed page):
 - `/proposal/agentforce` — Patient intake on Salesforce Agentforce Service
   Agent, with graceful Pause-branded fallback when no org is configured.
 - `/proposal/mulesoft` — Integration plane on MuleSoft Anypoint, with a
-  live mocked Experience API at `/api/mulesoft/health`.
+  live mocked Experience API at `/api/mulesoft/health`. A real Anypoint
+  org is now available; the next-session plan to replace this single mock
+  with a live CloudHub 2.0 deployment is documented in
+  [`docs/MULESOFT_RUNBOOK.md`](docs/MULESOFT_RUNBOOK.md) (estimated 3-5
+  hours, same OAuth-client-credentials pattern as the Salesforce Phase 1
+  integration).
 - `/proposal/mcp` — Pause as a tool surface for AI agents. MCP server
   registration snippets for Claude Desktop, Cursor, and Agentforce.
 - `/proposal/agent-fabric` — Multi-agent control plane. Four agents
