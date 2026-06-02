@@ -13,7 +13,8 @@ import {
 } from "../../../../lib/data-360";
 import {
   getGroundingContextPreferReal,
-  resolveIdentityFromOrg
+  resolveIdentityFromOrg,
+  warnSalesforceDegradationOnce
 } from "../../../../lib/salesforce/grounding";
 import { isSalesforceConfigured } from "../../../../lib/salesforce/auth";
 
@@ -92,10 +93,7 @@ export async function POST(req: Request) {
         identitySource = "real";
       }
     } catch (err) {
-      console.warn(
-        "[intake/route-to-care-router] real-org identity resolution failed; degrading to mock:",
-        err instanceof Error ? err.message : err
-      );
+      warnSalesforceDegradationOnce("intake.identity.resolve", err);
     }
   }
   const idFinishedAt = Date.now();

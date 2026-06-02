@@ -56,8 +56,14 @@ async function main() {
   const t = await token();
   console.log("OK   authenticated");
 
+  // Match BOTH the new schema (Title = 'Pause Demo Patient') and the
+  // legacy schema (LastName LIKE prefix) so the script keeps working
+  // during a partial migration. lib/salesforce/grounding.ts applies the
+  // same OR predicate in production.
   const contacts = await soql(t,
-    "SELECT Id, FirstName, LastName, Description, AccountId FROM Contact WHERE LastName LIKE 'Pause Demo Patient:%'"
+    "SELECT Id, FirstName, LastName, Description, AccountId FROM Contact " +
+      "WHERE Title = 'Pause Demo Patient' OR Department = 'Pause Demo' " +
+      "OR LastName LIKE 'Pause Demo Patient:%'"
   );
   if (contacts.length === 0) {
     console.error("FAIL: no seeded Pause Demo contacts found. Run scripts/salesforce-seed.mjs first.");

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { resolveIdentity } from "../../../../../lib/data-360";
-import { resolveIdentityFromOrg } from "../../../../../lib/salesforce/grounding";
+import {
+  resolveIdentityFromOrg,
+  warnSalesforceDegradationOnce
+} from "../../../../../lib/salesforce/grounding";
 import { isSalesforceConfigured } from "../../../../../lib/salesforce/auth";
 
 /**
@@ -43,10 +46,7 @@ export async function POST(req: Request) {
         resolution = real;
       }
     } catch (err) {
-      console.warn(
-        "[data-360/identity/resolve] Real-org identity resolution failed; degrading to mock:",
-        err instanceof Error ? err.message : err
-      );
+      warnSalesforceDegradationOnce("identity.resolve", err);
     }
   }
 

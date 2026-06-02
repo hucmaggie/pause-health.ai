@@ -124,9 +124,19 @@ const COHORT = [
 const PROGRAM_NAME = "Pause Demo: Menopause Care Program";
 const PROGRAM_DESC = "Menopause-specific care program seeded by Pause-Health.ai prototype. Safe to delete via scripts/salesforce-seed.mjs --cleanup.";
 const ACCOUNT_PREFIX = "Pause Demo Household: ";
-const CONTACT_PREFIX = "Pause Demo Patient: ";
 const CASE_PREFIX = "Pause Demo Intake: ";
 const CAREPLAN_PREFIX = "Pause Demo CarePlan: ";
+
+// Contact tagging: Pause demo Contacts use real FirstName/LastName so they
+// display naturally in Salesforce UI ("Deepa Krishnan"), but carry their
+// demo provenance in Title + Department fields so they're trivially
+// findable and deletable. The old schema (LastName="Pause Demo Patient:
+// Deepa Krishnan") is still recognized by cleanup() so a mid-migration
+// cleanup pass wipes everything regardless of which schema seeded it.
+const CONTACT_TITLE = "Pause Demo Patient";
+const CONTACT_DEPARTMENT = "Pause Demo";
+// Legacy prefix retained ONLY for cleanup-time matching of pre-polish seeds.
+const LEGACY_CONTACT_LASTNAME_PREFIX = "Pause Demo Patient: ";
 
 const CONTACT_RECORDTYPE_DEVNAME = "IndustriesIndividual";
 const CASE_RECORDTYPE_DEVNAME = "HLS_Payer_CareManagement";
@@ -240,9 +250,14 @@ async function seed(ctx) {
       Description: `${p.notes}\n\n[Pause Demo seed — safe to delete]`
     });
 
-    const contact = await createOrFind(ctx, "Contact", `${CONTACT_PREFIX}${fullName}`, {
-      LastName: `${CONTACT_PREFIX}${fullName}`,
+    // Contact lookup is scoped by Title=CONTACT_TITLE so we never collide
+    // with the org's existing 1,000+ non-demo contacts that might share a
+    // FirstName/LastName with one of our personas.
+    const contactPayload = {
       FirstName: p.firstName,
+      LastName: p.lastName,
+      Title: CONTACT_TITLE,
+      Department: CONTACT_DEPARTMENT,
       AccountId: account.id,
       RecordTypeId: contactRTId,
       Description: [
@@ -254,7 +269,22 @@ async function seed(ctx) {
         ``,
         p.notes
       ].join("\n")
-    });
+    };
+    const existingContactRows = await soql(ctx,
+      `SELECT Id FROM Contact WHERE Title = '${CONTACT_TITLE}' AND FirstName = '${p.firstName.replace(/'/g, "\\'")}' AND LastName = '${p.lastName.replace(/'/g, "\\'")}' LIMIT 1`
+    );
+    let contact;
+    if (existingContactRows[0]) {
+      contact = { id: existingContactRows[0].Id, created: false };
+      log.dim(`reused existing Contact ${contact.id}`);
+    } else if (DRY_RUN) {
+      contact = { id: "DRY_RUN_Contact", created: false };
+      log.dim(`[dry-run] would create Contact "${fullName}" (Title="${CONTACT_TITLE}")`);
+    } else {
+      const res = await sfFetch(ctx, "POST", "/sobjects/Contact", contactPayload);
+      contact = { id: res.id, created: true };
+      log.dim(`created Contact ${contact.id} (${fullName})`);
+    }
 
     const enrolleeName = `Pause Demo Enrollee: ${fullName}`;
     // EnrolleeType / BenefitCoverageType were intentionally removed: the
@@ -321,12 +351,20 @@ async function cleanup(ctx) {
   log.step("Cleanup: finding all Pause Demo records");
 
   const tables = [
-    // delete order matters: children before parents
+    // delete order matters: children before parents.
+    // Contact match is OR'd: new schema uses Title = 'Pause Demo Patient'
+    // and Department = 'Pause Demo'; legacy schema put the same identifier
+    // into LastName. Matching both means cleanup is safe to run during or
+    // after the schema migration without leaving orphans.
     { sobject: "CarePlan", where: `Name LIKE '${CAREPLAN_PREFIX}%'`, label: "CarePlans" },
     { sobject: "Case", where: `Subject LIKE '${CASE_PREFIX}%'`, label: "Cases" },
     { sobject: "CareProgramEnrollee", where: `Name LIKE 'Pause Demo Enrollee:%'`, label: "Enrollees" },
     { sobject: "CareProgram", where: `Name = '${PROGRAM_NAME}'`, label: "CareProgram" },
-    { sobject: "Contact", where: `LastName LIKE '${CONTACT_PREFIX}%'`, label: "Contacts" },
+    {
+      sobject: "Contact",
+      where: `Title = '${CONTACT_TITLE}' OR Department = '${CONTACT_DEPARTMENT}' OR LastName LIKE '${LEGACY_CONTACT_LASTNAME_PREFIX}%'`,
+      label: "Contacts (Pause Demo, new + legacy schema)"
+    },
     { sobject: "Account", where: `Name LIKE '${ACCOUNT_PREFIX}%'`, label: "Accounts" }
   ];
 

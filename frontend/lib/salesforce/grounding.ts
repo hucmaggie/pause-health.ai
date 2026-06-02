@@ -121,18 +121,29 @@ function parseHint(description: string | null | undefined, key: string): string 
 }
 
 /**
+ * SOQL predicate that matches Pause demo Contacts under both the current
+ * schema (Title = 'Pause Demo Patient', natural LastName) and the legacy
+ * pre-polish schema (LastName = 'Pause Demo Patient: <Name>'). The OR
+ * means grounding still works during a partial schema migration and
+ * doesn't silently start ignoring records that haven't been re-seeded.
+ *
+ * Scoping by Title also guarantees we never surface the org's existing
+ * 1,000+ non-demo Contacts as grounding context — those have null Title
+ * for our seeded value.
+ */
+const PAUSE_DEMO_CONTACT_PREDICATE =
+  `(Title = 'Pause Demo Patient' OR Department = 'Pause Demo' OR LastName LIKE 'Pause Demo Patient:%')`;
+
+/**
  * Look up a seeded patient by Contact.Id. Returns null if not a Pause
- * Demo seed (so callers can fall back). We deliberately scope to seeded
- * records via the "Pause Demo Patient:" LastName prefix so a curious
- * patient ID from the org can't accidentally surface random Health Cloud
- * fixtures (e.g. the existing 1,162 Contacts) as grounding context.
+ * Demo seed (so callers can fall back).
  */
 async function findSeededContact(contactId: string): Promise<RealContact | null> {
   const safe = escapeSoql(contactId);
   const rows = await soql<RealContact>(
     `SELECT Id, FirstName, LastName, Description, AccountId
      FROM Contact
-     WHERE Id = '${safe}' AND LastName LIKE 'Pause Demo Patient:%'
+     WHERE Id = '${safe}' AND ${PAUSE_DEMO_CONTACT_PREDICATE}
      LIMIT 1`
   );
   return rows[0] || null;
@@ -155,7 +166,7 @@ async function resolveSeededContact(input: {
   const seeded = await soql<RealContact>(
     `SELECT Id, FirstName, LastName, Description, AccountId
      FROM Contact
-     WHERE LastName LIKE 'Pause Demo Patient:%'`
+     WHERE ${PAUSE_DEMO_CONTACT_PREDICATE}`
   );
   const want = (input.preferredName || "").trim().toLowerCase();
   const matchByName =
@@ -468,6 +479,54 @@ export async function resolveIdentityFromOrg(input: {
 }
 
 /**
+ * Per-process dedup set so a single unexpected-failure category logs at
+ * most once. When Salesforce is intentionally unconfigured (env vars
+ * unset on purpose, e.g. Vercel production), no warning is ever emitted —
+ * the fallback is the expected behavior, not a degradation. Only when
+ * env vars ARE set and the call fails do we surface a warning, and even
+ * then we collapse duplicates to keep logs readable.
+ */
+const warnedFailures = new Set<string>();
+
+/**
+ * Emit a single rate-limited warning per distinct failure category.
+ * Categories are derived from the error name/code (or a fallback) so a
+ * persistent misconfiguration logs once instead of on every request,
+ * but a NEW failure mode still gets surfaced.
+ *
+ * Exported for use by API routes that perform their own SF calls
+ * outside this module (e.g. identity resolution in
+ * /api/intake/route-to-care-router).
+ */
+export function warnSalesforceDegradationOnce(
+  context: string,
+  err: unknown
+): void {
+  // Intentional silent fallback: env vars unset means fallback is expected.
+  if (!isSalesforceConfigured()) return;
+
+  const errMessage = err instanceof Error ? err.message : String(err);
+  const errName = err instanceof Error ? err.name : "Unknown";
+  // Bucket on (context, errName, first 80 chars of message) so a
+  // 500-error category and an auth-error category dedupe separately.
+  const bucket = `${context}::${errName}::${errMessage.slice(0, 80)}`;
+  if (warnedFailures.has(bucket)) return;
+  warnedFailures.add(bucket);
+  console.warn(
+    `[salesforce] ${context} failed (dedup-once per failure category); degrading to mock:`,
+    errMessage
+  );
+}
+
+/**
+ * Test-only: clear the dedup set so a test can re-trigger the warning.
+ * Not part of the public API; not imported by production code paths.
+ */
+export function _resetSalesforceWarnDedupForTests(): void {
+  warnedFailures.clear();
+}
+
+/**
  * Convenience wrapper that prefers the real org but degrades to the mock
  * on any failure (auth, network, no match). API routes should call this
  * rather than reaching into either underlying function directly.
@@ -484,12 +543,7 @@ export async function getGroundingContextPreferReal(args: {
       const real = await getGroundingContextFromOrg(args);
       if (real) return { source: "real", grounding: real };
     } catch (err) {
-      // Soft-fail: log and degrade. The trace consumer sees source:"mock"
-      // and can ask the operator why.
-      console.warn(
-        "[salesforce/grounding] Real-org grounding failed; degrading to mock:",
-        err instanceof Error ? err.message : err
-      );
+      warnSalesforceDegradationOnce("grounding.federated-query", err);
     }
   }
   return { source: "mock", grounding: getMockGroundingContext(args) };
