@@ -38,12 +38,12 @@ import { isSalesforceConfigured } from "../../../../lib/salesforce/auth";
  *      mock as a fallback.
  *   2. Pulls the federated grounding context (Health Cloud Phase 1
  *      in the real path; Data 360 simulator in the mock path).
- *   3. Flattens the grounding into ~20 string-typed fields plus one
- *      compact JSON dossier (Patient_Context_JSON) that captures
- *      every signal the agent should be able to cite verbatim.
+ *   3. Flattens the grounding into ~20 short string-typed fields, each
+ *      clamped to <=255 chars to survive the channel's hard cap.
  *
  * Field schema (all values are strings — Salesforce hidden prechat
- * fields are string-typed):
+ * fields are string-typed, and Salesforce hard-caps every channel
+ * custom parameter at 255 chars regardless of declared maxLength):
  *
  *   _firstName, _lastName                    -- Salesforce-standard
  *   Patient_Id                                -- Salesforce Contact.Id when real
@@ -58,14 +58,24 @@ import { isSalesforceConfigured } from "../../../../lib/salesforce/auth";
  *   Cohort_Name, Cohort_Size, Patient_Percentile
  *   Grounding_Source                          -- "real" | "mock"
  *   Grounding_Insights_Count
- *   Patient_Context_JSON                      -- compact JSON, <2KB
  *   Demo_Note                                 -- short narrative for the agent
  *
- * Registration: every non-underscore field above must be added to
- * the Messaging Channel's Parameter Mappings in Salesforce Setup
- * before the agent will see it as a Conversation Variable. The
- * underscore-prefixed standard fields are accepted automatically.
- * See docs/PHASE_3_RUNBOOK.md for the click-through.
+ * The Patient_Context_JSON dossier is NOT included in the channel
+ * payload because it cannot survive the 255-char truncation. It is
+ * still returned in this API response so that out-of-band consumers
+ * (e.g. a custom Apex action invoked by the agent during the
+ * conversation) can fetch the full structured dossier server-side.
+ *
+ * Registration: every non-underscore field above is registered on
+ * the Salesforce side as:
+ *   - a MessagingChannel customParameter (maxLength=255),
+ *   - a Pause_<Name>__c custom field on MessagingSession,
+ *   - an input variable on the Pause_Intake_Prechat_Router routing
+ *     Flow that copies the value onto MessagingSession,
+ *   - a Bot contextVariable mapped to the MessagingSession field so
+ *     the agent can reference it as $Context.Pause_<Name>.
+ * The underscore-prefixed standard fields are accepted automatically.
+ * See docs/PHASE_3_RUNBOOK.md for the full architecture diagram.
  *
  * Why GET, not POST: the patient picker on /demo/intake selects a
  * persona, and the resulting hidden-field bag is idempotent for
@@ -76,7 +86,16 @@ import { isSalesforceConfigured } from "../../../../lib/salesforce/auth";
  * the picker is closed-list so this only fires for hand-edited URLs.
  */
 
-const MAX_JSON_BYTES = 1800;
+// Salesforce hard-caps every messaging channel custom parameter at 255 chars,
+// regardless of the maxLength declared in metadata or the size of the underlying
+// MessagingSession__c field. Values exceeding 255 chars are truncated at the
+// channel boundary before they reach the routing Flow or the agent. We therefore
+// clamp every outbound dossier value to <=255 chars before handing it to
+// embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields(). The full
+// untruncated dossier is still available via this same API endpoint (e.g. for an
+// Apex callout-backed agent action that fetches the full JSON server-side); only
+// the in-band channel payload is constrained.
+const MAX_CHANNEL_VALUE_BYTES = 255;
 
 type PrechatContextResponse = {
   meta: {
@@ -91,13 +110,15 @@ type PrechatContextResponse = {
   prechatFields: Record<string, string>;
 };
 
-function clampJson(value: unknown): string {
-  const compact = JSON.stringify(value);
-  if (compact.length <= MAX_JSON_BYTES) return compact;
-  // Last-ditch truncation. We never expect to hit this in the
-  // current cohort, but defending against future field bloat keeps
-  // the route safe from quietly dropping Salesforce-rejected payloads.
-  return compact.slice(0, MAX_JSON_BYTES - 3) + "...";
+/**
+ * Truncate a string to fit within the Salesforce channel's 255-char hard cap.
+ * Adds an ellipsis when truncation occurs so downstream code can detect it.
+ * Returns an empty string for null/undefined/empty input.
+ */
+function clampForChannel(value: string | undefined | null): string {
+  if (!value) return "";
+  if (value.length <= MAX_CHANNEL_VALUE_BYTES) return value;
+  return value.slice(0, MAX_CHANNEL_VALUE_BYTES - 3) + "...";
 }
 
 async function buildPrechatFields(
@@ -200,9 +221,9 @@ async function buildPrechatFields(
   };
 
   // Resolve a couple of plain-string projections the agent prompt
-  // can reference directly without parsing JSON. These are the
-  // first-class hidden fields the customer will register in
-  // Parameter Mappings; everything else is in Patient_Context_JSON.
+  // can reference directly. Each one becomes a hidden prechat field
+  // (capped to 255 chars by the channel) and lands on the routing
+  // Flow as an input variable, then on MessagingSession.Pause_*__c.
   const careProgramStatus =
     careProgramInsight?.value !== undefined
       ? String(careProgramInsight.value)
@@ -237,8 +258,16 @@ async function buildPrechatFields(
     Grounding_Insights_Count: String(
       grounding.groundingProvenance.computedInsightsCount
     ),
-    Demo_Note: `Pre-resolved Pause-Health demo patient. ${persona.profileNote} The patient already opened the chat from a clinician's dashboard, so begin by acknowledging what you already know rather than asking for identity again.`,
-    Patient_Context_JSON: clampJson(dossier)
+    Demo_Note: clampForChannel(
+      `Pre-resolved Pause-Health demo patient. ${persona.profileNote} The patient already opened the chat from a clinician's dashboard, so begin by acknowledging what you already know rather than asking for identity again.`
+    )
+    // Patient_Context_JSON intentionally omitted: at ~1.4KB the dossier cannot
+    // survive the channel's 255-char hard cap meaningfully (the first 252 bytes
+    // are JSON header noise like `{"persona":{"id":"...","name":"..."`). The
+    // full dossier is still available to server-side actions via this same
+    // endpoint; the agent has the equivalent scalar fields (Age_Band,
+    // Cycle_Status, Vasomotor_Score, etc.) via $Context for fast personalization
+    // and can call a custom Apex action to fetch the full JSON when needed.
   };
 
   return { fields, identitySource, groundingSource };

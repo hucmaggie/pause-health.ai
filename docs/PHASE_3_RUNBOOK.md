@@ -52,118 +52,138 @@ specific blockers we hit and how each one was resolved.
    Agent` → pick `Pause_Health_Intake_Agent` → Save. Routes incoming
    conversations directly to our agent, bypassing the broken legacy flow.
 
-## Phase 18a follow-up: hidden-prechat patient context (2026-06-02)
+## Phase 18a follow-up: hidden-prechat patient context (2026-06-02 → 2026-06-03)
 
 After the base Phase 3 deployment shipped, we added pre-resolved patient
 context so the live Agentforce Service Agent walks into every
-conversation already knowing who the patient is. The mechanism is
-Salesforce's standard hidden-prechat API (Messaging for Web V2). No
-agent prompt changes were required; the dossier surfaces as
-Conversation Variables on the agent side.
+conversation already knowing who the patient is. Phase 18a turned out
+to be a two-session effort with one major architectural discovery
+between the sessions.
 
-### How it works end-to-end
+### Final architecture (post-discovery, 2026-06-03)
 
-1. `/demo/intake` renders a `<IntakePatientStage/>` client component
-   with a "View as" picker over the six seeded Salesforce demo
-   personas (Anika Patel, Brianna Okafor, Carmen Diaz, Deepa
-   Krishnan, Elena Rossi, Fatima Khan — see
-   `frontend/lib/demo-cohort.ts`).
-2. Selecting a persona calls
-   `GET /api/intake/prechat-context?personaId=<id>`. The route:
-   - Resolves the patient's Salesforce identity via
-     `resolveIdentityFromOrg` (real Health Cloud match by FirstName +
-     hint) with deterministic mock fallback.
-   - Pulls the federated grounding via
-     `getGroundingContextPreferReal` (Health Cloud Phase 1 SOQL: real
-     CareProgram / CarePlan / Case state).
-   - Flattens both into ~22 string-typed hidden-prechat fields
-     including a compact `Patient_Context_JSON` dossier.
-3. `<AgentforceEmbed/>` is re-keyed on `personaId`, so picking a new
-   patient cleanly remounts the Salesforce SDK with the new dossier.
-4. Inside the SDK's `onEmbeddedMessagingReady` handler — the only
-   window Salesforce accepts — we call
-   `embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields(fields)`.
-   Salesforce delivers the fields to the agent as Conversation
-   Variables before the first message is sent.
+The Salesforce-documented path for getting hidden-prechat fields into an
+Agentforce Service Agent is a **5-component data pipeline**, not the
+"add a few Parameter Mappings" UI step described in the initial Phase
+18a docs. The discovery: **Salesforce only accepts custom Parameter
+Mappings on Messaging Channels whose session handler is a Flow.** When
+the channel routes directly to an Agentforce Service Agent (which is
+what Phase 18 set up to bypass the legacy SDO bot), the channel
+silently refuses every custom parameter. The fix is to put a Flow
+between the channel and the agent, have the Flow write each inbound
+value onto a custom field on `MessagingSession`, then expose those
+fields to the agent as `$Context.<Field>` variables.
 
-### Hidden prechat field schema
+End-to-end data flow:
 
-All values are strings (Salesforce hidden prechat is string-typed).
+```
+[Browser /demo/intake]
+  └─ persona picker selected
+       └─ GET /api/intake/prechat-context?personaId=<id>
+            └─ returns ~20 short string fields (each <=255 chars)
+  └─ <AgentforceEmbed/> re-keys on personaId, remounts SDK
+       └─ onEmbeddedMessagingReady event
+            └─ embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields(fields)
 
-| Field | Example | Notes |
+[Salesforce SCRT2 / Messaging for Web channel]
+  └─ Channel: Messaging_for_In_App_Web
+       └─ <customParameters> (20x, one per dossier field, maxLength=255)
+       └─ <sessionHandlerType>Flow</sessionHandlerType>
+       └─ <sessionHandlerFlow>Pause_Intake_Prechat_Router</sessionHandlerFlow>
+            └─ values flow into the Flow as String input variables
+
+[Salesforce Routing Flow: Pause_Intake_Prechat_Router]
+  └─ 20 input variables (Patient_Id, Age_Band, Vasomotor_Score, ...)
+  └─ <recordUpdates> writes each variable onto MessagingSession.Pause_<Name>__c
+  └─ <actionCalls actionName=routeWork>
+       └─ routingType=Copilot, copilotId=Pause_Health_Intake_Agent
+
+[Agentforce Service Agent: Pause_Health_Intake_Agent]
+  └─ 19 <contextVariables> blocks (5 standard + 14 dossier)
+       └─ each maps MessagingSession.Pause_<Name>__c -> $Context.Pause_<Name>
+       └─ includeInPrompt=true, so the LLM sees them on session start
+  └─ Menopause_Symptom_Intake topic has two new sortOrder=0 instructions:
+       └─ instruction_0_dossier: enumerates every $Context.Pause_<Name>
+            and tells the LLM these values are authoritative
+       └─ instruction_0_personalize: tells the LLM not to re-ask for
+            anything already in the dossier
+```
+
+### Key architectural constraints we hit and how we handled them
+
+| # | Constraint | Source | Resolution |
+|---|---|---|---|
+| 1 | Parameter mappings only allowed on Flow-handled channels | Metadata API deploy error | Build the `Pause_Intake_Prechat_Router` Flow, switch `sessionHandlerType` from `AgentforceServiceAgent` to `Flow` |
+| 2 | `customParameter.maxLength` capped at 255, with truncation | Metadata API deploy error + Salesforce docs | Clamp every value <=255 in `/api/intake/prechat-context`; drop `Patient_Context_JSON` entirely (1.4KB would truncate to 252 bytes of JSON header) |
+| 3 | A Bot can have at most 20 `contextVariables` total | Metadata API deploy error | Bot has 5 standard ones; we kept 14 of our 20 dossier fields as ctx variables (dropped 6 metadata-ish ones: Identity_Confidence, Identity_Sources, Identity_Ruleset, Cohort_Size, Grounding_Insights_Count, Patient_Context_JSON). The Flow still writes all 20 to MessagingSession; the dropped 6 are queryable by Apex actions but not surfaced as `$Context` |
+| 4 | Cannot deploy GenAiPlannerBundle changes while agent is Active | Metadata API deploy error | Use `sf agent deactivate` -> deploy -> `sf agent activate` cycle |
+| 5 | Salesforce `Status` field on `BotVersion` not REST-writable | Tooling API error | Use `sf agent deactivate` / `sf agent activate` CLI commands (they wrap the proprietary API) |
+
+### Hidden prechat field schema (final, post-truncation handling)
+
+All values are strings clamped to <=255 chars by `clampForChannel()`.
+
+| Field | Example | Channel? | MessagingSession? | $Context? | Notes |
+|---|---|---|---|---|---|
+| `_firstName` | `Anika` | std | n/a | std | Salesforce-standard, auto-accepted |
+| `_lastName` | `Patel` | std | n/a | std | Salesforce-standard, auto-accepted |
+| `Patient_Id` | `003Hp00003b9bdqIAA` | ✓ | `Pause_Patient_Id__c` | `Pause_Patient_Id` | Real Salesforce Contact.Id when SF is configured |
+| `Identity_Confidence` | `0.94` | ✓ | `Pause_Identity_Confidence__c` | (dropped) | Provenance — Apex-queryable |
+| `Identity_Sources` | `epic-health-cloud, agentforce-intake-history` | ✓ | `Pause_Identity_Sources__c` | (dropped) | Provenance |
+| `Identity_Ruleset` | `pause-phase1-healthcloud-contact-match-v1` | ✓ | `Pause_Identity_Ruleset__c` | (dropped) | Provenance |
+| `Age_Band` | `45-49` | ✓ | `Pause_Age_Band__c` | `Pause_Age_Band` | |
+| `Cycle_Status` | `Perimenopausal` | ✓ | `Pause_Cycle_Status__c` | `Pause_Cycle_Status` | |
+| `Primary_Symptom` | `Hot flashes` | ✓ | `Pause_Primary_Symptom__c` | `Pause_Primary_Symptom` | |
+| `Vasomotor_Score` | `7` | ✓ | `Pause_Vasomotor_Score__c` | `Pause_Vasomotor_Score` | 0-10 |
+| `Sleep_Score` | `4` | ✓ | `Pause_Sleep_Score__c` | `Pause_Sleep_Score` | 0-10 |
+| `Mood_Score` | `3` | ✓ | `Pause_Mood_Score__c` | `Pause_Mood_Score` | 0-10 |
+| `Care_Program_Status` | `Enrolled` | ✓ | `Pause_Care_Program_Status__c` | `Pause_Care_Program_Status` | From real CareProgramEnrollee |
+| `Care_Plan_Status` | `Active` | ✓ | `Pause_Care_Plan_Status__c` | `Pause_Care_Plan_Status` | From real CarePlan |
+| `Days_Since_Last_Contact` | `1` | ✓ | `Pause_Days_Since_Last_Contact__c` | `Pause_Days_Since_Last_Contact` | From most-recent Case.LastModifiedDate |
+| `Cohort_Name` | `Pause Demo Menopause Cohort · 45-49 · primary Hot flashes` | ✓ | `Pause_Cohort_Name__c` | `Pause_Cohort_Name` | |
+| `Cohort_Size` | `6` | ✓ | `Pause_Cohort_Size__c` | (dropped) | Apex-queryable |
+| `Patient_Percentile` | `70` | ✓ | `Pause_Patient_Percentile__c` | `Pause_Patient_Percentile` | |
+| `Grounding_Source` | `real` | ✓ | `Pause_Grounding_Source__c` | `Pause_Grounding_Source` | `real` \| `mock` |
+| `Grounding_Insights_Count` | `5` | ✓ | `Pause_Grounding_Insights_Count__c` | (dropped) | Apex-queryable |
+| `Demo_Note` | `Pre-resolved Pause-Health demo patient…` | ✓ | `Pause_Demo_Note__c` | `Pause_Demo_Note` | Clamped to 255 chars |
+| `Patient_Context_JSON` | (full dossier) | ✗ | ✗ | ✗ | Available only via `/api/intake/prechat-context` (1.4KB; doesn't fit in 255-char channel field). Future: surface via a custom Apex action when the agent asks for it |
+
+### Files / metadata artifacts owned by Pause-Health
+
+| Artifact | Salesforce type | Source of truth |
 |---|---|---|
-| `_firstName` | `Anika` | Salesforce standard; auto-accepted |
-| `_lastName` | `Patel` | Salesforce standard; auto-accepted |
-| `Patient_Id` | `003Hp00000abc...` | Real Salesforce Contact.Id when SF is configured |
-| `Identity_Confidence` | `0.94` | |
-| `Identity_Sources` | `epic-health-cloud, agentforce-intake-history` | |
-| `Identity_Ruleset` | `pause-phase1-healthcloud-contact-match-v1` | |
-| `Age_Band` | `45-49` | |
-| `Cycle_Status` | `Perimenopausal` | |
-| `Primary_Symptom` | `Hot flashes` | |
-| `Vasomotor_Score` | `7` | 0-10 |
-| `Sleep_Score` | `4` | 0-10 |
-| `Mood_Score` | `3` | 0-10 |
-| `Care_Program_Status` | `Enrolled` | From real CareProgramEnrollee |
-| `Care_Plan_Status` | `Active` | From real CarePlan |
-| `Days_Since_Last_Contact` | `412` | From most-recent Case.LastModifiedDate |
-| `Cohort_Name` | `Pause Demo Menopause Cohort · 45-49 · primary Hot flashes` | |
-| `Cohort_Size` | `6` | From real CareProgramEnrollee COUNT |
-| `Patient_Percentile` | `70` | |
-| `Grounding_Source` | `real` or `mock` | |
-| `Grounding_Insights_Count` | `5` | |
-| `Demo_Note` | `Pre-resolved Pause-Health demo patient…` | Narrative for the agent |
-| `Patient_Context_JSON` | `{...}` | Compact dossier (<1800 bytes), all insights + observations |
+| 20 custom fields on `MessagingSession` | CustomField | `/tmp/sf-md-fields/force-app/main/default/objects/MessagingSession/fields/Pause_*__c.field-meta.xml` |
+| `Pause_Health_Intake_Prechat_Dossier` permission set (FLS) | PermissionSet | Same |
+| `Pause_Intake_Prechat_Router` routing flow | Flow / RoutingFlow | `/tmp/sf-md-flow/force-app/main/default/flows/Pause_Intake_Prechat_Router.flow-meta.xml` |
+| `Messaging_for_In_App_Web` channel | MessagingChannel | `/tmp/sf-md-retrieve/force-app/main/default/messagingChannels/Messaging_for_In_App_Web.messagingChannel-meta.xml` (custom-params + flow handler) |
+| `Pause_Health_Intake_Agent` Bot (contextVariables) | Bot | `/tmp/sf-agent/force-app/main/default/bots/Pause_Health_Intake_Agent/Pause_Health_Intake_Agent.bot-meta.xml` |
+| `Pause_Health_Intake_Agent` GenAiPlannerBundle (topic instructions) | GenAiPlannerBundle | `/tmp/sf-agent/force-app/main/default/genAiPlannerBundles/Pause_Health_Intake_Agent/...genAiPlannerBundle` |
 
-### Required Salesforce registration (Parameter Mappings)
+These metadata bundles currently live under `/tmp` because Phase 18a
+treated the Salesforce org as the source of truth. If we want to make
+the org's state version-controlled, the next step is to move these
+into `salesforce/` in the repo root and add a deploy script. (Tracked
+as a Phase 18b follow-up.)
 
-Hidden-prechat field names except the standard `_firstName` / `_lastName`
-must be pre-declared on the Messaging Channel. Salesforce silently
-drops unregistered keys.
+### Verifying end-to-end
 
-**Setup → Messaging Settings → Messaging for In App & Web →
-Parameter Mappings → Add** (one entry per field above):
-
-| Field on Channel | Parameter Mapping name | Type |
-|---|---|---|
-| New Custom Parameter | `Patient_Id` | Text |
-| New Custom Parameter | `Identity_Confidence` | Text |
-| New Custom Parameter | `Identity_Sources` | Text |
-| ... | ... | Text |
-| New Custom Parameter | `Patient_Context_JSON` | Text |
-
-(Repeat for every non-underscore field in the schema table above. All
-are `Text` type — there are no number or date hidden-prechat field
-types in Messaging for Web.)
-
-After saving each parameter mapping, **republish the Embedded Service
-Deployment** so SCRT2 picks up the new schema. Without this step
-hidden-prechat fields *are still sent* by the client SDK, but they
-won't appear as Conversation Variables in the Agent Builder / agent
-trace.
-
-The current production deployment has only `_firstName` and
-`_lastName` registered (standard fields, auto-accepted). The
-agent therefore sees the patient's name on Day 1 but the other fields
-require the registration above. The client sends them regardless so
-no code change is needed once you finish the Salesforce UI step.
-
-### Status
-
-- **LIVE end-to-end** for `_firstName` and `_lastName`: tested
-  2026-06-02 by selecting each persona and asking the agent "what's
-  my name?" — agent responds with the correct first name.
-- **Pending Salesforce admin UI step** for the other ~20 fields: the
-  picker fetches and the SDK sends them, but the agent won't surface
-  them as Conversation Variables until they're added to Parameter
-  Mappings. ~10 minutes of point-and-click work for whoever owns the
-  Salesforce admin seat.
+1. Visit `/demo/intake` on production.
+2. Pick a persona via "View as".
+3. Open the Agentforce launcher and ask "Who am I?". The agent should
+   greet you by first name and acknowledge your reported primary
+   symptom + vasomotor/sleep/mood scores.
+4. Ask "What symptoms have I reported?". The agent should NOT re-ask;
+   it should restate the values from the dossier.
+5. To inspect the agent's view of the dossier directly:
+   ```bash
+   curl -s "https://pause-health-ai.vercel.app/api/intake/prechat-context?personaId=anika-patel" | jq .prechatFields
+   ```
 
 ### Re-using this pattern in real customer deployments
 
-In customer deployments the picker disappears and the `personaId` is
-replaced by the patient's real authenticated identity (e.g. from the
-patient-portal SSO). The route signature can stay as-is:
+The picker disappears, `personaId` is replaced by the patient's real
+authenticated identity (patient-portal SSO), and the route signature
+stays as-is:
 
 ```
 GET /api/intake/prechat-context?patientId=<real-fhir-id>
@@ -171,9 +191,9 @@ GET /api/intake/prechat-context?patientId=<real-fhir-id>
 
 The grounding pipeline already supports both real Salesforce Contact
 IDs and synthetic demo IDs (see `lib/salesforce/grounding.ts:
-getGroundingContextFromOrg`). Everything downstream — the hidden
-prechat shape, the agent prompt that references Conversation
-Variables, the agent trace — is identical.
+getGroundingContextFromOrg`). Everything downstream — the channel
+schema, the Flow, the MessagingSession fields, the agent's
+`$Context.Pause_*` references — is identical.
 
 ## Original 2026-06-02 deferral notes (preserved for context)
 

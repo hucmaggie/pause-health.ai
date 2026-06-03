@@ -1282,6 +1282,158 @@ PHASES = [
             "so the picker keeps working in fork/preview deployments.",
         ],
     },
+    {
+        "title": (
+            "Phase 18b — Land the full agent-side wiring for the prechat "
+            "dossier (Flow + MessagingSession fields + agent $Context)"
+        ),
+        "ask": (
+            "Finish the second half of Phase 18a: make the live "
+            "Agentforce Service Agent actually consume the dossier we "
+            "started sending. Phase 18a got the browser SDK and the "
+            "/api/intake/prechat-context endpoint live but only the two "
+            "Salesforce-standard underscore fields (_firstName / "
+            "_lastName) were reaching the agent. The remaining ~20 "
+            "fields needed a Salesforce-side data pipeline to surface."
+        ),
+        "decisions": [
+            "Built the Salesforce side the documented way (a 5-component "
+            "pipeline) rather than the lightweight 'just add Parameter "
+            "Mappings' approach implied by the Phase 18a runbook. "
+            "Discovery during recon: Salesforce only accepts Parameter "
+            "Mappings on Messaging Channels whose session handler is a "
+            "Flow. Our Phase 18 fix had set the channel to route "
+            "directly to the Agentforce Service Agent (bypassing the "
+            "legacy SDO bot), which silently disabled the custom-"
+            "parameter mechanism. Three options on the table: (A) "
+            "lightweight 'inject context as first user message' "
+            "workaround, (B) defer the full architecture, (C) build "
+            "it the Salesforce-documented way. Picked (C) so the "
+            "platform demo looks Salesforce-native end-to-end and so "
+            "the same wiring scales to real customer deployments.",
+            "Did the entire Salesforce-side build via Metadata API "
+            "(force-app + sfdx-project.json + sf project deploy) "
+            "instead of clicking through Setup. Trade-off: ~30 min of "
+            "metadata authoring up front instead of ~3-5 hours of UI "
+            "clicks, and the resulting artifacts are versioned XML "
+            "that can be replayed on another org. Even the Omni-"
+            "Channel routing Flow (typically built in Flow Builder) "
+            "was authored as XML directly — Salesforce's Flow XML "
+            "schema is well-documented and the round-trip from "
+            "retrieve -> hand-author -> deploy worked first try.",
+            "Discovered Salesforce hard-caps every Messaging channel "
+            "custom parameter at 255 chars regardless of declared "
+            "maxLength, and silently truncates oversized values. "
+            "Adjusted the frontend's /api/intake/prechat-context to "
+            "clamp every field via a new clampForChannel() helper. "
+            "Dropped the rich Patient_Context_JSON dossier (1.4KB) "
+            "from the prechat payload entirely — the first 252 bytes "
+            "would have been useless JSON header noise. Kept the full "
+            "dossier in the API response for out-of-band consumers; "
+            "a future custom Apex action invoked by the agent can "
+            "fetch it when the agent needs it.",
+            "Salesforce caps a Bot at 20 contextVariables total. The "
+            "Pause agent already had 5 standard ones (ContactId, "
+            "EndUserId, EndUserLanguage, RoutableId, VoiceCallId), so "
+            "we got to keep 15 dossier fields as $Context. Dropped "
+            "the 5 least useful for the LLM (Identity_Confidence, "
+            "Identity_Sources, Identity_Ruleset, Cohort_Size, "
+            "Grounding_Insights_Count, Patient_Context_JSON — six in "
+            "total after the JSON-dossier drop). All 20 fields are "
+            "still written to MessagingSession by the Flow and remain "
+            "queryable by Apex actions; only the LLM's in-prompt view "
+            "is constrained.",
+            "Forced an agent deactivate -> deploy -> activate cycle "
+            "for every GenAiPlannerBundle change. Salesforce will not "
+            "let you mutate an active agent's planner because the "
+            "running session schema can drift mid-conversation. The "
+            "sf agent deactivate / sf agent activate CLI commands "
+            "wrap a proprietary REST endpoint; the Status field on "
+            "BotVersion isn't directly REST-writable.",
+            "Added two sortOrder=0 instructions to the Menopause "
+            "Symptom Intake topic instead of rewriting the existing "
+            "7 instructions. The new ones (instruction_0_dossier + "
+            "instruction_0_personalize) tell the LLM what dossier "
+            "values to expect and how to use them; the existing 7 "
+            "remain intact as the fallback intake flow when the "
+            "dossier is partial or absent. Safer to layer than to "
+            "edit the proven intake script.",
+        ],
+        "built": [
+            "Salesforce Metadata API artifacts (deployed via sf "
+            "project deploy):",
+            "  - 20 custom fields on MessagingSession (Pause_<Name>"
+            "__c, Text or LongTextArea) holding each inbound dossier "
+            "value once the Flow has run.",
+            "  - Pause_Health_Intake_Prechat_Dossier permission set "
+            "granting FLS read/edit on those 20 fields plus object-"
+            "level read on MessagingSession and MessagingEndUser. "
+            "Assignable to the integration Run-As user.",
+            "  - Pause_Intake_Prechat_Router routing Flow "
+            "(RoutingFlow, API v65.0, Status=Active) with 20 String "
+            "input variables, a recordUpdates element writing each "
+            "to MessagingSession.Pause_<Name>__c, and a "
+            "actionCalls/routeWork transferring to the Pause_Health_"
+            "Intake_Agent ExternalCopilot bot (Id 0XxHp0000014tiuKAA).",
+            "  - Messaging_for_In_App_Web channel updated: 20 new "
+            "customParameters (each maxLength=255, actionParameter"
+            "Mappings pointing at the Flow's matching input variable), "
+            "sessionHandlerType swapped from AgentforceServiceAgent "
+            "to Flow, sessionHandlerFlow set to the new router.",
+            "  - Pause_Health_Intake_Agent Bot updated: 14 new "
+            "contextVariables mapping MessagingSession.Pause_<Name>"
+            "__c -> $Context.Pause_<Name>, all with "
+            "includeInPrompt=true so the LLM sees them on session "
+            "start.",
+            "  - Pause_Health_Intake_Agent GenAiPlannerBundle "
+            "updated: two new sortOrder=0 instructions on the "
+            "Menopause Symptom Intake topic (instruction_0_dossier "
+            "enumerates every $Context.Pause_<Name> value as "
+            "authoritative; instruction_0_personalize tells the LLM "
+            "not to re-ask for anything already in the dossier).",
+            "Frontend update: frontend/app/api/intake/prechat-context/"
+            "route.ts now clamps every outbound field to <=255 chars "
+            "via clampForChannel() and omits Patient_Context_JSON "
+            "from the prechat payload (the full dossier remains in "
+            "the API response object for out-of-band consumers). "
+            "Doc-comment rewritten to describe the new 5-component "
+            "Salesforce architecture so future readers don't repeat "
+            "the discovery.",
+            "Docs: PHASE_3_RUNBOOK.md 'Phase 18a follow-up' section "
+            "completely rewritten with the final architecture "
+            "diagram, the 5 architectural constraints we hit + how "
+            "we resolved each, an updated field schema table that "
+            "marks each field's reachability (Channel? Messaging"
+            "Session? $Context?), and a 'Files / metadata artifacts' "
+            "table pointing at the source XML.",
+        ],
+        "verified": [
+            "Metadata API dry-runs caught every misstep along the "
+            "way: 'Parameter mappings can only be created for channels "
+            "with Flow session handlers' (forced the Flow), 'Max "
+            "Length must be a value between 1 and 255' (forced the "
+            "channel-side clamp + frontend clampForChannel), 'A parent "
+            "bot can only have 20 conversation definition variables' "
+            "(forced the priority sort on which dossier fields get "
+            "surfaced as $Context), 'Cannot update record as Agent is "
+            "Active' (forced the deactivate/activate cycle).",
+            "Server-side spot-check via Tooling API after each "
+            "deploy: 20 Pause_*__c CustomField records exist on "
+            "MessagingSession; Pause_Intake_Prechat_Router exists as "
+            "an Active RoutingFlow at API v65.0; Bot still parses; "
+            "agent reactivates cleanly.",
+            "Frontend /api/intake/prechat-context returns identity "
+            "and grounding source 'real' for Anika Patel with a real "
+            "Salesforce Contact.Id (003Hp00003b9bdqIAA). All 20 "
+            "fields are <=255 chars; npm run lint clean; npm test "
+            "73/73 pass.",
+            "Browser end-to-end verification deferred to user — the "
+            "Vercel redeploy needs to complete first, and the agent's "
+            "behavior change is best confirmed visually by selecting "
+            "each persona and asking 'who am I?' / 'what symptoms "
+            "have I reported?' in the live chat.",
+        ],
+    },
 ]
 
 OPERATIONS_LOG = {
@@ -1516,22 +1668,29 @@ CURRENT_STATE = {
         "'real' on the federated-query span when env vars are set; "
         "fall back to mock when unset (zero-credential default).",
         "Salesforce Agentforce Embedded Messaging intake on "
-        "/demo/intake (Phase 18, shipped 2026-06-02) — LIVE on "
-        "pause-health.ai. Pause_Health_Intake_Agent (a real Agentforce "
-        "Service Agent on Service Cloud, Active, with two subagents "
-        "and seven instructions including red-flag escalation) responds "
-        "to messages from the chat panel embedded in the Next.js app "
-        "via the V2 Messaging-for-Web bootstrap. Routing is "
-        "Omni-Channel -> Agentforce Service Agent (direct, no flow). "
-        "Phase 18a (also 2026-06-02): 'View as <patient>' picker over "
-        "the six seeded Health Cloud personas hands the agent a 22-"
-        "field hidden-prechat dossier (identity + grounding + "
-        "Patient_Context_JSON) via "
+        "/demo/intake (Phase 18, shipped 2026-06-02; Phase 18b "
+        "completed 2026-06-03) — LIVE on pause-health.ai. "
+        "Pause_Health_Intake_Agent (a real Agentforce Service Agent "
+        "on Service Cloud, Active, with two subagents and nine "
+        "instructions including red-flag escalation and two new "
+        "Phase-18b dossier-aware instructions) responds to messages "
+        "from the chat panel embedded in the Next.js app via the V2 "
+        "Messaging-for-Web bootstrap. Routing: Omni-Channel -> "
+        "Pause_Intake_Prechat_Router routing Flow -> Pause_Health_"
+        "Intake_Agent. The 'View as <patient>' picker hands ~20 "
+        "hidden-prechat fields to "
         "embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields() "
-        "BEFORE the conversation begins, so the agent walks in "
-        "pre-grounded. Scripted Pause-branded fallback still runs "
-        "for any deployment without the four NEXT_PUBLIC_AGENTFORCE_* "
-        "env vars set (forks, previews without org credentials).",
+        "before the conversation starts; the channel routes them "
+        "into the Flow, which writes each to a Pause_<Name>__c "
+        "custom field on MessagingSession; the agent then references "
+        "them as $Context.Pause_<Name> in its topic instructions and "
+        "personalizes its first message accordingly. Every field is "
+        "clamped to 255 chars per Salesforce's channel hard cap; the "
+        "full multi-KB dossier remains available out-of-band via "
+        "/api/intake/prechat-context for future custom Apex actions. "
+        "Scripted Pause-branded fallback still runs for any "
+        "deployment without the four NEXT_PUBLIC_AGENTFORCE_* env "
+        "vars set (forks, previews without org credentials).",
         "lib/salesforce/auth.ts test suite: 17 vitest tests covering "
         "token acquisition, caching, in-flight dedup, expiry, error "
         "paths. Plus 6 tests for the warn-once dedup helper.",
@@ -1577,16 +1736,16 @@ CURRENT_STATE = {
         "MuleSoft Phase 1 (one live CloudHub 2.0 Experience API "
         "replacing /api/mulesoft/health) — docs/MULESOFT_RUNBOOK.md; "
         "estimated 3-5 hours combined UI + wiring.",
-        "Salesforce Parameter Mappings registration for the ~20 "
-        "custom hidden-prechat fields Phase 18a sends (everything "
-        "except Salesforce-standard _firstName / _lastName which are "
-        "auto-accepted) — Setup -> Messaging Settings -> Messaging "
-        "for In App & Web -> Parameter Mappings -> Add (one per "
-        "field), then republish the Embedded Service Deployment. "
-        "~10 minutes of point-and-click admin work. The client "
-        "sends the fields regardless; this step makes them surface "
-        "as Conversation Variables in Agent Builder / agent traces. "
-        "Documented in docs/PHASE_3_RUNBOOK.md 'Phase 18a follow-up'.",
+        "Move the Phase 18a/18b Salesforce metadata artifacts (20 "
+        "MessagingSession custom fields, the Pause_Health_Intake_"
+        "Prechat_Dossier permission set, the Pause_Intake_Prechat_"
+        "Router routing Flow, the augmented Messaging_for_In_App_Web "
+        "channel, and the Bot + GenAiPlannerBundle for Pause_Health_"
+        "Intake_Agent) from /tmp scratch dirs into salesforce/ in "
+        "this repo, add a deploy script, and CI-validate them. "
+        "Today the Salesforce org IS the source of truth for these "
+        "artifacts; the next session makes the repo authoritative "
+        "instead. ~2 hours of scaffolding work.",
     ],
 }
 
