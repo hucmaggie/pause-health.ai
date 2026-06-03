@@ -91,17 +91,22 @@ Deep-dive sections (each a routed page):
   the org's Data Cloud workspace is provisioned with 31 unified DMOs
   (`ssot__Individual__dlm` etc.) but no Data Streams currently feed
   them; activation is a 2-4 hour Setup UI exercise.
-- `/demo/intake` — Agentforce Embedded Messaging intake. The
-  `lib/agentforce.ts` + `components/agentforce-embed.tsx` integration
-  reads four `NEXT_PUBLIC_AGENTFORCE_*` env vars; when set, the page
-  loads the real Salesforce-served chat launcher. When unset (the
-  default), a Pause-branded scripted intake renders. Verified end-to-end
-  against the org's SDO sample deployment on 2026-06-02: bootstrap loads,
-  init succeeds, launcher mounts in the DOM. The SDO sample's runtime
-  config endpoint blocks external origins via CORS + frame-ancestors CSP,
-  so the launcher renders inert until a Pause-Health-owned deployment is
-  authored. See [`docs/PHASE_3_RUNBOOK.md`](docs/PHASE_3_RUNBOOK.md) for
-  the 2-4 hour next-session playbook.
+- `/demo/intake` — Agentforce Embedded Messaging intake. **LIVE** as of
+  2026-06-02. The `lib/agentforce.ts` + `components/agentforce-embed.tsx`
+  integration reads four `NEXT_PUBLIC_AGENTFORCE_*` env vars; when set,
+  the page loads a real Salesforce-hosted chat launcher backed by an
+  Agentforce Service Agent (`Pause_Health_Intake_Agent`) on Service
+  Cloud. Verified end-to-end on production at `pause-health.ai/demo/intake`:
+  the launcher renders, the chat panel opens, the agent joins, and
+  conversations route through Omni-Channel Routing
+  (`Routing Type = Agentforce Service Agent`). When the env vars are
+  unset (the default for forks/previews without org credentials), a
+  Pause-branded scripted intake renders so the demo still works without
+  any Salesforce setup. See
+  [`docs/PHASE_3_RUNBOOK.md`](docs/PHASE_3_RUNBOOK.md) for the deployment
+  topology, the root-cause analysis of the two surprises we hit
+  (`clientVersion: WebV1` default + legacy `HLS - Route to Bot` flow on
+  the Messaging Channel), and how each was resolved.
 
 ## Local development
 

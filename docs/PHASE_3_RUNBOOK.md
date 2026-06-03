@@ -1,16 +1,67 @@
 # Phase 3 Runbook: Author a Pause-Health-owned Agentforce Embedded Messaging Deployment
 
-**Goal:** Replace the scripted intake at `/demo/intake` with a real, live
-Salesforce Agentforce Embedded Messaging widget that loads on
-`http://localhost:3000` and `https://pause-health.ai`.
+**Status: SHIPPED — 2026-06-02 21:46 PT.**
 
-**Status at 2026-06-02 end-of-session:** integration is fully wired and the
-SDO sample deployment in the org was successfully published as V2 with
-public bootstrap. However, the SDO sample deployment cannot be embedded on
-an external origin because of two Salesforce-side restrictions documented
-below. This runbook captures what needs to happen in a dedicated 2-4 hour
-session to lift those restrictions by authoring a Pause-Health-owned
-deployment.
+The Pause-Health-owned Agentforce Embedded Messaging deployment is now live
+end-to-end. A real Salesforce Agentforce Service Agent
+(`Pause_Health_Intake_Agent`) responds to messages from `pause-health.ai/demo/intake`
+through a Salesforce-hosted chat panel embedded into the Next.js app on Vercel.
+
+Verified end-to-end at 21:46 PT 2026-06-02: opened `pause-health.ai/demo/intake`
+on production Vercel, clicked the chat launcher, sent "hello", agent joined
+("Pause Health Intake Agent joined") and replied ("Hi, I'm an AI service
+assistant. How can I help you?"). Footer reads "Powered by Agentforce from
+salesforce." Console errors were limited to harmless `commcsp` placeholder
+warnings inherited from the org-wide CSP policy.
+
+The body of this runbook below is preserved as historical record of the
+two-session investigation that led to the live deployment, including the
+specific blockers we hit and how each one was resolved.
+
+## What ended up shipping (final state at 21:46 PT 2026-06-02)
+
+| Component | Value | Notes |
+|---|---|---|
+| Embedded Service Deployment | `Pause_Health_Intake` (Id `04IHp0000011V2VMAU`) | DeploymentType=Web, DeploymentFeature=EmbeddedMessaging, ClientVersion=WebV2, AreGuestUsersAllowed=true, IsEnabled=true |
+| Experience site | `ESW_Pause_Health_Intake_17804555025671` (Id `0DMHp0000019wJoOAI`) | UrlPathPrefix=`ESWPauseHealthIntake1780455502567`, Status=Active, frame-ancestors=`pause-health.ai *.pause-health.ai` |
+| Agent | `Pause_Health_Intake_Agent` (BotDefinitionId `0XxHp0000014tiuKAA`) | Type=Service Agent, Version 1=Active, two subagents (Escalation + Menopause Symptom Intake), 7 instructions including red-flag escalation |
+| Messaging Channel | `Messaging_for_In_App_Web` (Id `0MjHp00000118PqKAI`) | Type=EmbeddedMessaging, IsActive=true, PlatformType=Enhanced |
+| Channel routing | Omni-Channel Routing → Routing Type **Agentforce Service Agent** → Pause Health Intake Agent | The key fix: was previously set to Omni-Flow → `HLS - Route to Bot` which targeted the wrong (legacy SDO) bot |
+| Org CORS allowlist | `CorsWhitelistEntry` records `https_pause_health_ai` and `https_pause_health_ai_wild` | Cover `https://pause-health.ai` and `https://*.pause-health.ai` |
+| Trusted URLs (CSP) | `Pause_Health_AI_Production` + `Pause_Health_AI_Wildcard` | All 6 CSP directives ticked, Context=All |
+| Frontend env vars | Four `NEXT_PUBLIC_AGENTFORCE_*` in Vercel Production + Preview + Dev | Mirror `frontend/.env.local` |
+
+## Root-cause summary (the two surprises we hit)
+
+1. **`clientVersion: WebV1` stuck on the deployment.** The Salesforce UI
+   created the deployment as V2 (`DeploymentFeature=EmbeddedMessaging`) but
+   the underlying `EmbeddedServiceConfig.clientVersion` field defaulted to
+   `WebV1` and was not writable via Tooling API v60. **Fix:** use Tooling
+   API v65 to PATCH `Metadata.clientVersion = WebV2` (older versions don't
+   expose the field at all). Then republish the deployment for SCRT2 to
+   pick up the change.
+
+2. **The MessagingChannel routed conversations to the wrong bot.** The
+   org's `Messaging_for_In_App_Web` channel inherited an Omni-Channel
+   Routing config pointing at the legacy `HLS - Route to Bot` Omni-Flow
+   from the SDO sample. This caused the chat panel to open, fetch config,
+   then sit forever with `RPC failed to connect: Error: RPC connection
+   timeout` inside the iframe (the iframe couldn't reach an active bot).
+   **Fix:** Setup → Messaging Settings → Messaging for In App & Web → edit
+   Omni-Channel Routing → set **Routing Type** to `Agentforce Service
+   Agent` → pick `Pause_Health_Intake_Agent` → Save. Routes incoming
+   conversations directly to our agent, bypassing the broken legacy flow.
+
+## Original 2026-06-02 deferral notes (preserved for context)
+
+**Original Status at 2026-06-02 end of first session:** integration is fully
+wired and the SDO sample deployment in the org was successfully published
+as V2 with public bootstrap. However, the SDO sample deployment cannot be
+embedded on an external origin because of two Salesforce-side restrictions
+documented below. This runbook captures what needs to happen in a
+dedicated 2-4 hour session to lift those restrictions by authoring a
+Pause-Health-owned deployment. *(That second session happened the same day
+and shipped the live deployment.)*
 
 ## Why the SDO sample doesn't work for our prototype
 

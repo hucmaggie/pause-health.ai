@@ -142,11 +142,14 @@ export default function AgentforcePage() {
       <section className="card" style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Prototype vs production</p>
         <p style={{ marginTop: "0.4rem" }}>
-          The public prototype at <a href="/demo/intake">/demo/intake</a> renders a
-          Pause-branded scripted intake by default. The same page automatically upgrades
-          to a live Agentforce Service Agent once the four deployment env vars are set.
-          The surrounding layout, the structured-record handoff, and the clinical triage
-          rules are identical across both modes.
+          The live demo at <a href="/demo/intake">/demo/intake</a> is currently running
+          a real Salesforce Agentforce Service Agent
+          (<code>Pause_Health_Intake_Agent</code>) on Service Cloud, embedded via the
+          V2 Messaging-for-Web bootstrap. Forks of this repository that don&apos;t
+          configure the four <code>NEXT_PUBLIC_AGENTFORCE_*</code> env vars instead see
+          a Pause-branded scripted intake (a deterministic TypeScript state machine).
+          The surrounding layout, the structured-record handoff, and the clinical
+          triage rules are identical across both modes.
         </p>
         <div className="table-wrap" style={{ marginTop: "0.6rem" }}>
           <table>

@@ -86,8 +86,10 @@ ARCH_DIAGRAM = """\
                                   │  Patient submits intake
                                   ▼
    ┌───────────────────────────────────────────────────────────────────────┐
-   │  Agentforce Service Agent (front door)                                │
-   │  Real Embedded Messaging when configured, scripted fallback otherwise │
+   │  Agentforce Service Agent (front door) — LIVE**                       │
+   │  Pause_Health_Intake_Agent (Service Cloud) embedded via V2 Messaging  │
+   │  for Web on pause-health.ai. Scripted Pause fallback for unconfigured │
+   │  forks/previews.                                                      │
    └───────────────────────────────────────────────────────────────────────┘
                                   │
                                   │  Google A2A `tasks/send` with intake + grounding
@@ -137,6 +139,14 @@ ARCH_DIAGRAM = """\
      • A real Anypoint Platform org is connected for future MuleSoft
        work; today every Experience API is still served by the Next.js
        mock. Next-session plan lives in docs/MULESOFT_RUNBOOK.md.
+     • ** Agentforce embedded chat (Phase 3) shipped 2026-06-02. Real
+       Salesforce Agentforce Service Agent on Service Cloud, V2
+       Messaging for Web bootstrap, routed through Omni-Channel
+       (Agentforce Service Agent routing) directly to the agent.
+       See docs/PHASE_3_RUNBOOK.md for the deployment topology and
+       the two gotchas we hit (clientVersion=WebV1 default needing a
+       Tooling API v65 PATCH; Messaging Channel routing needing to
+       point at the agent, not a legacy Omni-Flow).
 """
 
 MONOREPO_LAYOUT = """\
@@ -1029,6 +1039,124 @@ PHASES = [
             "on both desktop and mobile.",
         ],
     },
+    {
+        "title": (
+            "Phase 18 — Real Agentforce embedded chat (Phase 3) shipped "
+            "end-to-end"
+        ),
+        "ask": (
+            "Continue from the Phase 15 deferral: actually stand up a "
+            "Pause-Health-owned Agentforce Embedded Messaging deployment "
+            "so /demo/intake serves a live Salesforce Agentforce Service "
+            "Agent on pause-health.ai, not the scripted fallback."
+        ),
+        "decisions": [
+            "Authored a Pause-Health-owned deployment from scratch "
+            "(EmbeddedServiceConfig DeveloperName=Pause_Health_Intake, "
+            "DeploymentFeature=EmbeddedMessaging, DeploymentType=Web) "
+            "instead of reusing the legacy SDO sample. This is the "
+            "only path that gets the Experience site's auto-generated "
+            "frame-ancestors header to include our origins.",
+            "Built the agent in Agent Builder (NOT the legacy Einstein "
+            "Bots UI). Pause_Health_Intake_Agent is a Type=Service Agent "
+            "(Agentforce GA), Version 1 Active, with two subagents "
+            "(Escalation + Menopause Symptom Intake) and 7 instructions "
+            "including red-flag escalation rules. The legacy Einstein "
+            "Bots page in Setup does not show Service Agents at all — "
+            "a real footgun for anyone porting from older docs.",
+            "Bound the agent to the channel via Setup -> Messaging "
+            "Settings -> Messaging for In App & Web -> Omni-Channel "
+            "Routing -> Routing Type = Agentforce Service Agent -> "
+            "Pause_Health_Intake_Agent. Did NOT use Agentforce's own "
+            "'Connections' tab on the agent detail page — that tab "
+            "only supports Type=API (external app integrations), not "
+            "messaging channels. The binding lives on the channel side.",
+            "Allowed external origins at the org level via two surfaces, "
+            "both required: (a) Setup -> CORS (CorsWhitelistEntry "
+            "records https://pause-health.ai + https://*.pause-health.ai), "
+            "(b) Setup -> Security -> Trusted URLs (Pause_Health_AI_"
+            "Production + Pause_Health_AI_Wildcard with CSP Context=All "
+            "and all 6 CSP directives ticked). Both edited from the UI; "
+            "SiteIframeWhiteListUrl REST writes return INSUFFICIENT_"
+            "ACCESS_ON_CROSS_REFERENCE_ENTITY so the UI is the only "
+            "path for the second surface.",
+            "Used Tooling API v65 (NOT v60) to PATCH "
+            "EmbeddedServiceConfig.Metadata.clientVersion = 'WebV2'. "
+            "Older API versions either silently drop the field or "
+            "return FIELD_INTEGRITY_EXCEPTION. The deployment defaults "
+            "to WebV1 in the UI even though DeploymentFeature is "
+            "EmbeddedMessaging, which the SDK runtime interprets as "
+            "the V1 wire protocol and which causes the chat panel to "
+            "fail its handshake. The field must be explicitly PATCHed, "
+            "then the deployment must be republished for SCRT2 to pick "
+            "it up.",
+            "On every UI screen handoff, asked the user for a "
+            "screenshot before guessing at the click path. The "
+            "Agentforce vs Einstein Bots UI split, the V1 vs V2 "
+            "modal mess, and the Connections-tab-is-API-only "
+            "footgun were all caught this way without burning "
+            "trial-and-error cycles on the wrong screen.",
+        ],
+        "built": [
+            "Salesforce: Pause_Health_Intake_Agent (BotDefinition "
+            "0XxHp0000014tiuKAA, Type=Service Agent, v1 Active) with "
+            "two subagents and seven instructions including red-flag "
+            "and red-zone safety escalation rules; Pause_Health_Intake "
+            "EmbeddedServiceConfig (Id 04IHp0000011V2VMAU, clientVersion=WebV2, "
+            "AreGuestUsersAllowed=true, IsEnabled=true); "
+            "ESW_Pause_Health_Intake_17804555025671 Experience site "
+            "(Id 0DMHp0000019wJoOAI, URL prefix ESWPauseHealthIntake1780455502567, "
+            "frame-ancestors=pause-health.ai + *.pause-health.ai); "
+            "two CorsWhitelistEntry records; two Trusted URL records; "
+            "Omni-Channel Routing on Messaging_for_In_App_Web pointed "
+            "directly at the agent.",
+            "Frontend: NEXT_PUBLIC_AGENTFORCE_* env vars in .env.local "
+            "and Vercel project settings (Production + Preview + "
+            "Development); /demo/intake renders the Live agent UI "
+            "automatically when all four are set; component handles "
+            "the loading / initializing / ready / error lifecycle via "
+            "onEmbeddedMessagingReady and onEmbeddedMessagingInitError "
+            "listeners.",
+            "Diagnostics: frontend/public/agentforce-probe.html — a "
+            "self-contained probe page that loads the bootstrap with "
+            "the same params and logs every SDK lifecycle event to an "
+            "on-page console. Useful when DevTools is ambiguous about "
+            "which tab/iframe context it is attached to. Lives at "
+            "/agentforce-probe.html on both production and preview "
+            "deployments.",
+            "Docs: docs/PHASE_3_RUNBOOK.md updated with the final "
+            "deployment topology, root-cause analysis of the two "
+            "surprises we hit (clientVersion=WebV1 default needs "
+            "Tooling API v65 PATCH; legacy HLS - Route to Bot flow "
+            "needs to be swapped for Agentforce Service Agent routing), "
+            "and the 5-item prereq checklist any future deployment "
+            "has to meet.",
+        ],
+        "verified": [
+            "End-to-end conversation on https://pause-health.ai/demo/intake "
+            "at 21:46 PT 2026-06-02: launcher renders, panel opens, "
+            "agent joins ('Pause Health Intake Agent joined'), agent "
+            "replies ('Hi, I'm an AI service assistant. How can I help "
+            "you?'), Powered-by-Agentforce footer shows.",
+            "SCRT2 embedded-service-config endpoint emits "
+            "Access-Control-Allow-Origin: https://pause-health.ai "
+            "(and https://www.pause-health.ai) after the CORS + "
+            "Trusted URLs + republish round-trip.",
+            "bootstrap.min.js serves 200 OK with 101,604 bytes (full "
+            "V2 bundle, embeddedservice_bootstrap.init namespace) "
+            "across multiple CDN edge nodes.",
+            "EmbeddedServiceConfig.Metadata.clientVersion = WebV2 "
+            "round-tripped through the Tooling API v65 PATCH and "
+            "is now reflected in SCRT2 config payload after republish.",
+            "Channel routing: Setup -> Messaging Settings -> "
+            "Messaging for In App & Web shows Omni-Channel Routing "
+            "= Agentforce Service Agent -> Pause Health Intake Agent.",
+            "Graceful degradation preserved: when the four "
+            "NEXT_PUBLIC_AGENTFORCE_* env vars are not set, "
+            "/demo/intake falls back to the Pause-branded scripted "
+            "intake.",
+        ],
+    },
 ]
 
 OPERATIONS_LOG = {
@@ -1131,25 +1259,78 @@ OPERATIONS_LOG = {
             ),
         },
         {
-            "name": "Embedded widgets are a hard-ceiling integration shape",
+            "name": "Embedded widgets require deployment in the embedding org",
             "detail": (
-                "Phase 15 invested a full session in Agentforce Embedded "
-                "Messaging. Every piece on the consumer side worked: "
-                "env vars set, bootstrap loads, init succeeds, launcher "
-                "mounts in DOM. The blockers were two Salesforce-side "
-                "policies on the SDO sample deployment that cannot be "
-                "modified from outside the deployment's own org: (1) "
-                "salesforce-scrt.com's runtime config endpoint omits "
-                "Access-Control-Allow-Origin for external origins; (2) "
-                "the Experience site's commcsp policy hardcodes "
-                "frame-ancestors to the DEPLOYING org's domain. CORS "
-                "allowlists, AreGuestUsersAllowed flips, and V1->V2 "
-                "switches do NOT lift either restriction. Lesson: "
-                "embedded-widget integrations require BOTH the customer-"
-                "side wiring AND a deployment authored in the embedding "
-                "domain's own org. Document this verbatim in the "
-                "runbook so the next attempt is click-through, not "
-                "investigation."
+                "Phase 15 invested a full session investigating why the "
+                "SDO sample Agentforce deployment could not be embedded "
+                "on pause-health.ai. Phase 18 confirmed the underlying "
+                "constraint: embedded-widget integrations need a "
+                "deployment authored in an org whose Experience site can "
+                "be configured to include the embedding origin in BOTH "
+                "(a) the SCRT2 endpoint's CORS allowlist (driven by "
+                "Trusted URLs + CorsWhitelistEntry on the embedding org) "
+                "AND (b) the site's frame-ancestors CSP (auto-derived "
+                "from the Experience site's Trusted Domains, which is "
+                "in turn populated from the Domain field set during "
+                "EmbeddedServiceDeployment creation). The SDO sample "
+                "had neither knob configured for pause-health.ai, and "
+                "neither could be changed from outside the org. A "
+                "Pause-Health-owned deployment in the same org (Phase "
+                "18) trivially has both knobs because we control the "
+                "Domain field during creation. Lesson: don't try to "
+                "borrow a sample deployment for external embedding; "
+                "stand up your own deployment, takes ~30 min once you "
+                "know the path."
+            ),
+        },
+        {
+            "name": "EmbeddedServiceConfig.clientVersion defaults to WebV1",
+            "detail": (
+                "Phase 18 surfaced a non-obvious gotcha: even when "
+                "DeploymentFeature is set to EmbeddedMessaging (the V2 "
+                "Messaging for In-App and Web product), the underlying "
+                "EmbeddedServiceConfig.Metadata.clientVersion field "
+                "defaults to 'WebV1'. The SCRT2 runtime config endpoint "
+                "reads this field verbatim and the SDK switches between "
+                "V1 and V2 wire protocols based on its value. With "
+                "clientVersion=WebV1 the launcher renders but the chat "
+                "panel handshake fails with RPC connection timeout. "
+                "Fix: PATCH Metadata.clientVersion='WebV2' via Tooling "
+                "API v65 (older API versions do not expose the field at "
+                "all), then republish the deployment. Document in any "
+                "future runbook as a mandatory step."
+            ),
+        },
+        {
+            "name": "Agentforce Service Agents do not appear in Einstein Bots",
+            "detail": (
+                "Phase 18 surfaced this footgun: the legacy 'Einstein "
+                "Bots' page in Salesforce Setup lists only classic "
+                "bots, not Agentforce Service Agents. An Agentforce "
+                "agent created via Agent Builder exists in BotDefinition "
+                "(queryable via SOQL) but is invisible in the Einstein "
+                "Bots UI. To manage Agentforce agents go to Setup -> "
+                "Agentforce Agents (or the agent's detail page directly). "
+                "Anyone porting from older Salesforce docs will look at "
+                "the empty Einstein Bots page and assume their agent "
+                "wasn't created — this is wrong."
+            ),
+        },
+        {
+            "name": "Bind Bot-to-Channel on the Channel, not on the Agent",
+            "detail": (
+                "The Agentforce agent's detail page has a 'Connections' "
+                "tab. It looks like the place to bind the agent to a "
+                "messaging channel. It is NOT — that tab only supports "
+                "Type=API (external app integrations). The actual "
+                "Bot-to-MessagingChannel binding lives on the channel: "
+                "Setup -> Messaging Settings -> <channel> -> "
+                "Omni-Channel Routing -> Routing Type = 'Agentforce "
+                "Service Agent' -> pick the agent. Without this, "
+                "incoming conversations route to the channel's "
+                "FallbackQueue (typically an empty 'Messaging' queue) "
+                "and the chat panel sits forever at RPC connection "
+                "timeout."
             ),
         },
         {
@@ -1209,6 +1390,17 @@ CURRENT_STATE = {
         "specific care plans. Agent Fabric trace spans show _source: "
         "'real' on the federated-query span when env vars are set; "
         "fall back to mock when unset (zero-credential default).",
+        "Salesforce Agentforce Embedded Messaging intake on "
+        "/demo/intake (Phase 18, shipped 2026-06-02) — LIVE on "
+        "pause-health.ai. Pause_Health_Intake_Agent (a real Agentforce "
+        "Service Agent on Service Cloud, Active, with two subagents "
+        "and seven instructions including red-flag escalation) responds "
+        "to messages from the chat panel embedded in the Next.js app "
+        "via the V2 Messaging-for-Web bootstrap. Routing is "
+        "Omni-Channel -> Agentforce Service Agent (direct, no flow). "
+        "Scripted Pause-branded fallback still runs for any "
+        "deployment without the four NEXT_PUBLIC_AGENTFORCE_* env "
+        "vars set (forks, previews without org credentials).",
         "lib/salesforce/auth.ts test suite: 17 vitest tests covering "
         "token acquisition, caching, in-flight dedup, expiry, error "
         "paths. Plus 6 tests for the warn-once dedup helper.",
@@ -1217,16 +1409,6 @@ CURRENT_STATE = {
         "Production deployment on Vercel at pause-health.ai.",
     ],
     "mocked": [
-        "Salesforce Agentforce Embedded Messaging on /demo/intake — "
-        "investigated end-to-end in Phase 15. The integration code is "
-        "complete and correct; the SDO sample deployment in the org "
-        "cannot be embedded on external origins because of two "
-        "Salesforce-side restrictions on its CORS and frame-ancestors "
-        "CSP that we do not control. Scripted Pause-branded fallback "
-        "runs by default and emits the same intake.completed event the "
-        "real widget would. Next-session playbook (author a Pause-Health-"
-        "owned deployment, 2-4 hours UI clickthrough) lives in "
-        "docs/PHASE_3_RUNBOOK.md.",
         "Salesforce Data Cloud unified-profile layer (Phase 14) — "
         "PROVISIONED but EMPTY. 31 unified DMOs exist; no Data Streams "
         "currently feed them. External Client App scopes are pre-"
@@ -1261,11 +1443,14 @@ CURRENT_STATE = {
     "deferred_with_runbook": [
         "Phase 2 (Salesforce Data Cloud activation) — README.md status "
         "section + .env.example comments; estimated 2-4 hours UI work.",
-        "Phase 3 (Pause-owned Agentforce Embedded Messaging deployment) "
-        "— docs/PHASE_3_RUNBOOK.md; estimated 2-4 hours UI work.",
         "MuleSoft Phase 1 (one live CloudHub 2.0 Experience API "
         "replacing /api/mulesoft/health) — docs/MULESOFT_RUNBOOK.md; "
         "estimated 3-5 hours combined UI + wiring.",
+        "Pre-fill chat session via setHiddenPrechatFields on "
+        "/demo/intake — Phase 18 optional follow-up to pre-populate "
+        "the conversation with the visiting patient's resolved "
+        "identity and recent vitals from Data 360. Skipped for the "
+        "first investor ship; ~45 min of focused work.",
     ],
 }
 
