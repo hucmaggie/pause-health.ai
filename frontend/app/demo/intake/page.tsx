@@ -1,7 +1,8 @@
-import { AgentforceEmbed } from "../../../components/agentforce-embed";
 import { AgentforceFallback } from "../../../components/agentforce-fallback";
 import { DemoShell } from "../../../components/demo-shell";
+import { IntakePatientStage } from "../../../components/intake-patient-stage";
 import { getAgentforceConfig } from "../../../lib/agentforce";
+import { DEMO_COHORT } from "../../../lib/demo-cohort";
 import { pageMetadata } from "../../../lib/page-metadata";
 
 export const metadata = pageMetadata({
@@ -13,37 +14,6 @@ export const metadata = pageMetadata({
   ogImageAlt: "Pause-Health.ai prototype preview — intake to analytics."
 });
 
-const queueRows = [
-  {
-    patient: "K. Johnson",
-    symptoms: "Hot flashes, night sweats, sleep disruption",
-    risk: "Moderate",
-    wait: "12m",
-    source: "JupyterHealth EHR + wearable sync"
-  },
-  {
-    patient: "T. Ramirez",
-    symptoms: "Irregular bleeding after 12 months amenorrhea",
-    risk: "High",
-    wait: "6m",
-    source: "JupyterHealth EHR"
-  },
-  {
-    patient: "N. Chen",
-    symptoms: "Palpitations, anxiety spikes, insomnia",
-    risk: "Moderate",
-    wait: "17m",
-    source: "dbdp wearable ingestion"
-  },
-  {
-    patient: "A. Green",
-    symptoms: "Severe mood changes, passive self-harm thoughts",
-    risk: "Critical",
-    wait: "2m",
-    source: "JupyterHealth EHR + call transcript"
-  }
-];
-
 export default function IntakeDemoPage() {
   const agentforceConfig = getAgentforceConfig();
 
@@ -54,7 +24,7 @@ export default function IntakeDemoPage() {
     >
       <section style={{ marginBottom: "1.5rem" }}>
         {agentforceConfig ? (
-          <AgentforceEmbed config={agentforceConfig} />
+          <IntakePatientStage agentforceConfig={agentforceConfig} />
         ) : (
           <AgentforceFallback />
         )}
@@ -63,6 +33,11 @@ export default function IntakeDemoPage() {
       <section className="demo-grid">
         <article className="card">
           <h3>Live menopause care queue</h3>
+          <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginTop: "0.2rem" }}>
+            Six seeded personas in our Salesforce Health Cloud org. Picking
+            one above pre-loads the live Agentforce Service Agent with
+            that patient&apos;s Data 360 dossier.
+          </p>
           <div className="table-wrap">
             <table>
               <thead>
@@ -75,13 +50,15 @@ export default function IntakeDemoPage() {
                 </tr>
               </thead>
               <tbody>
-                {queueRows.map((row) => (
-                  <tr key={row.patient}>
-                    <td>{row.patient}</td>
-                    <td>{row.symptoms}</td>
-                    <td>{row.risk}</td>
-                    <td>{row.wait}</td>
-                    <td>{row.source}</td>
+                {DEMO_COHORT.map((persona) => (
+                  <tr key={persona.id}>
+                    <td>
+                      {persona.firstName} {persona.lastName}
+                    </td>
+                    <td>{persona.displaySymptoms}</td>
+                    <td>{persona.displayRisk}</td>
+                    <td>{persona.displayWait}</td>
+                    <td>{persona.displaySource}</td>
                   </tr>
                 ))}
               </tbody>

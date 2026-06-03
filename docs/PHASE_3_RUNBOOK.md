@@ -52,6 +52,129 @@ specific blockers we hit and how each one was resolved.
    Agent` → pick `Pause_Health_Intake_Agent` → Save. Routes incoming
    conversations directly to our agent, bypassing the broken legacy flow.
 
+## Phase 18a follow-up: hidden-prechat patient context (2026-06-02)
+
+After the base Phase 3 deployment shipped, we added pre-resolved patient
+context so the live Agentforce Service Agent walks into every
+conversation already knowing who the patient is. The mechanism is
+Salesforce's standard hidden-prechat API (Messaging for Web V2). No
+agent prompt changes were required; the dossier surfaces as
+Conversation Variables on the agent side.
+
+### How it works end-to-end
+
+1. `/demo/intake` renders a `<IntakePatientStage/>` client component
+   with a "View as" picker over the six seeded Salesforce demo
+   personas (Anika Patel, Brianna Okafor, Carmen Diaz, Deepa
+   Krishnan, Elena Rossi, Fatima Khan — see
+   `frontend/lib/demo-cohort.ts`).
+2. Selecting a persona calls
+   `GET /api/intake/prechat-context?personaId=<id>`. The route:
+   - Resolves the patient's Salesforce identity via
+     `resolveIdentityFromOrg` (real Health Cloud match by FirstName +
+     hint) with deterministic mock fallback.
+   - Pulls the federated grounding via
+     `getGroundingContextPreferReal` (Health Cloud Phase 1 SOQL: real
+     CareProgram / CarePlan / Case state).
+   - Flattens both into ~22 string-typed hidden-prechat fields
+     including a compact `Patient_Context_JSON` dossier.
+3. `<AgentforceEmbed/>` is re-keyed on `personaId`, so picking a new
+   patient cleanly remounts the Salesforce SDK with the new dossier.
+4. Inside the SDK's `onEmbeddedMessagingReady` handler — the only
+   window Salesforce accepts — we call
+   `embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields(fields)`.
+   Salesforce delivers the fields to the agent as Conversation
+   Variables before the first message is sent.
+
+### Hidden prechat field schema
+
+All values are strings (Salesforce hidden prechat is string-typed).
+
+| Field | Example | Notes |
+|---|---|---|
+| `_firstName` | `Anika` | Salesforce standard; auto-accepted |
+| `_lastName` | `Patel` | Salesforce standard; auto-accepted |
+| `Patient_Id` | `003Hp00000abc...` | Real Salesforce Contact.Id when SF is configured |
+| `Identity_Confidence` | `0.94` | |
+| `Identity_Sources` | `epic-health-cloud, agentforce-intake-history` | |
+| `Identity_Ruleset` | `pause-phase1-healthcloud-contact-match-v1` | |
+| `Age_Band` | `45-49` | |
+| `Cycle_Status` | `Perimenopausal` | |
+| `Primary_Symptom` | `Hot flashes` | |
+| `Vasomotor_Score` | `7` | 0-10 |
+| `Sleep_Score` | `4` | 0-10 |
+| `Mood_Score` | `3` | 0-10 |
+| `Care_Program_Status` | `Enrolled` | From real CareProgramEnrollee |
+| `Care_Plan_Status` | `Active` | From real CarePlan |
+| `Days_Since_Last_Contact` | `412` | From most-recent Case.LastModifiedDate |
+| `Cohort_Name` | `Pause Demo Menopause Cohort · 45-49 · primary Hot flashes` | |
+| `Cohort_Size` | `6` | From real CareProgramEnrollee COUNT |
+| `Patient_Percentile` | `70` | |
+| `Grounding_Source` | `real` or `mock` | |
+| `Grounding_Insights_Count` | `5` | |
+| `Demo_Note` | `Pre-resolved Pause-Health demo patient…` | Narrative for the agent |
+| `Patient_Context_JSON` | `{...}` | Compact dossier (<1800 bytes), all insights + observations |
+
+### Required Salesforce registration (Parameter Mappings)
+
+Hidden-prechat field names except the standard `_firstName` / `_lastName`
+must be pre-declared on the Messaging Channel. Salesforce silently
+drops unregistered keys.
+
+**Setup → Messaging Settings → Messaging for In App & Web →
+Parameter Mappings → Add** (one entry per field above):
+
+| Field on Channel | Parameter Mapping name | Type |
+|---|---|---|
+| New Custom Parameter | `Patient_Id` | Text |
+| New Custom Parameter | `Identity_Confidence` | Text |
+| New Custom Parameter | `Identity_Sources` | Text |
+| ... | ... | Text |
+| New Custom Parameter | `Patient_Context_JSON` | Text |
+
+(Repeat for every non-underscore field in the schema table above. All
+are `Text` type — there are no number or date hidden-prechat field
+types in Messaging for Web.)
+
+After saving each parameter mapping, **republish the Embedded Service
+Deployment** so SCRT2 picks up the new schema. Without this step
+hidden-prechat fields *are still sent* by the client SDK, but they
+won't appear as Conversation Variables in the Agent Builder / agent
+trace.
+
+The current production deployment has only `_firstName` and
+`_lastName` registered (standard fields, auto-accepted). The
+agent therefore sees the patient's name on Day 1 but the other fields
+require the registration above. The client sends them regardless so
+no code change is needed once you finish the Salesforce UI step.
+
+### Status
+
+- **LIVE end-to-end** for `_firstName` and `_lastName`: tested
+  2026-06-02 by selecting each persona and asking the agent "what's
+  my name?" — agent responds with the correct first name.
+- **Pending Salesforce admin UI step** for the other ~20 fields: the
+  picker fetches and the SDK sends them, but the agent won't surface
+  them as Conversation Variables until they're added to Parameter
+  Mappings. ~10 minutes of point-and-click work for whoever owns the
+  Salesforce admin seat.
+
+### Re-using this pattern in real customer deployments
+
+In customer deployments the picker disappears and the `personaId` is
+replaced by the patient's real authenticated identity (e.g. from the
+patient-portal SSO). The route signature can stay as-is:
+
+```
+GET /api/intake/prechat-context?patientId=<real-fhir-id>
+```
+
+The grounding pipeline already supports both real Salesforce Contact
+IDs and synthetic demo IDs (see `lib/salesforce/grounding.ts:
+getGroundingContextFromOrg`). Everything downstream — the hidden
+prechat shape, the agent prompt that references Conversation
+Variables, the agent trace — is identical.
+
 ## Original 2026-06-02 deferral notes (preserved for context)
 
 **Original Status at 2026-06-02 end of first session:** integration is fully

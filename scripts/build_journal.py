@@ -1157,6 +1157,131 @@ PHASES = [
             "intake.",
         ],
     },
+    {
+        "title": (
+            "Phase 18a — Pre-fill the live Agentforce chat with patient "
+            "context (setHiddenPrechatFields)"
+        ),
+        "ask": (
+            "Make the live Agentforce Service Agent walk into every "
+            "conversation already knowing who the patient is. Reuse "
+            "the existing Data 360 + Health Cloud Phase 1 grounding "
+            "pipeline so the same identity-resolution and federated-"
+            "read path that the Care Router consumes also serves the "
+            "intake widget."
+        ),
+        "decisions": [
+            "Built /demo/intake's 'View as <patient>' picker over the "
+            "six seeded Salesforce Health Cloud demo personas instead "
+            "of inventing a new cohort. Centralized the personas in "
+            "lib/demo-cohort.ts so the picker, the queue table, and "
+            "the seeder all point at one authoritative list. The "
+            "Salesforce grounding module already keys on Contact."
+            "FirstName, so the picker's personaId -> firstName mapping "
+            "deterministically lands on the right real Contact.",
+            "Re-mounted <AgentforceEmbed/> with a React key on "
+            "personaId rather than trying to swap hidden-prechat "
+            "fields inside a live SDK session. Salesforce's Embedded "
+            "Messaging SDK is process-global and intentionally has no "
+            "swap-mid-conversation API; the supported pattern is "
+            "'configure once, before onEmbeddedMessagingReady fires.' "
+            "Forcing a clean React remount on persona change is the "
+            "tidy way to honor that constraint.",
+            "Packed the dossier into ~22 string-typed hidden-prechat "
+            "fields PLUS one compact Patient_Context_JSON catch-all. "
+            "Reason: Salesforce hidden-prechat field names must be "
+            "pre-registered as Parameter Mappings on the Messaging "
+            "Channel (unregistered keys are silently dropped) and the "
+            "field type is text-only. Splitting first-class fields "
+            "(name, age band, scores) from a JSON dossier (longitudinal "
+            "observations, insights, narrative profile) gives the "
+            "agent prompt clean variables to cite while still carrying "
+            "every signal we computed.",
+            "Built the prechat-context endpoint as GET, not POST. "
+            "The picker selection -> resolved dossier is idempotent "
+            "for a given personaId, so GET keeps cache semantics "
+            "obvious (no body, cacheable per-querystring if we "
+            "want CDN caching later). Mirrors how the rest of the "
+            "Data 360 read routes are shaped.",
+            "Documented (but did NOT block on) the Parameter Mappings "
+            "registration step in PHASE_3_RUNBOOK.md. Standard "
+            "underscore fields (_firstName, _lastName) are auto-"
+            "accepted by Salesforce so the agent already sees those "
+            "without any admin work. The remaining ~20 fields show up "
+            "as Conversation Variables once an admin clicks through "
+            "Setup -> Messaging Settings -> Messaging for In App & Web "
+            "-> Parameter Mappings -> Add (one row per field). The "
+            "client sends them regardless of registration, so no "
+            "frontend redeploy is required when the registration "
+            "happens.",
+        ],
+        "built": [
+            "lib/demo-cohort.ts — single source of truth for the six "
+            "seeded personas (Anika Patel, Brianna Okafor, Carmen "
+            "Diaz, Deepa Krishnan, Elena Rossi, Fatima Khan) including "
+            "display metadata (symptoms / risk tier / wait / source) "
+            "and clinical hint signals (ageBand, cycleStatus, "
+            "primarySymptom, vasomotor/sleep/mood scores, profile "
+            "note). Pure-data module — safe to import from both "
+            "server routes and client components.",
+            "app/api/intake/prechat-context/route.ts — GET endpoint "
+            "that resolves the persona via resolveIdentityFromOrg "
+            "(real Salesforce when SF_* env vars are set; deterministic "
+            "mock fallback) and getGroundingContextPreferReal (real "
+            "Health Cloud Phase 1 SOQL when available; mock baseline "
+            "otherwise), then flattens both into a ~22-field hidden-"
+            "prechat bag including a clamped (<1800 bytes) "
+            "Patient_Context_JSON dossier. Returns 404 on unknown "
+            "personaId.",
+            "components/intake-patient-stage.tsx — client component "
+            "rendering the 'View as <patient>' radio-group picker "
+            "above the agent. Fetches /api/intake/prechat-context on "
+            "every selection, surfaces identity + grounding source "
+            "(real | mock) inline so reviewers can see the wiring, "
+            "and re-keys <AgentforceEmbed/> on personaId for a clean "
+            "SDK remount.",
+            "components/agentforce-embed.tsx updated: typed the "
+            "prechatAPI surface (setHiddenPrechatFields / "
+            "removeHiddenPrechatFields), accepts a new optional "
+            "prechatFields prop, applies it inside the "
+            "onEmbeddedMessagingReady listener with a one-shot ref "
+            "guard, and surfaces prechatStatus (applied | skipped-"
+            "no-api | error) under the ready badge so reviewers can "
+            "see whether the dossier was successfully handed off.",
+            "app/demo/intake/page.tsx rewired: queue-table rows now "
+            "come from DEMO_COHORT (consistent with the live Salesforce "
+            "org), and the agent section renders the new "
+            "IntakePatientStage when Agentforce is configured.",
+            "Docs: PHASE_3_RUNBOOK.md gained a 'Phase 18a follow-up' "
+            "section documenting the end-to-end flow, the full hidden-"
+            "prechat field schema (22 rows), the Salesforce Parameter "
+            "Mappings registration steps, and how the same pattern "
+            "would work in a real customer deployment (replace "
+            "personaId with the authenticated patient's identity from "
+            "their portal SSO). README.md and .env.example also "
+            "updated.",
+        ],
+        "verified": [
+            "Vitest: all 73 existing tests still pass — the new "
+            "modules ship without breaking any existing surface.",
+            "tsc --noEmit: clean across the full frontend monorepo.",
+            "next build: clean; /api/intake/prechat-context appears in "
+            "the route manifest as a dynamic (server-rendered) "
+            "endpoint; /demo/intake static prerendered shell grew "
+            "~5 KB (the new client picker hydrates on demand).",
+            "End-to-end on production: selecting each of the six "
+            "personas re-keys the SDK; ready badge surfaces "
+            "'Prechat context pre-loaded: N fields'; agent responds "
+            "to 'what's my name?' with the correct first name (the "
+            "two Salesforce-standard underscore fields are auto-"
+            "accepted even before the custom Parameter Mappings are "
+            "registered).",
+            "Graceful degradation preserved: when SF_* env vars are "
+            "unset, the prechat-context route still returns a full "
+            "dossier (Identity_Source: mock + Grounding_Source: mock) "
+            "so the picker keeps working in fork/preview deployments.",
+        ],
+    },
 ]
 
 OPERATIONS_LOG = {
@@ -1398,9 +1523,15 @@ CURRENT_STATE = {
         "to messages from the chat panel embedded in the Next.js app "
         "via the V2 Messaging-for-Web bootstrap. Routing is "
         "Omni-Channel -> Agentforce Service Agent (direct, no flow). "
-        "Scripted Pause-branded fallback still runs for any "
-        "deployment without the four NEXT_PUBLIC_AGENTFORCE_* env "
-        "vars set (forks, previews without org credentials).",
+        "Phase 18a (also 2026-06-02): 'View as <patient>' picker over "
+        "the six seeded Health Cloud personas hands the agent a 22-"
+        "field hidden-prechat dossier (identity + grounding + "
+        "Patient_Context_JSON) via "
+        "embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields() "
+        "BEFORE the conversation begins, so the agent walks in "
+        "pre-grounded. Scripted Pause-branded fallback still runs "
+        "for any deployment without the four NEXT_PUBLIC_AGENTFORCE_* "
+        "env vars set (forks, previews without org credentials).",
         "lib/salesforce/auth.ts test suite: 17 vitest tests covering "
         "token acquisition, caching, in-flight dedup, expiry, error "
         "paths. Plus 6 tests for the warn-once dedup helper.",
@@ -1446,11 +1577,16 @@ CURRENT_STATE = {
         "MuleSoft Phase 1 (one live CloudHub 2.0 Experience API "
         "replacing /api/mulesoft/health) — docs/MULESOFT_RUNBOOK.md; "
         "estimated 3-5 hours combined UI + wiring.",
-        "Pre-fill chat session via setHiddenPrechatFields on "
-        "/demo/intake — Phase 18 optional follow-up to pre-populate "
-        "the conversation with the visiting patient's resolved "
-        "identity and recent vitals from Data 360. Skipped for the "
-        "first investor ship; ~45 min of focused work.",
+        "Salesforce Parameter Mappings registration for the ~20 "
+        "custom hidden-prechat fields Phase 18a sends (everything "
+        "except Salesforce-standard _firstName / _lastName which are "
+        "auto-accepted) — Setup -> Messaging Settings -> Messaging "
+        "for In App & Web -> Parameter Mappings -> Add (one per "
+        "field), then republish the Embedded Service Deployment. "
+        "~10 minutes of point-and-click admin work. The client "
+        "sends the fields regardless; this step makes them surface "
+        "as Conversation Variables in Agent Builder / agent traces. "
+        "Documented in docs/PHASE_3_RUNBOOK.md 'Phase 18a follow-up'.",
     ],
 }
 

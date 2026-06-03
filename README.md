@@ -107,6 +107,16 @@ Deep-dive sections (each a routed page):
   topology, the root-cause analysis of the two surprises we hit
   (`clientVersion: WebV1` default + legacy `HLS - Route to Bot` flow on
   the Messaging Channel), and how each was resolved.
+  The page also includes a "View as <patient>" picker (Phase 18a)
+  over the six seeded Health Cloud personas. Selecting a patient
+  fires `GET /api/intake/prechat-context?personaId=<id>`, which
+  resolves the patient via the existing Data 360 + Health Cloud
+  grounding pipeline and hands a ~22-field dossier to the
+  Salesforce SDK via `prechatAPI.setHiddenPrechatFields()` before
+  the conversation begins. The Agentforce Service Agent walks in
+  pre-grounded — name, age band, cycle status, intake scores, real
+  CarePlan / CareProgram state, and a compact `Patient_Context_JSON`
+  with every insight surface as Conversation Variables.
 
 ## Local development
 

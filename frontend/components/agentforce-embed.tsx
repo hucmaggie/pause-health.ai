@@ -20,10 +20,20 @@ import { AGENTFORCE_COPY, type AgentforceConfig } from "../lib/agentforce";
  *     in the Salesforce-provided snippet). They do not grant API access.
  *   - We mount once per page lifecycle. If a customer SPA navigates away
  *     and back, the script is already loaded; we no-op the second mount.
- *   - We do not call any APIs before the SDK dispatches
- *     `onEmbeddedMessagingReady`; future enhancements (auto-launch,
- *     prechat field hydration, etc.) should listen for that event.
+ *   - When `prechatFields` is supplied, we call
+ *     `embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields()`
+ *     inside the `onEmbeddedMessagingReady` handler — which is the only
+ *     window in which Salesforce accepts hidden-field assignment (after
+ *     the SDK is ready, before the conversation begins). The fields
+ *     then surface to the Agentforce Service Agent as Conversation
+ *     Variables so the agent walks in pre-grounded.
+ *   - To switch between patients in the same browser session, the
+ *     parent must re-mount this component (e.g. via React key). The
+ *     Salesforce SDK is global, sticky-state, and intentionally does
+ *     not expose a swap-fields-mid-conversation API.
  */
+
+type PrechatFields = Record<string, string>;
 
 declare global {
   interface Window {
@@ -41,16 +51,30 @@ declare global {
         siteUrl: string,
         options: { scrt2URL: string }
       ) => void;
+      prechatAPI?: {
+        setHiddenPrechatFields?: (fields: PrechatFields) => void;
+        removeHiddenPrechatFields?: (fieldNames: string[]) => void;
+      };
     };
   }
 }
 
 type AgentforceEmbedProps = {
   config: AgentforceConfig;
+  /**
+   * Optional hidden-prechat dossier handed to Salesforce after the
+   * SDK fires `onEmbeddedMessagingReady`. Keys must be registered as
+   * Parameter Mappings on the Messaging Channel (or use one of
+   * Salesforce's underscore-prefixed standard fields: _firstName,
+   * _lastName, _email, _subject). Unregistered keys are silently
+   * dropped server-side.
+   */
+  prechatFields?: PrechatFields | null;
 };
 
-export function AgentforceEmbed({ config }: AgentforceEmbedProps) {
+export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps) {
   const initializedRef = useRef(false);
+  const prechatAppliedRef = useRef(false);
   // "loading"      = script not yet loaded OR init() not yet called
   // "initializing" = init() returned but launcher not yet injected
   // "ready"        = onEmbeddedMessagingReady fired (launcher visible)
@@ -59,11 +83,40 @@ export function AgentforceEmbed({ config }: AgentforceEmbedProps) {
     "loading" | "initializing" | "ready" | "error"
   >("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [prechatStatus, setPrechatStatus] = useState<
+    "idle" | "applied" | "skipped-no-api" | "error"
+  >("idle");
 
   useEffect(() => {
     if (initializedRef.current) return;
 
-    const onReady = () => setStatus("ready");
+    const applyPrechatFields = () => {
+      if (prechatAppliedRef.current) return;
+      if (!prechatFields || Object.keys(prechatFields).length === 0) return;
+      const api = window.embeddedservice_bootstrap?.prechatAPI;
+      if (!api || typeof api.setHiddenPrechatFields !== "function") {
+        // SDK version doesn't expose prechatAPI. The agent still works;
+        // the conversation just starts without the dossier.
+        setPrechatStatus("skipped-no-api");
+        return;
+      }
+      try {
+        api.setHiddenPrechatFields(prechatFields);
+        prechatAppliedRef.current = true;
+        setPrechatStatus("applied");
+      } catch (err) {
+        setPrechatStatus("error");
+        console.error(
+          "[agentforce] setHiddenPrechatFields threw; conversation will proceed without prechat context.",
+          err
+        );
+      }
+    };
+
+    const onReady = () => {
+      applyPrechatFields();
+      setStatus("ready");
+    };
     const onInitError = (event: Event) => {
       const detail = (event as CustomEvent<{ message?: string }>).detail;
       const msg =
@@ -142,7 +195,11 @@ export function AgentforceEmbed({ config }: AgentforceEmbedProps) {
     document.body.appendChild(script);
 
     return cleanup;
-  }, [config]);
+  }, [config, prechatFields]);
+
+  const prechatFieldCount = prechatFields
+    ? Object.keys(prechatFields).length
+    : 0;
 
   return (
     <article className="card agentforce-shell" aria-label="Pause Intake Assistant">
@@ -182,6 +239,47 @@ export function AgentforceEmbed({ config }: AgentforceEmbedProps) {
                 an intake conversation. Salesforce-hosted, real-time, with
                 full session history on the Service Cloud side.
               </span>
+              {prechatFieldCount > 0 && prechatStatus === "applied" && (
+                <span
+                  style={{
+                    display: "block",
+                    marginTop: "0.4rem",
+                    color: "var(--muted)",
+                    fontSize: "0.85rem"
+                  }}
+                >
+                  Prechat context pre-loaded: {prechatFieldCount} fields
+                  handed to Salesforce (Conversation Variables on the
+                  agent side). The agent walks in already knowing the
+                  patient.
+                </span>
+              )}
+              {prechatFieldCount > 0 && prechatStatus === "skipped-no-api" && (
+                <span
+                  style={{
+                    display: "block",
+                    marginTop: "0.4rem",
+                    color: "var(--muted)",
+                    fontSize: "0.85rem"
+                  }}
+                >
+                  Prechat API not exposed by this SDK build — agent will
+                  proceed without the pre-resolved patient dossier.
+                </span>
+              )}
+              {prechatFieldCount > 0 && prechatStatus === "error" && (
+                <span
+                  style={{
+                    display: "block",
+                    marginTop: "0.4rem",
+                    color: "#ffb6c8",
+                    fontSize: "0.85rem"
+                  }}
+                >
+                  Prechat context failed to apply — agent will proceed
+                  without the dossier. Check the browser console.
+                </span>
+              )}
             </div>
           </>
         )}
