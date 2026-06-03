@@ -51,21 +51,42 @@ type AgentforceEmbedProps = {
 
 export function AgentforceEmbed({ config }: AgentforceEmbedProps) {
   const initializedRef = useRef(false);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  // "loading"      = script not yet loaded OR init() not yet called
+  // "initializing" = init() returned but launcher not yet injected
+  // "ready"        = onEmbeddedMessagingReady fired (launcher visible)
+  // "error"        = sync throw or async init error from the SDK
+  const [status, setStatus] = useState<
+    "loading" | "initializing" | "ready" | "error"
+  >("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (initializedRef.current) return;
+
+    const onReady = () => setStatus("ready");
+    const onInitError = (event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string }>).detail;
+      const msg =
+        (detail && typeof detail.message === "string" && detail.message) ||
+        "Salesforce Embedded Messaging dispatched onEmbeddedMessagingInitError.";
+      setStatus("error");
+      setErrorMessage(msg);
+    };
+
+    window.addEventListener("onEmbeddedMessagingReady", onReady);
+    window.addEventListener(
+      "onEmbeddedMessagingInitError",
+      onInitError as EventListener
+    );
 
     const tryInit = () => {
       const bootstrap = window.embeddedservice_bootstrap;
       if (!bootstrap) return false;
       try {
         bootstrap.settings.language = config.language;
-        // Floating-launcher mode is the V2 default and the only mode our
-        // out-of-the-box SDO deployment supports without extra Setup
-        // configuration. The launcher appears bottom-right of the page;
-        // clicking it opens the chat panel as a modal-like overlay.
+        // Floating launcher mode is what the V2 deployment is configured for;
+        // it injects a fixed-position chat button at the bottom-right and the
+        // chat panel opens as a modal-like overlay above the host page.
         bootstrap.settings.displayMode = "floating";
 
         bootstrap.init(config.orgId, config.deploymentApiName, config.siteUrl, {
@@ -73,23 +94,35 @@ export function AgentforceEmbed({ config }: AgentforceEmbedProps) {
         });
 
         initializedRef.current = true;
-        setStatus("ready");
+        setStatus("initializing");
         return true;
       } catch (err) {
         setStatus("error");
         setErrorMessage(err instanceof Error ? err.message : String(err));
-        return true; // don't keep retrying once init has thrown
+        return true;
       }
     };
 
-    if (tryInit()) return;
+    const cleanup = () => {
+      window.removeEventListener("onEmbeddedMessagingReady", onReady);
+      window.removeEventListener(
+        "onEmbeddedMessagingInitError",
+        onInitError as EventListener
+      );
+    };
+
+    if (tryInit()) return cleanup;
 
     const existing = document.querySelector<HTMLScriptElement>(
       `script[data-agentforce-bootstrap="${config.deploymentApiName}"]`
     );
     if (existing) {
-      existing.addEventListener("load", tryInit, { once: true });
-      return () => existing.removeEventListener("load", tryInit);
+      const handleLoad = () => tryInit();
+      existing.addEventListener("load", handleLoad, { once: true });
+      return () => {
+        existing.removeEventListener("load", handleLoad);
+        cleanup();
+      };
     }
 
     const script = document.createElement("script");
@@ -107,6 +140,8 @@ export function AgentforceEmbed({ config }: AgentforceEmbedProps) {
       );
     });
     document.body.appendChild(script);
+
+    return cleanup;
   }, [config]);
 
   return (
@@ -128,6 +163,11 @@ export function AgentforceEmbed({ config }: AgentforceEmbedProps) {
         {status === "loading" && (
           <p style={{ color: "var(--muted)", margin: 0 }}>
             Loading the live Pause Intake agent…
+          </p>
+        )}
+        {status === "initializing" && (
+          <p style={{ color: "var(--muted)", margin: 0 }}>
+            Connecting to Salesforce Agentforce Service Cloud…
           </p>
         )}
         {status === "ready" && (

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Pause-Health Agentforce probe</title>
+  <style>
+    body { font-family: -apple-system, system-ui, sans-serif; margin: 2rem; max-width: 700px; line-height: 1.5; }
+    h1 { margin-bottom: 0.2rem; }
+    code { background: #f3f3f3; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+    .log { background: #111; color: #0f0; padding: 1rem; margin-top: 1rem; font-family: ui-monospace, monospace; font-size: 0.85em; max-height: 400px; overflow: auto; white-space: pre-wrap; }
+    .ok { color: #0f0; }
+    .err { color: #f55; }
+    .info { color: #aaf; }
+  </style>
+</head>
+<body>
+  <h1>Agentforce Embedded Messaging probe</h1>
+  <p>This page loads the Salesforce V2 embedded messaging bootstrap with exactly the same config we wire into <code>/demo/intake</code>. Look for the launcher button bottom-right after a few seconds. The log below captures every SDK event and any errors.</p>
+
+  <div id="log" class="log">[startup]\n</div>
+
+  <script>
+    const logEl = document.getElementById("log");
+    function log(msg, cls) {
+      const t = new Date().toISOString().slice(11, 19);
+      const line = document.createElement("div");
+      line.className = cls || "info";
+      line.textContent = `${t}  ${msg}`;
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+      console.log(`[probe] ${msg}`);
+    }
+
+    // Catch unhandled errors and surface them
+    window.addEventListener("error", (e) => {
+      log(`window.error: ${e.message} @ ${e.filename}:${e.lineno}`, "err");
+    });
+    window.addEventListener("unhandledrejection", (e) => {
+      log(`unhandledrejection: ${e.reason && (e.reason.message || e.reason)}`, "err");
+    });
+
+    // Listen for all known V2 lifecycle events
+    const events = [
+      "onEmbeddedMessagingReady",
+      "onEmbeddedMessagingInitError",
+      "onEmbeddedMessagingConversationOpened",
+      "onEmbeddedMessagingConversationClosed",
+      "onEmbeddedMessagingButtonCreated",
+      "onEmbeddedMessagingWindowMinimized",
+      "onEmbeddedMessagingWindowMaximized",
+      "onEmbeddedMessagingShown",
+      "onEmbeddedMessagingHidden",
+      "onEmbeddedMessagingIdentityTokenExpired"
+    ];
+    events.forEach((evt) => {
+      window.addEventListener(evt, (e) => {
+        log(`event ${evt}: ${JSON.stringify(e.detail || {})}`, "ok");
+      });
+    });
+
+    log("config: orgId=00DHp00000L08KK, esConfigName=Pause_Health_Intake", "info");
+    log("loading bootstrap.min.js...", "info");
+
+    const script = document.createElement("script");
+    script.src = "https://trailsignup-c2d761a3b89bf2.my.site.com/ESWPauseHealthIntake1780455502567/assets/js/bootstrap.min.js";
+    script.async = true;
+    script.onload = () => {
+      log("bootstrap.min.js LOADED", "ok");
+      try {
+        const b = window.embeddedservice_bootstrap;
+        if (!b) {
+          log("FATAL: window.embeddedservice_bootstrap is undefined", "err");
+          return;
+        }
+        log("embeddedservice_bootstrap available, calling init()", "info");
+        b.settings.language = "en_US";
+        b.settings.displayMode = "floating";
+        b.init(
+          "00DHp00000L08KK",
+          "Pause_Health_Intake",
+          "https://trailsignup-c2d761a3b89bf2.my.site.com/ESWPauseHealthIntake1780455502567",
+          { scrt2URL: "https://trailsignup-c2d761a3b89bf2.my.salesforce-scrt.com" }
+        );
+        log("init() returned (async work continues)", "ok");
+      } catch (err) {
+        log(`init threw: ${err.message}`, "err");
+      }
+    };
+    script.onerror = (e) => {
+      log(`bootstrap.min.js FAILED TO LOAD`, "err");
+    };
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>
