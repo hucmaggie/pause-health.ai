@@ -1,4 +1,5 @@
 import { ProposalShell } from "../../../components/proposal-shell";
+import { StatusPill } from "../../../components/status-pill";
 import { pageMetadata } from "../../../lib/page-metadata";
 
 export const metadata = pageMetadata({
@@ -238,12 +239,11 @@ export default function InsightsPage() {
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {providerHypotheses.map((t) => (
             <article key={t.theme} className="card">
-              <span
-                className="pre-brief-source-badge pre-brief-source-badge--mock"
+              <StatusPill
+                status="plan"
+                label="Hypothesis · to validate"
                 style={{ marginBottom: "0.5rem" }}
-              >
-                Hypothesis · to validate
-              </span>
+              />
               <h3>{t.theme}</h3>
               <p style={{ margin: "0 0 0.6rem", color: "var(--text)" }}>
                 {t.detail}
@@ -297,12 +297,11 @@ export default function InsightsPage() {
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {patientHypotheses.map((t) => (
             <article key={t.theme} className="card">
-              <span
-                className="pre-brief-source-badge pre-brief-source-badge--mock"
+              <StatusPill
+                status="plan"
+                label="Hypothesis · to validate"
                 style={{ marginBottom: "0.5rem" }}
-              >
-                Hypothesis · to validate
-              </span>
+              />
               <h3>{t.theme}</h3>
               <p style={{ margin: "0 0 0.6rem", color: "var(--text)" }}>
                 {t.detail}

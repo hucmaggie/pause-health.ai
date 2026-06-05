@@ -1,4 +1,5 @@
 import { ProposalShell } from "../../../components/proposal-shell";
+import { StatusPill } from "../../../components/status-pill";
 import { pageMetadata } from "../../../lib/page-metadata";
 
 export const metadata = pageMetadata({
@@ -221,9 +222,7 @@ export default function CustomersPage() {
             <article key={s.name} className="card">
               <h3>{s.name}</h3>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", margin: "0.2rem 0 0.6rem" }}>
-                <span className="pre-brief-source-badge pre-brief-source-badge--mock">
-                  Estimate
-                </span>
+                <StatusPill status="estimate" />
                 <span style={{ color: "var(--brand)", fontWeight: 600 }}>
                   {s.sizeValue}
                 </span>
@@ -303,9 +302,7 @@ export default function CustomersPage() {
               <span>{m.label}</span>
               <strong>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                  <span className="pre-brief-source-badge pre-brief-source-badge--mock">
-                    Estimate
-                  </span>
+                  <StatusPill status="estimate" />
                   <span>{m.value}</span>
                 </span>
                 <span

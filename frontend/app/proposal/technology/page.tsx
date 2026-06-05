@@ -1,4 +1,5 @@
 import { ProposalShell } from "../../../components/proposal-shell";
+import { StatusPill } from "../../../components/status-pill";
 import { pageMetadata } from "../../../lib/page-metadata";
 
 export const metadata = pageMetadata({
@@ -36,14 +37,16 @@ export const metadata = pageMetadata({
  * what's still ahead.
  */
 
-type Status = "shipped" | "wired" | "designed" | "future";
+/**
+ * Tech-page status keys are a strict subset of the canonical
+ * StatusPill vocabulary in components/status-pill.tsx. Kept as a
+ * type alias so the table data refuses unsupported statuses at
+ * compile time.
+ */
+type Status = "shipped" | "prototype" | "designed" | "future";
 
-const statusLabels: Record<Status, string> = {
-  shipped: "Shipped",
-  wired: "Wired in prototype",
-  designed: "Designed",
-  future: "Future"
-};
+// statusLabels removed; the canonical labels live inside
+// components/status-pill.tsx (STATUS_PILL_LABEL).
 
 const stack: Array<{
   layer: string;
@@ -58,7 +61,7 @@ const stack: Array<{
       "FHIR R5 via JupyterHealth Exchange (primary), HL7v2 fallback, MuleSoft API-Led Connectivity for system integrations.",
     rationale:
       "Standards-based. JupyterHealth is the consented FHIR substrate; MuleSoft handles system-to-system writes and transforms. Avoids per-EHR custom work.",
-    status: "wired",
+    status: "prototype",
     link: { href: "/proposal/integration", label: "JupyterHealth integration brief →" }
   },
   {
@@ -67,7 +70,7 @@ const stack: Array<{
       "Salesforce Data 360 — Identity Resolution + Calculated Insights + Segments, zero-copy federated over JupyterHealth FHIR, DBDP features, and the customer's EHR-of-record.",
     rationale:
       "Solves identity + grounding in one substrate without bulk PHI ingestion. Snowflake / Databricks / Epic Health Cloud are federation targets, not separate Pause platforms.",
-    status: "wired",
+    status: "prototype",
     link: { href: "/proposal/data-360", label: "Data 360 brief →" }
   },
   {
@@ -110,7 +113,7 @@ const stack: Array<{
       "Digital Biomarker Discovery Pipeline (DBDP). Phase 1 shipped: FLIRT-backed RMSSD with closed-form correctness tests. Phase 2: EDA, sleep, vasomotor burden composite via Devicely + DHDR.",
     rationale:
       "Reuses peer-reviewed wearable feature pipelines instead of reinventing them. Honest about what's shipped (RMSSD) vs what awaits library upgrades (numpy < 2.0 in Devicely's current release).",
-    status: "wired",
+    status: "prototype",
     link: { href: "/proposal/dbdp", label: "DBDP feature engineering brief →" }
   },
   {
@@ -119,7 +122,7 @@ const stack: Array<{
       "Next.js (this site, the SMART-on-FHIR launch surface ahead). Salesforce Agentforce Service Agent for live intake (running on a real Service Cloud org today).",
     rationale:
       "Same engineers can move between web, EHR-embedded, and intake surfaces. React Native patient-mobile app is Phase 2.",
-    status: "wired",
+    status: "prototype",
     link: { href: "/proposal/agentforce", label: "Agentforce intake brief →" }
   },
   {
@@ -136,7 +139,7 @@ const stack: Array<{
       "Agent Fabric trace ring buffer: per-call spans with model, inputs, outputs, sources queried, durations, agent + protocol. Customer-deployment OpenTelemetry export via the MuleSoft tap.",
     rationale:
       "Audit-grade trail. Inputs/outputs/model/duration are live today in the demo trace plane; clinician-action capture lands when the SMART-on-FHIR install ships.",
-    status: "wired",
+    status: "prototype",
     link: { href: "/demo/agent-fabric", label: "See the live trace plane →" }
   }
 ];
@@ -168,7 +171,7 @@ const aiApproach: Array<{
     aspect: "Risk stratification",
     approach:
       "Phase 1 today: deterministic risk band from intake scores (V+S+M aggregate + per-axis flags). Phase 2: gradient-boosted classifier on structured features once labeled deployment data exists.",
-    status: "wired"
+    status: "prototype"
   },
   {
     aspect: "Conversational interface",
@@ -180,7 +183,7 @@ const aiApproach: Array<{
     aspect: "Continuous improvement loop",
     approach:
       "Today: every Care Router decision lands in the trace plane with inputs, outputs, model version, and duration. Tomorrow: clinician edits/rejections feed preference-tuning datasets + the outcomes registry validates long-term accuracy.",
-    status: "wired"
+    status: "prototype"
   }
 ];
 
@@ -251,21 +254,13 @@ const safety: Array<{
     principle: "Privacy posture",
     detail:
       "HIPAA-ready architecture today (zero-copy federation, no bulk PHI ingest, customer-controlled blast radius in production). HITRUST CSF + SOC 2 Type II are on the roadmap.",
-    status: "wired"
+    status: "prototype"
   }
 ];
 
-function StatusPill({ status }: { status: Status }) {
-  const variant = status === "shipped" ? "real" : "mock";
-  return (
-    <span
-      className={`pre-brief-source-badge pre-brief-source-badge--${variant}`}
-      style={{ marginBottom: "0.5rem" }}
-    >
-      {statusLabels[status]}
-    </span>
-  );
-}
+// StatusPill lives in components/status-pill.tsx so the vocabulary
+// stays consistent across the deck.
+const pillSpacing: React.CSSProperties = { marginBottom: "0.5rem" };
 
 export default function TechnologyPage() {
   return (
@@ -282,7 +277,7 @@ export default function TechnologyPage() {
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {stack.map((s) => (
             <article key={s.layer} className="card">
-              <StatusPill status={s.status} />
+              <StatusPill status={s.status} style={pillSpacing} />
               <h3>{s.layer}</h3>
               <p
                 style={{
@@ -317,7 +312,7 @@ export default function TechnologyPage() {
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {aiApproach.map((a) => (
             <article key={a.aspect} className="card">
-              <StatusPill status={a.status} />
+              <StatusPill status={a.status} style={pillSpacing} />
               <h3>{a.aspect}</h3>
               <p style={{ margin: 0, color: "var(--text)" }}>{a.approach}</p>
             </article>
@@ -367,7 +362,7 @@ export default function TechnologyPage() {
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {safety.map((s) => (
             <article key={s.principle} className="card">
-              <StatusPill status={s.status} />
+              <StatusPill status={s.status} style={pillSpacing} />
               <h3>{s.principle}</h3>
               <p style={{ margin: 0, color: "var(--text)" }}>{s.detail}</p>
             </article>

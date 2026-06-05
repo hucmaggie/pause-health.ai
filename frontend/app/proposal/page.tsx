@@ -1,3 +1,4 @@
+import { StatusPill } from "../../components/status-pill";
 import { pageMetadata } from "../../lib/page-metadata";
 
 export const metadata = pageMetadata({
@@ -28,7 +29,10 @@ export const metadata = pageMetadata({
  * to whichever entry-point matches their reading style.
  */
 
-const heroPoints = [
+const heroPoints: Array<{
+  text: string;
+  badge: "research" | "target" | "plan" | null;
+}> = [
   {
     text:
       "Focus cohort: women ages 40-60 navigating perimenopause and menopause with nuanced, evolving symptom profiles.",
@@ -37,12 +41,12 @@ const heroPoints = [
   {
     text:
       "~67% are initially misdiagnosed; the average path to accurate diagnosis can extend to ~2.5 years.",
-    badge: "Research"
+    badge: "research"
   },
   {
     text:
       "89% AI-assisted triage accuracy with transparent, evidence-linked rationale.",
-    badge: "Target"
+    badge: "target"
   },
   {
     text:
@@ -52,7 +56,7 @@ const heroPoints = [
   {
     text:
       "Provider-first B2B model delivering measurable ROI and durable ARR growth.",
-    badge: "Plan"
+    badge: "plan"
   }
 ];
 
@@ -231,16 +235,10 @@ export default function ProposalPage() {
               style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}
             >
               {point.badge && (
-                <span
-                  className={`pre-brief-source-badge ${
-                    point.badge === "Target" || point.badge === "Plan"
-                      ? "pre-brief-source-badge--mock"
-                      : "pre-brief-source-badge--mock"
-                  }`}
+                <StatusPill
+                  status={point.badge}
                   style={{ flexShrink: 0, marginTop: "0.15rem" }}
-                >
-                  {point.badge}
-                </span>
+                />
               )}
               <span>{point.text}</span>
             </li>

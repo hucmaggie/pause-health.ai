@@ -1,3 +1,4 @@
+import { StatusPill } from "../../../components/status-pill";
 import { pageMetadata } from "../../../lib/page-metadata";
 
 export const metadata = pageMetadata({
@@ -9,7 +10,12 @@ export const metadata = pageMetadata({
   ogImageAlt: "Full investor proposal — Pause-Health.ai."
 });
 
-const heroMetrics = [
+const heroMetrics: Array<{
+  value: string;
+  label: string;
+  detail: string;
+  tone: "research" | "target";
+}> = [
   {
     value: "~50M",
     label: "U.S. women affected",
@@ -41,29 +47,25 @@ const targetOutcomes = [
     value: "89%",
     label: "Diagnostic accuracy",
     detail:
-      "Target in validation settings, vs. the ~67% national misdiagnosis baseline.",
-    badge: "Target"
+      "Target in validation settings, vs. the ~67% national misdiagnosis baseline."
   },
   {
     value: "< 30 d",
     label: "Time to first specialist contact",
     detail:
-      "From a 2.5-year baseline to under a month — first MSCP-credentialed clinician contact.",
-    badge: "Target"
+      "From a 2.5-year baseline to under a month — first MSCP-credentialed clinician contact."
   },
   {
     value: "+34%",
     label: "Patient satisfaction lift",
     detail:
-      "Pilot target across anchor provider systems vs. care-as-usual baseline.",
-    badge: "Target"
+      "Pilot target across anchor provider systems vs. care-as-usual baseline."
   },
   {
     value: "$1,685",
     label: "Avoidable spend recovered",
     detail:
-      "Per patient, from earlier accurate diagnosis and pathway match.",
-    badge: "Target"
+      "Per patient, from earlier accurate diagnosis and pathway match."
   }
 ];
 
@@ -371,9 +373,7 @@ export default function FullProposalPage() {
         <div className="proposal-stat-block">
           {heroMetrics.map((m) => (
             <article key={m.label} className="proposal-stat-card">
-              <span className="pre-brief-source-badge pre-brief-source-badge--mock">
-                {m.tone === "research" ? "Research" : "Target"}
-              </span>
+              <StatusPill status={m.tone} />
               <p className="proposal-stat-value">{m.value}</p>
               <p className="proposal-stat-label">{m.label}</p>
               <p className="proposal-stat-detail">{m.detail}</p>
@@ -405,9 +405,7 @@ export default function FullProposalPage() {
           {targetOutcomes.map((t) => (
             <article key={t.label} className="card proposal-outcome-card">
               <div className="proposal-outcome-head">
-                <span className="pre-brief-source-badge pre-brief-source-badge--mock">
-                  {t.badge}
-                </span>
+                <StatusPill status="target" />
               </div>
               <p className="proposal-stat-value">{t.value}</p>
               <p className="proposal-stat-label">{t.label}</p>
@@ -501,9 +499,7 @@ export default function FullProposalPage() {
           {arrTargets.map((t) => (
             <article key={t.label} className="card proposal-outcome-card">
               <div className="proposal-outcome-head">
-                <span className="pre-brief-source-badge pre-brief-source-badge--mock">
-                  Target
-                </span>
+                <StatusPill status="target" />
               </div>
               <p className="proposal-stat-value">{t.value}</p>
               <p className="proposal-stat-label">{t.label}</p>

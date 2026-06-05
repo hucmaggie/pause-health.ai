@@ -1,10 +1,11 @@
 import { ProposalShell } from "../../../components/proposal-shell";
+import { StatusPill, type StatusPillStatus } from "../../../components/status-pill";
 import { pageMetadata } from "../../../lib/page-metadata";
 
 export const metadata = pageMetadata({
   title: "Investor Brief · Data Inventory & Strategy",
   description:
-    "Available menopause datasets, our data strategy, and the proprietary data moats Pause-Health.ai will accrue over time. Each row labels whether the data is in-hand today or a planned integration.",
+    "Available menopause datasets, our data strategy, and the proprietary data moats Pause-Health.ai will accrue over time. Each row labels whether the data is wired in prototype or a planned integration.",
   path: "/proposal/data",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Data inventory and strategy — Pause-Health.ai investor brief."
@@ -13,46 +14,25 @@ export const metadata = pageMetadata({
 /**
  * Data inventory + strategy — Arc A polish pass.
  *
- * Three things changed from the prior version:
+ * Refactored onto the shared <StatusPill> component
+ * (components/status-pill.tsx). The previous inline pill component
+ * used a local "today" / "planned" vocabulary; we now use the
+ * canonical "prototype" (label: Wired in prototype) and "planned"
+ * keys so the reader meets the same vocabulary on every page of
+ * the deck.
  *
- *   1. FHIR version was R4. The rest of the deck
- *      (/proposal/technology, /proposal/integration) commits to
- *      FHIR R5 via JupyterHealth Exchange. The inventory now matches.
- *   2. Each row in the inventory carries a Today / Planned pill so
- *      the reader can tell what Pause has in-hand vs what is a
- *      committed-roadmap integration. Two rows are Today (research
- *      corpora + guideline corpus); the rest are Planned because
- *      they live downstream of design-partner contracts.
- *   3. A "Read deeper" footer cross-links to dbdp / integration /
- *      provider-graph / learning where the data substrate is
- *      operationalized.
+ * Two rows are `prototype` (research corpora + guideline corpus —
+ * both wired into the prototype grounding store today). The rest are
+ * `planned` because they live downstream of design-partner contracts.
  */
 
-type DataStatus = "today" | "planned";
-
-const STATUS_LABEL: Record<DataStatus, string> = {
-  today: "Today",
-  planned: "Planned"
+const inlinePillStyle: React.CSSProperties = {
+  fontSize: "0.68rem",
+  marginRight: "0.4rem"
 };
-
-const STATUS_VARIANT: Record<DataStatus, "real" | "mock"> = {
-  today: "real",
-  planned: "mock"
-};
-
-function StatusPill({ status }: { status: DataStatus }) {
-  return (
-    <span
-      className={`pre-brief-source-badge pre-brief-source-badge--${STATUS_VARIANT[status]}`}
-      style={{ fontSize: "0.68rem", marginRight: "0.4rem" }}
-    >
-      {STATUS_LABEL[status]}
-    </span>
-  );
-}
 
 const inventory: Array<{
-  status: DataStatus;
+  status: StatusPillStatus;
   source: string;
   type: string;
   volume: string;
@@ -100,7 +80,7 @@ const inventory: Array<{
       "Captures the symptoms that drive lived experience but rarely make it into the EHR. The intake page (/demo/intake) is the surface this lands on."
   },
   {
-    status: "today",
+    status: "prototype",
     source: "Public research corpora",
     type: "Open / licensed",
     volume: "SWAN, UK Biobank menopause cohort, NHS, PubMed, ClinicalTrials.gov",
@@ -109,7 +89,7 @@ const inventory: Array<{
       "Pretraining and clinical evaluation; provides population-level priors. Surfaced today as grounding sources in the federated retrieval layer."
   },
   {
-    status: "today",
+    status: "prototype",
     source: "Specialty guideline corpus",
     type: "Structured + retrievable",
     volume:
@@ -189,14 +169,16 @@ export default function DataPage() {
           }}
         >
           Pills:{" "}
-          <StatusPill status="today" /> in-hand or wired in prototype today ·{" "}
-          <StatusPill status="planned" /> integration unlocks at design-partner stage.
+          <StatusPill status="prototype" style={inlinePillStyle} /> in-hand or
+          wired in the prototype today ·{" "}
+          <StatusPill status="planned" style={inlinePillStyle} /> integration
+          unlocks at design-partner stage.
         </p>
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {inventory.map((d) => (
             <article key={d.source} className="card">
               <div style={{ marginBottom: "0.35rem" }}>
-                <StatusPill status={d.status} />
+                <StatusPill status={d.status} style={inlinePillStyle} />
               </div>
               <h3 style={{ marginTop: 0 }}>{d.source}</h3>
               <p style={{ color: "var(--brand)", fontWeight: 600, marginBottom: "0.5rem" }}>
@@ -257,7 +239,7 @@ export default function DataPage() {
             <span>Compliance posture</span>
             <strong style={{ fontWeight: 500 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
-                <StatusPill status="planned" />
+                <StatusPill status="planned" style={inlinePillStyle} />
                 <span>HIPAA controls + HITRUST CSF on the implementation roadmap; SOC 2 Type II in Year 2.</span>
               </span>
             </strong>
@@ -278,7 +260,7 @@ export default function DataPage() {
             <span>AI auditability</span>
             <strong style={{ fontWeight: 500 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
-                <StatusPill status="today" />
+                <StatusPill status="prototype" style={inlinePillStyle} />
                 <span>
                   Every recommendation reproducible: inputs, model version, retrieval set, output. Trace plane live at{" "}
                   <a href="/demo/agent-fabric">/demo/agent-fabric</a>.

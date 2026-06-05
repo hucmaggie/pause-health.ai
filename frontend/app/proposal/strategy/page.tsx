@@ -1,5 +1,8 @@
 import { ProposalShell } from "../../../components/proposal-shell";
+import { StatusPill } from "../../../components/status-pill";
 import { pageMetadata } from "../../../lib/page-metadata";
+
+const pillSpacing: React.CSSProperties = { marginBottom: "0.5rem" };
 
 export const metadata = pageMetadata({
   title: "Investor Brief · Digital Strategy",
@@ -22,14 +25,13 @@ export const metadata = pageMetadata({
  * Each card may also link out to one of the architecture briefs
  * (Arc B) or demo pages that backs the claim.
  */
-type Status = "shipped" | "wired" | "designed" | "future";
-
-const statusLabels: Record<Status, string> = {
-  shipped: "Shipped",
-  wired: "Wired in prototype",
-  designed: "Designed",
-  future: "Future"
-};
+/**
+ * Strategy pages use a 4-key subset of the canonical StatusPill
+ * vocabulary (components/status-pill.tsx): shipped / prototype /
+ * designed / future. Kept as a type alias so the table data refuses
+ * unsupported statuses at compile time.
+ */
+type Status = "shipped" | "prototype" | "designed" | "future";
 
 const pillars: Array<{
   pillar: string;
@@ -53,7 +55,7 @@ const pillars: Array<{
       "PRO and wearable data are collected via a mobile experience the patient already uses (HealthKit / Health Connect bridge), then surfaced as a structured 'pre-read' inside the EHR — not a separate inbox.",
     today:
       "DBDP Phase 1 (FLIRT-backed RMSSD) is shipped with closed-form correctness tests. JupyterHealth FHIR observations land in the federated grounding payload. The native HealthKit / Health Connect bridge itself is Phase 2 work.",
-    status: "wired",
+    status: "prototype",
     link: { href: "/proposal/dbdp", label: "DBDP feature engineering brief →" }
   },
   {
@@ -143,7 +145,7 @@ const moats: Array<{
       "Continuous accumulation of structured outcomes data tied to specific recommendations. After 18 months of customer deployment, the registry is unreplicable by a new entrant.",
     today:
       "Trace plane records inputs/outputs/model per recommendation today. Registry as a customer-facing product is gated on customer-deployment time.",
-    status: "wired",
+    status: "prototype",
     link: { href: "/proposal/agent-fabric", label: "Agent Fabric brief →" }
   },
   {
@@ -182,23 +184,8 @@ const operatingPrinciples = [
   "Tag plan vs status everywhere. Aspiration is fine; aspiration disguised as fact is corrosive."
 ];
 
-function StatusPill({ status }: { status: Status }) {
-  // Reuses the .pre-brief-source-badge palette so status tagging on
-  // proposal pages stays visually consistent with source badges on
-  // /demo/intake, /demo/patient, /demo/analytics, etc. Shipped ->
-  // green real-source palette; wired/designed/future -> amber mock-
-  // source palette (so anything not yet shipped reads as "claim",
-  // not "fact").
-  const variant = status === "shipped" ? "real" : "mock";
-  return (
-    <span
-      className={`pre-brief-source-badge pre-brief-source-badge--${variant}`}
-      style={{ marginBottom: "0.5rem" }}
-    >
-      {statusLabels[status]}
-    </span>
-  );
-}
+// StatusPill lives in components/status-pill.tsx so the vocabulary
+// stays consistent across the deck (Arc A + Arc B + demo pages).
 
 export default function StrategyPage() {
   return (
@@ -215,7 +202,7 @@ export default function StrategyPage() {
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {pillars.map((p) => (
             <article key={p.pillar} className="card">
-              <StatusPill status={p.status} />
+              <StatusPill status={p.status} style={pillSpacing} />
               <h3>{p.pillar}</h3>
               <p
                 style={{
@@ -269,7 +256,7 @@ export default function StrategyPage() {
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {gtmMotion.map((s) => (
             <article key={s.stage} className="card">
-              <StatusPill status={s.status} />
+              <StatusPill status={s.status} style={pillSpacing} />
               <h3>{s.stage}</h3>
               <p
                 style={{
@@ -303,7 +290,7 @@ export default function StrategyPage() {
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {moats.map((m) => (
             <article key={m.moat} className="card">
-              <StatusPill status={m.status} />
+              <StatusPill status={m.status} style={pillSpacing} />
               <h3>{m.moat}</h3>
               <p
                 style={{

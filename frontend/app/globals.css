@@ -1770,6 +1770,28 @@ th {
   box-shadow: 0 0 0 0.15rem rgba(255, 200, 110, 0.2);
 }
 
+/*
+ * The "info" tone is reserved for source-of-truth tags on numbers,
+ * quotes, or claims (Estimate / Research / Target / Plan /
+ * Illustrative composite). It is intentionally neutral so a reader
+ * does not conflate "this number came from research" with "this code
+ * is a mock" (the amber "mock" tone above).
+ */
+.pre-brief-source-badge--info {
+  background: rgba(160, 195, 240, 0.1);
+  color: #b6cef0;
+  border-color: rgba(160, 195, 240, 0.4);
+}
+
+.pre-brief-source-badge--info::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: #b6cef0;
+  box-shadow: 0 0 0 0.15rem rgba(160, 195, 240, 0.2);
+}
+
 .pre-brief-primary-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));

@@ -1,4 +1,5 @@
 import { ProposalShell } from "../../../components/proposal-shell";
+import { StatusPill } from "../../../components/status-pill";
 import { pageMetadata } from "../../../lib/page-metadata";
 
 export const metadata = pageMetadata({
@@ -30,30 +31,17 @@ export const metadata = pageMetadata({
  *      architecture briefs that justify each column.
  */
 
+/**
+ * The Pause-column status keys are a strict subset of the canonical
+ * vocabulary in components/status-pill.tsx. Kept as a type alias so
+ * the `positioning` table data refuses bad statuses at compile time.
+ */
 type PauseStatus = "shipped" | "partial" | "planned";
 
-const STATUS_LABEL: Record<PauseStatus, string> = {
-  shipped: "Today",
-  partial: "Today · partial",
-  planned: "Planned"
+const inlinePillStyle: React.CSSProperties = {
+  fontSize: "0.68rem",
+  marginRight: "0.4rem"
 };
-
-const STATUS_VARIANT: Record<PauseStatus, "real" | "mock"> = {
-  shipped: "real",
-  partial: "real",
-  planned: "mock"
-};
-
-function StatusPill({ status }: { status: PauseStatus }) {
-  return (
-    <span
-      className={`pre-brief-source-badge pre-brief-source-badge--${STATUS_VARIANT[status]}`}
-      style={{ fontSize: "0.68rem", marginRight: "0.4rem" }}
-    >
-      {STATUS_LABEL[status]}
-    </span>
-  );
-}
 
 const landscape = [
   {
@@ -300,9 +288,11 @@ export default function CompetitionPage() {
           }}
         >
           Pills:{" "}
-          <StatusPill status="shipped" /> wired in prototype today ·{" "}
-          <StatusPill status="partial" /> partial today ·{" "}
-          <StatusPill status="planned" /> roadmap / design-partner stage.
+          <StatusPill status="shipped" style={inlinePillStyle} /> wired in
+          prototype today ·{" "}
+          <StatusPill status="partial" style={inlinePillStyle} /> partial today ·{" "}
+          <StatusPill status="planned" style={inlinePillStyle} /> roadmap /
+          design-partner stage.
         </p>
         <div className="table-wrap">
           <table>
@@ -323,7 +313,7 @@ export default function CompetitionPage() {
                   <td>
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                       <span>
-                        <StatusPill status={row.pause.status} />
+                        <StatusPill status={row.pause.status} style={inlinePillStyle} />
                         <strong>{row.pause.label}</strong>
                       </span>
                       {row.pause.detail ? (
