@@ -340,6 +340,18 @@ p {
   align-items: start;
 }
 
+/* Multi-card grid used across /proposal/* and a couple of /demo/*
+   pages. Up to ~17 callers reference this class today; many were
+   implicitly relying on the default block flow before this rule
+   was added. Two columns on wide screens, single column under
+   720px so the long card text doesn't get squeezed. */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
 .metric-list {
   list-style: none;
   padding: 0;
@@ -1192,8 +1204,114 @@ th {
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Investor brief / /proposal/full -- rebuilt page styles.
+   ---------------------------------------------------------------------------
+   The old /proposal/full was a single .proposal-doc block of <ul>/<li>
+   markup. The rebuild uses card-grids + a stat block + cross-link
+   sections; these styles support that vocabulary. .proposal-doc itself
+   is retained below for any other long-form pages that may still use it.
+   --------------------------------------------------------------------------- */
+
+.proposal-stat-block {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.9rem;
+}
+
+.proposal-stat-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: var(--card-shadow);
+}
+
+.proposal-stat-value {
+  margin: 0.2rem 0 0;
+  font-size: 2.05rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+}
+
+.proposal-stat-label {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.proposal-stat-detail {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* Hybrid stat card used inside .card-grid sections — same numerical
+   treatment as .proposal-stat-card but with the .card border + hover
+   already supplied by the .card class it carries. */
+.proposal-outcome-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1rem 1.1rem;
+}
+
+.proposal-outcome-head {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 0.2rem;
+}
+
+.proposal-section-title {
+  font-size: clamp(1.3rem, 1.6vw, 1.6rem);
+  color: var(--text);
+  margin: 0.3rem 0 0.6rem;
+  letter-spacing: -0.005em;
+  line-height: 1.25;
+}
+
+.proposal-section-subtitle {
+  font-size: 1.05rem;
+  color: var(--text);
+  margin: 1.4rem 0 0.4rem;
+  font-weight: 600;
+}
+
+.proposal-lede {
+  margin: 0 0 0.7rem;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.65;
+  max-width: 65ch;
+}
+
+.proposal-primary-objective {
+  padding: 1.1rem 1.2rem;
+  border-left: 3px solid var(--brand);
+  background: rgba(25, 11, 22, 0.45);
+}
+
+.proposal-success-list {
+  margin-top: 0.6rem;
+}
+
+.proposal-success-list strong {
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
 /* Long-form document prose for /proposal/full and similar pages.
-   Clean, readable, no boxed-paragraph treatment. */
+   Clean, readable, no boxed-paragraph treatment. Retained for any
+   other proposal pages that may still use it. */
 .proposal-doc {
   max-width: 72ch;
   margin: 2rem auto 0;

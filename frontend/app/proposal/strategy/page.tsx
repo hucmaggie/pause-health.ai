@@ -4,88 +4,172 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Digital Strategy",
   description:
-    "Architectural strategy, go-to-market motion, and the competitive moats that make Pause-Health.ai defensible.",
+    "Architectural strategy, go-to-market motion, and the competitive moats that make Pause-Health.ai defensible. Each pillar tagged with current status (Designed / Wired in prototype / Shipped / Future) so investors can see plan-vs-reality at a glance.",
   path: "/proposal/strategy",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Digital strategy — Pause-Health.ai investor brief."
 });
 
-const pillars = [
+/**
+ * Each card carries a status tag so the strategy page reads as
+ * "plan vs status", not "everything is already happening". Tags:
+ *
+ *   - "Shipped"             -- demonstrable in the live prototype today
+ *   - "Wired in prototype"  -- proves the path; not yet customer-deployed
+ *   - "Designed"            -- architecture is decided, build is ahead
+ *   - "Future"              -- earned through traction we don't yet have
+ *
+ * Each card may also link out to one of the architecture briefs
+ * (Arc B) or demo pages that backs the claim.
+ */
+type Status = "shipped" | "wired" | "designed" | "future";
+
+const statusLabels: Record<Status, string> = {
+  shipped: "Shipped",
+  wired: "Wired in prototype",
+  designed: "Designed",
+  future: "Future"
+};
+
+const pillars: Array<{
+  pillar: string;
+  intent: string;
+  today: string;
+  status: Status;
+  link?: { href: string; label: string };
+}> = [
   {
     pillar: "EHR-native, never sidecar",
-    description:
-      "Pause is delivered as a SMART-on-FHIR app inside Epic and Cerner workflows. The clinician never leaves their chart. This single architectural choice is the difference between adopted product and shelfware."
+    intent:
+      "Pause is delivered as a SMART-on-FHIR app inside Epic and Cerner workflows. The clinician never leaves their chart. This single architectural choice is the difference between adopted product and shelfware.",
+    today:
+      "JupyterHealth FHIR R5 substrate is wired; MuleSoft Process API design is documented; Salesforce Agentforce is the current intake surface for the live demo. SMART-on-FHIR install package itself is on the build plan, not shipped.",
+    status: "designed",
+    link: { href: "/proposal/integration", label: "JupyterHealth integration brief →" }
   },
   {
     pillar: "Patient-side data capture",
-    description:
-      "PRO and wearable data are collected via a mobile experience the patient already uses (HealthKit / Health Connect bridge), then surfaced as a structured 'pre-read' inside the EHR — not a separate inbox."
+    intent:
+      "PRO and wearable data are collected via a mobile experience the patient already uses (HealthKit / Health Connect bridge), then surfaced as a structured 'pre-read' inside the EHR — not a separate inbox.",
+    today:
+      "DBDP Phase 1 (FLIRT-backed RMSSD) is shipped with closed-form correctness tests. JupyterHealth FHIR observations land in the federated grounding payload. The native HealthKit / Health Connect bridge itself is Phase 2 work.",
+    status: "wired",
+    link: { href: "/proposal/dbdp", label: "DBDP feature engineering brief →" }
   },
   {
     pillar: "Recommendation, not autopilot",
-    description:
-      "Pause never takes a clinical action. It surfaces a ranked, explainable recommendation set with cited evidence and an editable narrative. The clinician remains the decision maker."
+    intent:
+      "Pause never takes a clinical action. It surfaces a ranked, explainable recommendation set with cited evidence and an editable narrative. The clinician remains the decision maker.",
+    today:
+      "Enforced by the Agent Fabric policy catalog today. The Anthropic-backed Care Router emits a recommendation (not an order); the no-clinical-autonomy policy is one of the four enforced policies on every span. Trace plane records the clinician's eventual action when it lands.",
+    status: "shipped",
+    link: { href: "/demo/agent-fabric", label: "See the policy catalog live →" }
   },
   {
     pillar: "Outcomes-anchored contracting",
-    description:
-      "Every customer contract includes a measurement plan: diagnostic time, symptom resolution, HT adherence, avoidable utilization, satisfaction. We are paid in part on what we deliver."
+    intent:
+      "Every customer contract includes a measurement plan: diagnostic time, symptom resolution, HT adherence, avoidable utilization, satisfaction. We are paid in part on what we deliver.",
+    today:
+      "No signed customer contracts yet. The measurement plan template is drafted; PMPM + diagnostic-yield + avoidable-spend metrics are the levers on the table. Outcomes telemetry pipeline exists on the trace plane.",
+    status: "future"
   },
   {
     pillar: "Build the registry, own the evidence",
-    description:
-      "The de-identified outcomes registry is published, contributing to the menopause evidence base, and circling back to product as the strongest competitive moat we have."
+    intent:
+      "The de-identified outcomes registry is published, contributing to the menopause evidence base, and circling back to product as the strongest competitive moat we have.",
+    today:
+      "Data 360 segments + cohort comparison are the prototype substrate. Registry-as-product (de-identified outcomes feed back to advisory + community) is gated on the first ~12 months of customer deployment, not yet earned.",
+    status: "designed",
+    link: { href: "/proposal/data-360", label: "Data 360 architecture brief →" }
   }
 ];
 
-const gtmMotion = [
+const gtmMotion: Array<{
+  stage: string;
+  intent: string;
+  today: string;
+  status: Status;
+}> = [
   {
     stage: "Year 0 — design partners",
-    detail:
-      "3-5 forward-leaning IDNs and 1 value-based payer. Free or deeply discounted. Mutual goal: ship-quality clinical evidence and case studies. Co-author publications and conference talks."
+    intent:
+      "3-5 forward-leaning IDNs and 1 value-based payer. Free or deeply discounted. Mutual goal: ship-quality clinical evidence and case studies. Co-author publications and conference talks.",
+    today:
+      "Pre-design-partner stage. Investor brief + working prototype exist; first design-partner conversations are the next milestone.",
+    status: "future"
   },
   {
     stage: "Year 1 — paid pilots into ARR",
-    detail:
-      "Convert design partners to paid contracts. Land 3-5 new IDNs at $250-500k ACV. Begin payer pilots with PMPM structure. ARR target: $2-4M."
+    intent:
+      "Convert design partners to paid contracts. Land 3-5 new IDNs at $250-500k ACV. Begin payer pilots with PMPM structure. ARR target: $2-4M.",
+    today: "Gated on Year 0 design-partner traction.",
+    status: "future"
   },
   {
     stage: "Year 2 — peer expansion",
-    detail:
-      "Lean on customer references and clinical advisory network. Expand within multi-system IDNs (single hospital → enterprise). Launch employer-paid carve-out via payer partners. ARR target: $10-15M."
+    intent:
+      "Lean on customer references and clinical advisory network. Expand within multi-system IDNs (single hospital → enterprise). Launch employer-paid carve-out via payer partners. ARR target: $10-15M.",
+    today: "Gated on Year 1 paid-pilot conversion.",
+    status: "future"
   },
   {
     stage: "Year 3 — platform extensions",
-    detail:
-      "Adjacent vertical: bone health, cardiometabolic risk, sexual / pelvic health for midlife women. Continue compounding outcomes data. ARR target: $30-45M."
+    intent:
+      "Adjacent vertical: bone health, cardiometabolic risk, sexual / pelvic health for midlife women. Continue compounding outcomes data. ARR target: $30-45M.",
+    today: "Gated on Year 2 expansion footprint + outcomes registry density.",
+    status: "future"
   }
 ];
 
-const moats = [
+const moats: Array<{
+  moat: string;
+  intent: string;
+  today: string;
+  status: Status;
+  link?: { href: string; label: string };
+}> = [
   {
     moat: "Workflow integration depth",
-    detail:
-      "Each Epic/Cerner deployment takes 60-120 days and meaningful clinician trust. Once installed, switching cost is high. Eventually, Pause becomes 'the way menopause care is done here.'"
+    intent:
+      "Each Epic/Cerner deployment takes 60-120 days and meaningful clinician trust. Once installed, switching cost is high. Eventually, Pause becomes 'the way menopause care is done here.'",
+    today:
+      "Estimate based on industry deployment timelines for SMART-on-FHIR + Epic/Cerner App Orchard installs. No live deployment time observed yet.",
+    status: "designed",
+    link: { href: "/proposal/integration", label: "JupyterHealth integration brief →" }
   },
   {
     moat: "Outcomes registry",
-    detail:
-      "Continuous accumulation of structured outcomes data tied to specific recommendations. After 18 months of customer deployment, the registry is unreplicable by a new entrant."
+    intent:
+      "Continuous accumulation of structured outcomes data tied to specific recommendations. After 18 months of customer deployment, the registry is unreplicable by a new entrant.",
+    today:
+      "Trace plane records inputs/outputs/model per recommendation today. Registry as a customer-facing product is gated on customer-deployment time.",
+    status: "wired",
+    link: { href: "/proposal/agent-fabric", label: "Agent Fabric brief →" }
   },
   {
     moat: "Clinical advisory network",
-    detail:
-      "A who's-who of NAMS-affiliated clinicians and researchers as advisors and design partners. Each adds credibility and slows competitive entry."
+    intent:
+      "A who's-who of MSCP-credentialed and NAMS-affiliated clinicians and researchers as advisors and design partners. Each adds credibility and slows competitive entry.",
+    today:
+      "Advisory network at pre-recruit stage. MSCP-credentialed routing graph design is documented; the partnership-with-The-Menopause-Society path is explicit.",
+    status: "designed",
+    link: { href: "/proposal/menopause-society", label: "Menopause Society brief →" }
   },
   {
     moat: "Guideline grounding library",
-    detail:
-      "A curated, structured, retrievable corpus of menopause guidelines maintained as evidence evolves. The work of building and maintaining it is more durable than the AI models themselves."
+    intent:
+      "A curated, structured, retrievable corpus of menopause guidelines maintained as evidence evolves. The work of building and maintaining it is more durable than the AI models themselves.",
+    today:
+      "Guideline-grounded prompts are scaffolded in the Care Router. Curated corpus + retrieval pipeline are Phase 2.",
+    status: "designed"
   },
   {
     moat: "Brand and category leadership",
-    detail:
-      "Owning 'menopause AI for providers' as a category. First in market, loudest voice in clinical conferences, deepest evidence base."
+    intent:
+      "Owning 'menopause AI for providers' as a category. First in market, loudest voice in clinical conferences, deepest evidence base.",
+    today:
+      "Pre-market. The investor brief, the demo, and the architecture-honesty posture (LIVE / MOCKED tagging across the deck) are the early proof points.",
+    status: "future"
   }
 ];
 
@@ -94,23 +178,75 @@ const operatingPrinciples = [
   "Clinicians are the user; patients are the beneficiary.",
   "Explain everything. If we can't explain it, we don't ship it.",
   "Evidence is a deliverable, not a marketing artifact.",
-  "Default to the EHR. Side-systems die."
+  "Default to the EHR. Side-systems die.",
+  "Tag plan vs status everywhere. Aspiration is fine; aspiration disguised as fact is corrosive."
 ];
+
+function StatusPill({ status }: { status: Status }) {
+  // Reuses the .pre-brief-source-badge palette so status tagging on
+  // proposal pages stays visually consistent with source badges on
+  // /demo/intake, /demo/patient, /demo/analytics, etc. Shipped ->
+  // green real-source palette; wired/designed/future -> amber mock-
+  // source palette (so anything not yet shipped reads as "claim",
+  // not "fact").
+  const variant = status === "shipped" ? "real" : "mock";
+  return (
+    <span
+      className={`pre-brief-source-badge pre-brief-source-badge--${variant}`}
+      style={{ marginBottom: "0.5rem" }}
+    >
+      {statusLabels[status]}
+    </span>
+  );
+}
 
 export default function StrategyPage() {
   return (
     <ProposalShell
       eyebrow="Investor Brief · Part 2"
       title="Digital Strategy: architecture, motion, and moats"
-      subtitle="Pause is not just a product strategy — it's a category-creation strategy. The architecture and go-to-market are designed to compound defensibility from day one."
+      subtitle="Pause is a category-creation strategy as much as a product strategy. Each pillar, stage, and moat below is tagged with current status (Shipped / Wired in prototype / Designed / Future) so investors can read plan-vs-reality at a glance. Architecture briefs link out from cards whose claims they back."
     >
       <section>
         <p className="eyebrow">Architectural pillars</p>
+        <h2 className="proposal-section-title">
+          Five pillars — each one verifiable today, or honestly labeled as ahead
+        </h2>
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {pillars.map((p) => (
             <article key={p.pillar} className="card">
+              <StatusPill status={p.status} />
               <h3>{p.pillar}</h3>
-              <p>{p.description}</p>
+              <p
+                style={{
+                  margin: "0 0 0.6rem",
+                  color: "var(--text)"
+                }}
+              >
+                {p.intent}
+              </p>
+              <p
+                style={{
+                  margin: "0 0 0.6rem",
+                  color: "var(--muted)",
+                  fontSize: "0.88rem",
+                  lineHeight: 1.55,
+                  borderLeft: "2px solid var(--line)",
+                  paddingLeft: "0.6rem"
+                }}
+              >
+                <strong style={{ color: "var(--text)" }}>Today: </strong>
+                {p.today}
+              </p>
+              {p.link && (
+                <a
+                  href={p.link.href}
+                  className="btn btn-secondary"
+                  style={{ fontSize: "0.85rem", padding: "0.4rem 0.7rem" }}
+                >
+                  {p.link.label}
+                </a>
+              )}
             </article>
           ))}
         </div>
@@ -118,11 +254,44 @@ export default function StrategyPage() {
 
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Go-to-market motion</p>
+        <h2 className="proposal-section-title">Four stages — current stage made explicit</h2>
+        <p
+          style={{
+            color: "var(--muted)",
+            margin: "0 0 0.8rem",
+            fontSize: "0.95rem"
+          }}
+        >
+          We are pre-design-partner. The investor brief and the working
+          prototype are the artifacts of the Year-0-minus-one stage; first
+          design-partner conversations are the immediate next milestone.
+        </p>
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {gtmMotion.map((s) => (
             <article key={s.stage} className="card">
+              <StatusPill status={s.status} />
               <h3>{s.stage}</h3>
-              <p>{s.detail}</p>
+              <p
+                style={{
+                  margin: "0 0 0.6rem",
+                  color: "var(--text)"
+                }}
+              >
+                {s.intent}
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  color: "var(--muted)",
+                  fontSize: "0.88rem",
+                  lineHeight: 1.55,
+                  borderLeft: "2px solid var(--line)",
+                  paddingLeft: "0.6rem"
+                }}
+              >
+                <strong style={{ color: "var(--text)" }}>Today: </strong>
+                {s.today}
+              </p>
             </article>
           ))}
         </div>
@@ -130,11 +299,42 @@ export default function StrategyPage() {
 
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Competitive moats</p>
+        <h2 className="proposal-section-title">Five moats — each compounding over deployment time</h2>
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {moats.map((m) => (
             <article key={m.moat} className="card">
+              <StatusPill status={m.status} />
               <h3>{m.moat}</h3>
-              <p>{m.detail}</p>
+              <p
+                style={{
+                  margin: "0 0 0.6rem",
+                  color: "var(--text)"
+                }}
+              >
+                {m.intent}
+              </p>
+              <p
+                style={{
+                  margin: "0 0 0.6rem",
+                  color: "var(--muted)",
+                  fontSize: "0.88rem",
+                  lineHeight: 1.55,
+                  borderLeft: "2px solid var(--line)",
+                  paddingLeft: "0.6rem"
+                }}
+              >
+                <strong style={{ color: "var(--text)" }}>Today: </strong>
+                {m.today}
+              </p>
+              {m.link && (
+                <a
+                  href={m.link.href}
+                  className="btn btn-secondary"
+                  style={{ fontSize: "0.85rem", padding: "0.4rem 0.7rem" }}
+                >
+                  {m.link.label}
+                </a>
+              )}
             </article>
           ))}
         </div>
@@ -148,6 +348,64 @@ export default function StrategyPage() {
               <span>{p}</span>
             </li>
           ))}
+        </ul>
+      </section>
+
+      <section style={{ marginTop: "1.5rem" }}>
+        <p className="eyebrow">Read deeper</p>
+        <h2 className="proposal-section-title">Where each pillar comes from in the architecture</h2>
+        <ul className="metric-list metric-list-stacked" style={{ marginTop: "0.5rem" }}>
+          <li>
+            <span>
+              <a href="/proposal/integration">JupyterHealth integration</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              The EHR-native substrate behind Pillar 1.
+            </strong>
+          </li>
+          <li>
+            <span>
+              <a href="/proposal/dbdp">DBDP feature engineering</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              The wearable + PRO data pipeline behind Pillar 2.
+            </strong>
+          </li>
+          <li>
+            <span>
+              <a href="/proposal/agent-fabric">Agent Fabric</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              The policy catalog that enforces &quot;recommendation, not
+              autopilot&quot; in Pillar 3 — verifiable live.
+            </strong>
+          </li>
+          <li>
+            <span>
+              <a href="/proposal/data-360">Salesforce Data 360</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              The segment + cohort substrate behind the outcomes registry
+              moat in Pillar 5.
+            </strong>
+          </li>
+          <li>
+            <span>
+              <a href="/proposal/menopause-society">Menopause Society partnership</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              The advisory + credential network behind the clinical-advisory
+              moat.
+            </strong>
+          </li>
+          <li>
+            <span>
+              <a href="/proposal/customers">Customer selection</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              The ICP segmentation that drives the Year 0–3 GTM stages.
+            </strong>
+          </li>
         </ul>
       </section>
     </ProposalShell>
