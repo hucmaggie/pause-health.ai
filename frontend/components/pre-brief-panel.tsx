@@ -224,16 +224,32 @@ export function PreBriefPanel({
             <section className="pre-brief-section">
               <h4 className="pre-brief-section-title">Cohort context</h4>
               <ul className="pre-brief-metric-list">
-                {COHORT_FIELDS.map(({ key, label }) => (
-                  <li key={key}>
-                    <span>{label}</span>
-                    <strong>
-                      {key === "Patient_Percentile"
-                        ? formatPercentile(fields?.[key])
-                        : get(key)}
-                    </strong>
-                  </li>
-                ))}
+                {COHORT_FIELDS.map(({ key, label }) => {
+                  // Cohort_Name is long-form text; render it stacked so
+                  // it gets the full card width instead of squeezing
+                  // into the right column.
+                  if (key === "Cohort_Name") {
+                    return (
+                      <li
+                        key={key}
+                        className="pre-brief-metric-row--stacked"
+                      >
+                        <span>{label}</span>
+                        <strong>{get(key)}</strong>
+                      </li>
+                    );
+                  }
+                  return (
+                    <li key={key}>
+                      <span>{label}</span>
+                      <strong>
+                        {key === "Patient_Percentile"
+                          ? formatPercentile(fields?.[key])
+                          : get(key)}
+                      </strong>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
 

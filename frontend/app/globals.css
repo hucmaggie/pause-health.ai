@@ -1440,11 +1440,13 @@ th {
   max-width: 65%;
 }
 
-.pre-brief-metric-list--stacked li {
+.pre-brief-metric-list--stacked li,
+.pre-brief-metric-list li.pre-brief-metric-row--stacked {
   display: block;
 }
 
-.pre-brief-metric-list--stacked li strong {
+.pre-brief-metric-list--stacked li strong,
+.pre-brief-metric-list li.pre-brief-metric-row--stacked strong {
   display: block;
   text-align: left;
   margin-top: 0.2rem;
