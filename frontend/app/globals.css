@@ -501,6 +501,214 @@ th {
   background: rgba(25, 11, 22, 0.45);
 }
 
+/* ---------------------------------------------------------------------------
+   /demo/analytics — outcome analytics dashboard.
+   --------------------------------------------------------------------------- */
+
+.analytics-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.analytics-card {
+  padding: 1rem 1.1rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.analytics-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.analytics-card-head .eyebrow {
+  margin: 0;
+}
+
+.analytics-card-title {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.analytics-card-value {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.analytics-card-loading,
+.analytics-card-error {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.analytics-card-error {
+  color: #ff8aa9;
+}
+
+.analytics-card-detail {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* Pathway distribution bar chart. */
+
+.analytics-pathway-chart {
+  padding: 1.1rem 1.2rem 1rem;
+}
+
+.analytics-bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+}
+
+.analytics-bar-row {
+  display: grid;
+  grid-template-columns: 18rem 1fr 5rem;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+@media (max-width: 740px) {
+  .analytics-bar-row {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+.analytics-bar-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+}
+
+.analytics-bar-label strong {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.analytics-bar-track {
+  height: 0.7rem;
+  background: rgba(25, 11, 22, 0.55);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.analytics-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 240ms ease;
+}
+
+.analytics-bar-fill--calm {
+  background: linear-gradient(90deg, #7eebbf, #4cd49b);
+}
+.analytics-bar-fill--moderate {
+  background: linear-gradient(90deg, #ffd28a, #ffb15a);
+}
+.analytics-bar-fill--elevated {
+  background: linear-gradient(90deg, #ffb15a, #ff8e4f);
+}
+.analytics-bar-fill--urgent {
+  background: linear-gradient(90deg, #ff8aa9, #ff5d8f);
+}
+.analytics-bar-fill--critical {
+  background: linear-gradient(90deg, #ff5679, #ff2a59);
+}
+
+.analytics-bar-count {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.85rem;
+}
+
+.analytics-bar-count strong {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.analytics-bar-count span {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* Segment activation chips. */
+
+.analytics-activation-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.analytics-activation-chip {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--line);
+  background: rgba(25, 11, 22, 0.55);
+  color: #d8a6c4;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+/* Outcome target cards. */
+
+.analytics-target-card {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: rgba(25, 11, 22, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.analytics-target-label {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.analytics-target-value {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.analytics-target-detail {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
 .btn {
   display: inline-block;
   border-radius: 0.6rem;
