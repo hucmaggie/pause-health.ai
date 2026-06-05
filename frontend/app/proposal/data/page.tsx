@@ -4,59 +4,119 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Data Inventory & Strategy",
   description:
-    "Available menopause datasets, our data strategy, and the proprietary data moats Pause-Health.ai will accrue over time.",
+    "Available menopause datasets, our data strategy, and the proprietary data moats Pause-Health.ai will accrue over time. Each row labels whether the data is in-hand today or a planned integration.",
   path: "/proposal/data",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Data inventory and strategy — Pause-Health.ai investor brief."
 });
 
-const inventory = [
+/**
+ * Data inventory + strategy — Arc A polish pass.
+ *
+ * Three things changed from the prior version:
+ *
+ *   1. FHIR version was R4. The rest of the deck
+ *      (/proposal/technology, /proposal/integration) commits to
+ *      FHIR R5 via JupyterHealth Exchange. The inventory now matches.
+ *   2. Each row in the inventory carries a Today / Planned pill so
+ *      the reader can tell what Pause has in-hand vs what is a
+ *      committed-roadmap integration. Two rows are Today (research
+ *      corpora + guideline corpus); the rest are Planned because
+ *      they live downstream of design-partner contracts.
+ *   3. A "Read deeper" footer cross-links to dbdp / integration /
+ *      provider-graph / learning where the data substrate is
+ *      operationalized.
+ */
+
+type DataStatus = "today" | "planned";
+
+const STATUS_LABEL: Record<DataStatus, string> = {
+  today: "Today",
+  planned: "Planned"
+};
+
+const STATUS_VARIANT: Record<DataStatus, "real" | "mock"> = {
+  today: "real",
+  planned: "mock"
+};
+
+function StatusPill({ status }: { status: DataStatus }) {
+  return (
+    <span
+      className={`pre-brief-source-badge pre-brief-source-badge--${STATUS_VARIANT[status]}`}
+      style={{ fontSize: "0.68rem", marginRight: "0.4rem" }}
+    >
+      {STATUS_LABEL[status]}
+    </span>
+  );
+}
+
+const inventory: Array<{
+  status: DataStatus;
+  source: string;
+  type: string;
+  volume: string;
+  examples: string;
+  why_it_matters: string;
+}> = [
   {
+    status: "planned",
     source: "EHR clinical data",
-    type: "FHIR R4 via SMART-on-FHIR",
-    volume: "Structured + unstructured visit notes for ~250M US patients across Epic, Cerner",
+    type: "FHIR R5 via JupyterHealth Exchange + SMART-on-FHIR",
+    volume:
+      "Structured + unstructured visit notes for ~250M US patients across Epic, Cerner — accessed through design-partner connections, not held by Pause.",
     examples: "Vitals, problem list, medications, lab panels (FSH, estradiol, TSH), encounter notes",
     why_it_matters:
-      "The longitudinal clinical truth set. Where we measure outcomes and where guidelines are applied."
+      "The longitudinal clinical truth set. Where we measure outcomes and where guidelines are applied. Federated access first; Pause does not centralize PHI by default (see /proposal/integration)."
   },
   {
+    status: "planned",
     source: "Claims data",
     type: "X12 837/835, plus partner data lakes",
-    volume: "Visit, procedure, prescription, and ER utilization across commercial + MA plans",
+    volume:
+      "Visit, procedure, prescription, and ER utilization across commercial + MA plans — accessed via payer design-partner contracts.",
     examples: "ICD-10 N95.x, CPT for endometrial biopsy / DEXA, RX fills for HT/SSRIs/SNRIs",
     why_it_matters:
-      "Quantifies avoidable utilization and the economic case for the payer-side product."
+      "Quantifies avoidable utilization and the economic case for the payer-side product. Required for the PMPM contracting motion on /proposal/customers."
   },
   {
+    status: "planned",
     source: "Patient-generated wearables",
     type: "HealthKit / Health Connect, Oura, Whoop, Garmin",
-    volume: "Continuous HRV, sleep, heart rate, skin temperature, cycle data",
+    volume:
+      "Continuous HRV, sleep, heart rate, skin temperature, cycle data — surfaced today as mocked Data 360 signals in the prototype dossier.",
     examples: "Sleep fragmentation, resting HR drift, nocturnal heat events, HRV decline patterns",
     why_it_matters:
-      "Earliest and most sensitive signal for perimenopause onset — usually invisible to clinicians."
+      "Earliest and most sensitive signal for perimenopause onset — usually invisible to clinicians. Today the Pre-Brief Panel shows these as mocked signals; first-party ingestion is roadmap (see /demo/intake)."
   },
   {
+    status: "planned",
     source: "Patient-reported outcomes (PROs)",
     type: "Validated instruments + adaptive intake",
-    volume: "MRS (Menopause Rating Scale), GCS, PHQ-9, GAD-7, plus structured symptom diaries",
+    volume:
+      "MRS (Menopause Rating Scale), GCS, PHQ-9, GAD-7, plus structured symptom diaries — collected via the intake experience in production deployments.",
     examples: "Vasomotor severity, sleep quality, mood, cognition, sexual function, urogenital",
     why_it_matters:
-      "Captures the symptoms that drive lived experience but rarely make it into the EHR."
+      "Captures the symptoms that drive lived experience but rarely make it into the EHR. The intake page (/demo/intake) is the surface this lands on."
   },
   {
+    status: "today",
     source: "Public research corpora",
     type: "Open / licensed",
     volume: "SWAN, UK Biobank menopause cohort, NHS, PubMed, ClinicalTrials.gov",
     examples: "Trajectory data, hormone-therapy outcomes, cardiovascular risk modeling",
-    why_it_matters: "Pretraining and clinical evaluation; provides population-level priors."
+    why_it_matters:
+      "Pretraining and clinical evaluation; provides population-level priors. Surfaced today as grounding sources in the federated retrieval layer."
   },
   {
+    status: "today",
     source: "Specialty guideline corpus",
     type: "Structured + retrievable",
-    volume: "NAMS, ACOG, IMS, AACE position statements; menopause hormone-therapy guidance",
+    volume:
+      "NAMS / Menopause Society, ACOG, IMS, AACE position statements; menopause hormone-therapy guidance — curated in the prototype grounding store.",
     examples: "Evidence levels, contraindications, dosing, monitoring intervals",
     why_it_matters:
-      "Grounding source for every recommendation — explainability requires it."
+      "Grounding source for every recommendation — explainability requires it. Live in the prototype: each Care Router decision cites it (see /demo/agent-fabric)."
   }
 ];
 
@@ -64,7 +124,7 @@ const dataStrategy = [
   {
     pillar: "FHIR-native by default",
     description:
-      "All ingestion conforms to FHIR R4 resources. No bespoke data formats. SMART-on-FHIR auth means we plug into Epic and Cerner without bespoke integration projects."
+      "All ingestion conforms to FHIR R5 resources via JupyterHealth Exchange. No bespoke data formats. SMART-on-FHIR auth means we plug into Epic and Cerner without bespoke integration projects (see /proposal/integration)."
   },
   {
     pillar: "Patient-side first, EHR-side second",
@@ -74,17 +134,17 @@ const dataStrategy = [
   {
     pillar: "De-identified product telemetry",
     description:
-      "Every AI recommendation is logged with inputs, outputs, clinician acceptance, and downstream outcome. This dataset compounds in value monthly."
+      "Every AI recommendation is logged in the Agent Fabric trace plane with inputs, outputs, clinician acceptance, and downstream outcome. This dataset compounds in value monthly (live today at /demo/agent-fabric)."
   },
   {
     pillar: "Outcomes registry",
     description:
-      "With each design-partner contract, we co-build a clinical outcomes registry — diagnostic time, symptom resolution, utilization deltas, HT adoption and adherence."
+      "With each design-partner contract, we co-build a clinical outcomes registry — diagnostic time, symptom resolution, utilization deltas, HT adoption and adherence. Operationalized via the Agent Fabric trace plane (/proposal/agent-fabric)."
   },
   {
     pillar: "Federated where required",
     description:
-      "For health systems unwilling to move data, our inference layer runs federated against an in-VPC deployment. Model weights leave; PHI does not."
+      "For health systems unwilling to move data, our inference layer runs federated against an in-VPC deployment. Model weights leave; PHI does not. This is the default posture, not the exception."
   }
 ];
 
@@ -102,7 +162,7 @@ const moats = [
   {
     moat: "Specialty guideline grounding library",
     detail:
-      "A curated, regularly updated, retrievable corpus of menopause clinical guidelines mapped to structured concepts. Hard to build, harder to keep current."
+      "A curated, regularly updated, retrievable corpus of menopause clinical guidelines mapped to structured concepts. Hard to build, harder to keep current. Live today; see /demo/intake for citations in action."
   },
   {
     moat: "Provider relationships and EHR install base",
@@ -116,14 +176,29 @@ export default function DataPage() {
     <ProposalShell
       eyebrow="Investor Brief · Part 2"
       title="Data Inventory & Insights: building the menopause data substrate"
-      subtitle="Menopause care has rich, fragmented data. The opportunity isn't to collect more — it's to assemble what already exists into a clinically usable, longitudinal patient picture, and compound a proprietary outcomes layer on top."
+      subtitle="Menopause care has rich, fragmented data. The opportunity isn't to collect more — it's to assemble what already exists into a clinically usable, longitudinal patient picture, and compound a proprietary outcomes layer on top. Each inventory row is tagged Today (in-hand or surfaced in prototype) or Planned (design-partner-stage integration)."
     >
       <section>
-        <p className="eyebrow">Data inventory</p>
+        <p className="eyebrow">Data inventory · with status pills</p>
+        <h2 className="proposal-section-title">What we work with today vs what we&apos;ll integrate</h2>
+        <p
+          style={{
+            color: "var(--muted)",
+            margin: "0 0 0.8rem",
+            fontSize: "0.92rem"
+          }}
+        >
+          Pills:{" "}
+          <StatusPill status="today" /> in-hand or wired in prototype today ·{" "}
+          <StatusPill status="planned" /> integration unlocks at design-partner stage.
+        </p>
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {inventory.map((d) => (
             <article key={d.source} className="card">
-              <h3>{d.source}</h3>
+              <div style={{ marginBottom: "0.35rem" }}>
+                <StatusPill status={d.status} />
+              </div>
+              <h3 style={{ marginTop: 0 }}>{d.source}</h3>
               <p style={{ color: "var(--brand)", fontWeight: 600, marginBottom: "0.5rem" }}>
                 {d.type}
               </p>
@@ -148,11 +223,12 @@ export default function DataPage() {
 
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Data strategy</p>
+        <h2 className="proposal-section-title">Five pillars — how the substrate is assembled</h2>
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {dataStrategy.map((s) => (
             <article key={s.pillar} className="card">
               <h3>{s.pillar}</h3>
-              <p>{s.description}</p>
+              <p style={{ margin: 0, color: "var(--text)", lineHeight: 1.6 }}>{s.description}</p>
             </article>
           ))}
         </div>
@@ -160,11 +236,12 @@ export default function DataPage() {
 
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Data moats</p>
+        <h2 className="proposal-section-title">What compounds as we ship</h2>
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {moats.map((m) => (
             <article key={m.moat} className="card">
               <h3>{m.moat}</h3>
-              <p>{m.detail}</p>
+              <p style={{ margin: 0, color: "var(--text)", lineHeight: 1.6 }}>{m.detail}</p>
             </article>
           ))}
         </div>
@@ -172,22 +249,98 @@ export default function DataPage() {
 
       <section className="card" style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Governance and trust</p>
-        <ul className="metric-list" style={{ marginTop: "0.5rem" }}>
+        <h2 className="proposal-section-title" style={{ marginTop: 0 }}>
+          The compliance posture, phased
+        </h2>
+        <ul className="metric-list metric-list-stacked" style={{ marginTop: "0.5rem" }}>
           <li>
             <span>Compliance posture</span>
-            <strong>HIPAA + HITRUST CSF on the implementation roadmap; SOC 2 Type II in Year 2</strong>
+            <strong style={{ fontWeight: 500 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                <StatusPill status="planned" />
+                <span>HIPAA controls + HITRUST CSF on the implementation roadmap; SOC 2 Type II in Year 2.</span>
+              </span>
+            </strong>
           </li>
           <li>
             <span>Data residency</span>
-            <strong>US-only by default; per-customer VPC available for federated deployments</strong>
+            <strong style={{ fontWeight: 500 }}>
+              US-only by default; per-customer VPC available for federated deployments. Federated-first matches /proposal/dbdp.
+            </strong>
           </li>
           <li>
             <span>Patient consent</span>
-            <strong>Granular, withdrawable, separated per data domain (clinical, wearable, PRO)</strong>
+            <strong style={{ fontWeight: 500 }}>
+              Granular, withdrawable, separated per data domain (clinical, wearable, PRO).
+            </strong>
           </li>
           <li>
             <span>AI auditability</span>
-            <strong>Every recommendation reproducible: inputs, model version, retrieval set, output</strong>
+            <strong style={{ fontWeight: 500 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                <StatusPill status="today" />
+                <span>
+                  Every recommendation reproducible: inputs, model version, retrieval set, output. Trace plane live at{" "}
+                  <a href="/demo/agent-fabric">/demo/agent-fabric</a>.
+                </span>
+              </span>
+            </strong>
+          </li>
+        </ul>
+      </section>
+
+      <section style={{ marginTop: "1.5rem" }}>
+        <p className="eyebrow">Read deeper</p>
+        <h2 className="proposal-section-title">Where the data substrate is operationalized</h2>
+        <ul className="metric-list metric-list-stacked" style={{ marginTop: "0.5rem" }}>
+          <li>
+            <span>
+              <a href="/proposal/integration">Integration architecture</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              FHIR R5 via JupyterHealth Exchange, SMART-on-FHIR auth, federated-first posture.
+            </strong>
+          </li>
+          <li>
+            <span>
+              <a href="/proposal/dbdp">DBDP / federated data plane</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              How the in-VPC federated execution model works in detail.
+            </strong>
+          </li>
+          <li>
+            <span>
+              <a href="/proposal/provider-graph">Provider graph</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              How clinician + facility data layers on top of FHIR.
+            </strong>
+          </li>
+          <li>
+            <span>
+              <a href="/proposal/agent-fabric">Agent Fabric</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              The trace plane backing the AI-auditability commitment. <a href="/demo/agent-fabric">See it live</a>.
+            </strong>
+          </li>
+          <li>
+            <span>
+              <a href="/proposal/strategy">Strategy · the five moats</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              How the outcomes registry compounds the data-moat claim above —
+              status-pilled per stage.
+            </strong>
+          </li>
+          <li>
+            <span>
+              <a href="/proposal/technology">Technology stack</a>
+            </span>
+            <strong style={{ fontWeight: 500 }}>
+              The full stack-layer view, each with its own status pill.
+            </strong>
           </li>
         </ul>
       </section>
