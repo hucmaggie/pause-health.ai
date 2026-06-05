@@ -20,13 +20,26 @@ import { AGENTFORCE_COPY, type AgentforceConfig } from "../lib/agentforce";
  *     in the Salesforce-provided snippet). They do not grant API access.
  *   - We mount once per page lifecycle. If a customer SPA navigates away
  *     and back, the script is already loaded; we no-op the second mount.
- *   - When `prechatFields` is supplied, we call
+ *   - When `prechatFields` is supplied, we attempt to call
  *     `embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields()`
  *     inside the `onEmbeddedMessagingReady` handler — which is the only
- *     window in which Salesforce accepts hidden-field assignment (after
- *     the SDK is ready, before the conversation begins). The fields
- *     then surface to the Agentforce Service Agent as Conversation
- *     Variables so the agent walks in pre-grounded.
+ *     window in which Salesforce accepts hidden-field assignment.
+ *
+ *     IMPORTANT (2026-06-04): On Embedded Messaging V2 deployments
+ *     the SDK ships `prechatAPI` as a no-op Proxy whose
+ *     `setHiddenPrechatFields(...)` returns `true` without
+ *     transmitting anything. The values never reach SCRT2, the
+ *     routing Flow fires with all input variables null, and
+ *     `MessagingSession.Pause_*__c` stays empty. Confirmed with the
+ *     `embeddedServiceForms` block + Publish + custom parameters +
+ *     Flow input vars all wired correctly. See PHASE_3_RUNBOOK.md
+ *     ("empty-Proxy prechatAPI" finding).
+ *
+ *     Callers in this codebase therefore pass `prechatFields={null}`
+ *     and surface the dossier visibly via <PreBriefPanel/> above
+ *     the chat. The hidden-prechat code path here is kept intact
+ *     so the day Salesforce fixes the V2 prechatAPI binding, the
+ *     dossier handoff lights up automatically.
  *   - To switch between patients in the same browser session, the
  *     parent must re-mount this component (e.g. via React key). The
  *     Salesforce SDK is global, sticky-state, and intentionally does

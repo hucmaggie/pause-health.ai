@@ -1284,3 +1284,183 @@ th {
 .founder-social-icon {
   flex-shrink: 0;
 }
+
+/* ---------------------------------------------------------------------------
+   Pre-Brief Panel — visible Data 360 dossier above the Agentforce chat.
+   See components/pre-brief-panel.tsx for the why-this-replaced-hidden-prechat
+   rationale.
+   --------------------------------------------------------------------------- */
+
+.pre-brief-panel {
+  padding: 1.2rem 1.3rem 1.1rem;
+}
+
+.pre-brief-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pre-brief-source-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-self: flex-start;
+  margin-top: 0.2rem;
+}
+
+.pre-brief-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.pre-brief-source-badge--real {
+  background: rgba(126, 235, 191, 0.12);
+  color: #7eebbf;
+  border-color: rgba(126, 235, 191, 0.4);
+}
+
+.pre-brief-source-badge--real::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: #7eebbf;
+  box-shadow: 0 0 0 0.15rem rgba(126, 235, 191, 0.22);
+}
+
+.pre-brief-source-badge--mock {
+  background: rgba(255, 200, 110, 0.1);
+  color: #ffd28a;
+  border-color: rgba(255, 200, 110, 0.45);
+}
+
+.pre-brief-source-badge--mock::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: #ffd28a;
+  box-shadow: 0 0 0 0.15rem rgba(255, 200, 110, 0.2);
+}
+
+.pre-brief-primary-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.9rem;
+}
+
+.pre-brief-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: rgba(25, 11, 22, 0.45);
+}
+
+.pre-brief-pill-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.pre-brief-pill-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.pre-brief-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.9rem;
+  margin-top: 0.9rem;
+}
+
+.pre-brief-section {
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  padding: 0.7rem 0.85rem 0.85rem;
+  background: rgba(25, 11, 22, 0.35);
+}
+
+.pre-brief-section-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ff8fc1;
+  font-weight: 700;
+}
+
+.pre-brief-metric-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pre-brief-metric-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(89, 48, 72, 0.45);
+}
+
+.pre-brief-metric-list li:last-child {
+  border-bottom: none;
+}
+
+.pre-brief-metric-list li span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.pre-brief-metric-list li strong {
+  font-size: 0.9rem;
+  text-align: right;
+  overflow-wrap: anywhere;
+  max-width: 65%;
+}
+
+.pre-brief-metric-list--stacked li {
+  display: block;
+}
+
+.pre-brief-metric-list--stacked li strong {
+  display: block;
+  text-align: left;
+  margin-top: 0.2rem;
+  max-width: 100%;
+}
+
+.pre-brief-narrative {
+  margin: 0.9rem 0 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: rgba(25, 11, 22, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.92rem;
+  color: var(--text);
+  line-height: 1.5;
+}

@@ -1,11 +1,20 @@
 # Phase 3 Runbook: Author a Pause-Health-owned Agentforce Embedded Messaging Deployment
 
-**Status: SHIPPED — 2026-06-02 21:46 PT.**
+**Status: SHIPPED — 2026-06-02 21:46 PT. Pivoted personalization to
+visible Pre-Brief Panel on 2026-06-04 (see Phase 18c below).**
 
 The Pause-Health-owned Agentforce Embedded Messaging deployment is now live
 end-to-end. A real Salesforce Agentforce Service Agent
 (`Pause_Health_Intake_Agent`) responds to messages from `pause-health.ai/demo/intake`
 through a Salesforce-hosted chat panel embedded into the Next.js app on Vercel.
+
+Personalization (hidden-prechat handoff of a Data 360 patient dossier to
+the agent) was attempted in Phase 18a/b and discovered to be blocked by
+an empty-Proxy `prechatAPI` in the Embedded Messaging V2 SDK. The
+working pivot in Phase 18c surfaces the same dossier as a visible
+Pre-Brief Panel above the chat. The full hidden-prechat metadata stack
+is left in place in the org so the moment Salesforce fixes the V2 SDK
+binding the in-band handoff lights up.
 
 Verified end-to-end at 21:46 PT 2026-06-02: opened `pause-health.ai/demo/intake`
 on production Vercel, clicked the chat launcher, sent "hello", agent joined
@@ -194,6 +203,189 @@ IDs and synthetic demo IDs (see `lib/salesforce/grounding.ts:
 getGroundingContextFromOrg`). Everything downstream — the channel
 schema, the Flow, the MessagingSession fields, the agent's
 `$Context.Pause_*` references — is identical.
+
+## Phase 18c: dead end on hidden-prechat — pivot to visible Pre-Brief Panel (2026-06-04)
+
+**Status: SHIPPED PIVOT — visible Pre-Brief Panel renders above the
+chat on `/demo/intake`. Phase 18a/b Salesforce metadata is left in
+place but is dormant.**
+
+After Phase 18a/b deployed the full 5-component data pipeline
+(channel customParameters → routing Flow → `MessagingSession.Pause_*__c`
+fields → bot `contextVariables` → topic instructions) end-to-end,
+verification failed: `MessagingSession.Pause_*__c` was always null on
+every conversation, no matter what we did.
+
+A two-evening debug session walked the data through every link and
+landed on a definitive root cause inside the Embedded Messaging V2
+SDK itself. The full investigation is preserved here so the next
+person who tries this doesn't have to repeat it.
+
+### Root cause: `prechatAPI` is an empty no-op Proxy on V2 deployments
+
+The Salesforce Embedded Messaging V2 SDK (`bootstrap.min.js` served
+from the deployment's Experience site) ships
+`window.embeddedservice_bootstrap.prechatAPI` as a JavaScript Proxy
+whose target is `{}`. The Proxy's `get` trap returns a function that
+returns `true` for every method lookup, regardless of arguments.
+
+Reproduced live on `pause-health.ai/demo/intake` on 2026-06-04
+21:14 PT (Chrome incognito, V2 deployment, post-Publish):
+
+```
+> window.embeddedservice_bootstrap.prechatAPI
+< Proxy(Object) {} 
+  [[Handler]]: Object — get: f (s,o), set: f (n,s,o)
+  [[Target]]: Object — [[Prototype]]: Object — [[IsRevoked]]: false
+
+> window.embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields({Patient_Id: "test123"})
+< true
+```
+
+`bootstrap.min.js` for this deployment contains 25 mentions of
+"prechat" and 5 mentions of "setHiddenPrechatFields" — i.e. it's the
+real SDK, not a stub — but it contains **zero references to any of
+our 19 custom field names** (`Patient_Id`, `Age_Band`,
+`Primary_Symptom`, etc.). The SDK clearly fetches the allowed-field
+list from somewhere at runtime; that fetch isn't returning our
+fields, so the SDK falls back to the empty Proxy.
+
+The user-visible symptom: `setHiddenPrechatFields(...)` returns
+`true` without throwing, our React `setPrechatStatus("applied")`
+fires, the UI prints "21 hidden prechat fields handed to Salesforce"
+— and not a single byte actually goes out over the wire to SCRT2.
+The routing Flow fires (we have ApexLogs proving this), but every
+input variable comes in null, so its `recordUpdates` element writes
+nothing to `MessagingSession.Pause_*__c`. End-to-end null pipeline.
+
+### Everything we tried that didn't fix it (so the next person knows)
+
+1. ✅ Verified `MessagingChannel` has 20 `<customParameters>` with
+   `<actionParameterMappings>` (one per dossier field).
+2. ✅ Verified channel `<sessionHandlerType>` is `Flow` pointing at
+   `Pause_Intake_Prechat_Router` (not the agent directly).
+3. ✅ Verified the Flow's 20 input variables exactly match the
+   channel parameter names, are marked `isInput=true`, and have an
+   `availableForInput` access.
+4. ✅ Verified the 20 `MessagingSession.Pause_*__c` custom fields
+   exist with matching API names.
+5. ✅ Created `Pause_Health_Intake_Prechat_Dossier` PermissionSet
+   granting FLS to those 20 fields. Assigned it to the **Automated
+   Process** user (Flow's run-as user), the **EinsteinServiceAgent**
+   user (bot's run-as user), and the current admin user.
+6. ✅ Verified Bot has 19 `<contextVariables>` mapping
+   `MessagingSession.Pause_*__c` to `$Context.Pause_*`. Bot is Active.
+7. ✅ Added `<embeddedServiceForms>` block to the
+   `EmbeddedServiceConfig` declaring 2 visible standard fields
+   (`_FirstName`, `_LastName`) and 19 hidden custom fields. Every
+   hidden field has `<isHidden>true</isHidden>`,
+   `<displayOrder>-1</displayOrder>`,
+   `<messagingChannelParameterType>Custom</messagingChannelParameterType>`.
+   Verified via `sf project retrieve start --metadata
+   EmbeddedServiceConfig:Pause_Health_Intake` that the block is in
+   the live org.
+8. ✅ Clicked **Publish** in Setup → Embedded Service Deployments →
+   Pause Health Intake → Publish (deployment timestamp 6/4/2026
+   9:53:39 PM EDT, Version 260.14.22).
+9. ✅ Verified bootstrap.min.js is served fresh from
+   `https://trailsignup-c2d761a3b89bf2.my.site.com/ESWPauseHealthIntake1780455502567/assets/js/bootstrap.min.js`
+   (200 OK, 29.5 KB, `Cache-Control: public, max-age=60`).
+10. ✅ Verified Vercel app calls
+    `embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields(fields)`
+    inside the `onEmbeddedMessagingReady` handler.
+
+After all 10 boxes are ticked, the prechatAPI is still the empty
+Proxy and `MessagingSession.Pause_*__c` is still null on every new
+session.
+
+### What the Flow ApexLog looks like (for sanity-check by the next person)
+
+For a session created at `21:46:08 UTC` from the live site:
+
+```
+21:46:09.0 FLOW_CREATE_INTERVIEW_END   Pause Intake Prechat Router
+21:46:09.5 FLOW_START_INTERVIEW_BEGIN  Pause Intake Prechat Router
+21:46:09.5 FLOW_VALUE_ASSIGNMENT       recordId      = 0MwHp000002LZ1J
+21:46:09.5 FLOW_VALUE_ASSIGNMENT       input_record  = {Id=..., Status=Waiting, ..., Pause_Patient_Id__c=null, Pause_Age_Band__c=null, ...}
+21:46:09.5 FLOW_START_INTERVIEW_END    (0.5ms — no work happened)
+21:46:09.5 FLOW_INTERVIEW_FINISHED     Pause Intake Prechat Router
+```
+
+The complete absence of `FLOW_VALUE_ASSIGNMENT` lines for any of the
+20 dossier input variables is the smoking gun: those variables were
+never set, so the `recordUpdates` element had nothing to write.
+
+### The pivot we shipped: visible Pre-Brief Panel
+
+Rather than ship a feature that quietly does nothing (the
+"Resolved. Identity: real. 21 prechat fields handed to Salesforce…"
+label was technically a lie — `setHiddenPrechatFields` returned
+`true`, but nothing crossed the wire), `/demo/intake` now renders
+the same `/api/intake/prechat-context` payload as a **visible
+dossier card** above the Agentforce chat:
+
+- `components/pre-brief-panel.tsx` (new): renders the full dossier
+  with sections for Intake Scores, Care State, Cohort Context, and
+  Identity Resolution. Two badges at the top declare
+  `Identity: real|mock` and `Grounding: real|mock`.
+- `components/intake-patient-stage.tsx` (updated): wires
+  `<PreBriefPanel/>` between the persona picker and
+  `<AgentforceEmbed/>`. Passes `prechatFields={null}` to the
+  embed so the empty-Proxy code path is dormant.
+- `components/agentforce-embed.tsx` (updated): doc comment now
+  documents the empty-Proxy behavior; the
+  `setHiddenPrechatFields` call path is still present so the
+  feature lights up automatically if Salesforce ever fixes the V2
+  prechatAPI binding.
+
+The agent itself is unchanged: it still walks a generic menopause
+intake. The personalization lives in the surrounding UI, where it
+is honest, inspectable, and not gated on undocumented Salesforce
+SDK internals.
+
+### What was left in place in the Salesforce org (intentionally)
+
+| Artifact | Why kept |
+|---|---|
+| 20 `Pause_*__c` custom fields on `MessagingSession` | Harmless when empty; ready for the day prechatAPI binding works |
+| `Pause_Health_Intake_Prechat_Dossier` PermissionSet | Same |
+| `Pause_Intake_Prechat_Router` Flow (Active) | Same; runs in <30ms with empty inputs |
+| Channel `Messaging_for_In_App_Web` with 20 `<customParameters>` + Flow handler | Same |
+| Bot 19 `<contextVariables>` mapping `Pause_*__c` → `$Context.Pause_*` | Same |
+| `embeddedServiceForms` block in EmbeddedServiceConfig | Same |
+
+If/when Salesforce fixes the V2 SDK's prechatAPI:
+
+1. Flip `prechatFields={null}` back to
+   `prechatFields={fetchState.fields}` in
+   `intake-patient-stage.tsx`.
+2. Browser sends prechat fields → SCRT2 dispatches them to the
+   Flow → Flow writes them to `MessagingSession.Pause_*__c` → agent
+   sees `$Context.Pause_*` and personalizes in-band.
+3. Update the `PreBriefPanel` copy to read "What the agent also
+   sees as Conversation Variables" instead of being the *only*
+   place the dossier surfaces.
+
+The dormant infrastructure stays earning its keep as a regression
+test: if a future SDK upgrade fixes the binding, the next live
+session will populate `MessagingSession.Pause_Patient_Id__c` and
+we'll know within one chat.
+
+### Confirming the empty-Proxy state on any live deployment
+
+Quick sanity check in DevTools Console on the live page:
+
+```javascript
+allow pasting
+window.embeddedservice_bootstrap.prechatAPI
+// If this prints `Proxy(Object) {}` with no methods on the target,
+// the V2 SDK has degraded to the empty-Proxy fallback and any
+// setHiddenPrechatFields(...) call will silently do nothing.
+```
+
+If that ever prints a real object with explicit `setHiddenPrechatFields`
+and `removeHiddenPrechatFields` methods (not Proxy-stubs), the binding
+is working and Phase 18b can be re-enabled.
 
 ## Original 2026-06-02 deferral notes (preserved for context)
 

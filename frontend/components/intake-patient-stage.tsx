@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { AgentforceEmbed } from "./agentforce-embed";
+import { PreBriefPanel } from "./pre-brief-panel";
 import type { AgentforceConfig } from "../lib/agentforce";
 import { DEMO_COHORT, type DemoPersona } from "../lib/demo-cohort";
 
@@ -10,18 +11,37 @@ import { DEMO_COHORT, type DemoPersona } from "../lib/demo-cohort";
  * "View as <patient>" stage above the live Agentforce widget.
  *
  * Picks a persona, fetches `/api/intake/prechat-context?personaId=...`,
- * then re-mounts <AgentforceEmbed/> keyed on the persona so the
- * Salesforce SDK boots fresh with that patient's hidden-prechat
- * dossier already loaded. The Service Agent walks into the chat
- * already knowing who the patient is and what their care state
- * looks like.
+ * then renders the dossier as a visible <PreBriefPanel/> ABOVE the
+ * <AgentforceEmbed/>. The clinician sees the same identity-resolved
+ * Data 360 dossier (identity confidence, cohort percentile, care
+ * program / care plan state, vasomotor/sleep/mood scores, narrative
+ * profile note) before the conversation begins. The live Agentforce
+ * agent answers menopause-care questions generically while the
+ * personalization lives in the surrounding UI.
  *
- * Why re-key the embed instead of swapping fields mid-conversation:
- * the Salesforce Embedded Messaging SDK is process-global and
- * sticky. There is no public API to swap conversation context
- * after init; the supported pattern is "configure once, before
- * onEmbeddedMessagingReady fires." Re-keying React forces the
- * component (and the SDK's view) to remount cleanly.
+ * Why a visible panel and not hidden prechat fields:
+ *
+ *   The Salesforce Embedded Messaging V2 SDK ships
+ *   `embeddedservice_bootstrap.prechatAPI` as a no-op Proxy when the
+ *   deployment hasn't fully wired the prechat-field surface server
+ *   side. Calls to `setHiddenPrechatFields(...)` return `true` but
+ *   no values actually traverse SCRT2; the routing Flow fires with
+ *   all input variables null. Verified end-to-end on 2026-06-04 with
+ *   the form-fields block + Publish + custom parameters + Flow input
+ *   variables all correctly deployed. See docs/PHASE_3_RUNBOOK.md
+ *   ("empty-Proxy prechatAPI" finding). Rather than ship a feature
+ *   that quietly does nothing, we surface the dossier visibly.
+ *
+ *   The hidden-prechat plumbing (Pause_*__c custom fields on
+ *   MessagingSession, the Pause_Intake_Prechat_Router routing Flow,
+ *   the channel customParameters, the agent contextVariables) is
+ *   left in place — it's harmless when unused and ready for the day
+ *   Salesforce fixes the prechatAPI binding for V2 deployments.
+ *
+ * The component still re-keys the embed on persona change so the
+ * SDK does a clean remount, which keeps the chat transcript in
+ * sync with the currently-selected patient even though the
+ * conversation context isn't being handed to the agent in-band.
  */
 
 type PrechatFields = Record<string, string>;
@@ -98,7 +118,7 @@ export function IntakePatientStage({ agentforceConfig }: Props) {
       <article
         className="card"
         aria-label="View intake as patient"
-        style={{ marginBottom: "1.25rem" }}
+        style={{ marginBottom: "1rem" }}
       >
         <header style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
           <p className="eyebrow">View intake as</p>
@@ -147,61 +167,32 @@ export function IntakePatientStage({ agentforceConfig }: Props) {
             );
           })}
         </div>
-
-        <div
-          aria-live="polite"
-          style={{
-            marginTop: "0.9rem",
-            fontSize: "0.9rem",
-            color: "var(--muted)"
-          }}
-        >
-          {fetchState.status === "loading" && (
-            <span>Resolving {selectedPersona?.firstName ?? "patient"} via Data 360…</span>
-          )}
-          {fetchState.status === "ready" && (
-            <span>
-              Resolved.{" "}
-              <strong>
-                Identity: {fetchState.identitySource} · Grounding:{" "}
-                {fetchState.groundingSource}
-              </strong>
-              . {Object.keys(fetchState.fields).length} hidden-prechat fields
-              will hand to Salesforce when you open the chat. The Agentforce
-              Service Agent will see them as Conversation Variables.
-            </span>
-          )}
-          {fetchState.status === "error" && (
-            <span role="alert" style={{ color: "#ffb6c8" }}>
-              Could not resolve prechat context: {fetchState.message}. The
-              agent will still load, but without the pre-resolved dossier.
-            </span>
-          )}
-        </div>
-
-        {selectedPersona && (
-          <p
-            style={{
-              marginTop: "0.6rem",
-              fontSize: "0.88rem",
-              color: "var(--muted)"
-            }}
-          >
-            <em>Profile note (handed to the agent verbatim):</em>{" "}
-            {selectedPersona.profileNote}
-          </p>
-        )}
       </article>
 
+      <PreBriefPanel
+        persona={selectedPersona}
+        status={fetchState.status}
+        fields={fetchState.status === "ready" ? fetchState.fields : undefined}
+        identitySource={
+          fetchState.status === "ready" ? fetchState.identitySource : undefined
+        }
+        groundingSource={
+          fetchState.status === "ready" ? fetchState.groundingSource : undefined
+        }
+        errorMessage={
+          fetchState.status === "error" ? fetchState.message : undefined
+        }
+      />
+
       <AgentforceEmbed
-        // Re-keying on personaId forces a clean SDK remount so the
-        // hidden-prechat fields for the newly-selected patient are
-        // applied before onEmbeddedMessagingReady fires.
+        // Re-keying on personaId forces a clean SDK remount, so each
+        // patient switch starts a fresh conversation thread. We no
+        // longer rely on prechatFields handing the dossier to the
+        // agent in-band — see PreBriefPanel above and
+        // components/pre-brief-panel.tsx for why.
         key={selectedId}
         config={agentforceConfig}
-        prechatFields={
-          fetchState.status === "ready" ? fetchState.fields : null
-        }
+        prechatFields={null}
       />
     </>
   );
