@@ -3,6 +3,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { DemoShell } from "../../../components/demo-shell";
+
 type AgentRecord = {
   id: string;
   name: string;
@@ -175,23 +177,7 @@ function AgentFabricConsoleInner() {
   }, [policies]);
 
   return (
-    <main className="container">
-      <section className="hero" style={{ paddingBottom: "1.5rem" }}>
-        <a href="/demo/intake" className="btn btn-secondary">
-          ← Back to Intake
-        </a>
-        <p className="eyebrow">Prototype · Agent Fabric Console</p>
-        <h1>Multi-agent control plane</h1>
-        <p className="hero-copy">
-          Live view of every Pause-Health.ai agent currently registered on a
-          (mocked) MuleSoft Agent Fabric: Agentforce intake, the Anthropic
-          Claude-backed Care Router, the Pause MCP server, and the MuleSoft
-          Process API. Every A2A handoff and tool call lands here as a trace
-          span so you can govern, monitor, and audit the multi-agent system in
-          one place.
-        </p>
-      </section>
-
+    <>
       <section style={{ marginBottom: "1.5rem" }}>
         <p className="eyebrow">Agent Registry</p>
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
@@ -291,7 +277,11 @@ function AgentFabricConsoleInner() {
           }}
         >
           {recentTaskIds.length === 0 && (
-            <p style={{ color: "var(--muted)" }}>No recent tasks yet.</p>
+            <p style={{ color: "var(--muted)", fontSize: "0.88rem" }}>
+              No recent tasks yet. Run a test case above, or trigger a real
+              Care Router decision from{" "}
+              <a href="/demo/routing">/demo/routing</a>.
+            </p>
           )}
           {recentTaskIds.map((tid) => (
             <button
@@ -567,20 +557,28 @@ function AgentFabricConsoleInner() {
           </li>
         </ul>
       </section>
-    </main>
+    </>
   );
 }
 
 export default function AgentFabricConsole() {
   return (
-    <Suspense
-      fallback={
-        <main className="container">
-          <p>Loading Agent Fabric console…</p>
-        </main>
-      }
+    <DemoShell
+      title="Multi-agent control plane"
+      subtitle="Live view of every Pause-Health.ai agent currently registered on a (mocked) MuleSoft Agent Fabric: Agentforce intake, the Anthropic Claude-backed Care Router, the Pause MCP server, and the MuleSoft Process API. Every A2A handoff and tool call lands here as a trace span so you can govern, monitor, and audit the multi-agent system in one place."
+      eyebrow="Prototype · Agent Fabric Console"
+      backHref="/demo/intake"
+      backLabel="← Back to Intake"
     >
-      <AgentFabricConsoleInner />
-    </Suspense>
+      <Suspense
+        fallback={
+          <p style={{ color: "var(--muted)" }}>
+            Loading Agent Fabric console…
+          </p>
+        }
+      >
+        <AgentFabricConsoleInner />
+      </Suspense>
+    </DemoShell>
   );
 }
