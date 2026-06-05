@@ -15,6 +15,10 @@
  */
 
 import type { DemoPersona } from "./demo-cohort";
+import {
+  PATHWAY_LABELS,
+  type CareRouterPathway
+} from "./care-router-pathways";
 
 export type RiskBand = "Low" | "Moderate" | "High" | "Critical";
 
@@ -89,27 +93,28 @@ export function computeRisk(persona: DemoPersona): RiskAssessment {
 }
 
 /**
- * Map a risk band to a recommended Care Router pathway. Mirrors the
- * pathway enum the Anthropic-backed Care Router actually emits — see
- * `frontend/components/latest-care-router-decision.tsx` for the
- * canonical mapping. Kept in sync manually for now; will be extracted
- * into a single source of truth when /demo/routing gets its rebuild.
+ * Map a risk band to a recommended Care Router pathway. The pathway
+ * id and label come from the single source of truth in
+ * `lib/care-router-pathways.ts` so this heuristic can't drift from
+ * what the live Care Router actually emits.
  */
 export function suggestedPathway(
   persona: DemoPersona,
   assessment: RiskAssessment
 ): {
-  pathway: string;
+  pathway: CareRouterPathway;
   pathwayLabel: string;
   rationale: string;
 } {
+  const label = (p: CareRouterPathway) => PATHWAY_LABELS[p];
+
   // Mood-predominant high band -> behavioral-health handoff
   const moodLed =
     persona.moodScore >= 7 && persona.moodScore >= persona.vasomotorScore;
   if (moodLed && (assessment.band === "High" || assessment.band === "Critical")) {
     return {
       pathway: "behavioral-health-handoff",
-      pathwayLabel: "Behavioral health handoff",
+      pathwayLabel: label("behavioral-health-handoff"),
       rationale:
         "Mood-axis severity ≥7 with overall High/Critical burden. Co-manage with behavioral health while menopause-care continues."
     };
@@ -119,7 +124,7 @@ export function suggestedPathway(
   if (assessment.band === "Critical") {
     return {
       pathway: "urgent-gynecology",
-      pathwayLabel: "Urgent gynecology",
+      pathwayLabel: label("urgent-gynecology"),
       rationale:
         "Sum of intake scores ≥22/30 OR critical clinical flag. 24-hour gynecology review required."
     };
@@ -129,7 +134,7 @@ export function suggestedPathway(
   if (assessment.band === "High" && persona.vasomotorScore >= 8) {
     return {
       pathway: "mscp-in-person",
-      pathwayLabel: "MSCP in-person visit",
+      pathwayLabel: label("mscp-in-person"),
       rationale:
         "Severe vasomotor symptoms (≥8/10) warrant in-person MSCP evaluation; complex HRT decision-making benefits from in-person workup."
     };
@@ -139,7 +144,7 @@ export function suggestedPathway(
   if (assessment.band === "High") {
     return {
       pathway: "mscp-virtual-visit",
-      pathwayLabel: "MSCP virtual visit",
+      pathwayLabel: label("mscp-virtual-visit"),
       rationale:
         "High symptom burden but no single-axis emergency. MSCP-credentialed virtual visit within the week."
     };
@@ -149,7 +154,7 @@ export function suggestedPathway(
   if (assessment.band === "Moderate") {
     return {
       pathway: "mscp-virtual-visit",
-      pathwayLabel: "MSCP virtual visit",
+      pathwayLabel: label("mscp-virtual-visit"),
       rationale:
         "Moderate burden — MSCP virtual visit appropriate, schedule within 2-4 weeks."
     };
@@ -158,7 +163,7 @@ export function suggestedPathway(
   // Low band -> self-care tracking
   return {
     pathway: "self-care-tracking",
-    pathwayLabel: "Self-care tracking",
+    pathwayLabel: label("self-care-tracking"),
     rationale:
       "Low symptom burden. Self-care tracking pathway with wearable + intake check-ins; escalate if any axis rises >2 points."
   };

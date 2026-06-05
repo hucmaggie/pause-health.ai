@@ -1,3 +1,4 @@
+import { CareRoutingStage } from "../../../components/care-routing-stage";
 import { DemoShell } from "../../../components/demo-shell";
 import { LatestCareRouterDecision } from "../../../components/latest-care-router-decision";
 import {
@@ -9,94 +10,23 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Prototype · Care Routing",
   description:
-    "How Pause-Health.ai routes menopause cases to the right pathway — urgent gynecology, specialist consult, or guided self-management.",
+    "How Pause-Health.ai routes menopause cases. The Anthropic-backed Care Router emits one of six pathways; pick a demo persona to preview the heuristic suggestion, run the live router, and watch the multi-agent trace land in the Agent Fabric.",
   path: "/demo/routing",
   ogImage: "/brand/pause-health-og-prototype.png",
   ogImageAlt: "Pause-Health.ai prototype preview — care routing pathways."
 });
 
-const pathways = [
-  {
-    pathway: "Urgent gynecology review",
-    trigger: "Postmenopausal bleeding or concerning pelvic symptoms",
-    target: "< 24h"
-  },
-  {
-    pathway: "Menopause specialist consult",
-    trigger: "Moderate-severe vasomotor symptoms affecting daily function",
-    target: "< 7 days"
-  },
-  {
-    pathway: "Behavioral health handoff",
-    trigger: "Mood instability, anxiety, or depressive safety indicators",
-    target: "Same day"
-  },
-  {
-    pathway: "Primary care optimization",
-    trigger: "Low-risk symptoms with no red flags",
-    target: "< 14 days"
-  }
-];
-
 export default function RoutingDemoPage() {
   return (
     <DemoShell
       title="Smart Care Pathway Routing"
-      subtitle="Recommendations translate into polished, policy-aware menopause care pathways with clear response targets. Each decision is produced by the Anthropic-backed Care Router agent (or its deterministic fallback) and audited by the Pause Agent Fabric."
+      subtitle="Each decision is produced by the Anthropic-backed Care Router agent (or its deterministic fallback) and audited by the Pause Agent Fabric. Pick a demo persona below to preview the heuristic, run the live router end-to-end, and watch the resulting multi-agent trace appear."
     >
       <section style={{ marginBottom: "1.5rem" }}>
         <LatestCareRouterDecision />
       </section>
 
-      <section className="demo-grid">
-        <article className="card">
-          <h3>Care routing matrix</h3>
-          <div className="table-wrap">
-            <table className="routing-table">
-              <thead>
-                <tr>
-                  <th>Care pathway</th>
-                  <th>Triage trigger</th>
-                  <th>Target response</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pathways.map((item) => (
-                  <tr key={item.pathway}>
-                    <td>{item.pathway}</td>
-                    <td>{item.trigger}</td>
-                    <td>{item.target}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </article>
-        <article className="card">
-          <h3>Applied decision profile</h3>
-          <ul className="metric-list metric-list-stacked">
-            <li>
-              <span>Selected pathway</span>
-              <strong>Urgent gynecology review</strong>
-            </li>
-            <li>
-              <span>Fallback protocol</span>
-              <strong>ED escalation if heavy bleeding or instability</strong>
-            </li>
-            <li>
-              <span>Patient communication</span>
-              <strong>High-priority outreach sent with safety instructions</strong>
-            </li>
-            <li>
-              <span>Interop handoff</span>
-              <strong>Decision written to JupyterHealth; wearable watchlist via dbdp</strong>
-            </li>
-          </ul>
-          <a href="/demo/analytics" className="btn btn-primary">
-            View Analytics
-          </a>
-        </article>
-      </section>
+      <CareRoutingStage />
 
       <section style={{ marginTop: "1.5rem" }}>
         <article className="card">
@@ -107,9 +37,10 @@ export default function RoutingDemoPage() {
             <li>
               <span>When Pause uses this</span>
               <strong style={{ fontWeight: 500 }}>
-                When the recommended pathway is &quot;menopause specialist consult&quot; and the
-                patient&apos;s plan / network doesn&apos;t already include an MSCP-credentialed
-                clinician.
+                When the recommended pathway is &quot;menopause specialist
+                (virtual)&quot; or &quot;menopause specialist (in person)&quot;
+                and the patient&apos;s plan / network doesn&apos;t already
+                include an MSCP-credentialed clinician.
               </strong>
             </li>
             <li>

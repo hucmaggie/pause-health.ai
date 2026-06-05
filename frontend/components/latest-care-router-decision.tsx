@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from "react";
 
+import {
+  PATHWAY_LABELS,
+  PATHWAY_TARGETS,
+  type CareRouterPathway
+} from "../lib/care-router-pathways";
+
 type LatestDecision = {
   pathway: string;
   pathwayLabel: string;
@@ -42,29 +48,14 @@ export function LatestCareRouterDecision() {
             const attrs = routerSpan.attributes as Record<string, unknown>;
             const pathway = typeof attrs.pathway === "string" ? attrs.pathway : null;
             if (!pathway) continue;
-            const PATHWAY_LABELS: Record<string, string> = {
-              "self-care-tracking": "Self-care + symptom tracking",
-              "mscp-virtual-visit": "Menopause specialist (virtual)",
-              "mscp-in-person": "Menopause specialist (in person)",
-              "urgent-gynecology": "Urgent gynecology review",
-              "behavioral-health-handoff": "Behavioral health handoff",
-              "ed-referral": "Emergency department"
-            };
-            const PATHWAY_TARGETS: Record<string, string> = {
-              "self-care-tracking": "Self-paced; wearable + symptom tracker enabled",
-              "mscp-virtual-visit": "< 7 days",
-              "mscp-in-person": "< 14 days",
-              "urgent-gynecology": "< 24h",
-              "behavioral-health-handoff": "Same day",
-              "ed-referral": "Immediate (call 911 or go to ED)"
-            };
+            const pw = pathway as CareRouterPathway;
             if (cancelled) return;
             setDecision({
               pathway,
-              pathwayLabel: PATHWAY_LABELS[pathway] ?? pathway,
+              pathwayLabel: PATHWAY_LABELS[pw] ?? pathway,
               acuity: typeof attrs.acuity === "string" ? attrs.acuity : "routine",
               rationale: [],
-              recommendedTargetResponse: PATHWAY_TARGETS[pathway] ?? "",
+              recommendedTargetResponse: PATHWAY_TARGETS[pw] ?? "",
               modelProvenance: {
                 provider:
                   typeof attrs.provider === "string"

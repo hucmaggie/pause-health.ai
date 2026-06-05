@@ -177,3 +177,73 @@ export function findDemoPersonaByFirstName(name: string): DemoPersona | null {
     DEMO_COHORT.find((p) => p.firstName.toLowerCase() === want) || null
   );
 }
+
+/**
+ * Map a DemoPersona's display fields to the lowercase enum values the
+ * Care Router (`lib/care-router.ts` / `IntakeRecord`) expects.
+ *
+ * The cohort displaySymptom strings are title-case for UI legibility
+ * ("Hot flashes", "Sleep disruption"). The Care Router policy
+ * normalizes to the symptom-cluster lowercase ids: hot_flashes,
+ * sleep, mood, gsm, joint, bleeding. This mapper keeps both surfaces
+ * aligned so a "Run Care Router" button on /demo/routing can submit
+ * the same intake shape the agent-fabric debug page uses.
+ */
+export function personaToCareRouterIntake(persona: DemoPersona): {
+  preferredName: string;
+  ageBand: string;
+  cycleStatus: string;
+  primarySymptom: string;
+  severity: "mild" | "moderate" | "severe";
+  redFlagsAcknowledged: "yes" | "no" | "none";
+} {
+  const sym = persona.primarySymptom.toLowerCase();
+  let primarySymptom = "hot_flashes";
+  if (sym.includes("hot flash") || sym.includes("vasomotor")) {
+    primarySymptom = "hot_flashes";
+  } else if (sym.includes("sleep")) {
+    primarySymptom = "sleep";
+  } else if (sym.includes("mood")) {
+    primarySymptom = "mood";
+  } else if (sym.includes("vaginal") || sym.includes("gsm")) {
+    primarySymptom = "gsm";
+  } else if (sym.includes("joint") || sym.includes("musculoskeletal")) {
+    primarySymptom = "joint";
+  } else if (sym.includes("bleed")) {
+    primarySymptom = "bleeding";
+  }
+
+  // Map cycleStatus from the display label ("Perimenopausal",
+  // "Postmenopausal") to the Care Router's enum.
+  const cs = persona.cycleStatus.toLowerCase();
+  let cycleStatus = "irregular";
+  if (cs.includes("postmeno")) {
+    cycleStatus = "stopped>=12mo";
+  } else if (cs.includes("peri")) {
+    cycleStatus = "irregular";
+  }
+
+  // Severity from the aggregate symptom score (V+S+M, 0-30).
+  const total = persona.vasomotorScore + persona.sleepScore + persona.moodScore;
+  let severity: "mild" | "moderate" | "severe" = "moderate";
+  if (total >= 22) severity = "severe";
+  else if (total < 12) severity = "mild";
+
+  // Red flags: derive from profileNote text for the High/Critical
+  // patients. The CVD/bleeding flags map to redFlagsAcknowledged='yes'
+  // so the router can apply the safety policy.
+  const note = persona.profileNote.toLowerCase();
+  let redFlagsAcknowledged: "yes" | "no" | "none" = "none";
+  if (/cvd|cardiometabolic|bleed/.test(note)) {
+    redFlagsAcknowledged = "yes";
+  }
+
+  return {
+    preferredName: persona.firstName,
+    ageBand: persona.ageBand,
+    cycleStatus,
+    primarySymptom,
+    severity,
+    redFlagsAcknowledged
+  };
+}

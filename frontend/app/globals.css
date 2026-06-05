@@ -398,18 +398,107 @@ th {
 
 .routing-table th:nth-child(1),
 .routing-table td:nth-child(1) {
-  width: 28%;
+  width: 24%;
 }
 
 .routing-table th:nth-child(2),
 .routing-table td:nth-child(2) {
-  width: 50%;
+  width: 46%;
 }
 
 .routing-table th:nth-child(3),
 .routing-table td:nth-child(3) {
-  width: 22%;
+  width: 18%;
   white-space: nowrap;
+}
+
+.routing-table th:nth-child(4),
+.routing-table td:nth-child(4) {
+  width: 12%;
+  white-space: nowrap;
+}
+
+/* Highlight + tone styles for the matrix rebuilt from
+   lib/care-router-pathways.ts. */
+
+.routing-matrix-row td {
+  vertical-align: top;
+  transition: background-color 200ms ease;
+}
+
+.routing-matrix-row--highlighted td {
+  background: rgba(255, 93, 168, 0.07);
+}
+
+.routing-matrix-row--highlighted td:first-child {
+  position: relative;
+  border-left: 3px solid var(--brand);
+}
+
+.routing-matrix-highlight-pill {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(255, 93, 168, 0.18);
+  color: var(--brand);
+  border: 1px solid rgba(255, 93, 168, 0.5);
+  vertical-align: middle;
+}
+
+.routing-acuity-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.5rem;
+  border-radius: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.routing-acuity-chip--routine {
+  background: rgba(126, 235, 191, 0.08);
+  color: #7eebbf;
+  border-color: rgba(126, 235, 191, 0.4);
+}
+
+.routing-acuity-chip--elevated {
+  background: rgba(255, 200, 110, 0.08);
+  color: #ffd28a;
+  border-color: rgba(255, 200, 110, 0.4);
+}
+
+.routing-acuity-chip--urgent {
+  background: rgba(255, 138, 169, 0.1);
+  color: #ff8aa9;
+  border-color: rgba(255, 138, 169, 0.45);
+}
+
+.routing-acuity-chip--emergency {
+  background: rgba(255, 86, 121, 0.15);
+  color: #ff5679;
+  border-color: rgba(255, 86, 121, 0.55);
+}
+
+/* Routing decision card (live result) styles. */
+
+.routing-decision-card {
+  padding: 1.2rem 1.3rem 1.1rem;
+}
+
+.routing-live-result {
+  margin-top: 1rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: rgba(25, 11, 22, 0.45);
 }
 
 .btn {
