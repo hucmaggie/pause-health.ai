@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { AgentforceEmbed } from "./agentforce-embed";
 import { PreBriefPanel } from "./pre-brief-panel";
 import type { AgentforceConfig } from "../lib/agentforce";
-import { DEMO_COHORT, type DemoPersona } from "../lib/demo-cohort";
+import {
+  DEMO_COHORT,
+  findDemoPersona,
+  type DemoPersona
+} from "../lib/demo-cohort";
 
 /**
  * "View as <patient>" stage above the live Agentforce widget.
@@ -63,9 +68,25 @@ type Props = {
 
 const DEFAULT_PERSONA_ID = DEMO_COHORT[0]?.id ?? "anika-patel";
 
-export function IntakePatientStage({ agentforceConfig }: Props) {
-  const [selectedId, setSelectedId] = useState<string>(DEFAULT_PERSONA_ID);
+function IntakePatientStageInner({ agentforceConfig }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlPersonaId = searchParams.get("personaId");
+
+  const [selectedId, setSelectedId] = useState<string>(
+    findDemoPersona(urlPersonaId ?? "")?.id ?? DEFAULT_PERSONA_ID
+  );
   const [fetchState, setFetchState] = useState<FetchState>({ status: "idle" });
+
+  // Sync selectedId -> URL (replace, not push, so back-button isn't
+  // polluted with every persona click).
+  useEffect(() => {
+    const current = searchParams.get("personaId");
+    if (current === selectedId) return;
+    const params = new URLSearchParams(Array.from(searchParams.entries()));
+    params.set("personaId", selectedId);
+    router.replace(`/demo/intake?${params.toString()}`, { scroll: false });
+  }, [selectedId, searchParams, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -167,6 +188,23 @@ export function IntakePatientStage({ agentforceConfig }: Props) {
             );
           })}
         </div>
+
+        <div
+          style={{
+            marginTop: "0.9rem",
+            display: "flex",
+            gap: "0.5rem",
+            flexWrap: "wrap"
+          }}
+        >
+          <a
+            href={`/demo/patient?personaId=${encodeURIComponent(selectedId)}`}
+            className="btn btn-secondary"
+            style={{ fontSize: "0.88rem", padding: "0.4rem 0.75rem" }}
+          >
+            Open Care Detail →
+          </a>
+        </div>
       </article>
 
       <PreBriefPanel
@@ -195,5 +233,17 @@ export function IntakePatientStage({ agentforceConfig }: Props) {
         prechatFields={null}
       />
     </>
+  );
+}
+
+export function IntakePatientStage(props: Props) {
+  return (
+    <Suspense
+      fallback={
+        <p style={{ color: "var(--muted)" }}>Loading intake stage…</p>
+      }
+    >
+      <IntakePatientStageInner {...props} />
+    </Suspense>
   );
 }

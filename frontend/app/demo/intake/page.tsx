@@ -90,7 +90,7 @@ export default function IntakeDemoPage() {
             </li>
           </ul>
           <a href="/demo/patient" className="btn btn-primary">
-            Open Care Detail
+            Open Care Detail (cohort view)
           </a>
         </article>
       </section>
