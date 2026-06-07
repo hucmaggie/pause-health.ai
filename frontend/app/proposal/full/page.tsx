@@ -1,4 +1,7 @@
-import { StatusPill } from "../../../components/status-pill";
+import {
+  StatusPill,
+  type StatusPillStatus
+} from "../../../components/status-pill";
 import { pageMetadata } from "../../../lib/page-metadata";
 
 export const metadata = pageMetadata({
@@ -37,7 +40,8 @@ const heroMetrics: Array<{
   {
     value: "~$1,685",
     label: "Avoidable spend / patient",
-    detail: "Estimated waste from delay + misdiagnosis (literature-derived).",
+    detail:
+      "Estimate of waste per patient from delayed dx + over-utilization, derived from menopause-care cost-of-care literature. Illustrative -- this is a published-research-derived figure, not a Pause-Health.ai measurement.",
     tone: "research"
   }
 ];
@@ -47,7 +51,7 @@ const targetOutcomes = [
     value: "89%",
     label: "Diagnostic accuracy",
     detail:
-      "Target in validation settings, vs. the ~67% national misdiagnosis baseline."
+      "Validation target vs. the ~67% national misdiagnosis baseline. Measurement plan documented in /proposal/insights."
   },
   {
     value: "< 30 d",
@@ -59,69 +63,98 @@ const targetOutcomes = [
     value: "+34%",
     label: "Patient satisfaction lift",
     detail:
-      "Pilot target across anchor provider systems vs. care-as-usual baseline."
+      "Pilot target with design-partner provider organizations vs. care-as-usual baseline. (Design-partner program kicks off 2026 H2.)"
   },
   {
-    value: "$1,685",
-    label: "Avoidable spend recovered",
+    value: "Time-to-MSCP",
+    label: "Closed-loop metric per design partner",
     detail:
-      "Per patient, from earlier accurate diagnosis and pathway match."
+      "Replaces the previous '$1,685 avoidable spend recovered' metric. The cost-recovery number is literature-derived (see hero); the per-design-partner outcome we will actually measure is time-to-MSCP-visit and Care-Router pathway concordance vs. clinician adjudication."
   }
 ];
 
-const whatPauseProvides = [
+type Capability = {
+  title: string;
+  status: StatusPillStatus;
+  detail: string;
+  cta: { href: string; label: string };
+};
+
+// Each capability is pilled to reflect proto-vs-prod state. The
+// rest of the site uses the same vocabulary so a reader who has
+// internalized "prototype" / "partial" / "designed" elsewhere
+// reads the same thing here.
+const whatPauseProvides: Capability[] = [
   {
     title: "AI-assisted triage + risk scoring",
+    status: "prototype",
     detail:
-      "Symptom-cluster scoring, red-flag screening, and risk stratification surfaced inside the intake flow — not as a separate dashboard.",
+      "Deterministic risk-band scoring (lib/risk-band.ts) plus an Anthropic-backed Care Router policy surface intake-time triage. Wired and inspectable in the public prototype today.",
     cta: { href: "/demo/intake", label: "See live intake →" }
   },
   {
     title: "Persona-aware care pathway routing",
+    status: "prototype",
     detail:
-      "Six canonical pathways (self-care → ED referral). Routing is policy-aware, traceable, and overridable by clinicians.",
+      "Six canonical pathways (self-care → ED referral) from a single source-of-truth enum (lib/care-router-pathways.ts). Policy-aware, traceable, designed to be overridable by clinicians once design-partner deployments are in force.",
     cta: { href: "/demo/routing", label: "See live routing →" }
   },
   {
     title: "Federated Data 360 grounding",
+    status: "partial",
     detail:
-      "Unified patient memory across EHR, wearable, intake, and claims — zero-copy federation; no bulk PHI ingestion required.",
+      "Live grounding path federates against Salesforce Health Cloud today (Phase 1, OAuth Client Credentials). Phase 2 swaps the target for the Data Cloud Federated Query API against JupyterHealth FHIR + DBDP; Phase 3 onboards the customer's EHR-of-record. Interface stays constant across phases.",
     cta: { href: "/proposal/data-360", label: "Architecture brief →" }
   },
   {
     title: "Outcomes telemetry baked in",
+    status: "partial",
     detail:
-      "Every decision emits a multi-agent trace. Every span carries the model, inputs, sources queried, and the clinician's eventual action.",
+      "Every Care Router decision emits OpenTelemetry-style spans (intake → identity → grounding → routing). The 'clinician's eventual action' attribute is designed (a real clinician needs to be on the other end first); spans are populated today by the prototype.",
     cta: { href: "/demo/agent-fabric", label: "See the trace plane →" }
   }
 ];
 
-const techFoundation = [
+type Substrate = {
+  title: string;
+  status: StatusPillStatus;
+  detail: string;
+  href: string;
+  cta: string;
+};
+
+// Substrate cards pilled per their actual integration state, with
+// links into the architecture briefs for the proto-vs-prod detail.
+const techFoundation: Substrate[] = [
   {
     title: "JupyterHealth Exchange",
+    status: "designed",
     detail:
-      "Consented FHIR R5 data exchange substrate. The interop plane for wearable, EHR, and intake records.",
+      "Consented FHIR R5 data exchange substrate. The interop plane for wearable, EHR, and intake records. Federation target for Phase 2; not the live grounding path today.",
     href: "/proposal/integration",
     cta: "JupyterHealth integration brief →"
   },
   {
     title: "DBDP feature engineering",
+    status: "prototype",
     detail:
-      "Digital Biomarker Discovery Pipeline — sleep, HRV, activity, skin temperature features. Phase 1 ships FLIRT-backed RMSSD.",
+      "Duke's Digital Biomarker Discovery Pipeline — sleep, HRV, activity, skin temperature features. FLIRT-backed RMSSD math is integrated in pause_ingest today with 20 passing unit tests including a closed-form correctness check; FHIR persistence is Phase 2.",
     href: "/proposal/dbdp",
     cta: "DBDP brief →"
   },
   {
     title: "Salesforce Data 360",
+    status: "partial",
     detail:
-      "Identity Resolution + Calculated Insights + Segments — Pause's read plane and segment-activation surface.",
+      "Identity Resolution + grounding wired against Salesforce Health Cloud today via OAuth Client Credentials. The full Data 360 surface (Calculated Insights + Segments + federated query) is Phase 2 — the Care Router interface doesn't change across phases.",
     href: "/proposal/data-360",
     cta: "Data 360 brief →"
   },
   {
     title: "MuleSoft Agent Fabric",
+    status: "designed",
     detail:
-      "Multi-agent control plane: agent registry, policy catalog, trace plane. Anthropic-backed Care Router runs here.",
+      "Multi-agent control plane: agent registry, policy catalog, trace plane. The Anthropic-backed Care Router runs against a Pause-internal A2A endpoint today; the MuleSoft Agent Fabric is the designed production home for it.",
     href: "/proposal/agent-fabric",
     cta: "Agent Fabric brief →"
   }
@@ -156,7 +189,8 @@ const arrTargets = [
 const marketTiming = [
   {
     title: "Market size",
-    detail: "U.S. menopause-care market estimated at $15.4B, growing ~5.7% annually."
+    detail:
+      "U.S. menopause-care market estimated at ~$15.4B, growing ~5.7% annually (literature-derived sizing across pharma, devices, services, and digital health; the precise figure varies meaningfully across analyst sources)."
   },
   {
     title: "Payer + IDN pressure",
@@ -226,7 +260,8 @@ const strategicObjectives = [
   },
   {
     title: "Product excellence",
-    detail: "Deliver robust EHR integration, performance, uptime, compliance, and regulatory progress (HIPAA → HITRUST → SOC 2 Type II)."
+    detail:
+      "Robust EHR integration, performance, uptime, and the planned regulatory progression (HIPAA controls in force at design-partner kickoff, HITRUST CSF then SOC 2 Type II as Year-2 milestones)."
   }
 ];
 
@@ -258,7 +293,8 @@ const strategicPriorities = [
   },
   {
     title: "Trust + compliance as long-term differentiation",
-    detail: "HIPAA + HITRUST + SOC 2 + ToS-respecting integrations (e.g. The Menopause Society directory) are the durable moat."
+    detail:
+      "The trust posture compounds: HIPAA controls designed-for-production today, HITRUST CSF + SOC 2 Type II as planned Year-2 milestones, and ToS-respecting integrations (e.g. The Menopause Society directory deep-link rather than scraping) wired in the prototype. See /security for the per-control proto-vs-prod view."
   }
 ];
 
@@ -327,8 +363,9 @@ const strategyDeepDives = [
   },
   {
     href: "/proposal/insights",
-    title: "Customer insights",
-    summary: "Provider + patient interview synthesis. Themes, verbatims, product implications."
+    title: "Research-design plan",
+    summary:
+      "Provider + patient discovery plan: literature-derived hypotheses, methodology, and the interview program ahead. Pause is pre-design-partner; this is the research we'll run, not research we've run."
   },
   {
     href: "/proposal/data",
@@ -362,10 +399,11 @@ export default function FullProposalPage() {
         <p className="eyebrow">Full investor proposal · Pause-Health.ai</p>
         <h1>Menopause Clinical Decision Support</h1>
         <p className="hero-copy">
-          Pause-Health.ai helps clinicians diagnose and treat menopause-related
-          symptoms faster and more accurately, by combining patient history,
-          wearable signals, and AI guidance inside normal clinical workflows —
-          EHR-native, never a sidecar.
+          Pause-Health.ai is designed to help clinicians diagnose and treat
+          menopause-related symptoms faster and more accurately by combining
+          patient history, wearable signals, and AI guidance inside normal
+          clinical workflows — EHR-native, never a sidecar. The prototype is
+          live and open-source today; provider organizations onboard in 2026 H2.
         </p>
       </section>
 
@@ -421,6 +459,10 @@ export default function FullProposalPage() {
         <div className="card-grid" style={{ marginTop: "0.8rem" }}>
           {whatPauseProvides.map((c) => (
             <article key={c.title} className="card">
+              <StatusPill
+                status={c.status}
+                style={{ marginBottom: "0.5rem" }}
+              />
               <h3 style={{ marginBottom: "0.4rem" }}>{c.title}</h3>
               <p style={{ margin: "0 0 0.7rem", color: "var(--text)" }}>{c.detail}</p>
               <a
@@ -451,6 +493,10 @@ export default function FullProposalPage() {
         <div className="card-grid">
           {techFoundation.map((t) => (
             <article key={t.title} className="card">
+              <StatusPill
+                status={t.status}
+                style={{ marginBottom: "0.5rem" }}
+              />
               <h3 style={{ marginBottom: "0.4rem" }}>{t.title}</h3>
               <p style={{ margin: "0 0 0.7rem", color: "var(--text)" }}>{t.detail}</p>
               <a
@@ -466,8 +512,33 @@ export default function FullProposalPage() {
       </section>
 
       <section style={{ marginTop: "2rem" }}>
-        <p className="eyebrow">Business model</p>
+        <header
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "0.6rem",
+            flexWrap: "wrap"
+          }}
+        >
+          <p className="eyebrow" style={{ margin: 0 }}>
+            Business model
+          </p>
+          <StatusPill status="target" label="Target ACV ranges · pre-design-partner" />
+        </header>
         <h2 className="proposal-section-title">B2B healthcare SaaS — three channels</h2>
+        <p
+          style={{
+            color: "var(--muted)",
+            margin: "0 0 0.6rem",
+            fontSize: "0.92rem",
+            maxWidth: "70ch"
+          }}
+        >
+          The ACV / PMPM ranges below are target ranges derived from
+          comparable provider-vendor pricing benchmarks, not booked
+          revenue. Pause-Health.ai is pre-design-partner; final
+          pricing lands with the first executed MSAs.
+        </p>
         <div className="table-wrap" style={{ marginTop: "0.6rem" }}>
           <table className="routing-table">
             <thead>
@@ -510,7 +581,19 @@ export default function FullProposalPage() {
       </section>
 
       <section style={{ marginTop: "2rem" }}>
-        <p className="eyebrow">Market + strategic timing</p>
+        <header
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "0.6rem",
+            flexWrap: "wrap"
+          }}
+        >
+          <p className="eyebrow" style={{ margin: 0 }}>
+            Market + strategic timing
+          </p>
+          <StatusPill status="research" label="Literature-derived sizing" />
+        </header>
         <h2 className="proposal-section-title">A large, under-served market in a tractable moment</h2>
         <div className="card-grid">
           {marketTiming.map((m) => (
@@ -553,6 +636,11 @@ export default function FullProposalPage() {
         <p className="eyebrow">24-month objectives</p>
         <h2 className="proposal-section-title">Primary objective</h2>
         <article className="card proposal-primary-objective">
+          <StatusPill
+            status="target"
+            label="Month-24 target · pre-design-partner"
+            style={{ marginBottom: "0.5rem" }}
+          />
           <p style={{ margin: 0, fontSize: "1.05rem", color: "var(--text)" }}>
             Deploy Pause AI decision support across <strong>25 health systems</strong>,
             improve diagnostic accuracy by <strong>30%</strong> over baseline,
@@ -579,8 +667,20 @@ export default function FullProposalPage() {
       </section>
 
       <section style={{ marginTop: "2rem" }}>
-        <p className="eyebrow">Success criteria · month 24</p>
-        <h2 className="proposal-section-title">What “done” looks like</h2>
+        <header
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "0.6rem",
+            flexWrap: "wrap"
+          }}
+        >
+          <p className="eyebrow" style={{ margin: 0 }}>
+            Success criteria · month 24
+          </p>
+          <StatusPill status="target" label="All targets · not measured yet" />
+        </header>
+        <h2 className="proposal-section-title">What &ldquo;done&rdquo; looks like</h2>
         <ul className="metric-list metric-list-stacked proposal-success-list">
           {successCriteria.map((s) => (
             <li key={s.label}>
