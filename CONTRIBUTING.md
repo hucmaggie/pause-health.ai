@@ -78,6 +78,24 @@ cd pause_ingest
 pytest -q
 ```
 
+### Optional: smoke test
+
+After a polish pass that touches multiple pages or API routes, run
+the end-to-end smoke test against your local dev server:
+
+```bash
+cd frontend
+npm run dev                  # leave running in another terminal
+npm run smoke                # in a second terminal
+```
+
+The script hits every public page, follows every internal link,
+and POSTs realistic fixtures to every API endpoint. Results land
+at [`SMOKE_TEST_RESULTS.md`](./SMOKE_TEST_RESULTS.md) in the repo
+root — commit it alongside any regression fixes so future reviewers
+have a record of what passed. Set `BASE_URL=https://pause-health.ai`
+to smoke production instead of dev.
+
 ## Honesty conventions
 
 The single strongest convention in this codebase is the **"today

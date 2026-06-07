@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "check": "npm run lint && npm run test && npm run build",
     "preflight:live": "node scripts/preflight.mjs",
-    "preflight": "npm run check && npm run preflight:live"
+    "preflight": "npm run check && npm run preflight:live",
+    "smoke": "node scripts/smoke-test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",

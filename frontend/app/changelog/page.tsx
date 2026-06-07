@@ -31,8 +31,24 @@ const weeks: ChangelogWeek[] = [
     range: "Week of June 1, 2026",
     headline: "Honesty-pilling marathon",
     intro:
-      "Thirty-plus commits across every public page on the site. The single theme: replace any present-tense claim that isn't yet true with a StatusPill-flagged 'today vs. designed' framing. The Apache-2.0 license + OSS-hygiene trio (CONTRIBUTING / CODE_OF_CONDUCT / SECURITY) landed at the end of the week to round out the posture.",
+      "Thirty-plus commits across every public page on the site. The single theme: replace any present-tense claim that isn't yet true with a StatusPill-flagged 'today vs. designed' framing. The Apache-2.0 license + OSS-hygiene trio (CONTRIBUTING / CODE_OF_CONDUCT / SECURITY) landed mid-week, and the polish marathon wrapped with a reproducible end-to-end smoke test that confirmed 132 / 132 checks pass.",
     entries: [
+      {
+        title: "End-to-end smoke test — 132 / 132 pass",
+        summary:
+          "New reproducible smoke-test harness at frontend/scripts/smoke-test.mjs. Hits all 35 public routes, follows 77 unique internal links discovered by parsing rendered HTML, and POSTs realistic fixtures to 16 API endpoints (including the A2A JSON-RPC tasks/send envelope to /api/agents/care-router/tasks). Results land in SMOKE_TEST_RESULTS.md committed at the repo root. Caught one false-positive in the link extractor (query-string handling) on the first run; no real regressions on the polished surface. Wired into package.json as `npm run smoke`.",
+        commits: [
+          { sha: "HEAD", label: "smoke test + 132/132 results" }
+        ],
+        status: "shipped"
+      },
+      {
+        title: "/changelog + /roadmap pages",
+        summary:
+          "Built /changelog as a hand-curated weekly narrative with real commit SHAs linking to GitHub, and /roadmap as a Now / Next / Later horizon view drawn from the 30+ designed / planned / future items already pilled across the site. Home page got a 'momentum strip' (63 commits since May 24, 2026) with cross-links to both pages.",
+        commits: [{ sha: "cd1ea17", label: "changelog + roadmap pages" }],
+        status: "shipped"
+      },
       {
         title: "Apache-2.0 license + OSS-hygiene trio",
         summary:

@@ -36,9 +36,9 @@ const horizons: RoadmapHorizon[] = [
       {
         title: "End-to-end smoke test of the polished surface",
         detail:
-          "Click through every /demo/* and /proposal/* page, capture screenshots, fix any visual regressions the 30-commit polish marathon introduced (busted links, mobile layout issues, ungated CTAs). tsc --noEmit catches a lot but not everything.",
-        status: "planned",
-        source: { href: "/changelog", label: "See recent polish work" }
+          "Reproducible smoke-test script at frontend/scripts/smoke-test.mjs. Hits 35 routes, follows 77 unique internal links, POSTs realistic fixtures to 16 API endpoints. Current run: 132 / 132 pass. Run via `npm run smoke` against a local dev server; results land in SMOKE_TEST_RESULTS.md. Re-runnable after every polish pass.",
+        status: "prototype",
+        source: { href: "/changelog", label: "See SMOKE_TEST_RESULTS.md" }
       },
       {
         title: "GitHub Private Vulnerability Reporting enabled",
