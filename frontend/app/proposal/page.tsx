@@ -323,6 +323,12 @@ export default function ProposalPage() {
           <a href="/demo/intake" className="btn btn-secondary">
             Experience the live prototype →
           </a>
+          <a href="/roadmap" className="btn btn-secondary">
+            See what&apos;s coming →
+          </a>
+          <a href="/changelog" className="btn btn-secondary">
+            See what&apos;s shipped →
+          </a>
           <a href="/" className="btn btn-secondary">
             ← Back to Landing
           </a>

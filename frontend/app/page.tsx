@@ -301,6 +301,42 @@ export default function HomePage() {
       </section>
 
       <section
+        aria-label="Momentum"
+        style={{
+          marginTop: "1.6rem",
+          padding: "0.85rem 1rem",
+          background: "var(--surface-2)",
+          borderRadius: "10px",
+          border: "1px solid var(--surface-3)",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "0.8rem",
+          alignItems: "center",
+          justifyContent: "space-between"
+        }}
+      >
+        <p style={{ margin: 0, fontSize: "0.92rem", color: "var(--muted)" }}>
+          Built in the open — 63 commits since May 24, 2026.
+        </p>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <a
+            href="/changelog"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.85rem", padding: "0.4rem 0.75rem" }}
+          >
+            See what shipped →
+          </a>
+          <a
+            href="/roadmap"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.85rem", padding: "0.4rem 0.75rem" }}
+          >
+            See what's coming →
+          </a>
+        </div>
+      </section>
+
+      <section
         aria-label="Two ways to go deeper"
         style={{ marginTop: "1.75rem", marginBottom: "2rem" }}
       >
