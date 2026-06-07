@@ -328,6 +328,17 @@ function CareDetailStageInner() {
         errorMessage={
           prechat.status === "error" ? prechat.message : undefined
         }
+        // Care Detail has its own dedicated risk-band card (gauge,
+        // axis flags, HRT suitability) immediately below this panel,
+        // so suppress the panel's compact verdict callout to avoid
+        // showing the same band twice.
+        showVerdict={false}
+        // Drive Care Detail's selectedId from the compact picker
+        // so the picker, dossier, risk card, and pathway card all
+        // re-key in sync. URL personaId stays accurate (see the
+        // selectedId -> URL sync useEffect above).
+        onSwitchPersona={setSelectedId}
+        currentStage="patient"
       />
 
       {selectedPersona && risk && pathway && hrt && (

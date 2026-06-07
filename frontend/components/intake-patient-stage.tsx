@@ -220,6 +220,13 @@ function IntakePatientStageInner({ agentforceConfig }: Props) {
         errorMessage={
           fetchState.status === "error" ? fetchState.message : undefined
         }
+        // The PreBriefPanel's compact switch-persona chip row drives
+        // selectedId so picker, dossier fetch, and embedded chat all
+        // re-key in sync. The selectedId -> URL sync useEffect above
+        // also re-runs, so personaId stays accurate in the address
+        // bar (and therefore in the shell nav).
+        onSwitchPersona={setSelectedId}
+        currentStage="intake"
       />
 
       <AgentforceEmbed
