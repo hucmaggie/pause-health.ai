@@ -244,6 +244,17 @@ Pause-Health.ai and are **not** licensed under Apache 2.0. See
 [`/press`](https://pause-health.ai/press) on the deployed site for brand
 asset usage guidelines.
 
+## Contributing, conduct, security
+
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — how to file issues, send PRs,
+  run the test suites, and what kinds of contributions are welcome at
+  this stage.
+- [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) — Contributor Covenant
+  2.1, adopted verbatim.
+- [`SECURITY.md`](./SECURITY.md) — vulnerability-disclosure policy.
+  Please use GitHub's Private Vulnerability Reporting (Security tab on
+  the repo) rather than the public issue tracker.
+
 ---
 
 # Northstar Shipping Cost API (ZIP-based)
