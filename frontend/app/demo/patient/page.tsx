@@ -1,5 +1,6 @@
 import { CareDetailStage } from "../../../components/care-detail-stage";
 import { DemoShell } from "../../../components/demo-shell";
+import { PersonaJourneyFooter } from "../../../components/persona-journey-footer";
 import { pageMetadata } from "../../../lib/page-metadata";
 
 export const metadata = pageMetadata({
@@ -18,6 +19,7 @@ export default function PatientDemoPage() {
       subtitle="Per-patient view: the same Data 360 dossier the agent sees, the federated grounding signals the Care Router uses, a deterministic risk band, suggested pathway, and an HRT suitability heuristic — all six demo personas, all live."
     >
       <CareDetailStage />
+      <PersonaJourneyFooter stage="patient" />
     </DemoShell>
   );
 }

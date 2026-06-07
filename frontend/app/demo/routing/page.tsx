@@ -1,6 +1,7 @@
 import { CareRoutingStage } from "../../../components/care-routing-stage";
 import { DemoShell } from "../../../components/demo-shell";
 import { LatestCareRouterDecision } from "../../../components/latest-care-router-decision";
+import { PersonaJourneyFooter } from "../../../components/persona-journey-footer";
 import {
   MSCP_DIRECTORY_LABELS,
   mscpDirectoryUrl
@@ -91,6 +92,8 @@ export default function RoutingDemoPage() {
           </p>
         </article>
       </section>
+
+      <PersonaJourneyFooter stage="routing" />
     </DemoShell>
   );
 }

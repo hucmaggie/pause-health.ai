@@ -1,5 +1,6 @@
 import { DemoShell } from "../../../components/demo-shell";
 import { OutcomeAnalyticsStage } from "../../../components/outcome-analytics-stage";
+import { PersonaJourneyFooter } from "../../../components/persona-journey-footer";
 import { pageMetadata } from "../../../lib/page-metadata";
 
 export const metadata = pageMetadata({
@@ -18,6 +19,7 @@ export default function AnalyticsDemoPage() {
       subtitle="Live operational metrics from the Pause Agent Fabric and Data 360 (top), the pathway distribution emitted by the Care Router (middle), the active segment catalog (table), and clearly-labeled program targets (bottom)."
     >
       <OutcomeAnalyticsStage />
+      <PersonaJourneyFooter stage="analytics" />
     </DemoShell>
   );
 }

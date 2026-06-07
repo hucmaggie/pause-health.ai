@@ -1,6 +1,7 @@
 import { AgentforceFallback } from "../../../components/agentforce-fallback";
 import { DemoShell } from "../../../components/demo-shell";
 import { IntakePatientStage } from "../../../components/intake-patient-stage";
+import { PersonaJourneyFooter } from "../../../components/persona-journey-footer";
 import { getAgentforceConfig } from "../../../lib/agentforce";
 import { DEMO_COHORT } from "../../../lib/demo-cohort";
 import { pageMetadata } from "../../../lib/page-metadata";
@@ -89,11 +90,15 @@ export default function IntakeDemoPage() {
               <strong>JupyterHealth EHR + dbdp wearable streams</strong>
             </li>
           </ul>
-          <a href="/demo/patient" className="btn btn-primary">
-            Open Care Detail (cohort view)
-          </a>
+          {/*
+           * The "Continue to Care Detail" affordance lives in the
+           * shared <PersonaJourneyFooter> below so the next-stage
+           * CTA is consistent across every /demo/* page.
+           */}
         </article>
       </section>
+
+      <PersonaJourneyFooter stage="intake" />
     </DemoShell>
   );
 }

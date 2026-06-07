@@ -263,18 +263,21 @@ function CareRoutingStageInner() {
             </button>
             {runState.status === "done" && (
               <a
-                href={`/demo/agent-fabric?taskId=${encodeURIComponent(runState.taskId)}`}
+                href={`/demo/agent-fabric?taskId=${encodeURIComponent(runState.taskId)}&personaId=${encodeURIComponent(selectedId)}`}
                 className="btn btn-secondary"
               >
                 View multi-agent trace →
               </a>
             )}
-            <a
-              href={`/demo/patient?personaId=${encodeURIComponent(selectedId)}`}
-              className="btn btn-secondary"
-            >
-              Back to Care Detail
-            </a>
+            {/*
+             * "Back to Care Detail" moved to the shared
+             * <PersonaJourneyFooter stage="routing" /> at the
+             * bottom of /demo/routing so the inter-stage nav is
+             * consistent across pages. The "View multi-agent
+             * trace" button stays here because it carries
+             * ?taskId= (the trace anchor) which the footer
+             * doesn't know about.
+             */}
           </div>
 
           {runState.status === "running" && (

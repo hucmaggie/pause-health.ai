@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { DemoShell } from "../../../components/demo-shell";
+import { PersonaJourneyFooter } from "../../../components/persona-journey-footer";
 
 type AgentRecord = {
   id: string;
@@ -579,6 +580,8 @@ export default function AgentFabricConsole() {
       >
         <AgentFabricConsoleInner />
       </Suspense>
+
+      <PersonaJourneyFooter stage="agent-fabric" />
     </DemoShell>
   );
 }

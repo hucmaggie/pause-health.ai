@@ -423,20 +423,12 @@ function CareDetailStageInner() {
             </section>
           </div>
 
-          <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <a
-              href={`/demo/routing?personaId=${encodeURIComponent(selectedId)}`}
-              className="btn btn-primary"
-            >
-              Continue to Routing
-            </a>
-            <a
-              href={`/demo/intake?personaId=${encodeURIComponent(selectedId)}`}
-              className="btn btn-secondary"
-            >
-              Back to Intake
-            </a>
-          </div>
+          {/*
+           * "Continue to Routing" / "Back to Intake" CTAs moved to
+           * the shared <PersonaJourneyFooter stage="patient" />
+           * mounted at the bottom of /demo/patient so the
+           * next-stage affordance is consistent across pages.
+           */}
         </article>
       )}
 
