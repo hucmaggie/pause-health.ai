@@ -1,10 +1,15 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { DemoShell } from "../../../components/demo-shell";
 import { PersonaJourneyFooter } from "../../../components/persona-journey-footer";
+import {
+  DEMO_COHORT,
+  findDemoPersona,
+  type DemoPersona
+} from "../../../lib/demo-cohort";
 
 type AgentRecord = {
   id: string;
@@ -80,16 +85,43 @@ const TEST_INTAKES: Record<string, Record<string, string>> = {
 };
 
 function AgentFabricConsoleInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialTaskId = searchParams.get("taskId") ?? "";
+  const personaIdParam = searchParams.get("personaId");
+  const filterPersona: DemoPersona | null = personaIdParam
+    ? findDemoPersona(personaIdParam) ?? null
+    : null;
+  const filterPersonaId = filterPersona?.id ?? null;
 
   const [agents, setAgents] = useState<AgentRecord[]>([]);
   const [policies, setPolicies] = useState<PolicyRecord[]>([]);
   const [activeTaskId, setActiveTaskId] = useState<string>(initialTaskId);
   const [recentTaskIds, setRecentTaskIds] = useState<string[]>([]);
+  // Map of taskId -> personaId, derived from a recent-spans sweep on
+  // every poll. Used both to filter the Recent tasks chip row when
+  // ?personaId= is set, and to auto-advance the active task to the
+  // most recent matching one when the filter changes.
+  const [taskIdToPersonaId, setTaskIdToPersonaId] = useState<
+    Record<string, string>
+  >({});
   const [spans, setSpans] = useState<TraceSpan[]>([]);
   const [running, setRunning] = useState<string | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
+
+  const updatePersonaFilter = useCallback(
+    (nextPersonaId: string | null) => {
+      const params = new URLSearchParams(Array.from(searchParams.entries()));
+      if (nextPersonaId) params.set("personaId", nextPersonaId);
+      else params.delete("personaId");
+      const next = params.toString();
+      router.replace(
+        next ? `/demo/agent-fabric?${next}` : "/demo/agent-fabric",
+        { scroll: false }
+      );
+    },
+    [router, searchParams]
+  );
 
   const fetchAgents = useCallback(async () => {
     const r = await fetch("/api/agent-fabric/agents", { cache: "no-store" });
@@ -104,9 +136,38 @@ function AgentFabricConsoleInner() {
   }, []);
 
   const fetchRecentTaskIds = useCallback(async () => {
-    const r = await fetch("/api/agent-fabric/traces", { cache: "no-store" });
-    const d = await r.json();
-    const ids = (d.recentTaskIds ?? []) as string[];
+    // Two-pass fetch:
+    //   1. /api/agent-fabric/traces -> ordered recentTaskIds
+    //   2. /api/agent-fabric/traces?limit=200 -> recent spans, so we
+    //      can build the taskId -> personaId map. The handoff route
+    //      stamps attributes.personaId on every span when the run
+    //      was triggered from /demo/routing (or via the "Run a test
+    //      case" buttons below when a persona filter is active).
+    //
+    // Running these in parallel keeps the poll-tick latency similar
+    // to the previous single-fetch version.
+    const [idsRes, spansRes] = await Promise.all([
+      fetch("/api/agent-fabric/traces", { cache: "no-store" }),
+      fetch("/api/agent-fabric/traces?limit=200", { cache: "no-store" })
+    ]);
+    const idsData = await idsRes.json();
+    const spansData = await spansRes.json();
+    const ids = (idsData.recentTaskIds ?? []) as string[];
+    const recentSpans = (spansData.traces ?? []) as TraceSpan[];
+
+    // Build the map. The first span per task that carries
+    // attributes.personaId wins; if no span on a task carries one
+    // (e.g. a "Run a test case" run with no filter active), the task
+    // simply doesn't appear in the map and is treated as
+    // unattributable for filtering purposes.
+    const nextMap: Record<string, string> = {};
+    for (const span of recentSpans) {
+      const pid = span.attributes?.personaId;
+      if (typeof pid === "string" && pid.length > 0 && !nextMap[span.taskId]) {
+        nextMap[span.taskId] = pid;
+      }
+    }
+    setTaskIdToPersonaId(nextMap);
     setRecentTaskIds(ids);
     if (!activeTaskId && ids.length > 0) setActiveTaskId(ids[0]);
   }, [activeTaskId]);
@@ -151,7 +212,18 @@ function AgentFabricConsoleInner() {
         const r = await fetch("/api/intake/route-to-care-router", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ intake })
+          // When a persona filter is active, thread its id into the
+          // handoff so the test-case run's spans carry the matching
+          // attributes.personaId. That means the trace immediately
+          // satisfies the filter and shows up in the chip row -- no
+          // confusing "I just ran a case but the chip row is still
+          // empty" mismatch. With no filter active, the field is
+          // omitted and the trace is unattributed (the existing
+          // behavior).
+          body: JSON.stringify({
+            intake,
+            ...(filterPersonaId ? { personaId: filterPersonaId } : {})
+          })
         });
         if (!r.ok) throw new Error(`handoff failed: ${r.status}`);
         const d = (await r.json()) as { taskId?: string };
@@ -163,7 +235,7 @@ function AgentFabricConsoleInner() {
         setRunning(null);
       }
     },
-    [fetchRecentTaskIds, fetchSpansForActive]
+    [fetchRecentTaskIds, fetchSpansForActive, filterPersonaId]
   );
 
   const policiesByAgent = useMemo(() => {
@@ -177,8 +249,136 @@ function AgentFabricConsoleInner() {
     return map;
   }, [policies]);
 
+  // When ?personaId= is set, scope the recent-tasks chip row to
+  // tasks whose spans carry the matching attributes.personaId.
+  // When no filter is set, this is just the unfiltered recent list.
+  const filteredRecentTaskIds = useMemo(() => {
+    if (!filterPersonaId) return recentTaskIds;
+    return recentTaskIds.filter(
+      (tid) => taskIdToPersonaId[tid] === filterPersonaId
+    );
+  }, [recentTaskIds, taskIdToPersonaId, filterPersonaId]);
+
+  // When the persona filter changes and the active task no longer
+  // matches the filter, auto-advance to the most recent matching
+  // task. This keeps the page honest: the Trace panel either shows
+  // a trace that belongs to the filter persona, or it shows
+  // "(none selected)" with an empty-state message.
+  useEffect(() => {
+    if (!filterPersonaId) return;
+    if (!activeTaskId) {
+      if (filteredRecentTaskIds.length > 0) {
+        setActiveTaskId(filteredRecentTaskIds[0]);
+      }
+      return;
+    }
+    const activeBelongs = taskIdToPersonaId[activeTaskId] === filterPersonaId;
+    if (!activeBelongs) {
+      setActiveTaskId(filteredRecentTaskIds[0] ?? "");
+    }
+  }, [
+    filterPersonaId,
+    activeTaskId,
+    taskIdToPersonaId,
+    filteredRecentTaskIds
+  ]);
+
   return (
     <>
+      {/*
+       * Persona-filter banner. Mirrors the analytics banner from
+       * the previous demo-polish pass so the two pages feel like
+       * sibling views over the same span stream. Wired to the
+       * shared updatePersonaFilter() helper.
+       */}
+      {filterPersona ? (
+        <article
+          className="card"
+          style={{
+            marginBottom: "1rem",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "0.75rem",
+            justifyContent: "space-between"
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.6rem",
+              alignItems: "center"
+            }}
+          >
+            <span className="pre-brief-source-badge pre-brief-source-badge--info">
+              Persona filter
+            </span>
+            <strong style={{ fontSize: "1rem" }}>
+              Filtering by {filterPersona.firstName} {filterPersona.lastName}
+            </strong>
+            <span style={{ color: "var(--muted)", fontSize: "0.88rem" }}>
+              · {filterPersona.ageBand} · {filterPersona.cycleStatus} ·{" "}
+              {filterPersona.primarySymptom}
+            </span>
+            <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
+              · {filteredRecentTaskIds.length} of {recentTaskIds.length}{" "}
+              recent traces match
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => updatePersonaFilter(null)}
+            className="btn btn-secondary"
+            style={{ fontSize: "0.85rem", padding: "0.4rem 0.8rem" }}
+          >
+            Clear filter
+          </button>
+        </article>
+      ) : (
+        <article
+          className="card"
+          style={{
+            marginBottom: "1rem",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "0.75rem",
+            justifyContent: "space-between"
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.6rem",
+              alignItems: "center"
+            }}
+          >
+            <span className="pre-brief-source-badge pre-brief-source-badge--info">
+              No persona filter
+            </span>
+            <span style={{ color: "var(--muted)", fontSize: "0.88rem" }}>
+              All-tasks view across {recentTaskIds.length} recent traces.
+              Filter by a persona to scope the Recent tasks chip row:
+            </span>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+            {DEMO_COHORT.slice(0, 4).map((persona) => (
+              <button
+                key={persona.id}
+                type="button"
+                onClick={() => updatePersonaFilter(persona.id)}
+                className="btn btn-secondary"
+                style={{ fontSize: "0.8rem", padding: "0.35rem 0.7rem" }}
+              >
+                {persona.firstName}
+              </button>
+            ))}
+          </div>
+        </article>
+      )}
+
       <section style={{ marginBottom: "1.5rem" }}>
         <p className="eyebrow">Agent Registry</p>
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
@@ -268,7 +468,12 @@ function AgentFabricConsoleInner() {
       </section>
 
       <section style={{ marginBottom: "1.5rem" }}>
-        <p className="eyebrow">Recent tasks</p>
+        <p className="eyebrow">
+          Recent tasks
+          {filterPersona
+            ? ` · scoped to ${filterPersona.firstName} ${filterPersona.lastName}`
+            : ""}
+        </p>
         <div
           style={{
             display: "flex",
@@ -277,26 +482,79 @@ function AgentFabricConsoleInner() {
             marginTop: "0.5rem"
           }}
         >
-          {recentTaskIds.length === 0 && (
+          {filteredRecentTaskIds.length === 0 && (
             <p style={{ color: "var(--muted)", fontSize: "0.88rem" }}>
-              No recent tasks yet. Run a test case above, or trigger a real
-              Care Router decision from{" "}
-              <a href="/demo/routing">/demo/routing</a>.
+              {filterPersona ? (
+                <>
+                  No recent tasks attributed to {filterPersona.firstName}{" "}
+                  {filterPersona.lastName} yet. Trigger one from{" "}
+                  <a
+                    href={`/demo/routing?personaId=${encodeURIComponent(filterPersona.id)}`}
+                  >
+                    /demo/routing
+                  </a>
+                  , or click a test case above (it will inherit this
+                  persona attribution), or{" "}
+                  <button
+                    type="button"
+                    onClick={() => updatePersonaFilter(null)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--brand)",
+                      textDecoration: "underline",
+                      cursor: "pointer",
+                      padding: 0,
+                      font: "inherit"
+                    }}
+                  >
+                    clear the filter
+                  </button>{" "}
+                  to see all tasks.
+                </>
+              ) : (
+                <>
+                  No recent tasks yet. Run a test case above, or trigger a
+                  real Care Router decision from{" "}
+                  <a href="/demo/routing">/demo/routing</a>.
+                </>
+              )}
             </p>
           )}
-          {recentTaskIds.map((tid) => (
-            <button
-              key={tid}
-              type="button"
-              className={
-                tid === activeTaskId ? "btn btn-primary" : "btn btn-secondary"
-              }
-              onClick={() => setActiveTaskId(tid)}
-              style={{ fontSize: "0.78rem", fontFamily: "monospace" }}
-            >
-              {tid}
-            </button>
-          ))}
+          {filteredRecentTaskIds.map((tid) => {
+            const personaForTask = taskIdToPersonaId[tid];
+            const personaLabel = personaForTask
+              ? findDemoPersona(personaForTask)?.firstName ?? personaForTask
+              : null;
+            return (
+              <button
+                key={tid}
+                type="button"
+                className={
+                  tid === activeTaskId
+                    ? "btn btn-primary"
+                    : "btn btn-secondary"
+                }
+                onClick={() => setActiveTaskId(tid)}
+                style={{ fontSize: "0.78rem", fontFamily: "monospace" }}
+                title={personaLabel ? `Persona: ${personaLabel}` : undefined}
+              >
+                {tid}
+                {!filterPersona && personaLabel && (
+                  <span
+                    style={{
+                      marginLeft: "0.4rem",
+                      fontFamily: "inherit",
+                      fontSize: "0.7rem",
+                      opacity: 0.75
+                    }}
+                  >
+                    · {personaLabel}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </section>
 

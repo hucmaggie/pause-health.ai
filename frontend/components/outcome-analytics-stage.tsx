@@ -424,6 +424,23 @@ function OutcomeAnalyticsStageInner() {
                 >
                   /demo/routing
                 </a>
+                {filterPersona ? (
+                  <>
+                    {" "}
+                    ·{" "}
+                    <a
+                      href={`/demo/agent-fabric?personaId=${encodeURIComponent(filterPersona.id)}`}
+                    >
+                      view all of {filterPersona.firstName}&apos;s traces
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    {" "}
+                    ·{" "}
+                    <a href="/demo/agent-fabric">browse all traces</a>
+                  </>
+                )}
                 .
               </p>
             </>
@@ -474,6 +491,17 @@ function OutcomeAnalyticsStageInner() {
                   : "no completed queries yet"}{" "}
                 · sources: Salesforce Health Cloud, JupyterHealth FHIR,
                 dbdp wearable, Agentforce intake.
+                {filterPersona && (
+                  <>
+                    {" "}
+                    <a
+                      href={`/demo/agent-fabric?personaId=${encodeURIComponent(filterPersona.id)}`}
+                    >
+                      Inspect {filterPersona.firstName}&apos;s grounding
+                      spans →
+                    </a>
+                  </>
+                )}
               </p>
             </>
           )}
