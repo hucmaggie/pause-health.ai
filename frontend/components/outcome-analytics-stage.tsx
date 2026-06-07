@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { CARE_ROUTER_PATHWAYS } from "../lib/care-router-pathways";
+import { DEMO_COHORT, findDemoPersona } from "../lib/demo-cohort";
 
 /**
  * Outcome Analytics stage — the new /demo/analytics page body.
@@ -34,6 +36,26 @@ import { CARE_ROUTER_PATHWAYS } from "../lib/care-router-pathways";
  *      measured" so a reader can never confuse them for live KPIs.
  *      ARR / revenue cards removed entirely; they live on
  *      /proposal/* where they belong.
+ *
+ * Persona-aware filtering (added in the demo-polish pass):
+ *
+ * When the URL carries `?personaId=<id>` -- threaded in by the
+ * shell nav from any other /demo/* page that's tracking a persona
+ * -- the analytics stage filters the three trace-derived surfaces
+ * by persona:
+ *
+ *   - Care Router decisions card  (filtered by span.attributes.personaId)
+ *   - Federated grounding queries card  (same filter)
+ *   - Pathway distribution chart  (same filter)
+ *
+ * The Data 360 segment count card, the segment activation table,
+ * and the outcome targets section stay cohort-level because they
+ * are not span-derived -- they describe population segments and
+ * program targets, both inherently many-patient.
+ *
+ * A "Filtering by ..." banner sits above the cards when a persona
+ * is set, with a Clear filter link that strips ?personaId= and
+ * shows the cohort-wide view.
  */
 
 type Segment = {
@@ -83,7 +105,47 @@ function p50(values: number[]): number | null {
   return median(values);
 }
 
+/**
+ * Wrapper that satisfies Next.js's requirement to suspend
+ * useSearchParams() consumers. The interesting logic lives in
+ * OutcomeAnalyticsStageInner.
+ */
 export function OutcomeAnalyticsStage() {
+  return (
+    <Suspense fallback={<OutcomeAnalyticsLoadingSkeleton />}>
+      <OutcomeAnalyticsStageInner />
+    </Suspense>
+  );
+}
+
+function OutcomeAnalyticsLoadingSkeleton() {
+  return (
+    <section className="analytics-strip">
+      <article className="card analytics-card">
+        <p className="analytics-card-value analytics-card-loading">Loading…</p>
+      </article>
+    </section>
+  );
+}
+
+function OutcomeAnalyticsStageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const personaIdParam = searchParams.get("personaId");
+  const filterPersona = personaIdParam
+    ? findDemoPersona(personaIdParam) ?? null
+    : null;
+  const filterPersonaId = filterPersona?.id ?? null;
+
+  const clearFilter = () => {
+    const params = new URLSearchParams(Array.from(searchParams.entries()));
+    params.delete("personaId");
+    const next = params.toString();
+    router.replace(next ? `/demo/analytics?${next}` : "/demo/analytics", {
+      scroll: false
+    });
+  };
+
   const [segState, setSegState] = useState<LoadState<SegmentsResponse>>({
     status: "loading"
   });
@@ -147,22 +209,36 @@ export function OutcomeAnalyticsStage() {
       return null;
     }
     const traces = traceState.data.traces;
+
+    // When a personaId filter is set, narrow to spans whose
+    // attributes carry the matching personaId. The handoff at
+    // /api/intake/route-to-care-router stamps personaId on the
+    // intake, identity, grounding, and Care Router spans whenever
+    // it's invoked from /demo/routing.
+    const matchesPersona = (t: TraceSpan) =>
+      filterPersonaId == null
+        ? true
+        : (t.attributes?.personaId as string | undefined) === filterPersonaId;
+
     const careRouter = traces.filter(
       (t) => t.agentId === "care-router-claude" && t.status === "ok"
     );
+    const careRouterScoped = careRouter.filter(matchesPersona);
+
     const grounding = traces.filter(
       (t) => t.operation === "data360.grounding.federated-query"
     );
+    const groundingScoped = grounding.filter(matchesPersona);
 
     const last24hThreshold = Date.now() - 24 * 60 * 60 * 1000;
-    const careRouterLast24h = careRouter.filter(
+    const careRouterLast24h = careRouterScoped.filter(
       (t) => new Date(t.startedAt).getTime() >= last24hThreshold
     );
 
-    const careRouterDurations = careRouter
+    const careRouterDurations = careRouterScoped
       .map((t) => t.durationMs)
       .filter((d): d is number => typeof d === "number" && d > 0);
-    const groundingDurations = grounding
+    const groundingDurations = groundingScoped
       .map((t) => {
         if (typeof t.durationMs === "number") return t.durationMs;
         const v = t.attributes?.durationMs;
@@ -170,34 +246,39 @@ export function OutcomeAnalyticsStage() {
       })
       .filter((d): d is number => typeof d === "number" && d > 0);
 
-    // Pathway distribution
+    // Pathway distribution -- scoped to the persona filter when set.
     const pathwayCounts: Record<string, number> = {};
-    for (const span of careRouter) {
+    for (const span of careRouterScoped) {
       const pw = span.attributes?.pathway;
       if (typeof pw === "string") {
         pathwayCounts[pw] = (pathwayCounts[pw] ?? 0) + 1;
       }
     }
-    const totalCareRouter = careRouter.length;
+    const totalCareRouter = careRouterScoped.length;
 
-    // Real vs mock breakdown for grounding queries
-    const realGroundingCount = grounding.filter(
+    // Real vs mock breakdown for grounding queries -- scoped to
+    // the persona filter when set.
+    const realGroundingCount = groundingScoped.filter(
       (t) => (t.attributes?._source as string | undefined) === "real"
     ).length;
-    const mockGroundingCount = grounding.length - realGroundingCount;
+    const mockGroundingCount = groundingScoped.length - realGroundingCount;
 
     return {
-      careRouter,
+      careRouter: careRouterScoped,
       careRouterLast24h,
       careRouterMedianMs: median(careRouterDurations),
-      grounding,
+      grounding: groundingScoped,
       groundingP50Ms: p50(groundingDurations),
       pathwayCounts,
       totalCareRouter,
       realGroundingCount,
-      mockGroundingCount
+      mockGroundingCount,
+      // Cohort-wide totals, kept around so the filter banner can
+      // show "12 of 84 decisions" context when a persona is set.
+      cohortTotalCareRouter: careRouter.length,
+      cohortTotalGrounding: grounding.length
     };
-  }, [traceState]);
+  }, [traceState, filterPersonaId]);
 
   const segments = segState.status === "ready" ? segState.data.segments : [];
   const totalPatients =
@@ -205,6 +286,81 @@ export function OutcomeAnalyticsStage() {
 
   return (
     <>
+      {filterPersona ? (
+        <article
+          className="card"
+          style={{
+            marginBottom: "1rem",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "0.75rem",
+            justifyContent: "space-between"
+          }}
+        >
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem", alignItems: "center" }}>
+            <span className="pre-brief-source-badge pre-brief-source-badge--info">
+              Persona filter
+            </span>
+            <strong style={{ fontSize: "1rem" }}>
+              Filtering by {filterPersona.firstName} {filterPersona.lastName}
+            </strong>
+            <span style={{ color: "var(--muted)", fontSize: "0.88rem" }}>
+              · {filterPersona.ageBand} · {filterPersona.cycleStatus} ·{" "}
+              {filterPersona.primarySymptom}
+            </span>
+            {computed && computed.cohortTotalCareRouter > 0 && (
+              <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
+                · {computed.totalCareRouter} of {computed.cohortTotalCareRouter}{" "}
+                Care Router decisions in this session
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={clearFilter}
+            className="btn btn-secondary"
+            style={{ fontSize: "0.85rem", padding: "0.4rem 0.8rem" }}
+          >
+            Clear filter
+          </button>
+        </article>
+      ) : (
+        <article
+          className="card"
+          style={{
+            marginBottom: "1rem",
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "0.75rem",
+            justifyContent: "space-between"
+          }}
+        >
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem", alignItems: "center" }}>
+            <span className="pre-brief-source-badge pre-brief-source-badge--info">
+              No persona filter
+            </span>
+            <span style={{ color: "var(--muted)", fontSize: "0.88rem" }}>
+              Cohort-wide view across all{" "}
+              {computed?.cohortTotalCareRouter ?? 0} Care Router decisions in
+              this session. Filter by a persona to scope the cards + chart:
+            </span>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+            {DEMO_COHORT.slice(0, 4).map((persona) => (
+              <a
+                key={persona.id}
+                href={`/demo/analytics?personaId=${encodeURIComponent(persona.id)}`}
+                className="btn btn-secondary"
+                style={{ fontSize: "0.8rem", padding: "0.35rem 0.7rem" }}
+              >
+                {persona.firstName}
+              </a>
+            ))}
+          </div>
+        </article>
+      )}
       <section className="analytics-strip">
         <article className="card analytics-card">
           <div className="analytics-card-head">
@@ -251,12 +407,24 @@ export function OutcomeAnalyticsStage() {
                 {computed?.totalCareRouter ?? 0}
               </p>
               <p className="analytics-card-detail">
+                {filterPersona
+                  ? `Scoped to ${filterPersona.firstName} · `
+                  : ""}
                 {computed?.careRouterLast24h.length ?? 0} in last 24h ·{" "}
                 {computed?.careRouterMedianMs != null
                   ? `median ${computed.careRouterMedianMs} ms`
                   : "no completed runs yet"}
                 . Drive a new decision from{" "}
-                <a href="/demo/routing">/demo/routing</a>.
+                <a
+                  href={
+                    filterPersona
+                      ? `/demo/routing?personaId=${encodeURIComponent(filterPersona.id)}`
+                      : "/demo/routing"
+                  }
+                >
+                  /demo/routing
+                </a>
+                .
               </p>
             </>
           )}
@@ -298,6 +466,9 @@ export function OutcomeAnalyticsStage() {
                 {computed?.grounding.length ?? 0}
               </p>
               <p className="analytics-card-detail">
+                {filterPersona
+                  ? `Scoped to ${filterPersona.firstName} · `
+                  : ""}
                 {computed?.groundingP50Ms != null
                   ? `p50 ${computed.groundingP50Ms} ms`
                   : "no completed queries yet"}{" "}
@@ -313,6 +484,11 @@ export function OutcomeAnalyticsStage() {
         pathwayCounts={computed?.pathwayCounts ?? {}}
         totalDecisions={computed?.totalCareRouter ?? 0}
         loading={traceState.status === "loading"}
+        scopedToPersonaName={
+          filterPersona
+            ? `${filterPersona.firstName} ${filterPersona.lastName}`
+            : null
+        }
       />
 
       <SegmentActivationTable
@@ -328,11 +504,13 @@ export function OutcomeAnalyticsStage() {
 function PathwayDistributionChart({
   pathwayCounts,
   totalDecisions,
-  loading
+  loading,
+  scopedToPersonaName
 }: {
   pathwayCounts: Record<string, number>;
   totalDecisions: number;
   loading: boolean;
+  scopedToPersonaName: string | null;
 }) {
   const rows = CARE_ROUTER_PATHWAYS.map((p) => {
     const count = pathwayCounts[p.pathway] ?? 0;
@@ -345,7 +523,10 @@ function PathwayDistributionChart({
       <header className="pre-brief-header">
         <div>
           <p className="eyebrow">Live · Care Router</p>
-          <h3 style={{ margin: "0.1rem 0 0" }}>Pathway distribution</h3>
+          <h3 style={{ margin: "0.1rem 0 0" }}>
+            Pathway distribution
+            {scopedToPersonaName ? ` · ${scopedToPersonaName}` : ""}
+          </h3>
           <p
             style={{
               margin: "0.25rem 0 0",
@@ -353,7 +534,9 @@ function PathwayDistributionChart({
               fontSize: "0.88rem"
             }}
           >
-            Recent Care Router decisions binned by emitted pathway.
+            {scopedToPersonaName
+              ? `Care Router decisions for ${scopedToPersonaName}, binned by emitted pathway. `
+              : "Recent Care Router decisions binned by emitted pathway. "}
             Counts come from spans recorded by the Agent Fabric in this
             session; reset on server restart.
           </p>
@@ -412,7 +595,9 @@ function PathwayDistributionChart({
             fontSize: "0.85rem"
           }}
         >
-          No Care Router decisions recorded yet in this session.{" "}
+          {scopedToPersonaName
+            ? `No Care Router decisions for ${scopedToPersonaName} recorded yet in this session. `
+            : "No Care Router decisions recorded yet in this session. "}
           <a href="/demo/routing">Trigger one from /demo/routing</a> and watch
           this chart update.
         </p>

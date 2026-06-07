@@ -43,7 +43,18 @@ import { isSalesforceConfigured } from "../../../../lib/salesforce/auth";
  * later add OAuth between agents without changing the client.
  */
 export async function POST(req: Request) {
-  type Body = { intake?: IntakeRecord; sessionId?: string };
+  type Body = {
+    intake?: IntakeRecord;
+    sessionId?: string;
+    /**
+     * Optional demo cohort persona id (e.g. "anika-patel"). When
+     * present, threaded into every span emitted by this handler so
+     * /demo/analytics can filter Care Router decisions + grounding
+     * spans by persona. Production callers omit this field and the
+     * filter just stays empty on analytics; nothing else branches.
+     */
+    personaId?: string;
+  };
   let body: Body;
   try {
     body = (await req.json()) as Body;
@@ -54,6 +65,10 @@ export async function POST(req: Request) {
   const intake = body.intake ?? {};
   const sessionId = body.sessionId ?? newTaskId("session");
   const taskId = newTaskId("intake-to-router");
+  const personaId =
+    typeof body.personaId === "string" && body.personaId.length > 0
+      ? body.personaId
+      : undefined;
 
   const intakeSpan = recordInstantSpan({
     taskId,
@@ -65,7 +80,8 @@ export async function POST(req: Request) {
       redFlag: intake.redFlagsAcknowledged === "yes",
       ageBand: intake.ageBand,
       primarySymptom: intake.primarySymptom,
-      severity: intake.severity
+      severity: intake.severity,
+      ...(personaId ? { personaId } : {})
     }
   });
 
@@ -109,7 +125,8 @@ export async function POST(req: Request) {
       confidence: identity.confidence,
       matchedSources: identity.matchedSources,
       resolutionRuleset: identity.resolutionRuleset,
-      durationMs: idFinishedAt - idStartedAt
+      durationMs: idFinishedAt - idStartedAt,
+      ...(personaId ? { personaId } : {})
     }
   });
 
@@ -142,7 +159,8 @@ export async function POST(req: Request) {
       cohortSize: grounding.cohortComparison.cohortSize,
       patientPercentile: grounding.cohortComparison.patientPercentile,
       lastClinicianContactDaysAgo: grounding.lastClinicianContact.daysAgo,
-      durationMs: groundingFinishedAt - groundingStartedAt
+      durationMs: groundingFinishedAt - groundingStartedAt,
+      ...(personaId ? { personaId } : {})
     }
   });
 
@@ -158,7 +176,10 @@ export async function POST(req: Request) {
         "Please route this menopause intake to the appropriate care pathway. Longitudinal context attached from Salesforce Data 360.",
         { intake, data360Grounding: grounding, data360Identity: identity }
       ),
-      metadata: { parentSpanId: intakeSpan.id }
+      metadata: {
+        parentSpanId: intakeSpan.id,
+        ...(personaId ? { personaId } : {})
+      }
     });
 
     const decisionPart = task.artifacts?.[0]?.parts?.find(

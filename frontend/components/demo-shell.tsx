@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { DemoShellNav } from "./demo-shell-nav";
 
 type DemoShellProps = {
   title: string;
@@ -17,14 +18,6 @@ type DemoShellProps = {
   backLabel?: string;
 };
 
-const links = [
-  { href: "/demo/intake", label: "Signal Intake" },
-  { href: "/demo/patient", label: "Care Detail" },
-  { href: "/demo/routing", label: "Care Routing" },
-  { href: "/demo/analytics", label: "Outcome Analytics" },
-  { href: "/demo/agent-fabric", label: "Agent Fabric" }
-];
-
 export function DemoShell({
   title,
   subtitle,
@@ -42,13 +35,14 @@ export function DemoShell({
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
         <p>{subtitle}</p>
-        <nav className="demo-nav" aria-label="Prototype pages">
-          {links.map((item) => (
-            <a key={item.href} href={item.href}>
-              {item.label}
-            </a>
-          ))}
-        </nav>
+        {/*
+         * In-page nav is split into its own client subcomponent so
+         * it can read `?personaId=` (and a few other small params)
+         * from the URL via useSearchParams() and append them to each
+         * link, preserving persona context across shell-nav clicks.
+         * The shell itself stays server-rendered.
+         */}
+        <DemoShellNav />
       </section>
       {children}
     </main>

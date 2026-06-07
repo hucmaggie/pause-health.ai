@@ -79,6 +79,15 @@ export async function POST(req: Request) {
     typeof params.metadata?.parentSpanId === "string"
       ? (params.metadata.parentSpanId as string)
       : undefined;
+  // Threaded by the /api/intake/route-to-care-router handoff when
+  // it's run from /demo/routing. Used purely to stamp the Care
+  // Router's span so /demo/analytics can filter by persona.
+  // Production / non-demo callers omit this and the analytics
+  // filter just shows zero hits for the empty persona filter.
+  const personaId =
+    typeof params.metadata?.personaId === "string"
+      ? (params.metadata.personaId as string)
+      : undefined;
 
   const dataPart = params.message?.parts?.find((p) => p.type === "data");
   const dataPayload =
@@ -113,7 +122,8 @@ export async function POST(req: Request) {
       status: "error",
       attributes: {
         violations: governance.blockingViolations,
-        policiesEvaluated: governance.appliesPolicies.length
+        policiesEvaluated: governance.appliesPolicies.length,
+        ...(personaId ? { personaId } : {})
       }
     });
     const failed: A2ATask = {
@@ -170,7 +180,8 @@ export async function POST(req: Request) {
       data360Grounded: grounding !== undefined,
       data360UnifiedPatientId: grounding?.unifiedPatientId,
       data360InsightsCited: decision.groundingUsed?.insightsCited ?? [],
-      data360Cohort: decision.groundingUsed?.cohortName
+      data360Cohort: decision.groundingUsed?.cohortName,
+      ...(personaId ? { personaId } : {})
     }
   });
 

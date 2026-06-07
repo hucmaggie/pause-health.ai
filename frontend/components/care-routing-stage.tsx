@@ -124,7 +124,12 @@ function CareRoutingStageInner() {
       const res = await fetch("/api/intake/route-to-care-router", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intake })
+        // personaId rides along so the intake span (and downstream
+        // identity / grounding / a2a.tasks/send spans correlated to
+        // the same taskId) can be filtered by persona on
+        // /demo/analytics. The server route ignores the field if
+        // unset, so non-demo callers keep working unchanged.
+        body: JSON.stringify({ intake, personaId: selectedPersona.id })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const payload = (await res.json()) as CareRouterDecisionResponse;
