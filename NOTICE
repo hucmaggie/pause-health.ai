@@ -1,0 +1,55 @@
+Pause-Health.ai
+Copyright 2026 Pause-Health.ai
+
+This product includes software developed by Pause-Health.ai
+(https://pause-health.ai).
+
+This product also references and integrates with the following
+third-party works. Each is governed by its own license terms,
+which are NOT replaced or modified by the Apache License under
+which Pause-Health.ai itself is distributed. When redistributing
+Derivative Works of Pause-Health.ai, please consult the upstream
+project for its own license terms and notices.
+
+  * JupyterHealth Exchange
+      https://github.com/jupyterhealth/jupyterhealth-exchange
+      Open FHIR R5 data-exchange substrate.
+
+  * JupyterHealth omh-shim
+      https://github.com/jupyterhealth/omh-shim
+      Open mHealth schema converter for wearable JSON.
+
+  * Digital Biomarker Discovery Pipeline (DBDP)
+      https://www.dbdp.org/code-repository
+      Duke University's open clinical-feature engineering toolkit.
+
+  * FLIRT (Feature generation for resting-state HRV)
+      https://github.com/im-ethz/flirt
+      Feature-extraction library used by pause_ingest.
+
+  * Salesforce Health Cloud, Data 360, Agentforce, MuleSoft Anypoint
+      https://www.salesforce.com/
+      Commercial platforms integrated with at runtime. The
+      Pause-Health.ai source code in this repository is released
+      under Apache 2.0; Salesforce platform components and any
+      org-specific metadata generated against a customer's
+      Salesforce org are governed by the customer's Salesforce
+      Master Subscription Agreement, not by this License.
+
+  * Model Context Protocol (MCP)
+      https://modelcontextprotocol.io/
+      Open protocol specification; Pause-Health.ai's MCP server
+      (mcp/) follows the spec and is released under Apache 2.0.
+
+  * Anthropic Claude (used at runtime by the Care Router agent)
+      https://www.anthropic.com/
+      Commercial LLM API; usage governed by Anthropic's Terms of
+      Service, not by this License.
+
+  * The Menopause Society (formerly NAMS) directory
+      https://portal.menopause.org/NAMS/NAMS/Directory/MSCP-Directory.aspx
+      Pause-Health.ai's referral path deep-links to The Menopause
+      Society's own MSCP-Certified-Practitioner directory rather
+      than redistributing it. The directory itself is The Menopause
+      Society's property; we never scrape or republish it. See
+      /proposal/menopause-society for the full guardrail posture.

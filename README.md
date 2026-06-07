@@ -221,6 +221,29 @@ customer data in a single org.
 
 See each subdirectory's README for full setup and configuration details.
 
+## License
+
+Pause-Health.ai is released under the
+[Apache License, Version 2.0](./LICENSE). You may use, modify, and
+redistribute the code for any purpose — including commercial — provided
+you preserve the copyright notice and the NOTICE file.
+
+The Apache 2.0 license also grants an explicit **patent license** from
+contributors, which matters in healthcare AI: if Pause-Health.ai is
+granted patents on the Care Router policy, grounding architecture, or
+related work in the future, the Apache 2.0 license ensures downstream
+users of this code remain protected.
+
+Third-party software referenced by this project (JupyterHealth, DBDP,
+FLIRT, Salesforce platform components, Anthropic API, etc.) is governed
+by its own license terms. See [`NOTICE`](./NOTICE) for the full list of
+upstream attributions.
+
+The Pause-Health.ai name, wordmark, and icon are trademarks of
+Pause-Health.ai and are **not** licensed under Apache 2.0. See
+[`/press`](https://pause-health.ai/press) on the deployed site for brand
+asset usage guidelines.
+
 ---
 
 # Northstar Shipping Cost API (ZIP-based)

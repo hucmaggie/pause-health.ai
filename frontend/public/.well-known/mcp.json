@@ -9,7 +9,7 @@
   },
   "description": "MCP server that exposes the Pause-Health.ai MuleSoft Experience APIs (patient timeline, intake, provider directory) as tools for AI agents. Today fronts a mocked Experience API plane; in production it transparently fronts a customer's MuleSoft Anypoint Experience tier (no client changes -- only PAUSE_MCP_BASE_URL changes).",
   "homepage": "https://pause-health.ai/proposal/mcp",
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "transport": {
     "type": "stdio",
     "command": "npx",

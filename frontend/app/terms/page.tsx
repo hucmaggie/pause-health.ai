@@ -69,15 +69,15 @@ const todayTerms: TermsItem[] = [
     status: "shipped"
   },
   {
-    area: "Source code",
+    area: "Source code · Apache License 2.0",
     detail:
-      "The codebase is published at github.com/hucmaggie/pause-health.ai for inspection and education. It does not currently carry a permissive open-source license — copyright is reserved by Pause-Health.ai. If you want to use parts of the code for derivative work, please email partners@pause-health.ai to discuss licensing; we're generally happy to grant permission for non-commercial and research use.",
+      "The codebase is published at github.com/hucmaggie/pause-health.ai under the Apache License, Version 2.0. You may use, modify, and redistribute the code for any purpose — including commercial — provided you preserve the copyright notice and the NOTICE file. The Apache 2.0 license also includes an explicit patent grant from contributors, which matters for downstream healthcare-AI use. Third-party software referenced by the project (JupyterHealth, DBDP, FLIRT, Salesforce platform components, Anthropic API) is governed by its own license terms — see the NOTICE file in the repo root for the full attribution list.",
     status: "shipped"
   },
   {
     area: "Trademark + brand",
     detail:
-      "The Pause-Health.ai wordmark and icon are property of Pause-Health.ai. The press kit at /press provides assets for editorial use; please don't recompose the wordmark or imply endorsement / partnership without prior written agreement.",
+      "The Pause-Health.ai wordmark and icon are trademarks of Pause-Health.ai and are NOT licensed under Apache 2.0 (the source-code license, above). Per Apache 2.0 Section 6, the license grants no permission to use Pause-Health.ai's trade names or marks except as required for describing the origin of the Work. The press kit at /press provides assets for editorial use; please don't recompose the wordmark or imply endorsement / partnership without prior written agreement.",
     status: "shipped"
   },
   {

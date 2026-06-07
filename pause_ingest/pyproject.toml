@@ -9,7 +9,7 @@ description = "Pause-Health.ai wearable ingest worker (omh-shim → JupyterHealt
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Pause-Health.ai" }]
-license = { text = "Proprietary" }
+license = { text = "Apache-2.0" }
 dependencies = [
   # JupyterHealth Python client used to read observations and obtain tokens.
   "jupyterhealth-client>=0.1",
