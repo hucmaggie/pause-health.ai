@@ -38,7 +38,7 @@ const weeks: ChangelogWeek[] = [
         summary:
           "New reproducible smoke-test harness at frontend/scripts/smoke-test.mjs. Hits all 35 public routes, follows 77 unique internal links discovered by parsing rendered HTML, and POSTs realistic fixtures to 16 API endpoints (including the A2A JSON-RPC tasks/send envelope to /api/agents/care-router/tasks). Results land in SMOKE_TEST_RESULTS.md committed at the repo root. Caught one false-positive in the link extractor (query-string handling) on the first run; no real regressions on the polished surface. Wired into package.json as `npm run smoke`.",
         commits: [
-          { sha: "HEAD", label: "smoke test + 132/132 results" }
+          { sha: "1fa3a19", label: "smoke test + 132/132 results" }
         ],
         status: "shipped"
       },
