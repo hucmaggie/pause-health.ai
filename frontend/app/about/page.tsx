@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { pageMetadata } from "../../lib/page-metadata";
+import { StatusPill, type StatusPillStatus } from "../../components/status-pill";
 
 export const metadata = pageMetadata({
   title: "About",
@@ -9,6 +10,32 @@ export const metadata = pageMetadata({
   ogImage: "/brand/pause-health-og-about.png",
   ogImageAlt: "About Pause-Health.ai — building the menopause intelligence layer healthcare deserves."
 });
+
+/**
+ * About page.
+ *
+ * Polished in the journey-fabric pass to remove a credibility risk:
+ * the previous version listed three roles (CMO, Head of AI, Head
+ * of Clinical Design) under a section titled "Team we're building"
+ * with full role descriptions and bios. A fast reader could miss
+ * the eyebrow and assume those were filled positions. Same issue
+ * with the milestones list -- "Clinical advisory board formed"
+ * was listed as a 2026 fact when it's a planned milestone.
+ *
+ * Honest framing this rebuild applies:
+ *
+ *   - "Open roles we're hiring for" replaces "Team we're building",
+ *     each role pilled `future` to be unmissable about what's
+ *     filled and what isn't.
+ *   - Founder card unchanged -- Maggie is the only real team
+ *     member today, so she keeps the dedicated card and is
+ *     visually distinct from the hiring slots.
+ *   - Milestones split into "Done" and "Planned" with status
+ *     pills, so a 2026 reader can immediately tell which year-
+ *     2026 items shipped and which are still on the roadmap.
+ *   - Hero metric "Stage" updated to match how /proposal/insights
+ *     describes it: pre-design-partner, prototype in the open.
+ */
 
 const values = [
   {
@@ -33,29 +60,100 @@ const values = [
   }
 ];
 
-const team = [
+// Roles Pause is hiring for. Each is pilled `future` so a reader
+// can't mistake them for filled positions -- this section is a
+// careers preview, not a team roster. The actual team-of-one
+// (Maggie) is in the founder card above.
+type OpenRole = {
+  title: string;
+  focus: string;
+  description: string;
+};
+
+const openRoles: OpenRole[] = [
   {
-    name: "Chief Medical Officer",
-    role: "Clinical strategy and evidence",
-    bio: "Board-certified OB/GYN with deep experience in midlife women's health, menopause hormone therapy, and clinical guidelines."
+    title: "Chief Medical Officer",
+    focus: "Clinical strategy and evidence",
+    description:
+      "Board-certified OB/GYN with deep experience in midlife women's health, menopause hormone therapy, and clinical guidelines. Owns clinical safety + advisory-board curation."
   },
   {
-    name: "Head of AI",
-    role: "Models, evaluation, and safety",
-    bio: "Applied ML leader with a track record of shipping production AI in regulated healthcare environments."
+    title: "Head of AI",
+    focus: "Models, evaluation, and safety",
+    description:
+      "Applied ML leader with a track record of shipping production AI in regulated healthcare environments. Owns Care Router policy + evaluation harness."
   },
   {
-    name: "Head of Clinical Design",
-    role: "Workflow and patient experience",
-    bio: "Nurse-informaticist designing intake, triage, and care navigation flows that feel humane and clear."
+    title: "Head of Clinical Design",
+    focus: "Workflow and patient experience",
+    description:
+      "Nurse-informaticist designing intake, triage, and care navigation flows that feel humane and clear. Owns clinician + patient research and the design partner program."
   }
 ];
 
-const milestones = [
-  { year: "2026", label: "Pause-Health.ai founded with provider-first AI thesis" },
-  { year: "2026", label: "Clinical advisory board formed across OB/GYN, endocrinology, and primary care" },
-  { year: "2026", label: "First prototype released to design partners" },
-  { year: "2027", label: "Pilot deployments with provider organizations" }
+type Milestone = {
+  year: string;
+  label: string;
+  status: StatusPillStatus;
+};
+
+// Milestones split between Done (status `shipped`/`prototype`) and
+// Planned (status `planned`/`future`). The previous version listed
+// "Clinical advisory board formed" and "First prototype released
+// to design partners" as 2026 facts; the prototype IS released
+// publicly but the advisory board and design partners are still
+// planned. Honest framing makes that explicit.
+const milestonesDone: Milestone[] = [
+  {
+    year: "2026",
+    label: "Pause-Health.ai founded with provider-first AI thesis",
+    status: "shipped"
+  },
+  {
+    year: "2026",
+    label: "Prototype open-sourced (github.com/hucmaggie/pause-health.ai)",
+    status: "prototype"
+  },
+  {
+    year: "2026",
+    label: "Care Router agent + Data 360 grounding wired against Salesforce Health Cloud",
+    status: "prototype"
+  }
+];
+
+const milestonesPlanned: Milestone[] = [
+  {
+    year: "2026 H2",
+    label: "Clinical advisory board formed across OB/GYN, endocrinology, primary care",
+    status: "planned"
+  },
+  {
+    year: "2026 H2",
+    label: "First design-partner provider organizations onboarded",
+    status: "planned"
+  },
+  {
+    year: "2027",
+    label: "Pilot deployments with provider organizations",
+    status: "future"
+  }
+];
+
+type HeroMetric = {
+  label: string;
+  value: string;
+  status?: StatusPillStatus;
+};
+
+const heroMetrics: HeroMetric[] = [
+  { label: "Founded", value: "2026" },
+  { label: "Headquarters", value: "Irvine, CA" },
+  { label: "Focus", value: "Provider-first AI for menopause care" },
+  {
+    label: "Stage",
+    value: "Pre-design-partner; prototype in the open",
+    status: "prototype"
+  }
 ];
 
 export default function AboutPage() {
@@ -71,22 +169,24 @@ export default function AboutPage() {
           women they serve.
         </p>
         <ul className="metric-list">
-          <li>
-            <span>Founded</span>
-            <strong>2026</strong>
-          </li>
-          <li>
-            <span>Headquarters</span>
-            <strong>Irvine, CA</strong>
-          </li>
-          <li>
-            <span>Focus</span>
-            <strong>Provider-first AI for menopause care</strong>
-          </li>
-          <li>
-            <span>Stage</span>
-            <strong>Early prototype with design partners</strong>
-          </li>
+          {heroMetrics.map((m) => (
+            <li key={m.label}>
+              <span>
+                {m.label}
+                {m.status ? (
+                  <StatusPill
+                    status={m.status}
+                    style={{
+                      marginLeft: "0.4rem",
+                      fontSize: "0.7rem",
+                      padding: "0.1rem 0.45rem"
+                    }}
+                  />
+                ) : null}
+              </span>
+              <strong>{m.value}</strong>
+            </li>
+          ))}
         </ul>
       </section>
 
@@ -98,7 +198,7 @@ export default function AboutPage() {
         <p style={{ color: "var(--muted)", maxWidth: "70ch" }}>
           Menopause is one of the most under-served transitions in modern medicine. Misdiagnosis
           rates remain high, and the average path to accurate care can stretch for years. We
-          believe a thoughtful AI layer — built with clinicians, validated against evidence, and
+          believe a thoughtful AI layer — built with clinicians, evaluated against evidence, and
           designed for real workflows — can compress that journey from years to weeks.
         </p>
       </section>
@@ -174,20 +274,59 @@ export default function AboutPage() {
       </section>
 
       <section style={{ marginTop: "1.5rem" }}>
-        <p className="eyebrow">Team we&apos;re building</p>
+        <header
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "0.6rem",
+            flexWrap: "wrap",
+            marginBottom: "0.4rem"
+          }}
+        >
+          <p className="eyebrow" style={{ margin: 0 }}>
+            Open roles we&apos;re hiring for
+          </p>
+          <StatusPill status="future" label="Not filled yet" />
+        </header>
         <p style={{ color: "var(--muted)", maxWidth: "65ch", marginBottom: "0.75rem" }}>
-          A small, mission-driven team across product, clinical, AI, and design.
-          These are the founding roles we&apos;re actively hiring for; detailed
-          bios and headshots will land here as the team grows.
+          The founding roles that round out the team after the founder.
+          Each card describes the role we&apos;re hiring for, not a person
+          already on staff. If one of these resonates, please reach out
+          via{" "}
+          <a href="/careers" style={{ color: "var(--brand)" }}>
+            /careers
+          </a>{" "}
+          or{" "}
+          <a href="/contact" style={{ color: "var(--brand)" }}>
+            /contact
+          </a>
+          .
         </p>
         <div className="card-grid">
-          {team.map((member) => (
-            <article key={member.name} className="card">
-              <h3>{member.name}</h3>
-              <p style={{ color: "var(--brand)", marginBottom: "0.4rem", fontWeight: 600 }}>
-                {member.role}
+          {openRoles.map((role) => (
+            <article key={role.title} className="card">
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  flexWrap: "wrap",
+                  marginBottom: "0.25rem"
+                }}
+              >
+                <StatusPill status="future" label="Open role" />
+              </div>
+              <h3 style={{ margin: "0.1rem 0 0.25rem" }}>{role.title}</h3>
+              <p
+                style={{
+                  color: "var(--brand)",
+                  marginBottom: "0.4rem",
+                  fontWeight: 600
+                }}
+              >
+                {role.focus}
               </p>
-              <p>{member.bio}</p>
+              <p>{role.description}</p>
             </article>
           ))}
         </div>
@@ -195,10 +334,51 @@ export default function AboutPage() {
 
       <section className="card" style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Milestones</p>
-        <ul className="metric-list" style={{ marginTop: "0.5rem" }}>
-          {milestones.map((m, i) => (
-            <li key={`${m.year}-${i}`}>
-              <span>{m.label}</span>
+        <p style={{ color: "var(--muted)", margin: "0.2rem 0 0.6rem", fontSize: "0.9rem" }}>
+          Done so far vs. planned. The 2026 milestones below are pilled so
+          a reader at any point in time can tell what shipped from what&apos;s
+          still on the roadmap.
+        </p>
+
+        <h4 style={{ margin: "0.6rem 0 0.3rem", fontSize: "0.95rem" }}>
+          Done
+        </h4>
+        <ul className="metric-list" style={{ marginTop: 0 }}>
+          {milestonesDone.map((m, i) => (
+            <li key={`done-${i}`}>
+              <span>
+                {m.label}{" "}
+                <StatusPill
+                  status={m.status}
+                  style={{
+                    marginLeft: "0.3rem",
+                    fontSize: "0.7rem",
+                    padding: "0.1rem 0.45rem"
+                  }}
+                />
+              </span>
+              <strong>{m.year}</strong>
+            </li>
+          ))}
+        </ul>
+
+        <h4 style={{ margin: "1rem 0 0.3rem", fontSize: "0.95rem" }}>
+          Planned
+        </h4>
+        <ul className="metric-list" style={{ marginTop: 0 }}>
+          {milestonesPlanned.map((m, i) => (
+            <li key={`planned-${i}`}>
+              <span>
+                {m.label}{" "}
+                <StatusPill
+                  status={m.status}
+                  style={{
+                    marginLeft: "0.3rem",
+                    fontSize: "0.7rem",
+                    padding: "0.1rem 0.45rem"
+                  }}
+                />
+              </span>
               <strong>{m.year}</strong>
             </li>
           ))}
