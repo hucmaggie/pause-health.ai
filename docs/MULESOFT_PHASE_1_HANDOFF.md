@@ -59,7 +59,12 @@ remaining steps depend on all three.
 
 ### Step 1 — 10 minutes — Create the Connected App
 
-Access Management → Connected Apps → **+ Create app**.
+> **Naming note:** Anypoint Platform has renamed this surface from
+> "Connected Apps" to **External Client App Manager** in recent
+> releases. The path is the same — Access Management — but the menu
+> label and button text may differ depending on your org's version.
+
+Access Management → External Client App Manager (or Connected Apps) → **+ Create app**.
 
 - **App name:** `pause-prototype-cloudhub`
 - **App acts on its own behalf** (this is the OAuth Client
@@ -120,7 +125,7 @@ Then **File → Open Folder → `~/projects/pause-health.ai/mulesoft/pause-mules
 
 When the project loads under either option, Code Builder reads
 `mule-artifact.json` and should automatically recognize this as a
-Mule 4.6 app. Confirmation signals:
+Mule 4.11 app. Confirmation signals:
 
 - The MuleSoft logo appears next to `health-flow.xml` in the file tree.
 - Opening `health-flow.xml` renders the visual flow designer instead
@@ -146,7 +151,9 @@ Code Builder.
 If that doesn't work, fix it here before touching CloudHub. Common
 issues: port 8081 already in use (edit `health-flow.xml` to set a
 different port), or a Mule runtime version mismatch (the
-`mule-artifact.json` declares `4.6.0`; Code Builder must support it).
+`mule-artifact.json` declares `4.11.0` with Java 17; Code Builder must
+support it — use the latest Code Builder version if the runtime is
+not available in the dropdown).
 
 ### Step 4 — 20 minutes — Deploy to CloudHub 2.0 from Code Builder
 
@@ -304,8 +311,8 @@ The repo side is well-tested (31 unit tests pin the live/mock matrix),
 but the deploy side has three real risks worth naming explicitly:
 
 1. **CloudHub 2.0 + the `mule-maven-plugin` configuration changed
-   semantics between 3.x and 4.x.** The `pom.xml` ships 4.3.0 which
-   is current as of 2026-06-08, but if MuleSoft has shipped 5.x by
+   semantics between 3.x and 4.x.** The `pom.xml` ships `4.7.0` which
+   is current as of 2026-06-07, but if MuleSoft has shipped 5.x by
    the time you sit down, the `<cloudhub2Deployment>` element schema
    may need updating. Look at
    https://docs.mulesoft.com/mule-runtime/latest/deploy-mule-application-cloudhub-2
@@ -315,7 +322,9 @@ but the deploy side has three real risks worth naming explicitly:
    fields.** If Code Builder rejects the project on import with a
    schema error, the fix is usually to let Code Builder regenerate
    the file (right-click project → Rebuild project skeleton) and
-   then merge any new keys it added.
+   then merge any new keys it added. The current file declares
+   `minMuleVersion: 4.11.0` and `javaSpecificationVersions: ["17"]`
+   — if Code Builder adds new required keys, merge them in and commit.
 
 3. **Zscaler.** The investigation found Anypoint shares the
    Salesforce edge (`*.salesforce.com`), which is currently
