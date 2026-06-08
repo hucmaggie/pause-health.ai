@@ -135,7 +135,7 @@ const traceFlow = [
     step: 3,
     span: "Data 360 grounding.federated-query",
     detail:
-      "Federated read against the Data 360 unified patient view: calculated insights (active care program, days since last clinical contact, active care plan status — all LIVE Salesforce-native), longitudinal observations, cohort comparison. Wearable / EHR insights (HRV, vasomotor, sleep) are mocked baselines pending Phase 2."
+      "Federated read against the Data 360 unified patient view: calculated insights (active care program, days since last clinical contact, active care plan status — all LIVE Salesforce-native), longitudinal observations, cohort comparison. Wearable / EHR insights (HRV, vasomotor, sleep) are served by the Phase 2 Data Cloud Calculated Insights client when SF_DC_TENANT_URL is set; fall back to intake-only baselines until the DC tenant is provisioned."
   },
   {
     step: 4,
@@ -177,9 +177,9 @@ const protoVsProd: Array<{
   },
   {
     aspect: "Calculated insights — wearable / EHR",
-    status: "designed",
+    status: "partial",
     proto:
-      "MOCKED (Phase 2 work): HRV variability z-score, vasomotor burden composite, sleep disruption index. Marked as 'intake-only baseline' in the API so it's clear which insights are real vs which await Data Cloud federation.",
+      "Phase 2 code is live: lib/salesforce/data-cloud.ts calls the Data Cloud Calculated Insights API for HRV RMSSD z-score, vasomotor burden composite, and sleep disruption index. Each falls back to an intake-only baseline until SF_DC_TENANT_URL is set and the DC tenant is provisioned. See docs/MULESOFT_PHASE_2_DATA_CLOUD.md for the setup walkthrough.",
     prod:
       "Real Data 360 Calculated Insights jobs against the customer's JupyterHealth FHIR observations and DBDP feature warehouse."
   },

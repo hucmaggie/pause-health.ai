@@ -51,7 +51,7 @@ const horizons: RoadmapHorizon[] = [
         title: "Roadmap + changelog pages",
         detail:
           "This page (/roadmap) and its sibling (/changelog) — making 'what's shipped' and 'what's coming' first-class surfaces rather than buried in commit messages.",
-        status: "designed",
+        status: "prototype",
         source: { href: "/changelog", label: "Changelog" }
       }
     ]
