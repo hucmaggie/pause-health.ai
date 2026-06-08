@@ -68,12 +68,13 @@ Deep-dive sections (each a routed page):
 - `/proposal/agentforce` — Patient intake on Salesforce Agentforce Service
   Agent, with graceful Pause-branded fallback when no org is configured.
 - `/proposal/mulesoft` — Integration plane on MuleSoft Anypoint. The
-  Experience-API surface at `/api/mulesoft/health` is live/mock-branched
-  on `MULESOFT_HEALTH_BASE_URL`: unset = deterministic mock (the prototype
-  default), set = proxy to a Mule app on CloudHub 2.0 with graceful
-  degradation. The deployable Mule artifact lives in
-  `mulesoft/pause-mulesoft-health-v1/`; the Anypoint Code Builder
-  walkthrough is in
+  Experience-API surface at `/api/mulesoft/health` is **live in Vercel
+  production**, proxying to `pause-mulesoft-health-v1` on CloudHub 2.0
+  (Cloudhub-US-West-1, Sandbox,
+  `https://pause-mulesoft-health-v1-zkeniz.scqos5-1.usa-w1.cloudhub.io`).
+  Degrades to `mock-fallback` if the worker is unreachable — the prototype
+  never goes hard-down. The deployable Mule artifact lives in
+  `mulesoft/pause-mulesoft-health-v1/`; the runbook is in
   [`docs/MULESOFT_PHASE_1_HANDOFF.md`](docs/MULESOFT_PHASE_1_HANDOFF.md).
   31 unit tests pin the live/mock matrix (see
   `frontend/lib/mulesoft/health.test.ts` and

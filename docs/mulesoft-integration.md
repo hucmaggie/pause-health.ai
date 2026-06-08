@@ -185,12 +185,13 @@ frontend.
 - Investor-facing handoff runbook at
   [`docs/MULESOFT_PHASE_1_HANDOFF.md`](MULESOFT_PHASE_1_HANDOFF.md).
 
-### Phase 1b — Anypoint UI deploy  *(blocked on user, ~3-5 hours of Anypoint UI time)*
-- Import `mulesoft/pause-mulesoft-health-v1/` into Anypoint Code Builder.
-- Deploy to CloudHub 2.0 Sandbox.
-- Set `MULESOFT_HEALTH_BASE_URL` in Vercel project env.
-- Confirm `/api/mulesoft/health` reports `meta._source: "live-mulesoft"`.
-- See `docs/MULESOFT_PHASE_1_HANDOFF.md` for click-by-click.
+### Phase 1b — Anypoint UI deploy  *(shipped 2026-06-07)*
+- Mule 4.11.2 app deployed to CloudHub 2.0, Cloudhub-US-West-1, Sandbox.
+- Worker URL: `https://pause-mulesoft-health-v1-zkeniz.scqos5-1.usa-w1.cloudhub.io`
+- `MULESOFT_HEALTH_BASE_URL` set in Vercel production.
+- `/api/mulesoft/health` reports `meta._source: "live-mulesoft"` in production.
+- `/proposal/mulesoft` shows the green LIVE badge.
+- Degradation path verified: worker stopped → `mock-fallback` + `_liveAttempted: true`.
 
 ### Phase 1c — Remaining System APIs  *(2-3 weeks, post-Phase-1b)*
 - Author the six System APIs as real Mule projects.
