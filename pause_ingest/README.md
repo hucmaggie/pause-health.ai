@@ -13,9 +13,30 @@ read path lives in the FastAPI service at the repository root.
 
 ## Status
 
-Scaffold — Phase 1 of the JupyterHealth integration design
-(see `docs/jupyterhealth-integration.md`). The local-dev loop works against
-a JHE instance you stand up yourself; production wiring is in flight.
+Phase 1 of the JupyterHealth integration design
+(see `docs/jupyterhealth-integration.md`).
+
+**What's verified today (Wire-level prototype):**
+- omh-shim conversion of Oura / OpenWearable samples to Open mHealth
+- OMH → FHIR R5 Observation envelope (raw)
+- DBDP-style HRV time-domain features (validated against Kubios)
+- HRV features → FHIR R5 Observation with `derivedFrom` provenance
+- OAuth2 client-credentials grant against a JHE-shaped token endpoint
+- FHIR `POST /fhir/r5/Observation` upload
+- FHIR `GET /fhir/r5/Observation?patient=...` read-back via `jupyterhealth-client`
+- Full pipeline (raw upload → feature compute → derived upload → both readable)
+  exercised end-to-end by an in-process JHE wire-level mock.
+  27 / 27 tests pass.
+
+**What's deferred:**
+- Running the same flow against a real JupyterHealth Exchange Django
+  instance. See [`docs/JHE_SETUP_RUNBOOK.md`](../docs/JHE_SETUP_RUNBOOK.md)
+  for the step-by-step (docker-compose, OAuth client + Patient + Data
+  Source setup, pointing `.env` at it).
+- Vendor OAuth flows (Oura, HealthKit). Phase 2.
+- Background worker / queue. Phase 2.
+- `skin_temperature` converter — `omh-shim` v1.0 doesn't ship it; we
+  plan to upstream a converter + schema proposal.
 
 ## Requirements
 
@@ -63,6 +84,24 @@ python -m pause_ingest.examples.oura_sample_upload
 ```
 
 Expected output ends with `OK — uploaded and round-tripped 1 observation`.
+
+## Run the wire-level contract test (no JHE required)
+
+The contract test boots an in-process Python mock of JHE's OAuth +
+FHIR endpoints, then runs the **production** `upload_observation`,
+`hrv_features_to_fhir_observation`, and `read_recent_observations`
+code paths against it. It catches the same class of bugs a real JHE
+instance would (FHIR validator rejections, OAuth scope mismatches,
+missing Authorization headers) without needing Docker.
+
+```bash
+pytest -v                          # 27 tests; 7 are wire-level integration
+```
+
+Implementation: [`tests/jhe_mock_server.py`](tests/jhe_mock_server.py)
++ [`tests/test_exchange_integration.py`](tests/test_exchange_integration.py).
+For the path to swap the mock for a real JHE, see
+[`docs/JHE_SETUP_RUNBOOK.md`](../docs/JHE_SETUP_RUNBOOK.md).
 
 ## Layout
 

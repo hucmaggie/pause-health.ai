@@ -73,6 +73,13 @@ def read_recent_observations(
 
     Uses ``jupyterhealth-client`` so we exercise the same library a Pause
     backend service would use in production.
+
+    Implementation note: ``JupyterHealthClient`` 0.2.0 takes a pre-issued
+    bearer token, not a client_id/client_secret pair. We do the OAuth2
+    client-credentials exchange ourselves (same as ``upload_observation``)
+    and hand the resulting access_token to the client. If the upstream
+    client library adds first-class client-credentials support later,
+    swap this for that -- the public API of this function is unchanged.
     """
     try:
         from jupyterhealth_client import JupyterHealthClient  # type: ignore[import-not-found]
@@ -82,13 +89,11 @@ def read_recent_observations(
             "inside pause_ingest/."
         ) from exc
 
-    client = JupyterHealthClient(
-        base_url=config.jhe_base_url,
-        client_id=config.jhe_client_id,
-        client_secret=config.jhe_client_secret,
-    )
+    token = _fetch_oauth_token(config, scope="observation.read")
+    client = JupyterHealthClient(url=config.jhe_base_url, token=token)
+    # The 0.2.0 client takes `limit`, not `count`, and returns a Generator.
     observations = client.list_observations(
-        patient_id=config.patient_fhir_id,
-        count=count,
+        patient_id=config.patient_fhir_id,  # type: ignore[arg-type]
+        limit=count,
     )
     return list(observations)

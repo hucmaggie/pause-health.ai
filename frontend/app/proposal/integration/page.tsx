@@ -141,14 +141,14 @@ const phases: Array<{
     status: "prototype",
     duration: "Shipped",
     detail:
-      "omh-shim and jupyterhealth-client integrated in pause_ingest. Vendor JSON → Open mHealth (IEEE 1752.1) → FHIR R5 Observation path is end-to-end runnable in the Python worker. 20 passing unit tests across convert + features. Reference FHIR R5 Bundle shape served live at /api/mulesoft/patient/anika-patel/timeline."
+      "omh-shim and jupyterhealth-client integrated in pause_ingest. Vendor JSON → Open mHealth (IEEE 1752.1) → FHIR R5 Observation path is end-to-end runnable in the Python worker, including DBDP HRV feature computation → derived Observation upload with derivedFrom provenance. Wire-level contract test (tests/jhe_mock_server.py + test_exchange_integration.py) exercises the full pipeline against an in-process JHE mock — the production exchange.upload_observation, hrv_features_to_fhir_observation, and read_recent_observations code paths run unmodified. 27 / 27 tests pass. Surfaced a real bug in the jupyterhealth-client integration that lenient unit-test doubles missed. Reference FHIR R5 Bundle shape also served live at /api/mulesoft/patient/anika-patel/timeline."
   },
   {
-    name: "Phase 1 · Local dev loop",
+    name: "Phase 1 · Local dev loop against real JHE",
     status: "designed",
-    duration: "1–2 weeks",
+    duration: "1 afternoon (per docs/JHE_SETUP_RUNBOOK.md)",
     detail:
-      "Stand up JHE (the Django server) locally. Upload an OMH-converted sample as a FHIR Observation and read it back from FastAPI. End-to-end proof against a real JHE instance, not a fixture."
+      "Swap the wire-level mock for a real JupyterHealth Exchange Django instance via docker-compose. Re-run the same contract-test assertions against real JHE — runbook at docs/JHE_SETUP_RUNBOOK.md captures the OAuth client + Patient + Data Source setup, the .env values to wire, and the known-unknowns list of strict-validator gotchas to expect on first run. Gated only on Docker availability."
   },
   {
     name: "Phase 2 · Real wearable ingest",

@@ -80,8 +80,8 @@ const horizons: RoadmapHorizon[] = [
       {
         title: "pause_ingest → real JupyterHealth Exchange round-trip",
         detail:
-          "Today: 20 passing unit tests against the conversion + features layer. Next: stand up a JHE dev instance, prove a real Garmin / Fitbit / Apple Health JSON → Open mHealth → FHIR R5 Observation round-trip end-to-end. Flips the JupyterHealth integration pill from 'designed' to 'prototype'.",
-        status: "designed",
+          "Wire-level contract test against an in-process JHE mock now exercises the full pipeline end-to-end: raw Oura sample → omh-shim → FHIR R5 Observation upload → DBDP HRV feature computation → derived Observation upload (with derivedFrom provenance) → readback via jupyterhealth-client. 27 / 27 tests pass. Surfaced and fixed a real bug in read_recent_observations along the way. Next: swap the mock for a real JHE Docker instance per docs/JHE_SETUP_RUNBOOK.md (~1 afternoon, gated only on Docker availability).",
+        status: "prototype",
         source: { href: "/proposal/integration", label: "/proposal/integration" }
       },
       {

@@ -31,8 +31,17 @@ const weeks: ChangelogWeek[] = [
     range: "Week of June 1, 2026",
     headline: "Honesty-pilling marathon",
     intro:
-      "Thirty-plus commits across every public page on the site. The single theme: replace any present-tense claim that isn't yet true with a StatusPill-flagged 'today vs. designed' framing. The Apache-2.0 license + OSS-hygiene trio (CONTRIBUTING / CODE_OF_CONDUCT / SECURITY) landed mid-week, and the polish marathon wrapped with a reproducible end-to-end smoke test that confirmed 132 / 132 checks pass.",
+      "Thirty-plus commits across every public page on the site. The single theme: replace any present-tense claim that isn't yet true with a StatusPill-flagged 'today vs. designed' framing. The Apache-2.0 license + OSS-hygiene trio (CONTRIBUTING / CODE_OF_CONDUCT / SECURITY) landed mid-week, the polish marathon wrapped with a reproducible end-to-end smoke test (132 / 132 pass), and the JupyterHealth integration jumped from designed-on-paper to wire-level prototype with 27 passing tests against an in-process JHE mock.",
     entries: [
+      {
+        title: "pause_ingest → JHE: wire-level contract test (27 / 27 pass)",
+        summary:
+          "New in-process JHE mock server (tests/jhe_mock_server.py) implements the OAuth2 + FHIR endpoints pause_ingest actually hits. Seven integration tests (tests/test_exchange_integration.py) exercise the production exchange.upload_observation, hrv_features_to_fhir_observation, and read_recent_observations code paths end-to-end — including a full-pipeline test that uploads 6 raw heart-rate observations, computes time-domain HRV features, uploads the derived observation with derivedFrom provenance, and reads everything back. The contract test surfaced a real bug in read_recent_observations (the JupyterHealthClient 0.2.0 API doesn't accept client_id/client_secret) that lenient unit-test doubles missed. Added hrv_features_to_fhir_observation helper. New runbook at docs/JHE_SETUP_RUNBOOK.md captures the path to swap the mock for real JHE in an afternoon (~1 afternoon, gated on Docker). Flipped the JupyterHealth pill on /roadmap from designed to prototype.",
+        commits: [
+          { sha: "HEAD", label: "pause_ingest → JHE contract test" }
+        ],
+        status: "prototype"
+      },
       {
         title: "End-to-end smoke test — 132 / 132 pass",
         summary:
