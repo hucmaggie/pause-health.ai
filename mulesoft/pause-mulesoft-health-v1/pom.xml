@@ -20,7 +20,7 @@
             http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>ai.pause-health</groupId>
+    <groupId>56707cc3-a0e3-4318-b110-78126aace370</groupId>
     <artifactId>pause-mulesoft-health-v1</artifactId>
     <version>1.0.0</version>
     <packaging>mule-application</packaging>

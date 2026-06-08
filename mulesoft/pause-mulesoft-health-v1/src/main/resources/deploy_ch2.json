@@ -1,0 +1,7 @@
+{
+  "applicationName": "pause-mulesoft-health-v1",
+  "runtime": "4.12.0:10e-java17",
+  "replicas": 1,
+  "replicaSize": "0.1",
+  "deploymentModel": "rolling"
+}

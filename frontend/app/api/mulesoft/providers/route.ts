@@ -1,24 +1,39 @@
 import { NextResponse } from "next/server";
+import {
+  getProvidersPreferReal,
+  isMulesoftProvidersLive
+} from "../../../../lib/mulesoft/providers";
 import { queryProviderDirectory } from "../../../../lib/mulesoft-mocks";
 
 /**
- * Mocked Pause-Health.ai Experience API:
- *   GET /api/mulesoft/providers?zip=92614&menopause=true&limit=10
+ * Pause-Health.ai Experience-tier endpoint: GET /api/mulesoft/providers
  *
- * Production equivalent: MuleSoft Experience API
- *   `pause-provider-directory-experience-api`
- * which composes CMS NPPES, MSCP credential lists, state board
- * registries, and Pause's internal closed-loop referral outcomes
- * into a single ranked provider directory.
+ *   ?zip=92614&menopause=true&limit=10
  *
- * Today the directory is a hand-curated synthetic slice (see
- * `frontend/lib/mulesoft-mocks.ts` and `/proposal/provider-graph`).
- * The shape and filtering UX are real so MCP clients can integrate
- * against a stable contract.
+ * Behavior (mirrors /api/mulesoft/health):
  *
- * The MCP server (mcp/) exposes this as the `find_menopause_providers`
- * tool.
+ *   - When MULESOFT_PROVIDERS_BASE_URL is set and reachable, proxies to
+ *     the live MuleSoft /providers endpoint on CloudHub 2.0. Response
+ *     meta reports _source: "live-mulesoft".
+ *
+ *   - When MULESOFT_PROVIDERS_BASE_URL is unset, or when the live call
+ *     fails, degrades transparently to the deterministic mock in
+ *     lib/mulesoft-mocks.ts. Meta reports _source: "mock" or
+ *     _source: "mock-fallback" (live was configured but failed).
+ *
+ * The MCP server exposes this as the `find_menopause_providers` tool.
+ * See docs/MULESOFT_RUNBOOK.md for the deploy runbook.
  */
+
+const MOCK_BASE = queryProviderDirectory({});
+const BASE_META = {
+  _note:
+    "Pause-Health.ai provider directory Experience API. In production this is served by the MuleSoft pause-provider-directory-experience-api. See docs/mulesoft-integration.md.",
+  _generatedBy: "next.js mock @ /api/mulesoft/providers",
+  _mcpToolEquivalent: "find_menopause_providers",
+  _totalProvidersInMock: MOCK_BASE.providers.length
+};
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const zipRaw = searchParams.get("zip") ?? undefined;
@@ -29,22 +44,48 @@ export async function GET(req: Request) {
   const limitRaw = searchParams.get("limit");
   const limit = limitRaw ? Math.max(1, Math.min(50, Number(limitRaw) || 0)) : undefined;
 
-  const payload = queryProviderDirectory({ zip, menopauseOnly, limit });
+  const query = { zip, menopauseOnly, limit };
 
-  const meta = {
-    _note:
-      "Mocked Pause-Health.ai Experience API for the provider directory. See /proposal/provider-graph for the production data-sourcing strategy (CMS NPPES + MSCP + state boards + closed-loop referrals).",
-    _generatedBy: "next.js mock @ /api/mulesoft/providers",
-    _mcpToolEquivalent: "find_menopause_providers"
-  };
+  if (!isMulesoftProvidersLive()) {
+    const result = queryProviderDirectory(query);
+    return jsonResponse({ meta: { ...BASE_META, _source: "mock" }, ...result });
+  }
 
-  return NextResponse.json(
-    { meta, ...payload },
-    {
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"
-      }
+  const { source, result } = await getProvidersPreferReal(query);
+  if (source === "live") {
+    return jsonResponse({
+      meta: {
+        ...BASE_META,
+        _source: "live-mulesoft",
+        _liveUrl:
+          (process.env.MULESOFT_PROVIDERS_BASE_URL ?? "")
+            .trim()
+            .replace(/\/+$/, "") + "/providers",
+        _generatedBy: "MuleSoft pause-provider-directory-experience-api (proxied)"
+      },
+      ...result
+    });
+  }
+
+  return jsonResponse({
+    meta: {
+      ...BASE_META,
+      _source: "mock-fallback",
+      _liveAttempted: true,
+      _liveUrl:
+        (process.env.MULESOFT_PROVIDERS_BASE_URL ?? "")
+          .trim()
+          .replace(/\/+$/, "") + "/providers"
+    },
+    ...result
+  });
+}
+
+function jsonResponse(body: Record<string, unknown>) {
+  return NextResponse.json(body, {
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"
     }
-  );
+  });
 }

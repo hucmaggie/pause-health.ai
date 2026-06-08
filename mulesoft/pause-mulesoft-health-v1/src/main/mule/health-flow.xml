@@ -69,7 +69,7 @@ output application/json
 ---
 {
   resourceType: "Bundle",
-  type: "searchset",
+  'type': "searchset",
   meta: {
     lastUpdated: now() as String,
     source: "urn:pause-health:mulesoft:pause-patient-bundle-process-api"
@@ -222,5 +222,152 @@ output application/json
             </ee:message>
         </ee:transform>
 
+    </flow>
+
+    <!--
+      Provider directory Experience API.
+      GET /providers?zip=92614&menopause=true&limit=10
+
+      Returns a ranked list of menopause-specialised providers for the
+      requested ZIP prefix. The Pause Next.js proxy at
+      /api/mulesoft/providers forwards here when
+      MULESOFT_PROVIDERS_BASE_URL is set; the MCP tool
+      find_menopause_providers also routes through this flow.
+
+      Phase 1 iteration 2: static hand-curated slice in DataWeave,
+      shape-identical to the mock served by mulesoft-mocks.ts.
+      Iteration 3 will back this with a real CMS NPPES query +
+      MSCP credential overlay via the pause-provider-system-api.
+    -->
+    <flow name="providers-flow"
+          doc:id="providers-flow"
+          doc:name="GET /providers -> provider directory">
+        <http:listener config-ref="health-httpListenerConfig"
+                       path="/providers"
+                       allowedMethods="GET"
+                       doc:name="GET /providers">
+            <http:response statusCode="200">
+                <http:headers><![CDATA[#[output application/java
+---
+{
+  "Content-Type": "application/json",
+  "X-Pause-Source": "mulesoft-cloudhub2",
+  "X-Pause-App": "pause-mulesoft-health-v1",
+  "Cache-Control": "public, max-age=300"
+}]]]></http:headers>
+            </http:response>
+        </http:listener>
+
+        <ee:transform doc:name="Build provider directory response">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var zipParam   = attributes.queryParams.zip         default ""
+var menopause  = attributes.queryParams.menopause   default "false"
+var limitParam = attributes.queryParams.limit       default "10"
+var limitN     = limitParam as Number default 10
+var allProviders = [
+  {
+    npi: "1245319599",
+    name: "Dr. Priya Nair, MD, MSCP",
+    credentials: ["MD", "MSCP"],
+    specialty: "Obstetrics & Gynecology",
+    menopauseCertified: true,
+    city: "Irvine",
+    state: "CA",
+    zip: "92614",
+    acceptingNewPatients: true,
+    telehealth: true,
+    graphScore: 0.95
+  },
+  {
+    npi: "1477506141",
+    name: "Dr. Linda Chen, MD",
+    credentials: ["MD"],
+    specialty: "Internal Medicine",
+    menopauseCertified: false,
+    city: "Irvine",
+    state: "CA",
+    zip: "92618",
+    acceptingNewPatients: true,
+    telehealth: false,
+    graphScore: 0.72
+  },
+  {
+    npi: "1659482301",
+    name: "Dr. Amara Osei, DO, MSCP",
+    credentials: ["DO", "MSCP"],
+    specialty: "Family Medicine",
+    menopauseCertified: true,
+    city: "Santa Ana",
+    state: "CA",
+    zip: "92701",
+    acceptingNewPatients: true,
+    telehealth: true,
+    graphScore: 0.91
+  },
+  {
+    npi: "1083947220",
+    name: "Dr. Rachel Kim, MD, MSCP",
+    credentials: ["MD", "MSCP"],
+    specialty: "Obstetrics & Gynecology",
+    menopauseCertified: true,
+    city: "Los Angeles",
+    state: "CA",
+    zip: "90025",
+    acceptingNewPatients: false,
+    telehealth: true,
+    graphScore: 0.93
+  },
+  {
+    npi: "1336271084",
+    name: "Dr. Susan Park, MD",
+    credentials: ["MD"],
+    specialty: "Endocrinology",
+    menopauseCertified: false,
+    city: "San Francisco",
+    state: "CA",
+    zip: "94107",
+    acceptingNewPatients: true,
+    telehealth: true,
+    graphScore: 0.78
+  },
+  {
+    npi: "1922450088",
+    name: "Dr. Samuel Levin, MD, MSCP",
+    credentials: ["MD", "MSCP"],
+    specialty: "Endocrinology",
+    menopauseCertified: true,
+    city: "Manhattan",
+    state: "NY",
+    zip: "10024",
+    acceptingNewPatients: false,
+    telehealth: true,
+    graphScore: 0.87
+  }
+]
+var filtered = allProviders
+  filter (menopause != "true" or $.menopauseCertified == true)
+  filter (sizeOf(zipParam) < 3 or $.zip[0 to 2] == zipParam[0 to 2])
+var sorted = filtered orderBy -$.graphScore
+var resultRows = sorted[0 to (limitN - 1)] default []
+---
+{
+  query: {
+    zip: if (sizeOf(zipParam) > 0) zipParam else null,
+    menopauseOnly: menopause == "true",
+    limit: limitN
+  },
+  'total': sizeOf(filtered),
+  returned: sizeOf(resultRows),
+  providers: resultRows,
+  provenance: {
+    sources: ["CMS NPPES (synthetic slice, Mule iteration 2)", "MSCP credential list (synthetic)"],
+    experienceApi: "pause-provider-directory-experience-api@1.0",
+    servedBy: "mulesoft-cloudhub2"
+  }
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
     </flow>
 </mule>

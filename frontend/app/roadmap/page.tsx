@@ -85,9 +85,9 @@ const horizons: RoadmapHorizon[] = [
         source: { href: "/proposal/integration", label: "/proposal/integration" }
       },
       {
-        title: "MuleSoft Anypoint CloudHub 2.0 deploy",
+        title: "MuleSoft Anypoint CloudHub 2.0 — iteration 2",
         detail:
-          "Shipped 2026-06-07. Mule 4.11.2 app live on CloudHub 2.0 (Cloudhub-US-West-1, Sandbox). /api/mulesoft/health reports meta._source: 'live-mulesoft' in Vercel production. Degradation path verified: stopping the worker surfaces mock-fallback, never a 5xx. /proposal/mulesoft shows the green LIVE badge. Next: API Manager policy (rate limit + client credentials) and Anypoint Exchange asset registration for iteration 2.",
+          "Iteration 1 shipped 2026-06-07: Mule 4.11.2 live on CloudHub 2.0, /api/mulesoft/health → live-mulesoft. Iteration 2 shipped 2026-06-07: /providers Experience API live on the same worker; lib/mulesoft/providers.ts prefer-real client; /api/mulesoft/providers wired to live path; 23 new tests (45/45 total). Next: API Manager Client ID Enforcement + Rate Limiting SLA policies via Anypoint UI — runbook at docs/MULESOFT_API_MANAGER_RUNBOOK.md.",
         status: "shipped",
         source: { href: "/proposal/mulesoft", label: "/proposal/mulesoft" }
       },

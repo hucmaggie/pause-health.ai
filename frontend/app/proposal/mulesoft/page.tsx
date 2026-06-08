@@ -2,6 +2,7 @@ import { ProposalShell } from "../../../components/proposal-shell";
 import { StatusPill, type StatusPillStatus } from "../../../components/status-pill";
 import { pageMetadata } from "../../../lib/page-metadata";
 import { isMulesoftHealthLive } from "../../../lib/mulesoft/health";
+import { isMulesoftProvidersLive } from "../../../lib/mulesoft/providers";
 
 // Read MULESOFT_HEALTH_BASE_URL at request time, not build time, so
 // flipping the env var in Vercel propagates without rebuilding the
@@ -165,10 +166,10 @@ const phases: Array<{
   },
   {
     name: "Phase 1 — Working sandbox",
-    status: "designed",
-    duration: "2–3 weeks",
+    status: "partial",
+    duration: "In progress",
     detail:
-      "Pause-managed Anypoint trial org. Six System APIs as real Mule projects. JHE and DBDP System APIs wired to local instances. One Process API end-to-end."
+      "Iteration 1 (2026-06-07): Mule 4.11.2 live on CloudHub 2.0, /health Experience API serving real FHIR Bundles in Vercel production. Iteration 2 (2026-06-07): /providers Experience API live on the same worker; lib/mulesoft/providers.ts prefer-real client wired; 45/45 MuleSoft lib tests green. Next: API Manager Client ID Enforcement + Rate Limiting SLA (runbook in docs/MULESOFT_API_MANAGER_RUNBOOK.md), Anypoint Exchange registration, DataWeave OMH→FHIR on the live path."
   },
   {
     name: "Phase 2 — First customer deployment",
@@ -270,6 +271,8 @@ const readDeeper: ReadDeeperRow[] = [
 
 export default function MulesoftPage() {
   const healthIsLive = isMulesoftHealthLive();
+  const providersIsLive = isMulesoftProvidersLive();
+  const anyLive = healthIsLive || providersIsLive;
   return (
     <ProposalShell
       eyebrow="Investor brief · MuleSoft integration"
@@ -344,10 +347,10 @@ export default function MulesoftPage() {
             marginTop: "0.8rem",
             padding: "0.65rem 0.9rem",
             borderRadius: 8,
-            background: healthIsLive
+            background: anyLive
               ? "rgba(46, 160, 67, 0.10)"
               : "rgba(125, 125, 125, 0.08)",
-            border: healthIsLive
+            border: anyLive
               ? "1px solid rgba(46, 160, 67, 0.45)"
               : "1px solid rgba(125, 125, 125, 0.30)",
             fontSize: "0.88rem",
@@ -355,33 +358,39 @@ export default function MulesoftPage() {
           }}
         >
           <strong style={{ marginRight: "0.45rem" }}>
-            {healthIsLive
-              ? "LIVE on Anypoint Platform"
+            {anyLive
+              ? `LIVE on Anypoint Platform · ${[healthIsLive && "/health", providersIsLive && "/providers"].filter(Boolean).join(" + ")}`
               : "MOCK · served by Next.js"}
           </strong>
           <StatusPill
-            status={healthIsLive ? "partial" : "prototype"}
+            status={anyLive ? "partial" : "prototype"}
             style={inlinePillStyle}
           />
           <span style={{ color: "var(--muted)" }}>
-            {healthIsLive ? (
+            {anyLive ? (
               <>
-                <code>/api/mulesoft/health</code> proxies to a Mule
-                application deployed on the customer&apos;s Anypoint Runtime
-                Fabric / CloudHub 2.0. Any non-2xx degrades gracefully to
-                the deterministic mock; response{" "}
+                {healthIsLive && (
+                  <><code>/api/mulesoft/health</code> and{" "}</>
+                )}
+                {providersIsLive && (
+                  <><code>/api/mulesoft/providers</code>{" "}</>
+                )}
+                {!healthIsLive && !providersIsLive ? null : "proxy to a Mule application deployed on CloudHub 2.0 (iteration 1 + 2). "}
+                Any non-2xx degrades gracefully to the deterministic mock;{" "}
                 <code>meta._source</code> flips between{" "}
                 <code>&quot;live-mulesoft&quot;</code> and{" "}
-                <code>&quot;mock-fallback&quot;</code> so the trace shows
-                which path served the request.
+                <code>&quot;mock-fallback&quot;</code>. Next: API Manager
+                Client ID Enforcement + Rate Limiting SLA — see{" "}
+                <code>docs/MULESOFT_API_MANAGER_RUNBOOK.md</code>.
               </>
             ) : (
               <>
                 Phase 1 deployable Mule app committed under{" "}
-                <code>mulesoft/pause-mulesoft-health-v1/</code>. Set
-                <code>MULESOFT_HEALTH_BASE_URL</code> to the CloudHub 2.0
-                worker URL to flip <code>/api/mulesoft/health</code> from
-                mock to live proxy. Walkthrough:{" "}
+                <code>mulesoft/pause-mulesoft-health-v1/</code>. Set{" "}
+                <code>MULESOFT_HEALTH_BASE_URL</code> (and optionally{" "}
+                <code>MULESOFT_PROVIDERS_BASE_URL</code>) to the CloudHub
+                2.0 worker URL to flip the proxies from mock to live.
+                Walkthrough:{" "}
                 <code>docs/MULESOFT_PHASE_1_HANDOFF.md</code>.
               </>
             )}

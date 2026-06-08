@@ -29,10 +29,19 @@ type ChangelogWeek = {
 const weeks: ChangelogWeek[] = [
   {
     range: "Week of June 7, 2026",
-    headline: "MuleSoft runtime upgrade + Data 360 Phase 2 code layer",
+    headline: "MuleSoft iteration 2: /providers live + API Manager policy runbook",
     intro:
-      "Two commits landed today. The MuleSoft artifact was upgraded to Mule 4.11.2 / Java 17 and its flow XML was fixed so Code Builder can render it. The Data 360 Phase 2 code layer is now in the repo: a Data Cloud Calculated Insights client and an updated grounding path that replaces the three intake-only wearable baselines (HRV z-score, vasomotor burden, sleep disruption) with live DC CI calls the moment SF_DC_TENANT_URL is set. The trailsignup org has CDPAdmin assigned but no provisioned DC tenant yet — org provisioning steps are in docs/MULESOFT_PHASE_2_DATA_CLOUD.md.",
+      "MuleSoft iteration 2 shipped. A second Experience API (/providers) is now live on the same CloudHub 2.0 worker alongside /health. lib/mulesoft/providers.ts adds the prefer-real / degrade-to-mock / warn-once client pattern; /api/mulesoft/providers was wired to the live path; 23 new unit tests (providers.test.ts) bring the MuleSoft lib total to 45/45. API Manager policy runbook (docs/MULESOFT_API_MANAGER_RUNBOOK.md) documents the Client ID Enforcement + Rate Limiting SLA steps that are next on the Anypoint UI side. Earlier same week: MuleSoft runtime 4.11.2 upgrade, health-flow.xml fixes, and Data 360 Phase 2 code layer.",
     entries: [
+      {
+        title: "MuleSoft iteration 2: /providers Experience API live + 23 new tests",
+        summary:
+          "GET /providers?zip=&menopause=&limit= is now live on the deployed CloudHub 2.0 worker (pause-mulesoft-health-v1). The Mule flow (health-flow.xml providers-flow) returns a DataWeave-built provider directory ranked by graphScore with zip-prefix + menopause-certified filters. lib/mulesoft/providers.ts implements the same prefer-real / degrade-to-mock / warn-once pattern as health.ts: activated by MULESOFT_PROVIDERS_BASE_URL, falls back to queryProviderDirectory() on any failure. /api/mulesoft/providers route upgraded from mock-only to live/mock/fallback with _source metadata. 23 new unit tests (providers.test.ts) cover isMulesoftProvidersLive, fetchLiveProviders success/failure paths, and getProvidersPreferReal degradation. Total MuleSoft lib test count: 45/45. docs/MULESOFT_API_MANAGER_RUNBOOK.md documents the next Anypoint UI steps: API Manager registration, Client ID Enforcement policy, Rate Limiting SLA with Demo/Production tiers, Exchange asset registration, and credential injection into the Next.js proxy.",
+        commits: [
+          { sha: "TBD", label: "mulesoft: iteration 2 — /providers live + API Manager runbook" }
+        ],
+        status: "partial"
+      },
       {
         title: "MuleSoft: runtime 4.11.2, Java 17, health-flow.xml fixes",
         summary:
