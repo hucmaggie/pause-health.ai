@@ -1,6 +1,12 @@
 import { ProposalShell } from "../../../components/proposal-shell";
 import { StatusPill, type StatusPillStatus } from "../../../components/status-pill";
 import { pageMetadata } from "../../../lib/page-metadata";
+import { isMulesoftHealthLive } from "../../../lib/mulesoft/health";
+
+// Read MULESOFT_HEALTH_BASE_URL at request time, not build time, so
+// flipping the env var in Vercel propagates without rebuilding the
+// investor page. The page is otherwise statically rendered.
+export const dynamic = "force-dynamic";
 
 export const metadata = pageMetadata({
   title: "Investor Brief · MuleSoft Integration",
@@ -263,6 +269,7 @@ const readDeeper: ReadDeeperRow[] = [
 ];
 
 export default function MulesoftPage() {
+  const healthIsLive = isMulesoftHealthLive();
   return (
     <ProposalShell
       eyebrow="Investor brief · MuleSoft integration"
@@ -332,6 +339,54 @@ export default function MulesoftPage() {
           <code>derivedFrom</code> reference back to the raw window it was
           derived from.
         </p>
+        <div
+          style={{
+            marginTop: "0.8rem",
+            padding: "0.65rem 0.9rem",
+            borderRadius: 8,
+            background: healthIsLive
+              ? "rgba(46, 160, 67, 0.10)"
+              : "rgba(125, 125, 125, 0.08)",
+            border: healthIsLive
+              ? "1px solid rgba(46, 160, 67, 0.45)"
+              : "1px solid rgba(125, 125, 125, 0.30)",
+            fontSize: "0.88rem",
+            lineHeight: 1.5
+          }}
+        >
+          <strong style={{ marginRight: "0.45rem" }}>
+            {healthIsLive
+              ? "LIVE on Anypoint Platform"
+              : "MOCK · served by Next.js"}
+          </strong>
+          <StatusPill
+            status={healthIsLive ? "partial" : "prototype"}
+            style={inlinePillStyle}
+          />
+          <span style={{ color: "var(--muted)" }}>
+            {healthIsLive ? (
+              <>
+                <code>/api/mulesoft/health</code> proxies to a Mule
+                application deployed on the customer&apos;s Anypoint Runtime
+                Fabric / CloudHub 2.0. Any non-2xx degrades gracefully to
+                the deterministic mock; response{" "}
+                <code>meta._source</code> flips between{" "}
+                <code>&quot;live-mulesoft&quot;</code> and{" "}
+                <code>&quot;mock-fallback&quot;</code> so the trace shows
+                which path served the request.
+              </>
+            ) : (
+              <>
+                Phase 1 deployable Mule app committed under{" "}
+                <code>mulesoft/pause-mulesoft-health-v1/</code>. Set
+                <code>MULESOFT_HEALTH_BASE_URL</code> to the CloudHub 2.0
+                worker URL to flip <code>/api/mulesoft/health</code> from
+                mock to live proxy. Walkthrough:{" "}
+                <code>docs/MULESOFT_PHASE_1_HANDOFF.md</code>.
+              </>
+            )}
+          </span>
+        </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginTop: "1rem" }}>
           <a
             href="/api/mulesoft/health"

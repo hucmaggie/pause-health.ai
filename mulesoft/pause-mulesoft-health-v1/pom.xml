@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Pause-Health.ai  -  pause-mulesoft-health-v1
+
+  Phase 1 deployable Mule app. Returns a static FHIR R5 Bundle
+  identical to the one served by the Next.js mock at
+  /api/mulesoft/health. This is the smallest possible artifact that
+  proves the architecture: a real Mule app deployed to the customer's
+  CloudHub 2.0 environment, fronting one Pause Experience API.
+
+  Deploy target: CloudHub 2.0, Sandbox environment.
+  Worker URL pattern: https://<app-name>.<region>.cloudhub.io
+    (e.g. https://pause-mulesoft-health-v1.us-e2.cloudhub.io)
+
+  See docs/MULESOFT_PHASE_1_HANDOFF.md for the step-by-step.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+            http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>ai.pause-health</groupId>
+    <artifactId>pause-mulesoft-health-v1</artifactId>
+    <version>1.0.0</version>
+    <packaging>mule-application</packaging>
+
+    <name>pause-mulesoft-health-v1</name>
+
+    <properties>
+        <app.runtime>4.6.0</app.runtime>
+        <mule.maven.plugin.version>4.3.0</mule.maven.plugin.version>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.mule.tools.maven</groupId>
+                <artifactId>mule-maven-plugin</artifactId>
+                <version>${mule.maven.plugin.version}</version>
+                <extensions>true</extensions>
+                <!--
+                  CloudHub 2.0 deployment configuration. Override
+                  org/env/connectedApp at deploy time via:
+                    mvn deploy -DmuleDeploy \
+                      -Dcloudhub2.businessGroupId=... \
+                      -Dcloudhub2.environment=Sandbox \
+                      -Dconnected.app.client.id=... \
+                      -Dconnected.app.client.secret=...
+                -->
+                <configuration>
+                    <cloudhub2Deployment>
+                        <muleVersion>${app.runtime}</muleVersion>
+                        <provider>MC</provider>
+                        <environment>${cloudhub2.environment}</environment>
+                        <target>Cloudhub-US-East-2</target>
+                        <businessGroupId>${cloudhub2.businessGroupId}</businessGroupId>
+                        <applicationName>pause-mulesoft-health-v1</applicationName>
+                        <replicas>1</replicas>
+                        <vCores>0.1</vCores>
+                        <connectedAppClientId>${connected.app.client.id}</connectedAppClientId>
+                        <connectedAppClientSecret>${connected.app.client.secret}</connectedAppClientSecret>
+                        <connectedAppGrantType>client_credentials</connectedAppGrantType>
+                    </cloudhub2Deployment>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <repository>
+            <id>anypoint-exchange-v3</id>
+            <name>Anypoint Exchange</name>
+            <url>https://maven.anypoint.mulesoft.com/api/v3/maven</url>
+            <layout>default</layout>
+        </repository>
+        <repository>
+            <id>mulesoft-releases</id>
+            <name>MuleSoft Releases Repository</name>
+            <url>https://repository.mulesoft.org/releases/</url>
+            <layout>default</layout>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>mulesoft-releases</id>
+            <name>MuleSoft Releases Repository</name>
+            <url>https://repository.mulesoft.org/releases/</url>
+            <layout>default</layout>
+        </pluginRepository>
+    </pluginRepositories>
+</project>

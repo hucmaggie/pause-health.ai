@@ -17,10 +17,25 @@ investor-facing summary, see `/proposal/mulesoft` on the deployed site.
 mulesoft/
 ├── README.md                                   <- this file
 ├── flows/
-│   └── pause-process-api.example.xml           <- Mule 4 Process API flow
-└── transforms/
-    └── omh-to-fhir.example.dwl                 <- DataWeave 2.0 transform
+│   └── pause-process-api.example.xml           <- Mule 4 Process API flow (reference)
+├── transforms/
+│   └── omh-to-fhir.example.dwl                 <- DataWeave 2.0 transform (reference)
+└── pause-mulesoft-health-v1/                   <- Phase 1 DEPLOYABLE Mule app
+    ├── README.md
+    ├── mule-artifact.json
+    ├── pom.xml                                 <- CloudHub 2.0 deploy config
+    └── src/main/mule/health-flow.xml           <- GET /health -> FHIR Bundle
 ```
+
+### `pause-mulesoft-health-v1/` (Phase 1, deployable)
+
+Unlike the `.example.xml` reference, this is a real Mule 4 project
+that builds and deploys to CloudHub 2.0. It serves a single Pause
+Experience-API surface — `GET /health` returning a static FHIR R5
+Bundle — and is shape-compatible with the Next.js mock at
+`/api/mulesoft/health`. The Phase 1 handoff doc walks through the
+Code Builder import and deploy click-by-click:
+[`docs/MULESOFT_PHASE_1_HANDOFF.md`](../docs/MULESOFT_PHASE_1_HANDOFF.md).
 
 ### `flows/pause-process-api.example.xml`
 

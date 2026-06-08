@@ -14,10 +14,12 @@ This repository hosts five things:
   (FLIRT + a Kubios-validated HRV reference port), and uploads the result to
   a [JupyterHealth Exchange](https://github.com/jupyterhealth/jupyterhealth-exchange)
   instance as FHIR R5 Observations. See `pause_ingest/README.md`.
-- **`mulesoft/`** — Reference MuleSoft Anypoint artifacts (Mule 4 Process
-  API flow + DataWeave 2.0 transform) showing the three-tier API-Led
-  Connectivity pattern Pause uses to integrate JupyterHealth, DBDP, and
-  consumer wearables in a customer's Anypoint Platform. See
+- **`mulesoft/`** — MuleSoft Anypoint artifacts. `flows/` + `transforms/`
+  contain reference-only Mule 4 / DataWeave samples showing the three-tier
+  API-Led Connectivity pattern; `pause-mulesoft-health-v1/` contains the
+  Phase 1 **deployable** Mule app (pom + mule-artifact + one-flow XML)
+  that backs `MULESOFT_HEALTH_BASE_URL` for the live `/api/mulesoft/health`
+  proxy. See
   `mulesoft/README.md`. Live mocked Experience APIs are served by the
   Next.js frontend at `/api/mulesoft/health`,
   `/api/mulesoft/patient/{id}/timeline`,
@@ -65,13 +67,17 @@ Deep-dive sections (each a routed page):
   from CMS NPPES and state board data (no scraping of restricted sources).
 - `/proposal/agentforce` — Patient intake on Salesforce Agentforce Service
   Agent, with graceful Pause-branded fallback when no org is configured.
-- `/proposal/mulesoft` — Integration plane on MuleSoft Anypoint, with a
-  live mocked Experience API at `/api/mulesoft/health`. A real Anypoint
-  org is now available; the next-session plan to replace this single mock
-  with a live CloudHub 2.0 deployment is documented in
-  [`docs/MULESOFT_RUNBOOK.md`](docs/MULESOFT_RUNBOOK.md) (estimated 3-5
-  hours, same OAuth-client-credentials pattern as the Salesforce Phase 1
-  integration).
+- `/proposal/mulesoft` — Integration plane on MuleSoft Anypoint. The
+  Experience-API surface at `/api/mulesoft/health` is live/mock-branched
+  on `MULESOFT_HEALTH_BASE_URL`: unset = deterministic mock (the prototype
+  default), set = proxy to a Mule app on CloudHub 2.0 with graceful
+  degradation. The deployable Mule artifact lives in
+  `mulesoft/pause-mulesoft-health-v1/`; the Anypoint Code Builder
+  walkthrough is in
+  [`docs/MULESOFT_PHASE_1_HANDOFF.md`](docs/MULESOFT_PHASE_1_HANDOFF.md).
+  31 unit tests pin the live/mock matrix (see
+  `frontend/lib/mulesoft/health.test.ts` and
+  `frontend/app/api/mulesoft/health/route.test.ts`).
 - `/proposal/mcp` — Pause as a tool surface for AI agents. MCP server
   registration snippets for Claude Desktop, Cursor, and Agentforce.
 - `/proposal/agent-fabric` — Multi-agent control plane. Four agents

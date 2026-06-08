@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Pause-Health.ai  -  pause-mulesoft-health-v1  -  health flow
+
+  Phase 1 Experience-API flow. One HTTP listener on /health,
+  returns a static FHIR R5 Bundle constructed by an inline
+  DataWeave literal. No upstream dependencies (no JHE, no DBDP,
+  no wearable System APIs) -- iteration 2 will wire those in.
+
+  The returned bundle is shape-compatible with the bundle
+  produced by frontend/lib/mulesoft-mocks.ts so the Next.js
+  proxy at /api/mulesoft/health can swap mock -> live without
+  any consumer-side changes.
+
+  Source-of-truth for the bundle shape:
+    - Next.js mock:  frontend/lib/mulesoft-mocks.ts
+    - Live tests:    frontend/lib/mulesoft/health.test.ts
+    - Live proxy:    frontend/app/api/mulesoft/health/route.ts
+    - Investor page: frontend/app/proposal/mulesoft/page.tsx
+-->
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+        http://www.mulesoft.org/schema/mule/core
+          http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http
+          http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+        http://www.mulesoft.org/schema/mule/ee/core
+          http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+    <http:listener-config name="health-httpListenerConfig"
+                          doc:name="HTTP Listener config">
+        <http:listener-connection host="0.0.0.0"
+                                  port="${http.listener.port:8081}" />
+    </http:listener-config>
+
+    <!--
+      Liveness flow. CloudHub 2.0 will hit GET /health automatically
+      as part of its built-in health probe, and the Pause Next.js
+      proxy at /api/mulesoft/health forwards traffic here when
+      MULESOFT_HEALTH_BASE_URL is set.
+    -->
+    <flow name="health-flow"
+          doc:id="health-flow"
+          doc:name="GET /health -> FHIR Bundle">
+        <http:listener config-ref="health-httpListenerConfig"
+                       path="/health"
+                       allowedMethods="GET"
+                       doc:name="GET /health" />
+
+        <ee:transform doc:name="Build FHIR Bundle">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  resourceType: "Bundle",
+  type: "searchset",
+  meta: {
+    lastUpdated: now() as String,
+    source: "urn:pause-health:mulesoft:pause-patient-bundle-process-api"
+  },
+  entry: [
+    {
+      fullUrl: "urn:uuid:pause-demo-patient-001",
+      resource: {
+        resourceType: "Patient",
+        id: "pause-demo-patient-001",
+        meta: {
+          profile: ["http://hl7.org/fhir/StructureDefinition/Patient"]
+        },
+        identifier: [
+          {
+            system: "urn:pause-health:demo-cohort",
+            value: "pause-demo-patient-001"
+          }
+        ],
+        active: true,
+        gender: "female",
+        birthDate: "1974-08-12",
+        extension: [
+          {
+            url: "urn:pause-health:extension:menopause-stage",
+            valueString: "late-perimenopause"
+          }
+        ]
+      }
+    },
+    {
+      fullUrl: "urn:uuid:obs-heart-rate-001",
+      resource: {
+        resourceType: "Observation",
+        id: "obs-heart-rate-001",
+        status: "final",
+        category: [{
+          coding: [{
+            system: "http://terminology.hl7.org/CodeSystem/observation-category",
+            code: "vital-signs",
+            display: "Vital Signs"
+          }]
+        }],
+        code: {
+          coding: [{
+            system: "http://loinc.org",
+            code: "8867-4",
+            display: "Heart rate"
+          }]
+        },
+        subject: { reference: "Patient/pause-demo-patient-001" },
+        effectiveDateTime: "2026-05-25T07:30:00Z",
+        valueQuantity: {
+          value: 72,
+          unit: "/min",
+          system: "http://unitsofmeasure.org",
+          code: "/min"
+        },
+        device: { display: "Oura Ring Gen3" },
+        extension: [{
+          url: "urn:pause-health:extension:mulesoft-pipeline-version",
+          valueString: "pause-ingest-process-api@1.0"
+        }]
+      }
+    },
+    {
+      fullUrl: "urn:uuid:obs-hrv-raw-001",
+      resource: {
+        resourceType: "Observation",
+        id: "obs-hrv-raw-001",
+        status: "final",
+        category: [{
+          coding: [{
+            system: "http://terminology.hl7.org/CodeSystem/observation-category",
+            code: "vital-signs",
+            display: "Vital Signs"
+          }]
+        }],
+        code: {
+          coding: [{
+            system: "http://loinc.org",
+            code: "80404-7",
+            display: "R-R interval by EKG"
+          }]
+        },
+        subject: { reference: "Patient/pause-demo-patient-001" },
+        effectivePeriod: {
+          start: "2026-05-25T02:00:00Z",
+          end: "2026-05-25T02:03:00Z"
+        },
+        component: (1 to 6) map ((idx, _) -> {
+          code: { text: "RR interval " ++ (idx as String) },
+          valueQuantity: {
+            value: [812, 798, 825, 841, 833, 820][idx - 1],
+            unit: "ms",
+            system: "http://unitsofmeasure.org",
+            code: "ms"
+          }
+        }),
+        device: { display: "Oura Ring Gen3" }
+      }
+    },
+    {
+      fullUrl: "urn:uuid:obs-feature-rmssd-001",
+      resource: {
+        resourceType: "Observation",
+        id: "obs-feature-rmssd-001",
+        status: "final",
+        category: [{
+          coding: [{
+            system: "http://terminology.hl7.org/CodeSystem/observation-category",
+            code: "survey",
+            display: "Survey"
+          }]
+        }],
+        code: {
+          coding: [{
+            system: "urn:pause-health:code:dbdp-features",
+            code: "hrv_rmssd_sliding_180s",
+            display: "HRV RMSSD (sliding 180s window, DBDP/FLIRT)"
+          }],
+          text: "Sliding-window RMSSD"
+        },
+        subject: { reference: "Patient/pause-demo-patient-001" },
+        effectivePeriod: {
+          start: "2026-05-25T02:00:00Z",
+          end: "2026-05-25T02:03:00Z"
+        },
+        valueQuantity: {
+          value: 18.4,
+          unit: "ms",
+          system: "http://unitsofmeasure.org",
+          code: "ms"
+        },
+        derivedFrom: [{ reference: "Observation/obs-hrv-raw-001" }],
+        extension: [
+          {
+            url: "urn:pause-health:extension:feature-source",
+            valueString: "pause_ingest.features.hrv_features_flirt"
+          },
+          {
+            url: "urn:pause-health:extension:mulesoft-pipeline-version",
+            valueString: "pause-ingest-process-api@1.0"
+          }
+        ]
+      }
+    }
+  ]
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+
+        <!--
+          Tag the response so a curl in front of Mule can confirm
+          the live path is hot, and so API Manager policies (in
+          iteration 2) can log per-deployment metadata.
+        -->
+        <http:headers ><![CDATA[#[output application/java
+---
+{
+  "Content-Type": "application/json",
+  "X-Pause-Source": "mulesoft-cloudhub2",
+  "X-Pause-App": "pause-mulesoft-health-v1",
+  "Cache-Control": "public, max-age=300"
+}]]]></http:headers>
+    </flow>
+</mule>

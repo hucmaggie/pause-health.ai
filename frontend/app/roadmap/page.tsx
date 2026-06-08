@@ -87,8 +87,8 @@ const horizons: RoadmapHorizon[] = [
       {
         title: "MuleSoft Anypoint CloudHub 2.0 deploy",
         detail:
-          "Today: Experience APIs mocked at /api/mulesoft/* by the Next.js frontend. Next: replace one mock (Patient Bundle Process API) with a live CloudHub 2.0 deployment hitting the Anypoint org that's already provisioned. Sized at 3–5 hours per docs/MULESOFT_RUNBOOK.md.",
-        status: "designed",
+          "Today: the Next.js proxy at /api/mulesoft/health is live/mock-branched on MULESOFT_HEALTH_BASE_URL with graceful degradation. The deployable Mule artifact lives in mulesoft/pause-mulesoft-health-v1/ (pom + mule-artifact + one-flow XML), 31 unit tests pin the proxy matrix, and /proposal/mulesoft renders a live-vs-mock badge that flips on the env var. Next: import the Mule project into Anypoint Code Builder, deploy to CloudHub 2.0 Sandbox, set MULESOFT_HEALTH_BASE_URL in Vercel — walkthrough in docs/MULESOFT_PHASE_1_HANDOFF.md.",
+        status: "partial",
         source: { href: "/proposal/mulesoft", label: "/proposal/mulesoft" }
       },
       {

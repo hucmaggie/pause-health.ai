@@ -164,18 +164,39 @@ frontend.
 
 ## Phased plan
 
-### Phase 0 — Reference artifacts  *(today)*
-- `mulesoft/` directory with the example flow + DataWeave transform.
+### Phase 0 — Reference artifacts  *(complete)*
+- `mulesoft/flows/pause-process-api.example.xml` reference flow.
+- `mulesoft/transforms/omh-to-fhir.example.dwl` reference DataWeave.
 - Mocked Experience API at `/api/mulesoft/health`.
 - Design doc (this file).
 - Investor-facing page at `/proposal/mulesoft`.
 
-### Phase 1 — Working sandbox  *(2-3 weeks)*
-- Stand up a Pause-managed Anypoint trial org.
+### Phase 1a — Deployable artifact + live/mock proxy  *(repo-side complete, 2026-06-07)*
+- `mulesoft/pause-mulesoft-health-v1/` Mule 4.6 project (pom + mule-artifact
+  + one flow XML) ready to import into Anypoint Code Builder and deploy to
+  CloudHub 2.0.
+- `/api/mulesoft/health` rewritten to live/mock-branch on
+  `MULESOFT_HEALTH_BASE_URL` with graceful degradation
+  (`_source: "mock" | "live-mulesoft" | "mock-fallback"`).
+- `lib/mulesoft/health.ts` client module mirroring the
+  `lib/salesforce/grounding.ts` warn-once / prefer-real pattern.
+- 31 unit tests pinning the live/mock matrix.
+- `/proposal/mulesoft` "Touch the architecture" badge flips on the env var.
+- Investor-facing handoff runbook at
+  [`docs/MULESOFT_PHASE_1_HANDOFF.md`](MULESOFT_PHASE_1_HANDOFF.md).
+
+### Phase 1b — Anypoint UI deploy  *(blocked on user, ~3-5 hours of Anypoint UI time)*
+- Import `mulesoft/pause-mulesoft-health-v1/` into Anypoint Code Builder.
+- Deploy to CloudHub 2.0 Sandbox.
+- Set `MULESOFT_HEALTH_BASE_URL` in Vercel project env.
+- Confirm `/api/mulesoft/health` reports `meta._source: "live-mulesoft"`.
+- See `docs/MULESOFT_PHASE_1_HANDOFF.md` for click-by-click.
+
+### Phase 1c — Remaining System APIs  *(2-3 weeks, post-Phase-1b)*
 - Author the six System APIs as real Mule projects.
 - Connect `jhe-system-api` and `dbdp-system-api` to local instances of
   JupyterHealth Exchange and `pause_ingest`.
-- One Process API end-to-end (`pause-ingest-process-api`).
+- One full Process API end-to-end (`pause-ingest-process-api`).
 
 ### Phase 2 — First customer deployment  *(4-6 weeks with customer)*
 - Deploy the Mule apps into the customer's Runtime Fabric.
