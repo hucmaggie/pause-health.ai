@@ -160,15 +160,15 @@ output application/json
           start: "2026-05-25T02:00:00Z",
           end: "2026-05-25T02:03:00Z"
         },
-        component: (1 to 6) map ((idx, _) -> {
-          code: { text: "RR interval " ++ (idx as String) },
+        component: [812, 798, 825, 841, 833, 820] map {
+          code: { text: "RR interval " ++ (($$  + 1) as String) },
           valueQuantity: {
-            value: [812, 798, 825, 841, 833, 820][idx - 1],
+            value: $,
             unit: "ms",
             system: "http://unitsofmeasure.org",
             code: "ms"
           }
-        }),
+        },
         device: { display: "Oura Ring Gen3" }
       }
     },
