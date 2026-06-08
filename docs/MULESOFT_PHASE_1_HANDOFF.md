@@ -79,25 +79,58 @@ location. You will NOT be able to see the secret again.
 
 Open https://anypoint.mulesoft.com → Design Center → Code Builder.
 
-There are two ways to load `mulesoft/pause-mulesoft-health-v1/`:
+**DO NOT use the "Import a Mule Project" button on the welcome
+screen.** That dialog only accepts a packaged Mule `.jar` file
+(the output of `mvn package`), not a source repository. Use one
+of the source-import paths below instead.
 
-**Option A — From local folder (recommended for the first deploy):**
+There are two source-level paths to load
+`mulesoft/pause-mulesoft-health-v1/`:
 
-1. Code Builder → File → Open Folder
-2. Browse to `<repo>/mulesoft/pause-mulesoft-health-v1`
-3. Trust the workspace when prompted.
+**Option A — Clone the repo via Source Control panel (recommended):**
 
-**Option B — From GitHub:**
+1. In Code Builder, click the **Source Control** icon in the left
+   sidebar (the branchy-Y icon, third from the top — between the
+   Search magnifier and the Run/Debug triangle).
+2. If no repo is open: click **Clone Repository**. Otherwise: the
+   **"..."** menu in the Source Control title bar → Clone.
+3. Paste `https://github.com/hucmaggie/pause-health.ai.git`.
+4. Pick a destination — e.g. `~/projects/` (the Code Builder dev
+   environment ships with that directory created).
+5. When prompted "Would you like to open the cloned repository?",
+   click **Open**.
+6. **Critical:** Code Builder will open the **repo root**, not the
+   Mule project. The Mule extension won't activate unless the
+   workspace root has a `mule-artifact.json` at its top level.
+   Fix it: **File → Open Folder** and pick
+   `pause-health.ai/mulesoft/pause-mulesoft-health-v1` as the new
+   workspace root.
 
-1. Code Builder → File → Open Repository
-2. URL: `https://github.com/hucmaggie/pause-health.ai`
-3. After clone: open `mulesoft/pause-mulesoft-health-v1` as the
-   project root.
+**Option B — Clone from the terminal (faster if you're comfortable):**
 
-When the project loads, Code Builder reads `mule-artifact.json` and
-should automatically recognize this as a Mule 4.6 app. The
-`src/main/mule/health-flow.xml` file should render in the visual
-flow designer if you click on it.
+The terminal panel at the bottom of Code Builder is a real shell.
+Open it and run:
+
+```bash
+cd ~/projects   # or wherever you want the repo
+git clone https://github.com/hucmaggie/pause-health.ai.git
+```
+
+Then **File → Open Folder → `~/projects/pause-health.ai/mulesoft/pause-mulesoft-health-v1`**.
+
+When the project loads under either option, Code Builder reads
+`mule-artifact.json` and should automatically recognize this as a
+Mule 4.6 app. Confirmation signals:
+
+- The MuleSoft logo appears next to `health-flow.xml` in the file tree.
+- Opening `health-flow.xml` renders the visual flow designer instead
+  of raw XML.
+- Right-clicking the project root shows "Run Mule project" and
+  "Deploy to CloudHub 2.0" in the context menu.
+
+If none of those signals appear, the workspace root is wrong —
+double-check that **the folder you opened contains `mule-artifact.json`
+at its top level**, not one directory above.
 
 ### Step 3 — 5 minutes — Run locally to verify
 
