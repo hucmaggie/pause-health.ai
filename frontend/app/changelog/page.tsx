@@ -38,7 +38,7 @@ const weeks: ChangelogWeek[] = [
         summary:
           "New in-process JHE mock server (tests/jhe_mock_server.py) implements the OAuth2 + FHIR endpoints pause_ingest actually hits. Seven integration tests (tests/test_exchange_integration.py) exercise the production exchange.upload_observation, hrv_features_to_fhir_observation, and read_recent_observations code paths end-to-end — including a full-pipeline test that uploads 6 raw heart-rate observations, computes time-domain HRV features, uploads the derived observation with derivedFrom provenance, and reads everything back. The contract test surfaced a real bug in read_recent_observations (the JupyterHealthClient 0.2.0 API doesn't accept client_id/client_secret) that lenient unit-test doubles missed. Added hrv_features_to_fhir_observation helper. New runbook at docs/JHE_SETUP_RUNBOOK.md captures the path to swap the mock for real JHE in an afternoon (~1 afternoon, gated on Docker). Flipped the JupyterHealth pill on /roadmap from designed to prototype.",
         commits: [
-          { sha: "HEAD", label: "pause_ingest → JHE contract test" }
+          { sha: "e1e43aa", label: "pause_ingest → JHE contract test" }
         ],
         status: "prototype"
       },
