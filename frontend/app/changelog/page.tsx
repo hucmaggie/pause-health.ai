@@ -37,7 +37,9 @@ const weeks: ChangelogWeek[] = [
         title: "MuleSoft Anypoint Phase 1: deployable artifact + live/mock proxy",
         summary:
           "Repo-side prep for the first real MuleSoft deployment. Five surfaces changed: (1) new lib/mulesoft/health.ts client mirroring the prefer-real / degrade-to-mock / warn-once pattern from lib/salesforce/grounding.ts, (2) /api/mulesoft/health rewired to live-vs-mock branch on MULESOFT_HEALTH_BASE_URL with response meta._source flipping between 'mock' / 'live-mulesoft' / 'mock-fallback', (3) deployable Mule 4.6 project at mulesoft/pause-mulesoft-health-v1/ (pom.xml with CloudHub 2.0 deploy config, mule-artifact.json, one HTTP listener flow that returns the same FHIR Bundle shape the mock serves), (4) 31 new vitest tests covering the live success / non-2xx / network-error / bad-shape / wrong-scheme / dedup / fast-path matrix and the route's mock / mock-fallback / live response shapes, and (5) env-gated badge on /proposal/mulesoft 'Touch the architecture' that flips between green LIVE-on-Anypoint and grey MOCK-served-by-Next.js. Today behavior is unchanged: the env var is unset everywhere, so every response is still mock. The flip happens when the user finishes the Anypoint Code Builder import + CloudHub 2.0 deploy walkthrough in the new docs/MULESOFT_PHASE_1_HANDOFF.md. Test counts: 173 → 204 frontend tests; smoke test still 132 / 132.",
-        commits: [],
+        commits: [
+          { sha: "55e1b6d", label: "MuleSoft Phase 1 repo prep" }
+        ],
         status: "prototype"
       },
       {
