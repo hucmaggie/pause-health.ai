@@ -94,8 +94,8 @@ const horizons: RoadmapHorizon[] = [
       {
         title: "Data 360 Phase 2 — Data Cloud unified profile",
         detail:
-          "Today: the connected dev org's Data Cloud workspace is provisioned with 31 unified DMOs (ssot__Individual__dlm etc.) but no Data Streams feed them. Next: activate via Setup UI (2–3 week scope) so the unified profile drives the Care Router grounding, not the raw Health Cloud objects.",
-        status: "designed",
+          "Code ready: lib/salesforce/data-cloud.ts calls the Data Cloud Calculated Insights API and layers HRV z-score, vasomotor burden, and sleep disruption on top of the Phase 1 SOQL grounding. Activated by SF_DC_TENANT_URL env var. Next: provision the DC tenant on the trailsignup org (Setup → Data Cloud → Get Started), author the three CIs, set the env var — walkthrough in docs/MULESOFT_PHASE_2_DATA_CLOUD.md.",
+        status: "partial",
         source: { href: "/proposal/data-360", label: "/proposal/data-360" }
       },
       {

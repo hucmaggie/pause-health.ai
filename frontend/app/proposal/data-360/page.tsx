@@ -11,50 +11,6 @@ export const metadata = pageMetadata({
   ogImageAlt: "Pause × Salesforce Data 360 — investor brief."
 });
 
-/**
- * Data 360 brief — Arc B polish pass.
- *
- * This page is already the most honest in the Arc B set. The "Where
- * Phase 1 is wired" 3-environment table is the gold standard we
- * cloned for /proposal/agentforce. The Prototype-vs-Production
- * table calls out which insights are LIVE vs MOCKED. The Touch-the-
- * architecture CTA panel already exists.
- *
- * Three substantive moves remaining:
- *
- *   1. The whyData360 cards read in present tense as if zero-copy
- *      federation across JupyterHealth + Snowflake + Databricks +
- *      Epic were already running. Today only Salesforce Health
- *      Cloud is federated; the broader sources are Phase 2/3
- *      designed. Pill each card by what's actually wired today
- *      (Identity Resolution and one of the calculated-insight rows
- *      are `partial`/`prototype`; broader federation is `designed`).
- *
- *   2. MSCP-CREDENTIALED CONTACT CLAIM. The page surfaces "days
- *      since last MSCP-credentialed contact" in whyData360 and the
- *      trace-flow as if the live Health Cloud path returned it. It
- *      doesn't -- the real lib/salesforce/grounding.ts returns
- *      "Days since last clinical contact" (not credential-aware).
- *      The MSCP-credentialed flavor only exists in the mocked
- *      lib/data-360.ts path. Tighten language to make this
- *      distinction explicit.
- *
- *   3. ADD the identity-resolve endpoint to the Touch-the-
- *      architecture CTA panel (it already exists at
- *      /api/data-360/identity/resolve but isn't linked from this
- *      page). The Phase 1 IR claim becomes verifiable in one
- *      click.
- *
- * Plus the standard polish pass:
- *   - Pill all fabricFit cards (1 `prototype`, 1 `designed`, 1
- *     `partial`, 1 `prototype`).
- *   - Pill each protoVsProd row by what's LIVE today.
- *   - Pill phases cards (Phase 1 `prototype`, 2-3 `designed`,
- *     4 `future`).
- *   - Pill investorTakeaways list items (mostly `designed` with
- *     one `prototype` for the "longitudinal context" claim).
- *   - Normalized Read-deeper footer with pills.
- */
 
 const inlinePillStyle: React.CSSProperties = {
   fontSize: "0.68rem",
@@ -268,10 +224,10 @@ const phases: Array<{
   },
   {
     name: "Phase 2 — Data Cloud unified profile",
-    status: "designed",
-    duration: "2–3 weeks",
+    status: "partial",
+    duration: "Code ready · org provisioning outstanding",
     detail:
-      "Stand up a Data Cloud Data Stream → Data Model Object → UnifiedIndividual mapping in the same org. Federate one wearable source (JupyterHealth FHIR test instance) via the Iceberg connector. Author the four wearable/EHR Calculated Insights as real Data Cloud jobs. The grounding fetcher swaps its SOQL backend for the Data Cloud Federated Query API; the Care Router interface doesn't change."
+      "The Data Cloud Calculated Insights client is live in lib/salesforce/data-cloud.ts. Three CIs (HRV RMSSD z-score, vasomotor burden, sleep disruption) are called in parallel with the Phase 1 SOQL grounding and layer on top when SF_DC_TENANT_URL is set. Remaining: provision the DC tenant on the connected org, author the three CI definitions, set the env var. Full walkthrough in docs/MULESOFT_PHASE_2_DATA_CLOUD.md."
   },
   {
     name: "Phase 3 — First customer deployment",

@@ -28,6 +28,32 @@ type ChangelogWeek = {
 
 const weeks: ChangelogWeek[] = [
   {
+    range: "Week of June 7, 2026",
+    headline: "MuleSoft runtime upgrade + Data 360 Phase 2 code layer",
+    intro:
+      "Two commits landed today. The MuleSoft artifact was upgraded to Mule 4.11.2 / Java 17 and its flow XML was fixed so Code Builder can render it. The Data 360 Phase 2 code layer is now in the repo: a Data Cloud Calculated Insights client and an updated grounding path that replaces the three intake-only wearable baselines (HRV z-score, vasomotor burden, sleep disruption) with live DC CI calls the moment SF_DC_TENANT_URL is set. The trailsignup org has CDPAdmin assigned but no provisioned DC tenant yet — org provisioning steps are in docs/MULESOFT_PHASE_2_DATA_CLOUD.md.",
+    entries: [
+      {
+        title: "MuleSoft: runtime 4.11.2, Java 17, health-flow.xml fixes",
+        summary:
+          "mule-artifact.json bumped to minMuleVersion 4.11.0 with javaSpecificationVersions: [\"17\"]. pom.xml bumped to app.runtime 4.11.2, mule-maven-plugin 4.7.0. health-flow.xml had two XML errors that prevented Code Builder from rendering the canvas: (1) <http:headers> used as a standalone flow processor — moved it into <http:response> nested inside <http:listener> where Mule 4 expects it; (2) double-hyphen (--) inside an XML comment — illegal in XML, replaced with single hyphen. Code Builder .vscode/launch.json and .vscode/settings.json scaffolding committed.",
+        commits: [
+          { sha: "3662130", label: "mulesoft: bump runtime + fix health-flow.xml" }
+        ],
+        status: "partial"
+      },
+      {
+        title: "Data 360 Phase 2: Data Cloud Calculated Insights layer",
+        summary:
+          "New lib/salesforce/data-cloud.ts implements the Data Cloud Query API and Calculated Insights API client, mirroring the same warn-once / prefer-real / degrade-to-null pattern as the Phase 1 SOQL path. Activated by SF_DC_TENANT_URL env var. lib/salesforce/grounding.ts updated to call getWearableInsights() in parallel with the four SOQL queries; each of the three wearable insights (Pause_HRV_RMSSD_30d, Pause_Vasomotor_Burden_30d, Pause_Sleep_Disruption_7d) falls back to its intake baseline independently. groundingProvenance.federatedQuery reflects which path served the request. frontend/.env.example documents the new vars with derivation notes. Full org setup walkthrough — DMO authoring, CI SQL, mock CI path, env var wiring, verification curls — in new docs/MULESOFT_PHASE_2_DATA_CLOUD.md. Probe result: trailsignup org has the permission sets but no provisioned DC tenant; code is ready and waiting.",
+        commits: [
+          { sha: "8a2e55f", label: "data-360: Phase 2 Data Cloud Calculated Insights layer" }
+        ],
+        status: "partial"
+      }
+    ]
+  },
+  {
     range: "Week of June 1, 2026",
     headline: "Honesty-pilling marathon",
     intro:
