@@ -5,7 +5,7 @@
   Phase 1 Experience-API flow. One HTTP listener on /health,
   returns a static FHIR R5 Bundle constructed by an inline
   DataWeave literal. No upstream dependencies (no JHE, no DBDP,
-  no wearable System APIs) -- iteration 2 will wire those in.
+  no wearable System APIs) - iteration 2 will wire those in.
 
   The returned bundle is shape-compatible with the bundle
   produced by frontend/lib/mulesoft-mocks.ts so the Next.js
@@ -49,7 +49,18 @@
         <http:listener config-ref="health-httpListenerConfig"
                        path="/health"
                        allowedMethods="GET"
-                       doc:name="GET /health" />
+                       doc:name="GET /health">
+            <http:response statusCode="200">
+                <http:headers><![CDATA[#[output application/java
+---
+{
+  "Content-Type": "application/json",
+  "X-Pause-Source": "mulesoft-cloudhub2",
+  "X-Pause-App": "pause-mulesoft-health-v1",
+  "Cache-Control": "public, max-age=300"
+}]]]></http:headers>
+            </http:response>
+        </http:listener>
 
         <ee:transform doc:name="Build FHIR Bundle">
             <ee:message>
@@ -211,18 +222,5 @@ output application/json
             </ee:message>
         </ee:transform>
 
-        <!--
-          Tag the response so a curl in front of Mule can confirm
-          the live path is hot, and so API Manager policies (in
-          iteration 2) can log per-deployment metadata.
-        -->
-        <http:headers ><![CDATA[#[output application/java
----
-{
-  "Content-Type": "application/json",
-  "X-Pause-Source": "mulesoft-cloudhub2",
-  "X-Pause-App": "pause-mulesoft-health-v1",
-  "Cache-Control": "public, max-age=300"
-}]]]></http:headers>
     </flow>
 </mule>

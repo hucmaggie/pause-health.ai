@@ -1,9 +1,12 @@
 {
   "name": "pause-mulesoft-health-v1",
-  "minMuleVersion": "4.6.0",
+  "minMuleVersion": "4.11.0",
   "configs": [
     "health-flow.xml"
   ],
   "redeploymentEnabled": true,
-  "secureProperties": []
+  "secureProperties": [],
+  "javaSpecificationVersions": [
+    "17"
+  ]
 }
