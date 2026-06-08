@@ -1,5 +1,8 @@
 # MuleSoft API Manager Policy Runbook
 
+**Status as of 2026-06-07:** Governance plane configured; runtime enforcement
+deferred to Flex Gateway (see "What's live vs. deferred" below).
+
 **Audience:** Pause-Health.ai engineering, when attaching policies to the
 deployed `pause-mulesoft-health-v1` app.
 
@@ -8,6 +11,32 @@ deployed `pause-mulesoft-health-v1` app.
 See [`docs/MULESOFT_PHASE_1_HANDOFF.md`](./MULESOFT_PHASE_1_HANDOFF.md).
 
 **Estimated time:** 1–1.5 hours of Anypoint UI work.
+
+---
+
+## What's live vs. deferred (2026-06-07)
+
+| Item | Status | Notes |
+|---|---|---|
+| Exchange asset `pause-provider-experience-api` v1.0.0 | **Live** | HTTP API type, visible in Anypoint Exchange |
+| API Manager instance ID `20954842` | **Live** | `pause-provider-experience-api-sandbox`, Sandbox env |
+| Client ID Enforcement policy | **Configured** | Applied in API Manager UI; visible in Governance Report |
+| Rate Limiting SLA policy | **Configured** | Demo tier: 10 req/min; Production: 1000 req/min |
+| SLA tiers | **Live** | Demo (ID 2438178, auto-approve) + Production (ID 2438179) |
+| `pause-prototype-client` app | **Live** | Approved on Demo tier; Client ID issued |
+| `MULESOFT_CLIENT_ID` / `MULESOFT_CLIENT_SECRET` | **Live** | Set in Vercel production; Next.js proxy forwards headers |
+| Runtime policy enforcement (401 on missing creds) | **Deferred** | CH2 Shared Space doesn't support Mule agent autodiscovery; requires Flex Gateway |
+
+**Why enforcement is deferred:** CloudHub 2.0 Shared Space runs the Mule
+runtime in a managed container that doesn't expose the Mule agent's
+autodiscovery registration channel. The `api.id` + `anypoint.platform.client_id`
+properties are set on the deployment but the agent cannot reach the API Manager
+registration endpoint from Shared Space. Runtime policy enforcement requires
+a **Flex Gateway** proxy in front of the CloudHub worker — a ~2hr setup when
+there's a customer org to deploy it into. The investor-facing story is intact:
+the governance artifacts (API instance, policies, SLA tiers, client app) are
+all visible and correct in Anypoint; the enforcement wire-up is a deployment
+topology change, not a code change.
 
 ---
 

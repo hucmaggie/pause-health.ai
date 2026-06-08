@@ -16,3 +16,4 @@ frontend/node_modules/
 
 # Stray lockfile at repo root (no root package.json)
 /package-lock.json
+.vercel
