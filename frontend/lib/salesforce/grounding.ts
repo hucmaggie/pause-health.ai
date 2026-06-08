@@ -1,14 +1,14 @@
 /**
- * Real-org grounding for the Care Router (Phase 1: Health Cloud objects).
+ * Real-org grounding for the Care Router (Phase 1 + Phase 2).
  *
  * This module is the production counterpart to lib/data-360.ts. When the
  * SF_* env vars are configured (see lib/salesforce/auth.ts), the Data 360
  * API routes prefer this module over the deterministic mock; if anything
  * here throws or returns null, callers fall back to the mock silently.
  *
- * What's real vs what's still mocked (Phase 1):
+ * What's real vs what's still mocked:
  *
- *   REAL (from your Salesforce Health Cloud org):
+ *   REAL — Phase 1 (Salesforce Health Cloud SOQL):
  *     - Unified patient identity      <- Contact.Id  (one per persona)
  *     - Age band hint                  <- parsed from Contact.Description
  *     - Cycle status hint              <- parsed from Contact.Description
@@ -17,7 +17,12 @@
  *     - Active care plan status        <- CarePlan.Status
  *     - Cohort size                    <- COUNT() on CareProgramEnrollee
  *
- *   STILL MOCKED (federation arrives in Phase 2 via Data Cloud):
+ *   REAL — Phase 2 (Data Cloud Calculated Insights, when SF_DC_TENANT_URL set):
+ *     - HRV RMSSD variability z-score  <- Pause_HRV_RMSSD_30d CI
+ *     - Vasomotor burden composite     <- Pause_Vasomotor_Burden_30d CI
+ *     - Sleep disruption index         <- Pause_Sleep_Disruption_7d CI
+ *
+ *   STILL MOCKED (Phase 2 not configured):
  *     - HRV variability z-score
  *     - Sleep disruption index
  *     - Vasomotor burden composite
@@ -37,6 +42,7 @@
  */
 
 import { getAccessToken, isSalesforceConfigured } from "./auth";
+import { getWearableInsights, isDataCloudConfigured } from "./data-cloud";
 import {
   getGroundingContext as getMockGroundingContext,
   type GroundingContext,
@@ -244,10 +250,11 @@ function num(value: string | undefined, fallback: number): number {
 }
 
 /**
- * Build a GroundingContext from real Health Cloud objects + clearly-
- * labeled mocked baselines for federation that hasn't been wired yet.
- * The returned object is shape-compatible with getMockGroundingContext()
- * so the Care Router and trace UI don't need to branch.
+ * Build a GroundingContext from real Health Cloud objects + optional
+ * Data Cloud wearable insights (Phase 2). Falls back to intake-baseline
+ * mocks for any insight not supplied by Data Cloud.
+ * Shape-compatible with getMockGroundingContext() so Care Router and
+ * trace UI don't need to branch.
  */
 function buildGroundingContext(args: {
   patientId: string;
@@ -257,8 +264,9 @@ function buildGroundingContext(args: {
   latestCase: RealCase | null;
   cohortSize: number;
   durationMs: number;
+  wearable?: Awaited<ReturnType<typeof getWearableInsights>>;
 }): GroundingContext {
-  const { contact, enrollee, carePlan, latestCase, cohortSize } = args;
+  const { contact, enrollee, carePlan, latestCase, cohortSize, wearable } = args;
 
   const vasomotorScore = num(parseHint(contact.Description, "Vasomotor")?.split("/")[0], 5);
   const sleepScore = num(parseHint(contact.Description, "Sleep")?.split("/")[0], 5);
@@ -302,29 +310,34 @@ function buildGroundingContext(args: {
       sourceWindow: "current",
       federatedFrom: [realSource]
     },
-    // -- Below: mocked baselines; replaced when Phase 2 wires Data Cloud.
-    {
+    // Vasomotor burden: real Data Cloud CI when available, else intake baseline.
+    wearable?.vasomotor ?? {
       id: "insight.vasomotor-burden-30d",
       name: "Vasomotor symptom burden (30-day, baseline)",
       description:
-        "Baseline composite from intake hint scores. Phase 2 will replace this with the Data Cloud Calculated Insight that fuses wearable thermoregulation, sleep disruption, and intake reports.",
+        "Baseline composite from intake hint scores. Set SF_DC_TENANT_URL to enable the Data Cloud Calculated Insight that fuses wearable thermoregulation, sleep disruption, and intake reports.",
       value: Math.round(vasomotorScore * 10),
       unit: "score",
       computedAt: new Date().toISOString(),
       sourceWindow: "intake-only",
       federatedFrom: ["agentforce-intake-history"]
     },
-    {
+    // Sleep disruption: real Data Cloud CI when available, else intake baseline.
+    wearable?.sleep ?? {
       id: "insight.sleep-disruption-7d",
       name: "Sleep disruption index (7-day, baseline)",
       description:
-        "Baseline from intake hint. Phase 2 will replace with Data Cloud federated wearable data.",
+        "Baseline from intake hint. Set SF_DC_TENANT_URL to enable Data Cloud federated wearable data.",
       value: Math.round((sleepScore / 10) * 100) / 100,
       unit: "fraction",
       computedAt: new Date().toISOString(),
       sourceWindow: "intake-only",
       federatedFrom: ["agentforce-intake-history"]
-    }
+    },
+    // HRV z-score: real Data Cloud CI when available, else omitted (no intake signal).
+    ...(wearable?.hrv
+      ? [wearable.hrv]
+      : [])
   ];
 
   const longitudinalObservations: LongitudinalObservation[] = [
@@ -388,10 +401,13 @@ function buildGroundingContext(args: {
     },
     cohortComparison,
     groundingProvenance: {
-      federatedQuery:
-        "SOQL: Contact + CareProgramEnrollee + CarePlan + Case (Phase 1 Health Cloud)",
+      federatedQuery: wearable
+        ? "Phase 2: SOQL (Health Cloud) + Data Cloud Calculated Insights (HRV/vasomotor/sleep)"
+        : "Phase 1: SOQL (Contact + CareProgramEnrollee + CarePlan + Case)",
       durationMs: args.durationMs,
-      sourcesQueried: [realSource, "agentforce-intake-history"],
+      sourcesQueried: wearable
+        ? [realSource, "agentforce-intake-history", "dbdp-wearable-features", "jupyterhealth-fhir"]
+        : [realSource, "agentforce-intake-history"],
       computedInsightsCount: calculatedInsights.length
     }
   };
@@ -429,10 +445,11 @@ export async function getGroundingContextFromOrg(args: {
   }
   if (!contact) return null;
 
-  const [enrollee, carePlan, latestCase] = await Promise.all([
+  const [enrollee, carePlan, latestCase, wearable] = await Promise.all([
     getActiveEnrollee(contact),
     getActiveCarePlan(contact),
-    getLatestCase(contact)
+    getLatestCase(contact),
+    isDataCloudConfigured() ? getWearableInsights(contact.Id) : Promise.resolve(null)
   ]);
 
   let cohortSize = 0;
@@ -447,6 +464,7 @@ export async function getGroundingContextFromOrg(args: {
     carePlan,
     latestCase,
     cohortSize,
+    wearable,
     durationMs: Date.now() - t0
   });
 }
