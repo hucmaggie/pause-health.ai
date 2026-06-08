@@ -31,12 +31,10 @@
         http://www.mulesoft.org/schema/mule/ee/core
           http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 
-    <configuration-properties file="config.yaml" doc:name="Configuration properties" />
-
     <http:listener-config name="health-httpListenerConfig"
                           doc:name="HTTP Listener config">
         <http:listener-connection host="0.0.0.0"
-                                  port="${http.listener.port:8081}" />
+                                  port="8081" />
     </http:listener-config>
 
     <!--
