@@ -69,7 +69,7 @@ const LIVE_SURFACES: LiveSurface[] = [
     href: "/demo/routing",
     label: "Anthropic-backed Care Router agent",
     blurb:
-      "Live policy + LLM decision that emits one of six canonical pathways (self-care, MSCP virtual / in-person, behavioral health, urgent gyn, ED). A2A endpoint, traced end to end.",
+      "Live policy + LLM decision that emits one of six canonical pathways (self-care, MSCP virtual / in-person, behavioral health, urgent gyn, ED). A2A endpoint, traced end to end. Backed by 100 unit tests pinning the decision tree, the Data 360 grounding promotion rules, and the governance gate.",
     status: "partial"
   },
   {

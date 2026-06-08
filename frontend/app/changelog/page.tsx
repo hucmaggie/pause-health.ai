@@ -31,8 +31,17 @@ const weeks: ChangelogWeek[] = [
     range: "Week of June 1, 2026",
     headline: "Honesty-pilling marathon",
     intro:
-      "Thirty-plus commits across every public page on the site. The single theme: replace any present-tense claim that isn't yet true with a StatusPill-flagged 'today vs. designed' framing. The Apache-2.0 license + OSS-hygiene trio (CONTRIBUTING / CODE_OF_CONDUCT / SECURITY) landed mid-week, the polish marathon wrapped with a reproducible end-to-end smoke test (132 / 132 pass), and the JupyterHealth integration jumped from designed-on-paper to wire-level prototype with 27 passing tests against an in-process JHE mock.",
+      "Thirty-plus commits across every public page on the site. The single theme: replace any present-tense claim that isn't yet true with a StatusPill-flagged 'today vs. designed' framing. The Apache-2.0 license + OSS-hygiene trio (CONTRIBUTING / CODE_OF_CONDUCT / SECURITY) landed mid-week, the polish marathon wrapped with a reproducible end-to-end smoke test (132 / 132 pass), the JupyterHealth integration jumped from designed-on-paper to wire-level prototype (27 / 27 against an in-process JHE mock), and the Care Router business logic got its first test safety net (100 new tests covering ~1,100 lines of previously-untested risk-band + pathway + A2A code).",
     entries: [
+      {
+        title: "Care Router business logic: +100 unit tests, drift caught",
+        summary:
+          "Five new test files cover the highest-leverage business logic on the site: lib/risk-band.test.ts (30 tests pinning the deterministic intake → band → pathway decision tree against every persona in the demo cohort), lib/care-router-pathways.test.ts (11 tests pinning the canonical six-pathway enum), lib/care-router.test.ts (25 tests covering scriptedRoute's red-flag / severity / cycleStatus / ageBand / Data 360 grounding branches plus the claudeRoute no-API-key fallback), lib/agent-fabric.test.ts (20 tests covering evaluateGovernance, the trace ring buffer, and listRecentTaskIds), and app/api/agents/care-router/tasks/route.test.ts (14 tests covering JSON-RPC envelope validation, governance block path, success path with RoutingDecision artifacts, and metadata.parentSpanId / personaId passthrough into recorded trace spans). The risk-band suite surfaced a real drift: Brianna Okafor's displayRisk on the public /demo/intake queue table was labeled 'Moderate' but her sleepScore=8 trips the single-axis-promotion rule and computeRisk returns 'High'. Fixed the data, the tests now pin both surfaces. Total frontend test count: 73 → 173. Smoke test still 132 / 132.",
+        commits: [
+          { sha: "HEAD", label: "Care Router test suite" }
+        ],
+        status: "prototype"
+      },
       {
         title: "pause_ingest → JHE: wire-level contract test (27 / 27 pass)",
         summary:

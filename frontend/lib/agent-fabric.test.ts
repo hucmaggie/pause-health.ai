@@ -1,0 +1,348 @@
+import { describe, expect, it } from "vitest";
+import {
+  evaluateGovernance,
+  getAgent,
+  getPoliciesForAgent,
+  listAgents,
+  listPolicies,
+  listRecentTaskIds,
+  listTraces,
+  recordInstantSpan,
+  recordSpan,
+  type TraceSpan
+} from "./agent-fabric";
+
+/**
+ * Tests for lib/agent-fabric.ts -- the in-memory mock of the
+ * MuleSoft Agent Fabric control plane.
+ *
+ * Important shape consideration: the trace ring buffer lives in a
+ * module-scoped global so it survives Next.js hot reload and is
+ * shared across every API route in the same Node process. The
+ * module also seeds 5 historical spans on first load. These tests
+ * use task ids unique to each test ("test-task-<random>") so they
+ * cannot conflict with the seeded spans OR with other tests in this
+ * file -- and they assert via per-task filtering rather than total
+ * counts, so adding more seed spans in the future cannot break them.
+ */
+
+function uniqueTaskId(label: string): string {
+  return `test-task-${label}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+describe("Agent + Policy registries", () => {
+  it("exposes a non-trivial agent registry", () => {
+    const agents = listAgents();
+    expect(agents.length).toBeGreaterThanOrEqual(5);
+    const ids = agents.map((a) => a.id);
+    expect(ids).toContain("agentforce-intake");
+    expect(ids).toContain("care-router-claude");
+    expect(ids).toContain("salesforce-data-360");
+  });
+
+  it("returns a copy from listAgents (mutating the result doesn't poison the registry)", () => {
+    const copy = listAgents();
+    const before = copy.length;
+    copy.push({} as never);
+    expect(listAgents()).toHaveLength(before);
+  });
+
+  it("getAgent resolves by id and returns undefined for unknowns", () => {
+    expect(getAgent("care-router-claude")?.kind).toBe("anthropic-claude");
+    expect(getAgent("does-not-exist")).toBeUndefined();
+  });
+
+  it("listPolicies returns a non-empty list with a stable shape", () => {
+    const policies = listPolicies();
+    expect(policies.length).toBeGreaterThan(5);
+    for (const p of policies) {
+      expect(p.id).toMatch(/^policy\./);
+      expect(["block", "audit", "rate-limit", "redact"]).toContain(p.enforcement);
+      expect(["enforced", "advisory", "draft"]).toContain(p.status);
+    }
+  });
+
+  it("getPoliciesForAgent filters by appliesTo membership", () => {
+    const careRouter = getPoliciesForAgent("care-router-claude").map(
+      (p) => p.id
+    );
+    expect(careRouter).toContain("policy.intake.red-flag-mandatory");
+    expect(careRouter).toContain(
+      "policy.model.anthropic-claude-sonnet-allowlisted"
+    );
+    // The Data 360 federation policy applies only to Data 360, not
+    // the care router.
+    expect(careRouter).not.toContain("policy.data360.zero-copy-federation");
+  });
+
+  it("returns an empty array for an unknown agent id", () => {
+    expect(getPoliciesForAgent("does-not-exist")).toEqual([]);
+  });
+});
+
+describe("evaluateGovernance · Care Router pre-flight", () => {
+  it("allows a well-formed task with red-flag screen and approved model", () => {
+    const out = evaluateGovernance({
+      agentId: "care-router-claude",
+      task: {
+        hasRedFlagScreen: true,
+        requestedModel: "claude-sonnet-4-5-20250929",
+        hasRationaleField: true
+      }
+    });
+    expect(out.decision).toBe("allow");
+    expect(out.blockingViolations).toEqual([]);
+    expect(out.appliesPolicies.length).toBeGreaterThan(0);
+  });
+
+  it("blocks when the red-flag screen field is explicitly false", () => {
+    const out = evaluateGovernance({
+      agentId: "care-router-claude",
+      task: {
+        hasRedFlagScreen: false,
+        requestedModel: "claude-sonnet-4-5-20250929"
+      }
+    });
+    expect(out.decision).toBe("block");
+    expect(out.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.intake.red-flag-mandatory"
+    );
+  });
+
+  it("does NOT block when hasRedFlagScreen is undefined (caller didn't supply the signal)", () => {
+    // The evaluator only blocks when the field is explicitly false,
+    // not when it's absent. This is documented behavior -- it lets
+    // the /api/agent-fabric/governance/evaluate POST work with
+    // partial test fixtures.
+    const out = evaluateGovernance({
+      agentId: "care-router-claude",
+      task: { requestedModel: "claude-sonnet-4-5-20250929" }
+    });
+    expect(out.decision).toBe("allow");
+  });
+
+  it("blocks when an off-allowlist model is requested", () => {
+    const out = evaluateGovernance({
+      agentId: "care-router-claude",
+      task: {
+        hasRedFlagScreen: true,
+        requestedModel: "gpt-4o-2024-08-06"
+      }
+    });
+    expect(out.decision).toBe("block");
+    const violation = out.blockingViolations.find(
+      (v) => v.policyId === "policy.model.anthropic-claude-sonnet-allowlisted"
+    );
+    expect(violation).toBeDefined();
+    expect(violation!.reason).toMatch(/gpt-4o/);
+  });
+
+  it("accepts claude-opus-* models per the allow-list regex", () => {
+    const out = evaluateGovernance({
+      agentId: "care-router-claude",
+      task: {
+        hasRedFlagScreen: true,
+        requestedModel: "claude-opus-4-7-20251119"
+      }
+    });
+    expect(out.decision).toBe("allow");
+  });
+
+  it("returns all blocking violations together, not just the first", () => {
+    const out = evaluateGovernance({
+      agentId: "care-router-claude",
+      task: {
+        hasRedFlagScreen: false,
+        requestedModel: "gpt-4o"
+      }
+    });
+    expect(out.blockingViolations).toHaveLength(2);
+  });
+
+  it("an unknown agent has no applicable policies and therefore allows", () => {
+    const out = evaluateGovernance({
+      agentId: "ghost-agent",
+      task: { hasRedFlagScreen: false }
+    });
+    // No policies apply to a ghost agent -> nothing to violate.
+    // Documented behavior: governance is opt-in by agent id.
+    expect(out.appliesPolicies).toEqual([]);
+    expect(out.decision).toBe("allow");
+  });
+});
+
+describe("Trace recording · recordSpan + recordInstantSpan", () => {
+  it("recordSpan assigns an id and returns the persisted span", () => {
+    const taskId = uniqueTaskId("rs");
+    const span = recordSpan({
+      taskId,
+      agentId: "care-router-claude",
+      agentName: "Care Router",
+      operation: "test.op",
+      protocol: "a2a",
+      startedAt: new Date().toISOString(),
+      finishedAt: new Date().toISOString(),
+      durationMs: 0,
+      status: "ok"
+    });
+    expect(span.id).toMatch(/^span-/);
+
+    const traces = listTraces({ taskId });
+    expect(traces).toHaveLength(1);
+    expect(traces[0]).toMatchObject<Partial<TraceSpan>>({
+      id: span.id,
+      taskId,
+      operation: "test.op"
+    });
+  });
+
+  it("recordInstantSpan resolves the agent name from the registry", () => {
+    const taskId = uniqueTaskId("ris");
+    const span = recordInstantSpan({
+      taskId,
+      agentId: "care-router-claude",
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      attributes: { pathway: "self-care-tracking" }
+    });
+    expect(span.agentName).toBe("Pause Care Router · Claude Sonnet 4.5");
+    expect(span.attributes?.pathway).toBe("self-care-tracking");
+    expect(span.durationMs).toBe(0);
+  });
+
+  it("recordInstantSpan falls back to agentId when the agent is unknown", () => {
+    const taskId = uniqueTaskId("unk");
+    const span = recordInstantSpan({
+      taskId,
+      agentId: "ghost-agent",
+      operation: "test.op",
+      protocol: "internal"
+    });
+    expect(span.agentName).toBe("ghost-agent");
+  });
+
+  it("recordInstantSpan defaults status to 'ok' but respects an explicit override", () => {
+    const taskId = uniqueTaskId("status");
+    const ok = recordInstantSpan({
+      taskId,
+      agentId: "care-router-claude",
+      operation: "test.ok",
+      protocol: "a2a"
+    });
+    const err = recordInstantSpan({
+      taskId,
+      agentId: "care-router-claude",
+      operation: "test.err",
+      protocol: "a2a",
+      status: "error"
+    });
+    expect(ok.status).toBe("ok");
+    expect(err.status).toBe("error");
+  });
+
+  it("listTraces filters by taskId and orders by startedAt", () => {
+    const taskId = uniqueTaskId("order");
+    const t0 = Date.now();
+    // Insert out of chronological order on purpose; listTraces must
+    // sort by startedAt ascending so trace inspectors render the
+    // span timeline left-to-right correctly.
+    recordSpan({
+      taskId,
+      agentId: "care-router-claude",
+      agentName: "x",
+      operation: "later",
+      protocol: "a2a",
+      startedAt: new Date(t0 + 5000).toISOString(),
+      finishedAt: new Date(t0 + 5100).toISOString(),
+      durationMs: 100,
+      status: "ok"
+    });
+    recordSpan({
+      taskId,
+      agentId: "care-router-claude",
+      agentName: "x",
+      operation: "earlier",
+      protocol: "a2a",
+      startedAt: new Date(t0 + 1000).toISOString(),
+      finishedAt: new Date(t0 + 1100).toISOString(),
+      durationMs: 100,
+      status: "ok"
+    });
+
+    const traces = listTraces({ taskId });
+    expect(traces.map((t) => t.operation)).toEqual(["earlier", "later"]);
+  });
+
+  it("listTraces respects the limit option (slices the tail)", () => {
+    const taskId = uniqueTaskId("limit");
+    const t0 = Date.now();
+    for (let i = 0; i < 5; i++) {
+      recordSpan({
+        taskId,
+        agentId: "care-router-claude",
+        agentName: "x",
+        operation: `op-${i}`,
+        protocol: "a2a",
+        startedAt: new Date(t0 + i * 100).toISOString(),
+        finishedAt: new Date(t0 + i * 100 + 50).toISOString(),
+        durationMs: 50,
+        status: "ok"
+      });
+    }
+    const tail = listTraces({ taskId, limit: 2 });
+    expect(tail.map((t) => t.operation)).toEqual(["op-3", "op-4"]);
+  });
+});
+
+describe("listRecentTaskIds", () => {
+  it("returns the most recently seen task ids (de-duplicated, capped)", () => {
+    const taskA = uniqueTaskId("recent-a");
+    const taskB = uniqueTaskId("recent-b");
+    const t0 = Date.now();
+    // Two spans for taskA, then one for taskB. taskB is most recent.
+    recordSpan({
+      taskId: taskA,
+      agentId: "care-router-claude",
+      agentName: "x",
+      operation: "a1",
+      protocol: "a2a",
+      startedAt: new Date(t0).toISOString(),
+      finishedAt: new Date(t0).toISOString(),
+      durationMs: 0,
+      status: "ok"
+    });
+    recordSpan({
+      taskId: taskA,
+      agentId: "care-router-claude",
+      agentName: "x",
+      operation: "a2",
+      protocol: "a2a",
+      startedAt: new Date(t0 + 100).toISOString(),
+      finishedAt: new Date(t0 + 100).toISOString(),
+      durationMs: 0,
+      status: "ok"
+    });
+    recordSpan({
+      taskId: taskB,
+      agentId: "care-router-claude",
+      agentName: "x",
+      operation: "b1",
+      protocol: "a2a",
+      startedAt: new Date(t0 + 200).toISOString(),
+      finishedAt: new Date(t0 + 200).toISOString(),
+      durationMs: 0,
+      status: "ok"
+    });
+
+    const ids = listRecentTaskIds(20);
+    // Both unique-per-test ids should appear; taskB (most recently
+    // recorded) should precede taskA.
+    const idxA = ids.indexOf(taskA);
+    const idxB = ids.indexOf(taskB);
+    expect(idxA).toBeGreaterThanOrEqual(0);
+    expect(idxB).toBeGreaterThanOrEqual(0);
+    expect(idxB).toBeLessThan(idxA);
+    // Same task id appears at most once.
+    expect(ids.filter((x) => x === taskA)).toHaveLength(1);
+  });
+});

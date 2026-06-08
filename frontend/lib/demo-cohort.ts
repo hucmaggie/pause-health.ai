@@ -86,7 +86,12 @@ export const DEMO_COHORT: DemoPersona[] = [
     profileNote:
       "Night sweats + insomnia. HRT discussion appropriate. Virtual visit candidate.",
     displaySymptoms: "Night sweats, insomnia, daytime fatigue",
-    displayRisk: "Moderate",
+    // Sleep axis = 8 trips the single-axis-promotion rule in
+    // lib/risk-band.ts:computeRisk, landing Brianna in the High
+    // band. The previous "Moderate" label on the public queue
+    // undersold the clinical picture; lib/risk-band.test.ts
+    // pins this so the two surfaces can't drift again.
+    displayRisk: "High",
     displayWait: "17m",
     displaySource: "JupyterHealth EHR + dbdp wearable sync"
   },
