@@ -56,7 +56,13 @@ export async function fetchLiveProviders(
     const fetchFn = opts.fetchImpl ?? fetch;
     const res = await fetchFn(url, {
       signal: controller.signal,
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        ...(process.env.MULESOFT_CLIENT_ID && {
+          client_id: process.env.MULESOFT_CLIENT_ID,
+          client_secret: process.env.MULESOFT_CLIENT_SECRET ?? ""
+        })
+      },
       cache: "no-store"
     });
     if (!res.ok) {

@@ -113,10 +113,11 @@ export async function fetchLiveHealthBundle(
       method: "GET",
       headers: {
         Accept: "application/json",
-        // The prototype tag is a soft signal Mule logs / API Manager
-        // policies can use to distinguish prototype traffic from
-        // production customer traffic; nothing depends on it today.
-        "X-Pause-Source": "pause-health.ai/prototype"
+        "X-Pause-Source": "pause-health.ai/prototype",
+        ...(process.env.MULESOFT_CLIENT_ID && {
+          client_id: process.env.MULESOFT_CLIENT_ID,
+          client_secret: process.env.MULESOFT_CLIENT_SECRET ?? ""
+        })
       },
       signal: controller.signal
     });
