@@ -1,5 +1,4 @@
 .venv/
-venv/
 __pycache__/
 *.pyc
 .env
@@ -14,6 +13,9 @@ node_modules/
 frontend/.next/
 frontend/node_modules/
 
-# Stray lockfile at repo root (no root package.json)
-/package-lock.json
+# Maven build output
+target/
+
+# Editor / tool scratch dirs
+.scratch/
 .vercel
