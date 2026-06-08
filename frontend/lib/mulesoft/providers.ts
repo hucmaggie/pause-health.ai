@@ -59,8 +59,9 @@ export async function fetchLiveProviders(
       headers: {
         Accept: "application/json",
         ...(process.env.MULESOFT_CLIENT_ID && {
-          client_id: process.env.MULESOFT_CLIENT_ID,
-          client_secret: process.env.MULESOFT_CLIENT_SECRET ?? ""
+          Authorization: "Basic " + Buffer.from(
+            `${process.env.MULESOFT_CLIENT_ID}:${process.env.MULESOFT_CLIENT_SECRET ?? ""}`
+          ).toString("base64")
         })
       },
       cache: "no-store"

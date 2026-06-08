@@ -358,10 +358,20 @@ All of these must be true before calling iteration 2 complete:
 
 ---
 
-## What's iteration 3 (out of scope here)
+## What's iteration 3
+
+**Flex Gateway — runtime enforcement** is the immediate next step.
+Full runbook: [`docs/FLEX_GATEWAY_RUNBOOK.md`](./FLEX_GATEWAY_RUNBOOK.md)
+
+Summary: Deploy Flex Gateway in Docker + ngrok, register it with Anypoint,
+create a new API Manager instance typed as "Flex Gateway", re-apply the
+existing policies to that instance, and update the Vercel env vars to route
+through the gateway URL.  Estimated ~2–2.5 hours.
+
+After Flex Gateway, the remaining backlog:
 
 1. **OAS/RAML spec for the Exchange asset** — generates interactive
-   documentation and lets customers generate client SDKs from the catalog.
+   documentation and lets customers produce client SDKs from the catalog.
 2. **JWT policy** (replacing Client ID Enforcement) — uses a customer's
    existing IdP (Azure AD, Okta) to issue tokens; eliminates the client
    ID/secret distribution problem.

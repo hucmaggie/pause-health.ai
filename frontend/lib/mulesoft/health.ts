@@ -115,8 +115,9 @@ export async function fetchLiveHealthBundle(
         Accept: "application/json",
         "X-Pause-Source": "pause-health.ai/prototype",
         ...(process.env.MULESOFT_CLIENT_ID && {
-          client_id: process.env.MULESOFT_CLIENT_ID,
-          client_secret: process.env.MULESOFT_CLIENT_SECRET ?? ""
+          Authorization: "Basic " + Buffer.from(
+            `${process.env.MULESOFT_CLIENT_ID}:${process.env.MULESOFT_CLIENT_SECRET ?? ""}`
+          ).toString("base64")
         })
       },
       signal: controller.signal

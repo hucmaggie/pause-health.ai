@@ -1,0 +1,5 @@
+# registration.yaml contains org credentials — never commit
+registration.yaml
+
+# ngrok env override
+.env
