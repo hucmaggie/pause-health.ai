@@ -38,7 +38,7 @@ const weeks: ChangelogWeek[] = [
         summary:
           "GET /providers?zip=&menopause=&limit= is now live on the deployed CloudHub 2.0 worker (pause-mulesoft-health-v1). The Mule flow (health-flow.xml providers-flow) returns a DataWeave-built provider directory ranked by graphScore with zip-prefix + menopause-certified filters. lib/mulesoft/providers.ts implements the same prefer-real / degrade-to-mock / warn-once pattern as health.ts: activated by MULESOFT_PROVIDERS_BASE_URL, falls back to queryProviderDirectory() on any failure. /api/mulesoft/providers route upgraded from mock-only to live/mock/fallback with _source metadata. 23 new unit tests (providers.test.ts) cover isMulesoftProvidersLive, fetchLiveProviders success/failure paths, and getProvidersPreferReal degradation. Total MuleSoft lib test count: 45/45. docs/MULESOFT_API_MANAGER_RUNBOOK.md documents the next Anypoint UI steps: API Manager registration, Client ID Enforcement policy, Rate Limiting SLA with Demo/Production tiers, Exchange asset registration, and credential injection into the Next.js proxy.",
         commits: [
-          { sha: "TBD", label: "mulesoft: iteration 2 — /providers live + API Manager runbook" }
+          { sha: "1e4468e", label: "mulesoft: iteration 2 — /providers live + API Manager runbook" }
         ],
         status: "partial"
       },
