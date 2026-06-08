@@ -350,7 +350,8 @@ var filtered = allProviders
   filter (menopause != "true" or $.menopauseCertified == true)
   filter (sizeOf(zipParam) < 3 or $.zip[0 to 2] == zipParam[0 to 2])
 var sorted = filtered orderBy -$.graphScore
-var resultRows = sorted[0 to (limitN - 1)] default []
+var clampedLimit = if (sizeOf(sorted) < limitN) sizeOf(sorted) else limitN
+var resultRows = if (clampedLimit == 0) [] else sorted[0 to (clampedLimit - 1)]
 ---
 {
   query: {

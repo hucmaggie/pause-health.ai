@@ -22,7 +22,7 @@
 
     <groupId>56707cc3-a0e3-4318-b110-78126aace370</groupId>
     <artifactId>pause-mulesoft-health-v1</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.2</version>
     <packaging>mule-application</packaging>
 
     <name>pause-mulesoft-health-v1</name>
@@ -62,7 +62,7 @@
                         <muleVersion>${app.runtime}</muleVersion>
                         <provider>MC</provider>
                         <environment>${cloudhub2.environment}</environment>
-                        <target>Cloudhub-US-East-2</target>
+                        <target>${cloudhub2.target}</target>
                         <businessGroupId>${cloudhub2.businessGroupId}</businessGroupId>
                         <applicationName>pause-mulesoft-health-v1</applicationName>
                         <replicas>1</replicas>
