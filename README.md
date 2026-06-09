@@ -4,9 +4,10 @@ This repository hosts five things:
 
 - **`frontend/`** — Next.js marketing site, investor brief, and clickable
   prototype for [Pause-Health.ai](https://pause-health.ai). Deployed to
-  Vercel. Also serves the mocked MuleSoft Experience APIs under
-  `/api/mulesoft/*` and the MCP descriptor at `/.well-known/mcp.json`. See
-  `frontend/README.md`.
+  Vercel. `/api/mulesoft/health` and `/api/mulesoft/providers` proxy through
+  Flex Gateway → CloudHub 2.0 (live, JWT-enforced); `/api/mulesoft/patient/*`
+  endpoints are deterministic mocks with the same response shapes. MCP
+  descriptor at `/.well-known/mcp.json`. See `frontend/README.md`.
 - **`pause_ingest/`** — Python wearable ingest worker. Normalizes vendor JSON
   through [omh-shim](https://github.com/jupyterhealth/omh-shim), computes
   clinical features via the
@@ -14,16 +15,16 @@ This repository hosts five things:
   (FLIRT + a Kubios-validated HRV reference port), and uploads the result to
   a [JupyterHealth Exchange](https://github.com/jupyterhealth/jupyterhealth-exchange)
   instance as FHIR R5 Observations. See `pause_ingest/README.md`.
-- **`mulesoft/`** — MuleSoft Anypoint artifacts. `flows/` + `transforms/`
-  contain reference-only Mule 4 / DataWeave samples showing the three-tier
-  API-Led Connectivity pattern; `pause-mulesoft-health-v1/` contains the
-  Phase 1 **deployable** Mule app (pom + mule-artifact + one-flow XML)
-  that backs `MULESOFT_HEALTH_BASE_URL` for the live `/api/mulesoft/health`
-  proxy. See
-  `mulesoft/README.md`. Live mocked Experience APIs are served by the
-  Next.js frontend at `/api/mulesoft/health`,
-  `/api/mulesoft/patient/{id}/timeline`,
-  `/api/mulesoft/patient/{id}/intake`, and `/api/mulesoft/providers`.
+- **`mulesoft/`** — MuleSoft Anypoint artifacts. `pause-mulesoft-health-v1/`
+  is the **live** Mule 4.11.2 app deployed on CloudHub 2.0 (Cloudhub-US-West-1,
+  Sandbox) serving `/health` and `/providers`. `flex-gateway/` contains the
+  Docker + ngrok Flex Gateway setup (static domain
+  `cattail-reactive-sassy.ngrok-free.dev`) with JWT Validation + Rate Limiting
+  policies enforced. `pause-provider-experience-api.oas3.yaml` is the OAS 3.0
+  spec published to Anypoint Exchange as `pause-provider-experience-api-spec`
+  v1.0.2. `flows/` + `transforms/` are reference-only Mule 4 / DataWeave
+  samples for the full three-tier architecture. See `mulesoft/README.md` and
+  `docs/MULESOFT_API_MANAGER_RUNBOOK.md`.
 - **`mcp/`** — [Model Context Protocol](https://modelcontextprotocol.io/)
   server (`@pause-health/mcp`) that exposes the MuleSoft Experience APIs as
   four tools (`get_patient_timeline`, `get_patient_intake`,
@@ -67,18 +68,15 @@ Deep-dive sections (each a routed page):
   from CMS NPPES and state board data (no scraping of restricted sources).
 - `/proposal/agentforce` — Patient intake on Salesforce Agentforce Service
   Agent, with graceful Pause-branded fallback when no org is configured.
-- `/proposal/mulesoft` — Integration plane on MuleSoft Anypoint. The
-  Experience-API surface at `/api/mulesoft/health` is **live in Vercel
-  production**, proxying to `pause-mulesoft-health-v1` on CloudHub 2.0
-  (Cloudhub-US-West-1, Sandbox,
-  `https://pause-mulesoft-health-v1-zkeniz.scqos5-1.usa-w1.cloudhub.io`).
-  Degrades to `mock-fallback` if the worker is unreachable — the prototype
-  never goes hard-down. The deployable Mule artifact lives in
-  `mulesoft/pause-mulesoft-health-v1/`; the runbook is in
-  [`docs/MULESOFT_PHASE_1_HANDOFF.md`](docs/MULESOFT_PHASE_1_HANDOFF.md).
-  31 unit tests pin the live/mock matrix (see
-  `frontend/lib/mulesoft/health.test.ts` and
-  `frontend/app/api/mulesoft/health/route.test.ts`).
+- `/proposal/mulesoft` — Integration plane on MuleSoft Anypoint. Iterations
+  1–7 complete (2026-06-09): CloudHub 2.0 worker live, Flex Gateway proxy
+  enforcing JWT Validation (Auth0 RS256/JWKS) + Rate Limiting (10 req/min),
+  OAS 3.0 spec in Exchange, stable ngrok domain. `/api/mulesoft/health` and
+  `/api/mulesoft/providers` are **live**, JWT-protected, and degrade to
+  `mock-fallback` on any gateway failure — the prototype never goes hard-down.
+  Next.js proxy fetches Auth0 M2M tokens automatically via
+  `frontend/lib/mulesoft/auth.ts`. Full governance runbook:
+  [`docs/MULESOFT_API_MANAGER_RUNBOOK.md`](docs/MULESOFT_API_MANAGER_RUNBOOK.md).
 - `/proposal/mcp` — Pause as a tool surface for AI agents. MCP server
   registration snippets for Claude Desktop, Cursor, and Agentforce.
 - `/proposal/agent-fabric` — Multi-agent control plane. Four agents
