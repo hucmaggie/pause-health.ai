@@ -2,11 +2,11 @@
 <!--
   Pause-Health.ai  -  pause-mulesoft-health-v1
 
-  Phase 1 deployable Mule app. Returns a static FHIR R5 Bundle
-  identical to the one served by the Next.js mock at
-  /api/mulesoft/health. This is the smallest possible artifact that
-  proves the architecture: a real Mule app deployed to the customer's
-  CloudHub 2.0 environment, fronting one Pause Experience API.
+  Phase 1 deployable Mule app. GET /health loads synthetic Oura OMH
+  samples from classpath and transforms them to a FHIR R5 Bundle via
+  the DataWeave omh-to-fhir-observation.dwl transform. GET /providers
+  returns a filtered provider directory. Deployed to the customer's
+  CloudHub 2.0 environment, fronting the Pause Experience API.
 
   Deploy target: CloudHub 2.0, Sandbox environment.
   Worker URL pattern: https://<app-name>.<region>.cloudhub.io
@@ -22,7 +22,7 @@
 
     <groupId>56707cc3-a0e3-4318-b110-78126aace370</groupId>
     <artifactId>pause-mulesoft-health-v1</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <packaging>mule-application</packaging>
 
     <name>pause-mulesoft-health-v1</name>
