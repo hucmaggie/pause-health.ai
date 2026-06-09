@@ -12,6 +12,7 @@
  */
 
 import { queryProviderDirectory } from "../mulesoft-mocks";
+import { getMulesoftBearerToken } from "./auth";
 
 export type ProviderDirectoryResult = ReturnType<typeof queryProviderDirectory>;
 
@@ -54,15 +55,22 @@ export async function fetchLiveProviders(
 
   try {
     const fetchFn = opts.fetchImpl ?? fetch;
+    const jwtToken = await getMulesoftBearerToken();
     const res = await fetchFn(url, {
       signal: controller.signal,
       headers: {
         Accept: "application/json",
-        ...(process.env.MULESOFT_CLIENT_ID && {
-          Authorization: "Basic " + Buffer.from(
-            `${process.env.MULESOFT_CLIENT_ID}:${process.env.MULESOFT_CLIENT_SECRET ?? ""}`
-          ).toString("base64")
-        })
+        ...(jwtToken
+          ? { Authorization: `Bearer ${jwtToken}` }
+          : process.env.MULESOFT_CLIENT_ID
+          ? {
+              Authorization: "Basic " + Buffer.from(
+                `${process.env.MULESOFT_CLIENT_ID}:${process.env.MULESOFT_CLIENT_SECRET ?? ""}`
+              ).toString("base64"),
+              "client_id": process.env.MULESOFT_CLIENT_ID,
+              "client_secret": process.env.MULESOFT_CLIENT_SECRET ?? "",
+            }
+          : {})
       },
       cache: "no-store"
     });

@@ -1,0 +1,317 @@
+openapi: "3.0.3"
+
+info:
+  title: Pause Provider Experience API
+  version: "1.0"
+  description: |
+    Experience API for the Pause Health platform. Exposes two endpoints:
+
+    - `GET /health` — returns a FHIR R5 Bundle containing a demo patient timeline
+      (vitals, HRV observations) sourced from the Pause MuleSoft CloudHub pipeline.
+    - `GET /providers` — returns a filtered list of menopause-certified providers
+      from the synthetic Pause provider directory.
+
+    All requests must be authenticated with a JWT Bearer token issued by Auth0
+    via the OAuth 2.0 client credentials grant. Requests are subject to a global
+    rate limit of 10 req/min enforced by Flex Gateway.
+
+servers:
+  - url: https://cattail-reactive-sassy.ngrok-free.dev
+    description: Flex Gateway (ngrok tunnel — development/demo)
+  - url: https://pause-mulesoft-health-v1-zkeniz.scqos5-1.usa-w1.cloudhub.io
+    description: CloudHub 2.0 worker (direct, bypasses gateway policies)
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      operationId: getHealthBundle
+      summary: Patient health timeline (FHIR R5 Bundle)
+      description: |
+        Returns a FHIR R5 Bundle of type `searchset` containing a demo patient
+        record and associated observations (heart rate, HRV RMSSD) produced by
+        the Pause MuleSoft ingest pipeline.
+      responses:
+        "200":
+          description: FHIR R5 Bundle — patient timeline
+          headers:
+            x-ratelimit-limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            x-ratelimit-remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            x-ratelimit-reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FhirBundle"
+              example:
+                resourceType: Bundle
+                type: searchset
+                meta:
+                  lastUpdated: "2026-06-09T06:24:07.324739034Z"
+                  source: "urn:pause-health:mulesoft:pause-patient-bundle-process-api"
+                entry:
+                  - fullUrl: "urn:uuid:pause-demo-patient-001"
+                    resource:
+                      resourceType: Patient
+                      id: pause-demo-patient-001
+                      active: true
+                      gender: female
+                      birthDate: "1974-08-12"
+                  - fullUrl: "urn:uuid:obs-heart-rate-001"
+                    resource:
+                      resourceType: Observation
+                      id: obs-heart-rate-001
+                      status: final
+                      valueQuantity:
+                        value: 72
+                        unit: /min
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /providers:
+    get:
+      operationId: getProviders
+      summary: Menopause-certified provider directory
+      description: |
+        Returns a filtered list of providers from the synthetic Pause provider
+        directory.  Results can be filtered by ZIP code, menopause certification,
+        and capped at a maximum count.
+      parameters:
+        - name: zip
+          in: query
+          description: Filter providers by ZIP code.
+          required: false
+          schema:
+            type: string
+            example: "90025"
+        - name: menopause
+          in: query
+          description: When `true`, return only menopause-certified providers.
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: limit
+          in: query
+          description: Maximum number of providers to return.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        "200":
+          description: Provider directory results
+          headers:
+            x-ratelimit-limit:
+              $ref: "#/components/headers/RateLimitLimit"
+            x-ratelimit-remaining:
+              $ref: "#/components/headers/RateLimitRemaining"
+            x-ratelimit-reset:
+              $ref: "#/components/headers/RateLimitReset"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderDirectoryResponse"
+              example:
+                query:
+                  zip: null
+                  menopauseOnly: true
+                  limit: 3
+                total: 4
+                returned: 3
+                providers:
+                  - npi: "1245319599"
+                    name: "Dr. Priya Nair, MD, MSCP"
+                    credentials: [MD, MSCP]
+                    specialty: "Obstetrics & Gynecology"
+                    menopauseCertified: true
+                    city: Irvine
+                    state: CA
+                    zip: "92614"
+                    acceptingNewPatients: true
+                    telehealth: true
+                    graphScore: 0.95
+                provenance:
+                  sources:
+                    - "CMS NPPES (synthetic slice, Mule iteration 2)"
+                    - "MSCP credential list (synthetic)"
+                  experienceApi: "pause-provider-directory-experience-api@1.0"
+                  servedBy: mulesoft-cloudhub2
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Auth0 M2M JWT token. Obtain via the OAuth 2.0 client credentials grant
+        against `https://dev-2z72o4qxi3yym4kh.us.auth0.com/oauth/token` with
+        audience `https://cattail-reactive-sassy.ngrok-free.dev`.
+
+  headers:
+    RateLimitLimit:
+      description: Maximum requests allowed in the current window.
+      schema:
+        type: integer
+        example: 10
+    RateLimitRemaining:
+      description: Requests remaining in the current window.
+      schema:
+        type: integer
+        example: 9
+    RateLimitReset:
+      description: Milliseconds until the rate limit window resets.
+      schema:
+        type: integer
+        example: 52034
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid client credentials.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Authentication Attempt Failed
+    TooManyRequests:
+      description: Rate limit exceeded for the current SLA tier.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Quota exceeded
+
+  schemas:
+    FhirBundle:
+      type: object
+      required: [resourceType, type, entry]
+      properties:
+        resourceType:
+          type: string
+          enum: [Bundle]
+        type:
+          type: string
+          example: searchset
+        meta:
+          type: object
+          properties:
+            lastUpdated:
+              type: string
+              format: date-time
+            source:
+              type: string
+        entry:
+          type: array
+          items:
+            $ref: "#/components/schemas/FhirBundleEntry"
+
+    FhirBundleEntry:
+      type: object
+      properties:
+        fullUrl:
+          type: string
+          example: "urn:uuid:pause-demo-patient-001"
+        resource:
+          type: object
+          required: [resourceType]
+          properties:
+            resourceType:
+              type: string
+              example: Patient
+
+    Provider:
+      type: object
+      required: [npi, name, specialty, menopauseCertified, city, state, zip, acceptingNewPatients, telehealth, graphScore]
+      properties:
+        npi:
+          type: string
+          description: National Provider Identifier
+          example: "1245319599"
+        name:
+          type: string
+          example: "Dr. Priya Nair, MD, MSCP"
+        credentials:
+          type: array
+          items:
+            type: string
+          example: [MD, MSCP]
+        specialty:
+          type: string
+          example: "Obstetrics & Gynecology"
+        menopauseCertified:
+          type: boolean
+        city:
+          type: string
+          example: Irvine
+        state:
+          type: string
+          example: CA
+        zip:
+          type: string
+          example: "92614"
+        acceptingNewPatients:
+          type: boolean
+        telehealth:
+          type: boolean
+        graphScore:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Provider relevance score from the Pause knowledge graph.
+          example: 0.95
+
+    ProviderDirectoryResponse:
+      type: object
+      required: [query, total, returned, providers]
+      properties:
+        query:
+          type: object
+          properties:
+            zip:
+              type: string
+              nullable: true
+            menopauseOnly:
+              type: boolean
+            limit:
+              type: integer
+        total:
+          type: integer
+          description: Total matching providers before limit applied.
+        returned:
+          type: integer
+          description: Number of providers in this response.
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Provider"
+        provenance:
+          type: object
+          properties:
+            sources:
+              type: array
+              items:
+                type: string
+            experienceApi:
+              type: string
+            servedBy:
+              type: string
