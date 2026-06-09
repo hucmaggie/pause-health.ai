@@ -220,7 +220,7 @@ export default function AboutPage() {
         <article className="card founder-card" style={{ marginTop: "0.6rem" }}>
           <Image
             src="/team/maggie-c-hu.jpg"
-            alt="Portrait of Maggie C. Hu, Founder & CEO of Pause-Health.ai."
+            alt="Portrait of Maggie C. Hu, Founder | CEO | CTO of Pause-Health.ai."
             width={200}
             height={200}
             sizes="(max-width: 600px) 160px, 200px"
@@ -235,7 +235,7 @@ export default function AboutPage() {
                 marginBottom: "0.6rem"
               }}
             >
-              Founder &amp; CEO
+              Founder | CEO | CTO
             </p>
             <p style={{ marginBottom: "0.5rem" }}>
               Maggie leads product, vision, and provider partnerships at
