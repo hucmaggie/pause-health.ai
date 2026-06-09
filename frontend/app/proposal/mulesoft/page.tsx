@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata = pageMetadata({
   title: "Investor Brief · MuleSoft Integration",
   description:
-    "Why Pause-Health.ai is designed to integrate JupyterHealth + DBDP wearable features + Agentforce through MuleSoft Anypoint. Today: mocked Experience-tier endpoints + reference Mule artifacts. Real Mule deployment lands with first design partner.",
+    "MuleSoft Anypoint integration plane for Pause-Health.ai. Iterations 1–7 shipped: CloudHub 2.0 worker live, Flex Gateway enforcing JWT + rate limiting, OAS 3.0 spec published to Exchange. Full three-tier architecture activates with first design partner.",
   path: "/proposal/mulesoft",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "MuleSoft integration strategy — Pause-Health.ai investor brief."
@@ -79,10 +79,10 @@ const tiers: Array<{
   },
   {
     name: "Experience APIs",
-    status: "prototype",
+    status: "partial",
     role: "Pause-facing read endpoints",
     detail:
-      "Read-optimized FHIR Bundles that combine raw Observations with DBDP-computed feature Observations. The Pause clinician web app calls these — never JHE or DBDP directly. Today four Experience-tier endpoints are wired as deterministic mocks at /api/mulesoft/* (health, timeline, intake, providers); same shapes will be served by real Mule in customer deployments."
+      "Read-optimized FHIR Bundles that combine raw Observations with DBDP-computed feature Observations. The Pause clinician web app calls these — never JHE or DBDP directly. Today /health and /providers are live on CloudHub 2.0, protected by Flex Gateway (JWT Validation + Rate Limiting); /timeline and /intake are deterministic mocks at /api/mulesoft/* with the same response shapes. Full three-tier deployment activates with the first design partner."
   }
 ];
 
@@ -120,7 +120,7 @@ const whyMulesoft: Array<{
 const protoVsProd = [
   {
     aspect: "Where the integration runs",
-    proto: "Mocked Experience APIs served by Next.js under /api/mulesoft/* (health, timeline, intake, providers).",
+    proto: "/health and /providers proxied through Flex Gateway → CloudHub 2.0 worker (live, JWT-enforced). /timeline and /intake served as deterministic mocks by Next.js.",
     prod:
       "Three-tier Mule application on the customer's Anypoint Runtime Fabric or CloudHub 2.0."
   },
@@ -166,10 +166,10 @@ const phases: Array<{
   },
   {
     name: "Phase 1 — Working sandbox",
-    status: "partial",
-    duration: "In progress",
+    status: "shipped",
+    duration: "Complete · 2026-06-09",
     detail:
-      "Iteration 1 (2026-06-07): Mule 4.11.2 live on CloudHub 2.0, /health Experience API serving real FHIR Bundles in Vercel production. Iteration 2 (2026-06-07): /providers Experience API live on the same worker; lib/mulesoft/providers.ts prefer-real client wired; 45/45 MuleSoft lib tests green. Next: API Manager Client ID Enforcement + Rate Limiting SLA (runbook in docs/MULESOFT_API_MANAGER_RUNBOOK.md), Anypoint Exchange registration, DataWeave OMH→FHIR on the live path."
+      "Seven iterations shipped: CloudHub 2.0 worker live with /health + /providers (iterations 1–2); Flex Gateway (Docker + ngrok) with runtime enforcement (iteration 3); Rate Limiting SLA 10 req/min (iteration 4); OAS 3.0 spec published to Anypoint Exchange as pause-provider-experience-api-spec v1.0.2 (iteration 5); static ngrok domain pinned (iteration 6); JWT Validation via Auth0 RS256/JWKS replaces Client ID Enforcement, plain Rate Limiting replaces SLA-based, Next.js proxy fetches Auth0 M2M tokens automatically (iteration 7). Current policy stack: JWT Validation + Rate Limiting (10 req/min global). Next: persistent VM to host the gateway (iteration 8)."
   },
   {
     name: "Phase 2 — First customer deployment",
@@ -277,7 +277,7 @@ export default function MulesoftPage() {
     <ProposalShell
       eyebrow="Investor brief · MuleSoft integration"
       title="Integration plane on the substrate our buyers already operate"
-      subtitle="Pause-Health.ai's integration with JupyterHealth, DBDP wearable features, Agentforce, and consumer wearables is designed to run through MuleSoft Anypoint — the connectivity platform most US health systems and large payers already license. Today the Experience-tier endpoints are wired as deterministic mocks at /api/mulesoft/* and reference Mule + DataWeave artifacts are committed under mulesoft/; the real Anypoint deployment lands with the first design partner."
+      subtitle="Pause-Health.ai's integration with JupyterHealth, DBDP wearable features, Agentforce, and consumer wearables is designed to run through MuleSoft Anypoint — the connectivity platform most US health systems and large payers already license. Today a Mule app is live on CloudHub 2.0 with Flex Gateway enforcing JWT validation and rate limiting; the full three-tier architecture activates with the first design partner."
     >
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">API-Led Connectivity, applied to menopause</p>
@@ -330,17 +330,16 @@ export default function MulesoftPage() {
       <section className="card" style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Touch the architecture</p>
         <h2 className="proposal-section-title" style={{ marginTop: 0 }}>
-          Six live surfaces you can hit right now
+          Hit the live gateway right now
         </h2>
         <p style={{ marginTop: "0.4rem" }}>
-          The Next.js frontend exposes four mocked Experience-tier endpoints
-          under <code>/api/mulesoft/*</code>. They return realistic FHIR R5
-          Bundles + structured intake records + a deterministic provider
-          directory — the same shapes a real Mule Experience API will serve
-          in production. The data lineage on the timeline endpoint is
-          intact: every DBDP-computed feature Observation carries a{" "}
-          <code>derivedFrom</code> reference back to the raw window it was
-          derived from.
+          <code>/health</code> and <code>/providers</code> proxy through Flex
+          Gateway to a real Mule app on CloudHub 2.0 — JWT-validated, rate-limited,
+          OAS 3.0 spec in Anypoint Exchange. <code>/timeline</code> and{" "}
+          <code>/intake</code> are deterministic mocks with the same response shapes.
+          The data lineage on the timeline endpoint is intact: every DBDP-computed
+          feature Observation carries a <code>derivedFrom</code> reference back to
+          the raw window it was derived from.
         </p>
         <div
           style={{
@@ -375,12 +374,13 @@ export default function MulesoftPage() {
                 {providersIsLive && (
                   <><code>/api/mulesoft/providers</code>{" "}</>
                 )}
-                {!healthIsLive && !providersIsLive ? null : "proxy to a Mule application deployed on CloudHub 2.0 (iteration 1 + 2). "}
+                proxy through Flex Gateway (JWT Validation + Rate Limiting, 10 req/min) to a Mule
+                app on CloudHub 2.0 (iterations 1–7).{" "}
                 Any non-2xx degrades gracefully to the deterministic mock;{" "}
                 <code>meta._source</code> flips between{" "}
                 <code>&quot;live-mulesoft&quot;</code> and{" "}
-                <code>&quot;mock-fallback&quot;</code>. Next: API Manager
-                Client ID Enforcement + Rate Limiting SLA — see{" "}
+                <code>&quot;mock-fallback&quot;</code>. Governance policy stack and
+                OAS 3.0 spec live in Anypoint Exchange — see{" "}
                 <code>docs/MULESOFT_API_MANAGER_RUNBOOK.md</code>.
               </>
             ) : (
