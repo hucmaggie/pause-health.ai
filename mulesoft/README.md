@@ -16,6 +16,11 @@ investor-facing summary, see `/proposal/mulesoft` on the deployed site.
 ```
 mulesoft/
 ├── README.md                                   <- this file
+├── pause-provider-experience-api.oas3.yaml     <- OAS 3.0 spec (published to Exchange v1.0.2)
+├── flex-gateway/                               <- Flex Gateway (Docker + ngrok)
+│   ├── docker-compose.yml                      <- runs flex-gateway container
+│   ├── .env.example                            <- NGROK_AUTHTOKEN template
+│   └── .gitignore                              <- excludes registration.yaml + .env
 ├── flows/
 │   └── pause-process-api.example.xml           <- Mule 4 Process API flow (reference)
 ├── transforms/
@@ -24,7 +29,7 @@ mulesoft/
     ├── README.md
     ├── mule-artifact.json
     ├── pom.xml                                 <- CloudHub 2.0 deploy config
-    └── src/main/mule/health-flow.xml           <- GET /health -> FHIR Bundle
+    └── src/main/mule/health-flow.xml           <- GET /health + GET /providers
 ```
 
 ### `pause-mulesoft-health-v1/` (Phase 1, deployable)

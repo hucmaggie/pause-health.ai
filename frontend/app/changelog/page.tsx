@@ -28,6 +28,24 @@ type ChangelogWeek = {
 
 const weeks: ChangelogWeek[] = [
   {
+    range: "Week of June 9, 2026",
+    headline: "MuleSoft iterations 3–7: Flex Gateway live, JWT auth, OAS spec, rate limiting, stable tunnel",
+    intro:
+      "Five iterations landed in a single session. Flex Gateway (Docker + ngrok) is running with runtime enforcement active — 401 on missing/invalid JWT, 429 on rate limit exceeded. Auth0 M2M client credentials grant issues RS256 tokens; the Next.js proxy caches and forwards them automatically. Plain Rate Limiting (10 req/min global) replaced the SLA-based policy after a BadArgument conflict with JWT. The OAS 3.0 spec is published to Exchange as a REST API asset with interactive docs. ngrok static domain is pinned in docker-compose so the tunnel URL survives restarts. Policy stack: JWT Validation + Rate Limiting (plain).",
+    entries: [
+      {
+        title: "MuleSoft iterations 3–7: Flex Gateway, JWT, OAS 3.0, rate limiting, stable tunnel",
+        summary:
+          "Iteration 3: Flex Gateway deployed as Docker + ngrok proxy, registered with Anypoint as Omni Gateway instance (ID 20955827), Client ID Enforcement policy applied — first live runtime enforcement (401 on unauthenticated requests). Iteration 4: Rate Limiting SLA (10 req/min Demo tier) added; Next.js proxy updated to send dual auth headers (Basic Auth + client_id/client_secret custom headers) because DataWeave Base64 decode is unsupported in Flex Gateway policy sandbox. Iteration 5: OAS 3.0 spec (mulesoft/pause-provider-experience-api.oas3.yaml) written and published to Exchange as pause-provider-experience-api-spec v1.0.0 (REST API type — separate from the HTTP API asset). Iteration 6: ngrok free static domain (cattail-reactive-sassy.ngrok-free.dev) pinned in docker-compose.yml with --domain flag. Iteration 7: JWT Validation policy (Auth0 RS256/JWKS, audience-validated, expiry mandatory) replaces Client ID Enforcement; Rate Limiting SLA replaced with plain Rate Limiting (SLA-based policy caused BadArgument when JWT present — contract lookup incompatible); Auth0 M2M app pause-prototype-client configured with Client Credentials grant; frontend/lib/mulesoft/auth.ts added for 24h token caching; both health.ts and providers.ts updated to send Authorization: Bearer <jwt> with Basic Auth fallback; AUTH0_MULESOFT_* vars set in Vercel; OAS spec updated to v1.0.2 with bearerAuth security scheme.",
+        commits: [
+          { sha: "37372b4", label: "mulesoft: iteration 3 — Flex Gateway live, runtime enforcement active" },
+          { sha: "981c031", label: "mulesoft: iterations 4-7 — rate limiting, OAS spec, stable tunnel, JWT auth" }
+        ],
+        status: "live"
+      }
+    ]
+  },
+  {
     range: "Week of June 7, 2026",
     headline: "MuleSoft iteration 2: /providers live + API Manager governance plane wired",
     intro:
@@ -40,7 +58,7 @@ const weeks: ChangelogWeek[] = [
         commits: [
           { sha: "1e4468e", label: "mulesoft: iteration 2 — /providers live + API Manager runbook" }
         ],
-        status: "partial"
+        status: "live"
       },
       {
         title: "MuleSoft: runtime 4.11.2, Java 17, health-flow.xml fixes",

@@ -14,29 +14,26 @@ See [`docs/MULESOFT_PHASE_1_HANDOFF.md`](./MULESOFT_PHASE_1_HANDOFF.md).
 
 ---
 
-## What's live vs. deferred (2026-06-07)
+## What's live (2026-06-09)
 
 | Item | Status | Notes |
 |---|---|---|
-| Exchange asset `pause-provider-experience-api` v1.0.0 | **Live** | HTTP API type, visible in Anypoint Exchange |
-| API Manager instance ID `20954842` | **Live** | `pause-provider-experience-api-sandbox`, Sandbox env |
-| Client ID Enforcement policy | **Configured** | Applied in API Manager UI; visible in Governance Report |
-| Rate Limiting SLA policy | **Configured** | Demo tier: 10 req/min; Production: 1000 req/min |
-| SLA tiers | **Live** | Demo (ID 2438178, auto-approve) + Production (ID 2438179) |
-| `pause-prototype-client` app | **Live** | Approved on Demo tier; Client ID issued |
-| `MULESOFT_CLIENT_ID` / `MULESOFT_CLIENT_SECRET` | **Live** | Set in Vercel production; Next.js proxy forwards headers |
-| Runtime policy enforcement (401 on missing creds) | **Deferred** | CH2 Shared Space doesn't support Mule agent autodiscovery; requires Flex Gateway |
+| Exchange asset `pause-provider-experience-api` v1.0.0 | **Live** | HTTP API type |
+| Exchange asset `pause-provider-experience-api-spec` v1.0.2 | **Live** | OAS 3.0 REST API type, interactive docs |
+| API Manager instance ID `20954842` | **Live** | `pause-provider-experience-api-sandbox`, Mule Gateway runtime |
+| API Manager instance ID `20955827` | **Live** | `pause-flex-gateway`, Omni Gateway (Flex) runtime — active instance |
+| Flex Gateway | **Live** | Docker + ngrok, static domain `cattail-reactive-sassy.ngrok-free.dev` |
+| JWT Validation policy | **Live** | Auth0 RS256 / JWKS, audience-validated, expiry mandatory |
+| Rate Limiting policy (plain) | **Live** | 10 req/min global, x-ratelimit headers exposed |
+| Auth0 M2M app `pause-prototype-client` | **Live** | Client credentials grant, audience = gateway URL |
+| `AUTH0_MULESOFT_*` env vars | **Live** | Set in Vercel production; Next.js proxy fetches JWT automatically |
+| Runtime policy enforcement | **Live** | 401 on missing/invalid JWT; 429 on rate limit exceeded |
 
-**Why enforcement is deferred:** CloudHub 2.0 Shared Space runs the Mule
-runtime in a managed container that doesn't expose the Mule agent's
-autodiscovery registration channel. The `api.id` + `anypoint.platform.client_id`
-properties are set on the deployment but the agent cannot reach the API Manager
-registration endpoint from Shared Space. Runtime policy enforcement requires
-a **Flex Gateway** proxy in front of the CloudHub worker — a ~2hr setup when
-there's a customer org to deploy it into. The investor-facing story is intact:
-the governance artifacts (API instance, policies, SLA tiers, client app) are
-all visible and correct in Anypoint; the enforcement wire-up is a deployment
-topology change, not a code change.
+**Architecture note:** CloudHub 2.0 Shared Space doesn't expose the Mule agent
+autodiscovery channel, so policy enforcement runs on the Flex Gateway proxy
+(instance 20955827) rather than on the CloudHub worker directly. The worker is
+reachable directly but bypasses all gateway policies — only go direct for
+debugging. All production traffic routes through the ngrok tunnel.
 
 ---
 
@@ -358,26 +355,21 @@ All of these must be true before calling iteration 2 complete:
 
 ---
 
-## What's iteration 3
+## Iteration history
 
-**Flex Gateway — runtime enforcement** is the immediate next step.
-Full runbook: [`docs/FLEX_GATEWAY_RUNBOOK.md`](./FLEX_GATEWAY_RUNBOOK.md)
+| Iteration | Date | What shipped |
+|---|---|---|
+| 1 | 2026-05-xx | CloudHub 2.0 worker live (`pause-mulesoft-health-v1` v1.0.2), `/health` + `/providers` endpoints |
+| 2 | 2026-06-07 | API Manager governance plane: Exchange asset, Client ID Enforcement + Rate Limiting SLA policies, SLA tiers, `pause-prototype-client` app |
+| 3 | 2026-06-08 | Flex Gateway (Docker + ngrok), runtime enforcement active, Client ID Enforcement enforcing 401 |
+| 4 | 2026-06-09 | Rate Limiting SLA (10 req/min Demo tier), x-ratelimit headers, Next.js proxy sends dual auth headers |
+| 5 | 2026-06-09 | OAS 3.0 spec (`pause-provider-experience-api.oas3.yaml`), published to Exchange as `pause-provider-experience-api-spec` v1.0.1 |
+| 6 | 2026-06-09 | Stable ngrok domain (`cattail-reactive-sassy.ngrok-free.dev`) pinned in docker-compose |
+| 7 | 2026-06-09 | JWT Validation (Auth0 RS256/JWKS) replaces Client ID Enforcement; plain Rate Limiting replaces SLA-based; Next.js proxy fetches Auth0 M2M token via `lib/mulesoft/auth.ts`; OAS spec updated to v1.0.2 |
 
-Summary: Deploy Flex Gateway in Docker + ngrok, register it with Anypoint,
-create a new API Manager instance typed as "Flex Gateway", re-apply the
-existing policies to that instance, and update the Vercel env vars to route
-through the gateway URL.  Estimated ~2–2.5 hours.
+## Remaining backlog
 
-After Flex Gateway, the remaining backlog:
-
-1. **OAS/RAML spec for the Exchange asset** — generates interactive
-   documentation and lets customers produce client SDKs from the catalog.
-2. **JWT policy** (replacing Client ID Enforcement) — uses a customer's
-   existing IdP (Azure AD, Okta) to issue tokens; eliminates the client
-   ID/secret distribution problem.
-3. **Anypoint MQ fanout** — the `pause-ingest-process-api` posts events
-   to an Anypoint MQ queue; downstream System APIs subscribe. Turns the
-   sequential DataWeave pipeline into an event-driven one.
-4. **DataWeave OMH→FHIR transform on the live `/health` path** — replaces
-   the static hand-coded bundle with a real DataWeave transform applied
-   to synthetic Oura input.
+1. **Stable VM** — replace Docker + ngrok with a persistent VM (Digital Ocean, EC2) so the gateway survives machine restarts without updating Vercel env vars.
+2. **Anypoint MQ fanout** — the `pause-ingest-process-api` posts events to an Anypoint MQ queue; downstream System APIs subscribe. Turns the sequential DataWeave pipeline into an event-driven one.
+3. **DataWeave OMH→FHIR transform on the live `/health` path** — replaces the static hand-coded bundle with a real DataWeave transform applied to synthetic Oura input.
+4. **Multi-tenant JWT** — swap the Auth0 dev tenant for a customer IdP (Azure AD, Okta) to demonstrate enterprise SSO.
