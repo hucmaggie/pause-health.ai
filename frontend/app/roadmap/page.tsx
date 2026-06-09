@@ -51,8 +51,15 @@ const horizons: RoadmapHorizon[] = [
         title: "Roadmap + changelog pages",
         detail:
           "This page (/roadmap) and its sibling (/changelog) — making 'what's shipped' and 'what's coming' first-class surfaces rather than buried in commit messages.",
-        status: "prototype",
+        status: "shipped",
         source: { href: "/changelog", label: "Changelog" }
+      },
+      {
+        title: "MuleSoft Flex Gateway — persistent hosting (iteration 8)",
+        detail:
+          "The Flex Gateway currently runs as Docker + ngrok on a local machine. When the machine sleeps or restarts the ngrok tunnel drops, the live badge goes dark, and pause-health.ai silently falls back to mock data. Iteration 8: move the gateway container to a persistent VM (DigitalOcean droplet or EC2 t4g.nano) so the MuleSoft live surface is always on. No Anypoint or Next.js changes needed — just a new host + updated MULESOFT_*_BASE_URL in Vercel.",
+        status: "planned",
+        source: { href: "/proposal/mulesoft", label: "/proposal/mulesoft" }
       }
     ]
   },
@@ -85,9 +92,9 @@ const horizons: RoadmapHorizon[] = [
         source: { href: "/proposal/integration", label: "/proposal/integration" }
       },
       {
-        title: "MuleSoft Anypoint CloudHub 2.0 — iteration 2",
+        title: "MuleSoft Anypoint — iterations 1–7 complete",
         detail:
-          "Iteration 1 shipped 2026-06-07: Mule 4.11.2 live on CloudHub 2.0, /api/mulesoft/health → live-mulesoft. Iteration 2 shipped 2026-06-07: /providers Experience API live on the same worker; lib/mulesoft/providers.ts prefer-real client; /api/mulesoft/providers wired to live path; 23 new tests (45/45 total). Next: API Manager Client ID Enforcement + Rate Limiting SLA policies via Anypoint UI — runbook at docs/MULESOFT_API_MANAGER_RUNBOOK.md.",
+          "Seven iterations shipped: CloudHub 2.0 worker live (iterations 1–2), Flex Gateway runtime enforcement (iteration 3), Rate Limiting SLA (iteration 4), OAS 3.0 spec published to Exchange (iteration 5), stable ngrok domain pinned (iteration 6), JWT Validation via Auth0 RS256/JWKS replacing Client ID Enforcement + plain Rate Limiting (iteration 7). Current policy stack: JWT Validation + Rate Limiting (10 req/min global). Next: iteration 8 — persistent VM so the gateway doesn't depend on a local machine.",
         status: "shipped",
         source: { href: "/proposal/mulesoft", label: "/proposal/mulesoft" }
       },
