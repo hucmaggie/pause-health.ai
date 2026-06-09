@@ -41,7 +41,7 @@ const weeks: ChangelogWeek[] = [
           { sha: "37372b4", label: "mulesoft: iteration 3 — Flex Gateway live, runtime enforcement active" },
           { sha: "981c031", label: "mulesoft: iterations 4-7 — rate limiting, OAS spec, stable tunnel, JWT auth" }
         ],
-        status: "live"
+        status: "shipped"
       }
     ]
   },
@@ -58,7 +58,7 @@ const weeks: ChangelogWeek[] = [
         commits: [
           { sha: "1e4468e", label: "mulesoft: iteration 2 — /providers live + API Manager runbook" }
         ],
-        status: "live"
+        status: "shipped"
       },
       {
         title: "MuleSoft: runtime 4.11.2, Java 17, health-flow.xml fixes",
