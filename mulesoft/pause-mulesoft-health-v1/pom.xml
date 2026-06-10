@@ -57,6 +57,20 @@
                       -Dconnected.app.client.id=... \
                       -Dconnected.app.client.secret=...
                 -->
+                <dependencies>
+                    <!-- Pin client API+impl to matching versions to avoid
+                         MavenClient classloader split on Maven 3.9 clean cache -->
+                    <dependency>
+                        <groupId>org.mule</groupId>
+                        <artifactId>mule-maven-client-api</artifactId>
+                        <version>2.6.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.mule</groupId>
+                        <artifactId>mule-maven-client-impl</artifactId>
+                        <version>2.6.0</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <cloudhub2Deployment>
                         <muleVersion>${app.runtime}</muleVersion>
