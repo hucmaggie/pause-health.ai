@@ -8,12 +8,40 @@ sleep) on the `trailsignup` Salesforce org.
 **Reference:** This is a checklist. The narrative + failure modes
 live in [`docs/MULESOFT_PHASE_2_DATA_CLOUD.md`](./MULESOFT_PHASE_2_DATA_CLOUD.md).
 
-**Status as of 2026-06-10:**
+**Status as of 2026-06-10 (end of session 2):**
 
 - Code: READY (`frontend/lib/salesforce/data-cloud.ts`, reviewed clean)
-- Env: `SF_DC_TENANT_URL` slot reserved, not set
-- Org: `trailsignup` returns `NOT_FOUND` on `/services/data/v66.0/ssot/queryjobs`
-  → **Data Cloud tenant not provisioned**. This is the only blocker.
+- Env: `SF_DC_TENANT_URL` slot reserved in `.env.example`, not set in `.env.local`
+- Org: DC is **provisioned** on `trailsignup` (the earlier `ssot/queryjobs`
+  `NOT_FOUND` was a stale API path; Setup → Data Cloud Setup Home shows
+  "Your Data Cloud instance is live and connected to your home org")
+- Tenant URL captured: `https://gmztczlbg13tczdbmvrdkyrwgm.c360a.salesforce.com`
+- Home Org ID: `00DHp00000L08KK`
+- Connected App scopes: all four DC scopes already on the external client
+  app (`cdp_api`, `cdp_query_api`, `cdp_ingest_api`, `cdp_profile_api`)
+  plus `api` / `refresh_token` / `offline_access`. Step 2 done.
+- Contact_Home Data Stream: ingestion **FAILED** on first run
+  (status=Failure, 38s duration, 0 records, Upsert mode). Root cause
+  not investigated yet. Pivoted around it.
+- `ssot__Individual__dlm`: 1168 records, populated by the SDO scaffold's
+  default identity resolution. **All six Pause demo personas confirmed
+  present** with their original Contact.Id as `ssot__Id__c`:
+    - anika-patel    → 003Hp00003b9bdqIAA
+    - brianna-okafor → 003Hp00003b9behIAA
+    - carmen-diaz    → 003Hp00003b9bemIAA
+    - deepa-krishnan → 003Hp00003b9berIAA
+    - elena-rossi    → 003Hp00003b9bewIAA
+    - fatima-khan    → 003Hp00003b9bf1IAA
+- Mock CI SQL: written and committed in `data-cloud/_mock_path.sql`.
+  Three queries target `ssot__Individual__dlm` (NOT `Contact_Home__dll`)
+  with MAX(constant) wrappers + GROUP BY ssot__Id__c so the DC CI
+  validator accepts them (CIs require aggregations).
+- **Where we paused:** in the Data Cloud → Calculated Insights → New
+  flow. Opened the SQL Authoring editor for CI 1 (Pause_HRV_RMSSD_30d).
+  Did NOT paste the query yet. Next-session-action: paste CI 1's SQL
+  block from `data-cloud/_mock_path.sql`, fill in Label =
+  `Pause HRV RMSSD 30d` and Developer Name = `Pause_HRV_RMSSD_30d`,
+  Activate. Then repeat for CI 2 and CI 3.
 
 ---
 

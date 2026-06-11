@@ -25,6 +25,15 @@
 -- IN cross-products, so the two extra SDO-scaffold Carmens (Lux and
 -- Garcia) are correctly excluded. Identical predicate used in all
 -- three CIs.
+--
+-- DC CI requirement (discovered 2026-06-10 in the SQL Authoring UI):
+--   Calculated Insights MUST include at least one aggregation +
+--   GROUP BY clause. Pure pass-through SELECTs are rejected by the
+--   CI validator with "A Calculated Insight must contain at least
+--   one measure with an aggregation function". The mock queries
+--   below satisfy this with MAX(<constant>) wrappers — the values
+--   are constants so MAX is a no-op semantically, but the validator
+--   sees the aggregation it needs.
 
 -- =============================================================
 -- CI 1: Pause_HRV_RMSSD_30d (mock)
@@ -32,16 +41,17 @@
 -- =============================================================
 SELECT
   ssot__Id__c                                AS ssot__Id__c,
-  38.2                                       AS hrv_rmssd_ms,
-  -0.3                                       AS z_score,
-  30                                         AS window_days
+  MAX(38.2)                                  AS hrv_rmssd_ms,
+  MAX(-0.3)                                  AS z_score,
+  MAX(30)                                    AS window_days
 FROM ssot__Individual__dlm
 WHERE (ssot__FirstName__c = 'Anika'   AND ssot__LastName__c = 'Patel')
    OR (ssot__FirstName__c = 'Brianna' AND ssot__LastName__c = 'Okafor')
    OR (ssot__FirstName__c = 'Carmen'  AND ssot__LastName__c = 'Diaz')
    OR (ssot__FirstName__c = 'Deepa'   AND ssot__LastName__c = 'Krishnan')
    OR (ssot__FirstName__c = 'Elena'   AND ssot__LastName__c = 'Rossi')
-   OR (ssot__FirstName__c = 'Fatima'  AND ssot__LastName__c = 'Khan');
+   OR (ssot__FirstName__c = 'Fatima'  AND ssot__LastName__c = 'Khan')
+GROUP BY ssot__Id__c;
 
 -- =============================================================
 -- CI 2: Pause_Vasomotor_Burden_30d (mock)
@@ -49,15 +59,16 @@ WHERE (ssot__FirstName__c = 'Anika'   AND ssot__LastName__c = 'Patel')
 -- =============================================================
 SELECT
   ssot__Id__c                                AS ssot__Id__c,
-  47.5                                       AS burden_score_0_100,
-  14                                         AS flash_count_30d
+  MAX(47.5)                                  AS burden_score_0_100,
+  MAX(14)                                    AS flash_count_30d
 FROM ssot__Individual__dlm
 WHERE (ssot__FirstName__c = 'Anika'   AND ssot__LastName__c = 'Patel')
    OR (ssot__FirstName__c = 'Brianna' AND ssot__LastName__c = 'Okafor')
    OR (ssot__FirstName__c = 'Carmen'  AND ssot__LastName__c = 'Diaz')
    OR (ssot__FirstName__c = 'Deepa'   AND ssot__LastName__c = 'Krishnan')
    OR (ssot__FirstName__c = 'Elena'   AND ssot__LastName__c = 'Rossi')
-   OR (ssot__FirstName__c = 'Fatima'  AND ssot__LastName__c = 'Khan');
+   OR (ssot__FirstName__c = 'Fatima'  AND ssot__LastName__c = 'Khan')
+GROUP BY ssot__Id__c;
 
 -- =============================================================
 -- CI 3: Pause_Sleep_Disruption_7d (mock)
@@ -65,15 +76,16 @@ WHERE (ssot__FirstName__c = 'Anika'   AND ssot__LastName__c = 'Patel')
 -- =============================================================
 SELECT
   ssot__Id__c                                AS ssot__Id__c,
-  0.43                                       AS disruption_index_0_1,
-  3                                          AS disrupted_nights
+  MAX(0.43)                                  AS disruption_index_0_1,
+  MAX(3)                                     AS disrupted_nights
 FROM ssot__Individual__dlm
 WHERE (ssot__FirstName__c = 'Anika'   AND ssot__LastName__c = 'Patel')
    OR (ssot__FirstName__c = 'Brianna' AND ssot__LastName__c = 'Okafor')
    OR (ssot__FirstName__c = 'Carmen'  AND ssot__LastName__c = 'Diaz')
    OR (ssot__FirstName__c = 'Deepa'   AND ssot__LastName__c = 'Krishnan')
    OR (ssot__FirstName__c = 'Elena'   AND ssot__LastName__c = 'Rossi')
-   OR (ssot__FirstName__c = 'Fatima'  AND ssot__LastName__c = 'Khan');
+   OR (ssot__FirstName__c = 'Fatima'  AND ssot__LastName__c = 'Khan')
+GROUP BY ssot__Id__c;
 
 -- =============================================================
 -- Verified persona → ssot__Id__c mapping (2026-06-10 snapshot)
