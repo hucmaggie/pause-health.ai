@@ -56,17 +56,17 @@ const whyData360: Array<{
   },
   {
     title: "Calculated insights as triage features",
-    status: "partial",
+    status: "prototype",
     detail: (
       <>
         Materialized features computed continuously across the federated
         sources. Today: 3 Salesforce-native insights (active care program,
         days since last clinical contact, active care plan status) are
         computed LIVE on every Care Router call from real Health Cloud
-        objects. The wearable / EHR insights (HRV z-score, vasomotor
-        burden, sleep disruption) are mocked intake-baselines awaiting
-        Phase 2 Data Cloud federation. These become routing inputs without
-        us writing a feature pipeline.
+        objects, and the wearable / EHR insights (HRV z-score, vasomotor
+        burden, sleep disruption) are now served LIVE from Data Cloud
+        Calculated Insights via the Phase 2 federation. These become
+        routing inputs without us writing a feature pipeline.
       </>
     )
   },
@@ -135,7 +135,7 @@ const traceFlow = [
     step: 3,
     span: "Data 360 grounding.federated-query",
     detail:
-      "Federated read against the Data 360 unified patient view: calculated insights (active care program, days since last clinical contact, active care plan status — all LIVE Salesforce-native), longitudinal observations, cohort comparison. Wearable / EHR insights (HRV, vasomotor, sleep) are served by the Phase 2 Data Cloud Calculated Insights client when SF_DC_TENANT_URL is set; fall back to intake-only baselines until the DC tenant is provisioned."
+      "Federated read against the Data 360 unified patient view: calculated insights (active care program, days since last clinical contact, active care plan status — all LIVE Salesforce-native), longitudinal observations, cohort comparison. Wearable / EHR insights (HRV, vasomotor, sleep) are served LIVE by the Phase 2 Data Cloud Calculated Insights client (a360 token exchange against the trailsignup tenant), falling back to intake-only baselines per-insight only if a DC call fails."
   },
   {
     step: 4,
@@ -177,11 +177,11 @@ const protoVsProd: Array<{
   },
   {
     aspect: "Calculated insights — wearable / EHR",
-    status: "partial",
+    status: "prototype",
     proto:
-      "Phase 2 code is live: lib/salesforce/data-cloud.ts calls the Data Cloud Calculated Insights API for HRV RMSSD z-score, vasomotor burden composite, and sleep disruption index. Each falls back to an intake-only baseline until SF_DC_TENANT_URL is set and the DC tenant is provisioned. See docs/MULESOFT_PHASE_2_DATA_CLOUD.md for the setup walkthrough.",
+      "LIVE in production: lib/salesforce/data-cloud.ts queries three Data Cloud Calculated Insights (Pause_HRV_RMSSD_30d, Pause_Vasomotor_Burden_30d, Pause_Sleep_Disruption_7d) on the trailsignup org via the a360 token-exchange flow, layering HRV RMSSD z-score, vasomotor burden composite, and sleep disruption index onto the Phase 1 SOQL grounding. Each falls back to an intake-only baseline independently if the DC call fails. Demo-cohort values are seeded mock CIs over ssot__Individual__dlm; the production wiring is identical (see docs/MULESOFT_PHASE_2_DATA_CLOUD.md).",
     prod:
-      "Real Data 360 Calculated Insights jobs against the customer's JupyterHealth FHIR observations and DBDP feature warehouse."
+      "Real Data 360 Calculated Insights jobs against the customer's JupyterHealth FHIR observations and DBDP feature warehouse — same client, same token flow, only the CI SQL behind the DMO changes."
   },
   {
     aspect: "MSCP-credentialed contact recency",

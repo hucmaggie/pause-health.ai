@@ -28,6 +28,26 @@ type ChangelogWeek = {
 
 const weeks: ChangelogWeek[] = [
   {
+    range: "Week of June 13, 2026",
+    headline: "Data 360 Phase 2 is LIVE: Data Cloud Calculated Insights grounding in production",
+    intro:
+      "The Data Cloud wearable/EHR insights flipped from designed-on-paper to live in production. On the trailsignup org, Data Cloud was already provisioned; three Calculated Insights (Pause_HRV_RMSSD_30d, Pause_Vasomotor_Burden_30d, Pause_Sleep_Disruption_7d) were authored over ssot__Individual__dlm and activated, SF_DC_TENANT_URL was wired into Vercel, and the grounding endpoint now returns \"Phase 2: SOQL (Health Cloud) + Data Cloud Calculated Insights\". The path there surfaced five things the original runbook got wrong — most importantly that a core Salesforce token is not valid against the c360a tenant and must be exchanged at /services/a360/token first. All five are documented in docs/PHASE_2_ACTIVATION_CHECKLIST.md so re-running on a customer org is a checklist, not an archaeology dig.",
+    entries: [
+      {
+        title: "Data 360 Phase 2 activated end-to-end on production",
+        summary:
+          "Authored and activated three Data Cloud Calculated Insights on the trailsignup org over ssot__Individual__dlm (the Contact_Home data stream's first ingestion failed; Individual was already populated with 1168 records incl. all six demo personas). data-cloud.ts was aligned with the live CI surface: __cio-suffixed API names, unified_id__c dimension, __c-suffixed metric columns, and the [field=value] CI filter syntax. The real fixes: (1) the CI query endpoint is GET /api/v1/insight/calculated-insights/{ci}?filters=[...], not the /insight/query?insight_api_name=... shape the code shipped with; (2) Data Cloud requires a two-legged token flow — the core client_credentials token must be exchanged at POST <instanceUrl>/services/a360/token (grant_type urn:salesforce:grant-type:external:cdp) for a DC-scoped token, and the c360a gateway rejects un-exchanged tokens with a bare 400. Added requestDataCloudToken()/getDataCloudToken() with its own cache; dcFetch now targets the authoritative tenant instance_url from the exchange. SF_DC_TENANT_URL set on Production/Preview/Development in Vercel. Verified live: anika-patel grounding returns the three wearable insights (z-score -0.3 / burden 47.5 / disruption 0.43) with 30d/30d/7d windows.",
+        commits: [
+          { sha: "1a441a3", label: "data-cloud: add the required Data Cloud token exchange" },
+          { sha: "61736a3", label: "data-cloud: fix CI Query API endpoint shape" },
+          { sha: "1901f90", label: "data-cloud: align constants + filter expression with live trailsignup CIs" },
+          { sha: "feda3d4", label: "docs: mark Phase 2 Data Cloud activation SHIPPED + record gotchas" }
+        ],
+        status: "shipped"
+      }
+    ]
+  },
+  {
     range: "Week of June 9, 2026",
     headline: "MuleSoft iterations 3–7: Flex Gateway live, JWT auth, OAS spec, rate limiting, stable tunnel",
     intro:
