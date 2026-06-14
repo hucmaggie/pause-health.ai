@@ -42,6 +42,13 @@ export type DemoPersona = {
   id: string;
   firstName: string;
   lastName: string;
+  /**
+   * Synthetic home ZIP. Chosen so the 3-digit prefix matches an
+   * MSCP-credentialed provider in lib/provider-directory.generated.json,
+   * so the Care Router's geo-narrowed recommendations surface a local
+   * specialist for this persona rather than a top-national fallback.
+   */
+  patientZip: string;
   ageBand: string;
   cycleStatus: string;
   primarySymptom: string;
@@ -60,6 +67,7 @@ export const DEMO_COHORT: DemoPersona[] = [
     id: "anika-patel",
     firstName: "Anika",
     lastName: "Patel",
+    patientZip: "92614",
     ageBand: "45-49",
     cycleStatus: "Perimenopausal",
     primarySymptom: "Hot flashes",
@@ -77,6 +85,7 @@ export const DEMO_COHORT: DemoPersona[] = [
     id: "brianna-okafor",
     firstName: "Brianna",
     lastName: "Okafor",
+    patientZip: "11215",
     ageBand: "50-54",
     cycleStatus: "Perimenopausal",
     primarySymptom: "Sleep disruption",
@@ -99,6 +108,7 @@ export const DEMO_COHORT: DemoPersona[] = [
     id: "carmen-diaz",
     firstName: "Carmen",
     lastName: "Diaz",
+    patientZip: "90012",
     ageBand: "55-59",
     cycleStatus: "Postmenopausal",
     primarySymptom: "Vaginal dryness",
@@ -116,6 +126,7 @@ export const DEMO_COHORT: DemoPersona[] = [
     id: "deepa-krishnan",
     firstName: "Deepa",
     lastName: "Krishnan",
+    patientZip: "10024",
     ageBand: "48-52",
     cycleStatus: "Perimenopausal",
     primarySymptom: "Hot flashes",
@@ -133,6 +144,7 @@ export const DEMO_COHORT: DemoPersona[] = [
     id: "elena-rossi",
     firstName: "Elena",
     lastName: "Rossi",
+    patientZip: "60614",
     ageBand: "46-50",
     cycleStatus: "Perimenopausal",
     primarySymptom: "Mood changes",
@@ -150,6 +162,7 @@ export const DEMO_COHORT: DemoPersona[] = [
     id: "fatima-khan",
     firstName: "Fatima",
     lastName: "Khan",
+    patientZip: "77002",
     ageBand: "51-55",
     cycleStatus: "Postmenopausal",
     primarySymptom: "Joint pain",
@@ -201,6 +214,7 @@ export function personaToCareRouterIntake(persona: DemoPersona): {
   primarySymptom: string;
   severity: "mild" | "moderate" | "severe";
   redFlagsAcknowledged: "yes" | "no" | "none";
+  patientZip: string;
 } {
   const sym = persona.primarySymptom.toLowerCase();
   let primarySymptom = "hot_flashes";
@@ -249,6 +263,7 @@ export function personaToCareRouterIntake(persona: DemoPersona): {
     cycleStatus,
     primarySymptom,
     severity,
-    redFlagsAcknowledged
+    redFlagsAcknowledged,
+    patientZip: persona.patientZip
   };
 }

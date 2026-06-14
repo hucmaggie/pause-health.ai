@@ -40,6 +40,7 @@ type AgentMessage = {
 
 type IntakeFieldKey =
   | "preferredName"
+  | "patientZip"
   | "ageBand"
   | "cycleStatus"
   | "primarySymptom"
@@ -65,6 +66,21 @@ const SCRIPT: IntakeStep[] = [
       input.trim().length === 0
         ? "Please share a name or initial so I know how to refer to you."
         : null
+  },
+  {
+    id: "patientZip",
+    inputType: "freeText",
+    prompt:
+      "What's your 5-digit ZIP code? I'll use it to find menopause specialists near you.",
+    helper:
+      "Optional — leave it blank to skip. When provided, Pause narrows MSCP-credentialed clinician recommendations to your area.",
+    validation: (input) => {
+      const trimmed = input.trim();
+      if (trimmed.length === 0) return null; // optional — blank skips geo-narrowing
+      return /^\d{5}$/.test(trimmed)
+        ? null
+        : "Please enter a 5-digit US ZIP code, or leave it blank to skip.";
+    }
   },
   {
     id: "ageBand",
@@ -184,7 +200,10 @@ export function AgentforceFallback() {
       cycleStatus: captured.cycleStatus,
       primarySymptom: captured.primarySymptom,
       severity: captured.severity,
-      redFlagsAcknowledged: captured.redFlagsAcknowledged
+      redFlagsAcknowledged: captured.redFlagsAcknowledged,
+      // Blank ZIP is sent as undefined so the Care Router falls back to
+      // top-national matches rather than filtering on an empty string.
+      patientZip: captured.patientZip?.trim() ? captured.patientZip.trim() : undefined
     };
     setA2aStatus("handing-off");
     (async () => {

@@ -48,6 +48,7 @@ function makePersona(
     id: "test-persona",
     firstName: "Test",
     lastName: "Persona",
+    patientZip: "92614",
     ageBand: "45-49",
     cycleStatus: "Perimenopausal",
     primarySymptom: "Hot flashes",

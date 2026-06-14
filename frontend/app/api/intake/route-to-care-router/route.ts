@@ -81,6 +81,7 @@ export async function POST(req: Request) {
       ageBand: intake.ageBand,
       primarySymptom: intake.primarySymptom,
       severity: intake.severity,
+      patientZipProvided: Boolean(intake.patientZip),
       ...(personaId ? { personaId } : {})
     }
   });
