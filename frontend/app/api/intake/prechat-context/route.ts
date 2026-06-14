@@ -51,6 +51,8 @@ import { isSalesforceConfigured } from "../../../../lib/salesforce/auth";
  *   Identity_Sources                          -- comma-separated source labels
  *   Identity_Ruleset
  *   Age_Band, Cycle_Status, Primary_Symptom
+ *   Patient_Zip                               -- 5-digit ZIP; feeds the
+ *                                                Find-a-Provider action's zip input
  *   Vasomotor_Score, Sleep_Score, Mood_Score  -- 0-10 ints as strings
  *   Care_Program_Status                       -- e.g. "Enrolled" | "Not enrolled"
  *   Care_Plan_Status                          -- e.g. "Active" | "None"
@@ -245,6 +247,12 @@ async function buildPrechatFields(
     Age_Band: persona.ageBand,
     Cycle_Status: persona.cycleStatus,
     Primary_Symptom: persona.primarySymptom,
+    // Patient ZIP — lets the Find-a-Provider Agentforce action geo-narrow
+    // without asking the patient. Registered as a prechat field + channel
+    // customParameter + MessagingSession.Pause_Patient_Zip__c + bot context
+    // variable ($Context.Pause_Patient_Zip), mapped to the action's zip input.
+    // See docs/AGENTFORCE_PROVIDER_ACTION_RUNBOOK.md ("Auto-passing the ZIP").
+    Patient_Zip: persona.patientZip,
     Vasomotor_Score: String(persona.vasomotorScore),
     Sleep_Score: String(persona.sleepScore),
     Mood_Score: String(persona.moodScore),

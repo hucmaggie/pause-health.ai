@@ -258,6 +258,58 @@ can you refer me to someone?
 
 ---
 
+## Auto-passing the ZIP (skip the agent's ZIP question)
+
+By default the agent asks the patient for their ZIP (Step 4) because the
+embed's prechat couldn't transmit it. **As of 2026-06-14 the V2 SDK prechat
+bug is fixed** — `embeddedservice_bootstrap.prechatAPI` now validates field
+names against the deployment's registered list and transmits valid ones
+(probe: `setHiddenPrechatFields({ Patient_Id: "x" })` is accepted;
+`{ Patient_Zip: "x" }` errors only because it isn't registered yet). So we can
+hand the ZIP in-band and the agent skips the question.
+
+The app side is already wired: `/api/intake/prechat-context` emits a
+`Patient_Zip` field, and `intake-patient-stage.tsx` passes
+`{ Patient_Zip: <persona ZIP> }` as a hidden prechat field. Until `Patient_Zip`
+is registered + mapped on the org, the SDK drops it and the agent falls back to
+asking (graceful). Register it the same way the dormant dossier fields were
+(see `docs/PHASE_3_RUNBOOK.md` Phase 18a/b for the exact metadata shapes):
+
+1. **Prechat field** — add `Patient_Zip` as a *hidden* prechat field on the
+   `Pause_Health_Intake` Embedded Service deployment's prechat form. This is the
+   registration that makes `validatePrechatField` accept it (without it you get
+   the "invalid field name Patient_Zip" console error).
+2. **Channel customParameter** — add `<customParameters>` `Patient_Zip` (with its
+   `<actionParameterMappings>`) to the `Messaging_for_In_App_Web` channel,
+   mirroring the existing dossier params.
+3. **MessagingSession field** — create `Pause_Patient_Zip__c` (Text, 5–10) on
+   MessagingSession; grant FLS via the `Pause_Health_Intake_Prechat_Dossier`
+   permission set (the same PS the EinsteinServiceAgent + Automated Process users
+   already hold).
+4. **Routing Flow** — in `Pause_Intake_Prechat_Router`, add input variable
+   `Patient_Zip` and a record-update that writes it to
+   `MessagingSession.Pause_Patient_Zip__c`.
+5. **Agent context variable** — add a bot context variable `Pause_Patient_Zip`
+   mapped to `MessagingSession.Pause_Patient_Zip__c`, so the agent can read
+   `$Context.Pause_Patient_Zip`.
+6. **Map it to the action** — in the **Find a Provider** subagent, set the
+   `findMenopauseProviders` action's **`zip` input** to **`$Context.Pause_Patient_Zip`**
+   (instead of agent-populated). Update the reasoning instructions so it only
+   asks for ZIP when that context variable is empty:
+
+   > If `$Context.Pause_Patient_Zip` has a value, use it as the zip and do NOT
+   > ask the patient for their ZIP. Only ask for a ZIP if it is empty.
+
+   Then **Commit Version → Activate**.
+
+**Verify:**
+- Re-run the console probe — `setHiddenPrechatFields({ Patient_Zip: "92614" })`
+  should no longer log "invalid field name."
+- Fresh incognito session on `/demo/intake` (any persona has a ZIP): ask
+  "find a provider that specializes in menopause" *without* giving a ZIP — the
+  agent should return local providers straight away instead of asking for the
+  ZIP first.
+
 ## When the live MuleSoft API replaces the public endpoint
 
 Repoint the Named Credential `endpoint` at the gateway/CloudHub base and add the

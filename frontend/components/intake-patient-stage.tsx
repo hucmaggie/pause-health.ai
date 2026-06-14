@@ -24,24 +24,28 @@ import {
  * agent answers menopause-care questions generically while the
  * personalization lives in the surrounding UI.
  *
- * Why a visible panel and not hidden prechat fields:
+ * Hidden prechat (ZIP) + visible dossier panel:
  *
- *   The Salesforce Embedded Messaging V2 SDK ships
- *   `embeddedservice_bootstrap.prechatAPI` as a no-op Proxy when the
- *   deployment hasn't fully wired the prechat-field surface server
- *   side. Calls to `setHiddenPrechatFields(...)` return `true` but
- *   no values actually traverse SCRT2; the routing Flow fires with
- *   all input variables null. Verified end-to-end on 2026-06-04 with
- *   the form-fields block + Publish + custom parameters + Flow input
- *   variables all correctly deployed. See docs/PHASE_3_RUNBOOK.md
- *   ("empty-Proxy prechatAPI" finding). Rather than ship a feature
- *   that quietly does nothing, we surface the dossier visibly.
+ *   History: the Embedded Messaging V2 SDK once shipped
+ *   `embeddedservice_bootstrap.prechatAPI` as a no-op Proxy —
+ *   `setHiddenPrechatFields(...)` returned `true` but nothing traversed
+ *   SCRT2, so the routing Flow fired with all inputs null (verified
+ *   2026-06-04; see docs/PHASE_3_RUNBOOK.md "empty-Proxy prechatAPI").
+ *   We pivoted to the visible PreBriefPanel.
  *
- *   The hidden-prechat plumbing (Pause_*__c custom fields on
- *   MessagingSession, the Pause_Intake_Prechat_Router routing Flow,
- *   the channel customParameters, the agent contextVariables) is
- *   left in place — it's harmless when unused and ready for the day
- *   Salesforce fixes the prechatAPI binding for V2 deployments.
+ *   That SDK bug is FIXED as of 2026-06-14: prechatAPI now validates
+ *   field names against the deployment's registered list and transmits
+ *   valid ones (probe: registered custom fields like Patient_Id are
+ *   accepted; unregistered names error). So we hand the one field that
+ *   changes the agent's behavior — Patient_Zip — to the Find-a-Provider
+ *   action in-band, and the agent skips asking for the ZIP. Patient_Zip
+ *   must be registered + mapped to the action's zip input; see
+ *   docs/AGENTFORCE_PROVIDER_ACTION_RUNBOOK.md ("Auto-passing the ZIP").
+ *
+ *   The full dossier still renders visibly via PreBriefPanel (it's the
+ *   richer, always-on surface). The rest of the Pause_*__c plumbing is
+ *   in place and can be re-lit the same way if we want the whole
+ *   dossier handed in-band too.
  *
  * The component still re-keys the embed on persona change so the
  * SDK does a clean remount, which keeps the chat transcript in
@@ -231,13 +235,24 @@ function IntakePatientStageInner({ agentforceConfig }: Props) {
 
       <AgentforceEmbed
         // Re-keying on personaId forces a clean SDK remount, so each
-        // patient switch starts a fresh conversation thread. We no
-        // longer rely on prechatFields handing the dossier to the
-        // agent in-band — see PreBriefPanel above and
-        // components/pre-brief-panel.tsx for why.
+        // patient switch starts a fresh conversation thread.
+        //
+        // We hand the patient ZIP to the agent in-band via hidden prechat
+        // so the Find-a-Provider action geo-narrows without asking. This
+        // works again as of the V2 SDK fix (2026-06-14): prechatAPI is no
+        // longer the empty no-op Proxy — it validates field names against
+        // the registered list and transmits valid ones. Patient_Zip must be
+        // registered as a prechat field + mapped to the action's zip input
+        // (docs/AGENTFORCE_PROVIDER_ACTION_RUNBOOK.md, "Auto-passing the
+        // ZIP"); until then the SDK drops it and the agent simply asks. The
+        // rest of the dossier still renders visibly via PreBriefPanel above.
         key={selectedId}
         config={agentforceConfig}
-        prechatFields={null}
+        prechatFields={
+          selectedPersona?.patientZip
+            ? { Patient_Zip: selectedPersona.patientZip }
+            : null
+        }
       />
     </>
   );
