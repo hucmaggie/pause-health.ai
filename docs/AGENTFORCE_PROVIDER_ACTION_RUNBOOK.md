@@ -165,6 +165,16 @@ that to the `zip` input instead of asking.)
 3. **Live embed:** reload `/demo/intake`, open the chat, ask the same question.
    It should now return local specialists instead of "reach out to your PCP."
 
+> **Gotcha — test in a *fresh* session after activating.** The embedded chat
+> persists its conversation in browser storage and pins it to the agent version
+> that was active when the session *started*. A session opened before (or during)
+> activation will keep deflecting even though V<n> is live, and a plain page
+> reload often resumes it. To confirm the live behavior, open an **incognito
+> window** (or use the chat's **⋮ → End Chat**, then hard-reload) so a brand-new
+> MIAW session binds to the newly activated version. Builder Preview always runs
+> the draft/active version directly, so "works in Preview, deflects live" is
+> almost always this stale session — not a permissions problem.
+
 ---
 
 ## Troubleshooting
@@ -174,6 +184,7 @@ that to the `zip` input instead of asking.)
 | External Service won't parse the spec | An unsupported OpenAPI feature was added | Keep the spec lean (no `$ref`/`oneOf`/`nullable`/auth); re-upload the repo copy |
 | Action returns 401/403 | Named Credential has auth turned on, or pointed at the gated MuleSoft URL | For the public endpoint use No Authentication; for MuleSoft add the JWT there |
 | Agent still deflects | Topic not activated, or classifier didn't match | Re-activate; add more example utterances; tighten the classification description |
+| Works in Builder Preview but live embed deflects | Cached pre-activation MIAW session pinned to the old version | Start a fresh session — incognito window, or chat ⋮ → End Chat then hard-reload. Not a permissions issue. |
 | Action runs but agent invents providers | Instructions not enforced | Re-paste the "Never invent providers — only return what the action gives you" instruction |
 | No local results for a ZIP | That ZIP prefix has no provider in the directory | Expected with the demo fixture; run `provider_ingest` against the national NPPES file for full coverage |
 | Agent never has the ZIP | prechat is a no-op (known) | Agent asks the patient for it (Step 4) |
