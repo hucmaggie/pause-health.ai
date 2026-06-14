@@ -720,6 +720,31 @@ App & Web → Allow file attachments** and pick the file types there.
    ZIP from context; only ask if it's blank." Re-activate the agent
    afterward.
 
+   Reasoning-instructions copy that ships (refined 2026-06-14 so the agent
+   uses the context ZIP *silently* and doesn't offer a redundant "search by
+   ZIP" when it already geo-narrowed):
+
+   > When the patient asks to find or be referred to a provider, immediately
+   > call the PauseProviderDirectory action with menopause=true, limit=3, and
+   > zip set to the Pause Patient Zip variable — do this silently, without
+   > announcing that you're using their ZIP and without asking for one. Only
+   > ask the patient for a 5-digit ZIP if Pause Patient Zip is blank; if it's
+   > still blank or they decline, call the action without a zip.
+   >
+   > Present up to three providers. For each, state the name, specialty, and
+   > city/state, then note whether they offer telehealth and whether they are
+   > accepting new patients — for example: "Dr. Priya Nair, MD, MSCP —
+   > Obstetrics & Gynecology in Irvine, CA. Offers telehealth and is accepting
+   > new patients." If you used the patient's ZIP, present them as specialists
+   > near the patient and offer to share more detail about any of them — do
+   > NOT offer to search by ZIP again. Only when you had no ZIP and returned
+   > national results should you offer to narrow by ZIP.
+   >
+   > Only return providers the action gives you. Never invent or guess a
+   > provider, NPI, or contact detail. If the action returns no providers, say
+   > you couldn't find a local match and point the patient to The Menopause
+   > Society directory at menopause.org.
+
    Builder notes (current Agent Authoring experience): the field shows up
    under **Variables → Messaging Session → Excluded Fields** at first; you
    must **Include** it (only works in a *draft* version, not the active one).
