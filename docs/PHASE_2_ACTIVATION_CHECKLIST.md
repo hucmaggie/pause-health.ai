@@ -6,6 +6,12 @@
 > (HRV/vasomotor/sleep)"`. The "Gotchas we hit" section at the bottom
 > documents the five non-obvious things that had to be right. Leave
 > this doc as the institutional record for re-running on another org.
+>
+> **➡️ Hardening (real data):** the activated CIs above use the **mock**
+> `MAX(constant)` formulas. To replace them with real DBDP-computed
+> per-patient values via the Data Cloud **Ingestion API** (feature math +
+> push client + DLO schema + real CI SQL all shipped in the repo), follow
+> [`docs/PHASE_2_INGESTION_API_RUNBOOK.md`](./PHASE_2_INGESTION_API_RUNBOOK.md).
 
 **Goal:** Flip `/api/data-360/.../grounding` from Phase 1 (intake-only
 baselines) to Phase 2 (real Calculated Insights for HRV / vasomotor /

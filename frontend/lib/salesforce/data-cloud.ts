@@ -271,8 +271,16 @@ export async function dcInsightQuery(
 // Insight Query API expects the full __cio-suffixed name.
 //
 // Activated on the trailsignup org 2026-06-13 (session 3).
-// See docs/MULESOFT_PHASE_2_DATA_CLOUD.md and data-cloud/_mock_path.sql
-// for the source-of-truth definitions.
+//
+// Output-column contract (load-bearing — read below) is identical across the
+// two CI definitions, so this client is unchanged whether the org runs the
+// mock or the real path:
+//   - Mock (constants):  data-cloud/_mock_path.sql
+//   - Real (aggregates the Ingestion-API-fed Pause_Wearable_Feature__dlm DMO):
+//       data-cloud/Pause_HRV_RMSSD_30d.sql, Pause_Vasomotor_Burden_30d.sql,
+//       Pause_Sleep_Disruption_7d.sql
+// The real-data push lives in pause_ingest (examples/data_cloud_push.py).
+// See docs/PHASE_2_INGESTION_API_RUNBOOK.md for the org-side wiring.
 // ---------------------------------------------------------------------------
 
 const CI_HRV_RMSSD_30D = "Pause_HRV_RMSSD_30d__cio";

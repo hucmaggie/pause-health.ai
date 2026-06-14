@@ -20,13 +20,20 @@ Phase 1 of the JupyterHealth integration design
 - omh-shim conversion of Oura / OpenWearable samples to Open mHealth
 - OMH → FHIR R5 Observation envelope (raw)
 - DBDP-style HRV time-domain features (validated against Kubios)
+- Sleep-architecture features (efficiency + 7-night disruption index)
+- Vasomotor (hot-flash / night-sweat) detection + 30-day burden scoring
 - HRV features → FHIR R5 Observation with `derivedFrom` provenance
 - OAuth2 client-credentials grant against a JHE-shaped token endpoint
 - FHIR `POST /fhir/r5/Observation` upload
 - FHIR `GET /fhir/r5/Observation?patient=...` read-back via `jupyterhealth-client`
 - Full pipeline (raw upload → feature compute → derived upload → both readable)
   exercised end-to-end by an in-process JHE wire-level mock.
-  27 / 27 tests pass.
+- **Data Cloud Ingestion API push** (Phase 2 hardening): the real feature math
+  feeds per-persona rows into a Data Cloud connector via a two-legged a360
+  token exchange (`data_cloud.py` + `examples/data_cloud_push.py`), where the
+  three Calculated Insights aggregate them — replacing the mock CIs. See
+  [`docs/PHASE_2_INGESTION_API_RUNBOOK.md`](../docs/PHASE_2_INGESTION_API_RUNBOOK.md).
+- 66 / 66 tests pass.
 
 **What's deferred:**
 - Running the same flow against a real JupyterHealth Exchange Django
@@ -95,7 +102,7 @@ instance would (FHIR validator rejections, OAuth scope mismatches,
 missing Authorization headers) without needing Docker.
 
 ```bash
-pytest -v                          # 27 tests; 7 are wire-level integration
+pytest -v                          # 66 tests; 7 are wire-level integration
 ```
 
 Implementation: [`tests/jhe_mock_server.py`](tests/jhe_mock_server.py)
@@ -112,18 +119,30 @@ pause_ingest/
 ├── .env.example
 ├── pause_ingest/
 │   ├── __init__.py
-│   ├── config.py        # env-driven configuration
-│   ├── convert.py       # omh-shim wrapper with menopause-relevant types
-│   ├── fhir.py          # OMH → FHIR R5 Observation envelope
-│   └── exchange.py      # JHE upload + readback (uses jupyterhealth-client)
+│   ├── config.py             # env-driven JHE configuration
+│   ├── convert.py            # omh-shim wrapper with menopause-relevant types
+│   ├── fhir.py               # OMH → FHIR R5 Observation envelope
+│   ├── exchange.py           # JHE upload + readback (uses jupyterhealth-client)
+│   ├── features.py           # HRV time-domain + FLIRT sliding-window
+│   ├── features_sleep.py     # sleep efficiency + 7-night disruption index
+│   ├── features_vasomotor.py # hot-flash / night-sweat detection + burden
+│   ├── data_cloud.py         # Data Cloud Ingestion API client (a360 exchange)
+│   └── cohort.py             # per-persona feature generator (demo cohort)
 ├── examples/
 │   ├── __init__.py
 │   ├── fixtures/
 │   │   └── oura_heart_rate_sample.json
-│   └── oura_sample_upload.py
+│   ├── oura_sample_upload.py # JHE round-trip smoke test
+│   └── data_cloud_push.py    # generate cohort features → push to Data Cloud
 └── tests/
     ├── __init__.py
-    └── test_convert.py
+    ├── test_convert.py
+    ├── test_features.py
+    ├── test_features_sleep.py
+    ├── test_features_vasomotor.py
+    ├── test_cohort.py
+    ├── test_data_cloud.py
+    └── test_exchange_integration.py
 ```
 
 ## What's intentionally not here yet

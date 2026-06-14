@@ -5,12 +5,25 @@ canonical, version-controlled source of the Phase 2 Data Cloud
 Calculated Insight SQL, intended to be copy-pasted into the Data Cloud
 UI (`Setup → Data Cloud → Calculated Insights → New`) during activation.
 
-| File                                  | Developer Name                  | Refresh | Source                  |
-|---------------------------------------|---------------------------------|---------|-------------------------|
-| `Pause_HRV_RMSSD_30d.sql`             | `Pause_HRV_RMSSD_30d`           | 6h      | Oura/DBDP via JHE FHIR  |
-| `Pause_Vasomotor_Burden_30d.sql`      | `Pause_Vasomotor_Burden_30d`    | 6h      | Wearable + intake       |
-| `Pause_Sleep_Disruption_7d.sql`       | `Pause_Sleep_Disruption_7d`     | 6h      | Oura sleep via JHE FHIR |
-| `_mock_path.sql`                      | (three CIs, mock data)          | 6h      | `MAX(constant)` formulas + GROUP BY over `ssot__Individual__dlm` — proves the code path without a live JHE instance (this is what's currently activated) |
+There are **two interchangeable definitions** of the same three CIs. Both
+emit the identical output columns, so the frontend (`data-cloud.ts`) is
+unchanged regardless of which is active:
+
+- **Mock** (`_mock_path.sql`) — `MAX(constant)` over `ssot__Individual__dlm`.
+  Proves the pipeline with zero data infrastructure. **Currently activated.**
+- **Real** (the three per-CI `.sql` files) — aggregate real DBDP-computed
+  features out of the `Pause_Wearable_Feature__dlm` DMO, which is fed by the
+  Data Cloud **Ingestion API** push from `pause_ingest`
+  (`examples/data_cloud_push.py`). Swap-in steps:
+  **`docs/PHASE_2_INGESTION_API_RUNBOOK.md`**.
+
+| File                                  | Developer Name                  | Refresh | Source (real path)                          |
+|---------------------------------------|---------------------------------|---------|---------------------------------------------|
+| `Pause_HRV_RMSSD_30d.sql`             | `Pause_HRV_RMSSD_30d`           | 6h      | `AVG(value_num)` over `hrv_rmssd` rows (30d) |
+| `Pause_Vasomotor_Burden_30d.sql`      | `Pause_Vasomotor_Burden_30d`    | 6h      | `SUM(severity)/30*100` over event rows (30d) |
+| `Pause_Sleep_Disruption_7d.sql`       | `Pause_Sleep_Disruption_7d`     | 6h      | nights `< 0.80` over `sleep_session` rows (7d) |
+| `_mock_path.sql`                      | (three CIs, mock data)          | 6h      | `MAX(constant)` over `ssot__Individual__dlm` (currently activated) |
+| `Pause_Wearable_Feature.dlo-schema.json` | (Ingestion API schema)       | n/a     | OpenAPI schema uploaded to create the `Pause_Wearable` DLO/DMO |
 
 The Developer Names are **load-bearing** — they're referenced as constants in:
 
@@ -37,5 +50,13 @@ activation checklist + the gotchas we hit live in
 - Org: `trailsignup` DC tenant provisioned; the three CIs are authored +
   activated over `ssot__Individual__dlm` using the **mock** `_mock_path.sql`
   formulas (demo-cohort values).
-- Next iteration: replace the mock CIs with real JHE/DBDP wearable math
-  (stand up JHE per `docs/JHE_SETUP_RUNBOOK.md`, point a Data Stream at it).
+- Next iteration (code SHIPPED, org wiring pending): replace the mock CIs with
+  real DBDP feature math via the Data Cloud **Ingestion API**. The feature
+  computation (`pause_ingest/features.py`, `features_sleep.py`,
+  `features_vasomotor.py`), the per-persona generator (`cohort.py`), the push
+  client (`data_cloud.py` + `examples/data_cloud_push.py`), the DLO schema, and
+  the real CI SQL are all in the repo and tested. Follow
+  `docs/PHASE_2_INGESTION_API_RUNBOOK.md` to wire the connector + DMO and flip
+  the CIs. (The older `docs/JHE_SETUP_RUNBOOK.md` Data-Stream-from-JHE path
+  remains valid but needs a publicly-reachable JHE; the Ingestion API push
+  avoids that.)
