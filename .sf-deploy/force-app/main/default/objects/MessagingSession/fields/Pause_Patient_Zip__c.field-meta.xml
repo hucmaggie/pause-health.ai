@@ -3,8 +3,8 @@
   Carries the patient's ZIP handed in-band via hidden prechat into the
   conversation. Routing Flow writes it here; the bot context variable
   Pause_Patient_Zip reads it; the Find-a-Provider action's zip input maps to
-  $Context.Pause_Patient_Zip. Length 10 to allow ZIP+4.
-  Deploy:  cd .sf-deploy && sf project deploy start --source-dir force-app --target-org trailsignup
+  Context.Pause_Patient_Zip. Length 10 to allow ZIP+4. Deploy from .sf-deploy
+  with sf project deploy start (source-dir force-app, target-org trailsignup).
 -->
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Pause_Patient_Zip__c</fullName>
