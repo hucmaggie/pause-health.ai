@@ -5,45 +5,47 @@ import { useEffect, useRef, useState } from "react";
 import { AGENTFORCE_COPY, type AgentforceConfig } from "../lib/agentforce";
 
 /**
- * Salesforce Embedded Messaging for Web — inline-mode mount.
+ * Salesforce Embedded Messaging for Web — floating-launcher mount.
  *
- * Loads the deployment-specific bootstrap.min.js, configures inline
- * display mode with a target element under our control, and calls
- * embeddedservice_bootstrap.init with the four values from
- * `lib/agentforce.getAgentforceConfig()`.
+ * Loads the deployment-specific bootstrap.min.js, configures floating
+ * display mode (a fixed bottom-right chat launcher that opens the chat
+ * panel as an overlay), and calls embeddedservice_bootstrap.init with the
+ * four values from `lib/agentforce.getAgentforceConfig()`.
  *
- * Matches the Salesforce Enhanced Chat v2 inline-mode pattern:
- * https://developer.salesforce.com/docs/ai/agentforce/guide/enhanced-chat-inline-mode.html
+ * Reference: Salesforce Enhanced Chat v2 (Messaging for In-App and Web).
  *
  * Notes:
  *   - All four config values are public deployment metadata (they ship
  *     in the Salesforce-provided snippet). They do not grant API access.
  *   - We mount once per page lifecycle. If a customer SPA navigates away
  *     and back, the script is already loaded; we no-op the second mount.
- *   - When `prechatFields` is supplied, we attempt to call
+ *   - When `prechatFields` is supplied, we call
  *     `embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields()`
- *     inside the `onEmbeddedMessagingReady` handler — which is the only
- *     window in which Salesforce accepts hidden-field assignment.
+ *     inside the `onEmbeddedMessagingReady` handler — the only window in
+ *     which Salesforce accepts hidden-field assignment.
  *
- *     IMPORTANT (2026-06-04): On Embedded Messaging V2 deployments
- *     the SDK ships `prechatAPI` as a no-op Proxy whose
- *     `setHiddenPrechatFields(...)` returns `true` without
- *     transmitting anything. The values never reach SCRT2, the
- *     routing Flow fires with all input variables null, and
- *     `MessagingSession.Pause_*__c` stays empty. Confirmed with the
- *     `embeddedServiceForms` block + Publish + custom parameters +
- *     Flow input vars all wired correctly. See PHASE_3_RUNBOOK.md
- *     ("empty-Proxy prechatAPI" finding).
+ *     HISTORY: the V2 SDK once shipped `prechatAPI` as a no-op Proxy
+ *     (verified 2026-06-04) whose `setHiddenPrechatFields(...)` returned
+ *     without transmitting, so values never reached SCRT2 and we pivoted
+ *     to the visible <PreBriefPanel/>. That is FIXED as of 2026-06-14:
+ *     prechatAPI now validates field names against the deployment's
+ *     registered hidden-field list and transmits the valid ones, so we
+ *     hand `Patient_Zip` to the Find-a-Provider action in-band and the
+ *     agent skips asking for the ZIP. See PHASE_3_RUNBOOK.md (Phase 18d).
  *
- *     Callers in this codebase therefore pass `prechatFields={null}`
- *     and surface the dossier visibly via <PreBriefPanel/> above
- *     the chat. The hidden-prechat code path here is kept intact
- *     so the day Salesforce fixes the V2 prechatAPI binding, the
- *     dossier handoff lights up automatically.
+ *     CAVEAT: a non-throwing setHiddenPrechatFields call — what this
+ *     component surfaces as prechatStatus "applied" — does NOT by itself
+ *     guarantee the value lands on MessagingSession. The field must be
+ *     registered as a hidden prechat field AND the Embedded Service
+ *     Deployment must be re-Published (then ~5–15 min CDN propagation).
+ *     Treat in-band delivery as best-effort; the agent reasoning falls
+ *     back gracefully (national results) when the ZIP is absent.
  *   - To switch between patients in the same browser session, the
- *     parent must re-mount this component (e.g. via React key). The
- *     Salesforce SDK is global, sticky-state, and intentionally does
- *     not expose a swap-fields-mid-conversation API.
+ *     parent must re-mount this component via React key (see
+ *     intake-patient-stage's `key={selectedId}`), which re-applies the
+ *     new prechat fields on the fresh mount. The Salesforce SDK is
+ *     global, sticky-state, and does not expose a swap-fields-mid-
+ *     conversation API.
  */
 
 type PrechatFields = Record<string, string>;
