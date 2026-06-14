@@ -1,0 +1,93 @@
+openapi: 3.0.0
+info:
+  title: Pause Provider Directory
+  version: "1.0.0"
+  description: >
+    Agentforce-facing slice of the Pause provider directory Experience API.
+    Registered in Salesforce as an External Service so the
+    Pause_Health_Intake_Agent can call findMenopauseProviders as an action
+    when a patient asks to find a menopause specialist.
+
+    This is a deliberately lean schema: the live endpoint returns more
+    (meta, query echo, provenance), but External Services only maps the
+    fields declared here into the agent's action output variables, so we
+    declare only what the agent needs to answer the patient. Backed by the
+    public, no-auth GET https://pause-health.ai/api/mulesoft/providers
+    (served by provider_ingest's NPPES-derived directory, or the live
+    MuleSoft Experience API when MULESOFT_PROVIDERS_BASE_URL is set).
+
+# External Services uses the associated Named Credential (Pause_Provider_API)
+# for the host; this server URL is informational. Paths are resolved relative
+# to the Named Credential endpoint, so the path below must match the live route.
+servers:
+  - url: https://pause-health.ai
+
+paths:
+  /api/mulesoft/providers:
+    get:
+      operationId: findMenopauseProviders
+      summary: Find menopause-certified providers
+      description: >
+        Returns menopause-relevant providers ranked by graph score. Pass
+        zip to narrow to the patient's area (3-digit prefix match) and
+        menopause=true to return only MSCP-credentialed clinicians.
+      parameters:
+        - name: zip
+          in: query
+          required: false
+          description: Patient 5-digit ZIP. Narrows results to the local area.
+          schema:
+            type: string
+        - name: menopause
+          in: query
+          required: false
+          description: When true, return only menopause-certified (MSCP) providers.
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of providers to return (1-50).
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Provider directory results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    description: Total matching providers before the limit was applied.
+                  returned:
+                    type: integer
+                    description: Number of providers in this response.
+                  providers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        npi:
+                          type: string
+                          description: National Provider Identifier.
+                        name:
+                          type: string
+                          description: Provider display name with credentials.
+                        specialty:
+                          type: string
+                        menopauseCertified:
+                          type: boolean
+                        city:
+                          type: string
+                        state:
+                          type: string
+                        zip:
+                          type: string
+                        acceptingNewPatients:
+                          type: boolean
+                        telehealth:
+                          type: boolean
+                        graphScore:
+                          type: number
