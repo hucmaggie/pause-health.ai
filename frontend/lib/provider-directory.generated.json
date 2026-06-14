@@ -1,0 +1,193 @@
+[
+  {
+    "npi": "1457390021",
+    "name": "Dr. Helen Okafor, DO, MSCP",
+    "credentials": [
+      "DO",
+      "MSCP"
+    ],
+    "specialty": "Endocrinology, Diabetes & Metabolism",
+    "menopauseCertified": true,
+    "city": "Newport Beach",
+    "state": "CA",
+    "zip": "92660",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0
+  },
+  {
+    "npi": "1881903422",
+    "name": "Dr. Marisol Reyes, MD, FACOG",
+    "credentials": [
+      "MD",
+      "FACOG"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Santa Ana",
+    "state": "CA",
+    "zip": "92705",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0
+  },
+  {
+    "npi": "1922450088",
+    "name": "Dr. Samuel Levin, MD, MSCP",
+    "credentials": [
+      "MD",
+      "MSCP"
+    ],
+    "specialty": "Endocrinology, Diabetes & Metabolism",
+    "menopauseCertified": true,
+    "city": "New York",
+    "state": "NY",
+    "zip": "10024",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0
+  },
+  {
+    "npi": "1023456789",
+    "name": "Dr. Thanh Nguyen, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Gynecology",
+    "menopauseCertified": false,
+    "city": "Irvine",
+    "state": "CA",
+    "zip": "92618",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 0.989
+  },
+  {
+    "npi": "1801234567",
+    "name": "Dr. Bianca Torres, NP",
+    "credentials": [
+      "NP"
+    ],
+    "specialty": "Nurse Practitioner \u2014 Family",
+    "menopauseCertified": false,
+    "city": "Newark",
+    "state": "NJ",
+    "zip": "07102",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 0.857
+  },
+  {
+    "npi": "1134567890",
+    "name": "Dr. Rina Patel, CNM, MSCP",
+    "credentials": [
+      "CNM",
+      "MSCP"
+    ],
+    "specialty": "Certified Nurse-Midwife (Lactation)",
+    "menopauseCertified": true,
+    "city": "Los Angeles",
+    "state": "CA",
+    "zip": "90012",
+    "acceptingNewPatients": true,
+    "telehealth": false,
+    "graphScore": 0.851
+  },
+  {
+    "npi": "1578901234",
+    "name": "Dr. Soo Kim, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Reproductive Endocrinology & Infertility",
+    "menopauseCertified": false,
+    "city": "San Diego",
+    "state": "CA",
+    "zip": "92103",
+    "acceptingNewPatients": true,
+    "telehealth": false,
+    "graphScore": 0.8225
+  },
+  {
+    "npi": "1356789012",
+    "name": "Dr. Megan Sullivan, MD, FAAFP, MSCP",
+    "credentials": [
+      "MD",
+      "FAAFP",
+      "MSCP"
+    ],
+    "specialty": "Family Medicine",
+    "menopauseCertified": true,
+    "city": "Chicago",
+    "state": "IL",
+    "zip": "60614",
+    "acceptingNewPatients": true,
+    "telehealth": false,
+    "graphScore": 0.8194
+  },
+  {
+    "npi": "1467890123",
+    "name": "Dr. Lucia Garcia, CNS, RN, MSCP",
+    "credentials": [
+      "CNS",
+      "RN",
+      "MSCP"
+    ],
+    "specialty": "Clinical Nurse Specialist \u2014 Women's Health",
+    "menopauseCertified": true,
+    "city": "Houston",
+    "state": "TX",
+    "zip": "77002",
+    "acceptingNewPatients": false,
+    "telehealth": true,
+    "graphScore": 0.8061
+  },
+  {
+    "npi": "1730155570",
+    "name": "Dr. Priya Anand, MD, FACOG, MSCP",
+    "credentials": [
+      "MD",
+      "FACOG",
+      "MSCP"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": true,
+    "city": "Irvine",
+    "state": "CA",
+    "zip": "92614",
+    "acceptingNewPatients": false,
+    "telehealth": false,
+    "graphScore": 0.7475
+  },
+  {
+    "npi": "1306188891",
+    "name": "Dr. Aileen Chen, NP, MSCP",
+    "credentials": [
+      "NP",
+      "MSCP"
+    ],
+    "specialty": "Nurse Practitioner \u2014 Women's Health",
+    "menopauseCertified": true,
+    "city": "Brooklyn",
+    "state": "NY",
+    "zip": "11215",
+    "acceptingNewPatients": false,
+    "telehealth": false,
+    "graphScore": 0.6716
+  },
+  {
+    "npi": "1245678901",
+    "name": "Dr. Dana Brooks, PA-C",
+    "credentials": [
+      "PA-C"
+    ],
+    "specialty": "Physician Assistant \u2014 Medical",
+    "menopauseCertified": false,
+    "city": "Costa Mesa",
+    "state": "CA",
+    "zip": "92626",
+    "acceptingNewPatients": false,
+    "telehealth": true,
+    "graphScore": 0.624
+  }
+]

@@ -5,27 +5,30 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Provider Graph",
   description:
-    "How Pause-Health.ai plans to build a defensible menopause provider graph from CMS NPPES, state board data, and clinic-site signal. Today the directory is a hand-curated synthetic slice served behind the Experience API contract; the ingestion pipeline is designed, not built.",
+    "How Pause-Health.ai builds a defensible menopause provider graph from CMS NPPES, state board data, and clinic-site signal. Phase 1 is shipped: the provider_ingest pipeline filters NPPES on the real menopause NUCC taxonomies, overlays the MSCP credential list, and computes a graphScore behind the Experience API contract. State boards + clinic-site detection are Phase 2.",
   path: "/proposal/provider-graph",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Provider graph strategy — Pause-Health.ai investor brief."
 });
 
 /**
- * Provider graph brief — Arc B polish pass.
+ * Provider graph brief.
  *
- * The previous version reads end-to-end in present tense -- "Pause
- * constructs its own menopause provider graph from CMS NPPES, state
- * board data, and clinic-site service detection" -- as if the
- * ingestion + scoring pipeline were running. In reality, the
- * provider directory today is a hand-curated synthetic slice of ~4
- * providers in frontend/lib/mulesoft-mocks.ts, exposed through:
+ * Phase 1 is shipped: the provider directory behind the Experience API
+ * contract is no longer hand-curated. The provider_ingest pipeline
+ * (provider_ingest/ at the repo root) streams the CMS NPPES bulk schema,
+ * filters on the real menopause NUCC taxonomy codes, overlays the MSCP
+ * credential list, computes a graphScore, and emits
+ * frontend/lib/provider-directory.generated.json — which queryProviderDirectory
+ * loads. Exposed through:
  *
- *   - GET /api/mulesoft/providers (mocked Experience API)
+ *   - GET /api/mulesoft/providers (Experience API; NPPES-derived data)
  *   - MCP tool: find_menopause_providers
  *
- * The Experience API contract (zip filter, menopauseOnly filter,
- * provenance block) is stable. The data behind it is not real.
+ * The committed dataset is the pipeline run over a synthetic NPPES-format
+ * fixture (real schema + real codes); the national npidata_pfile produces the
+ * full slice behind the same unchanged contract (zip filter, menopauseOnly,
+ * limit, provenance block). State boards + clinic-site detection are Phase 2.
  *
  * Four moves:
  *
@@ -68,10 +71,10 @@ const sources: Array<{
 }> = [
   {
     name: "CMS NPPES (NPI Registry)",
-    status: "designed",
+    status: "prototype",
     type: "Public domain · bulk download + REST API",
     detail:
-      "All US healthcare providers with an NPI. Includes taxonomy codes, primary practice address, license state, and authoritative provider identity. ~6M records, refreshed weekly. NPI numbers are the join key in the synthetic mock today; live ingestion is Phase 1.",
+      "All US healthcare providers with an NPI. Includes taxonomy codes, primary practice address, license state, and authoritative provider identity. ~8.5M records, refreshed monthly. The provider_ingest pipeline now streams the NPPES bulk schema, filters to the menopause taxonomies, and emits the directory the contract serves — committed today as the pipeline run over a synthetic NPPES-format fixture; point it at the national npidata_pfile to produce the full slice.",
     purpose:
       "Authoritative provider identity. The NPI is the join key that everything else hangs off."
   },
@@ -86,12 +89,12 @@ const sources: Array<{
   },
   {
     name: "NPPES taxonomy filter",
-    status: "designed",
-    type: "Derived",
+    status: "prototype",
+    type: "Derived · provider_ingest",
     detail:
-      "Plan: narrow ~6M providers to ~80K candidates by filtering for taxonomies relevant to menopause care — OB/GYN, Family Medicine, Internal Medicine, Endocrinology, Nurse Practitioner (women's health), Certified Nurse Midwife, Physician Assistant (women's health).",
+      "Built: narrows the NPPES population to menopause-relevant providers by filtering on the real NUCC taxonomy codes — OB/GYN (207V*), Gynecology, Reproductive Endocrinology, Endocrinology (207RE0101X), Family + Internal Medicine, Nurse Practitioner — Women's Health (363LW0102X), Certified Nurse-Midwife, Physician Assistant, and Women's-Health CNS. Each code carries a relevance weight that feeds the graphScore. Implemented in provider_ingest/taxonomy.py with unit tests.",
     purpose:
-      "Cuts the candidate set by ~75× before we spend any compute on clinic-site analysis."
+      "Cuts the candidate set by ~100× before we spend any compute on clinic-site analysis."
   },
   {
     name: "Clinic-site service detection",
@@ -130,10 +133,10 @@ const scoring: Array<{
 }> = [
   {
     factor: "Credential signal",
-    status: "designed",
+    status: "partial",
     weight: "Highest",
     detail:
-      "MSCP / NCMP / ABMS board certification in OB/GYN, IM, Endo, or FM. Self-attested in pilot; verified against primary sources before any pilot signs. Today's mock surfaces an MSCP credential string but no scoring logic is computed."
+      "MSCP / NCMP / ABMS board certification in OB/GYN, IM, Endo, or FM. The pipeline now overlays an MSCP NPI list onto the NPPES rows and applies a certification boost in the computed graphScore (provider_ingest/score.py). The MSCP list is synthetic today; production swaps in The Menopause Society directory or a licensed feed behind the same join. License-standing verification is Phase 2."
   },
   {
     factor: "Service-mention signal",
@@ -154,7 +157,7 @@ const scoring: Array<{
     status: "partial",
     weight: "Medium",
     detail:
-      "Distance to patient, accepting-new-patients flag (where available), insurance match. ZIP-prefix filter is wired today against the synthetic slice; distance ranking + insurance match are Phase 2."
+      "Distance to patient, accepting-new-patients flag (where available), insurance match. ZIP-prefix filter is wired today, and accepting-new-patients + telehealth now feed the computed graphScore. NPPES carries no accepting/telehealth field, so those are derived deterministically from the NPI for the demo; distance ranking + insurance match are Phase 2."
   },
   {
     factor: "Outcomes feedback",
@@ -211,10 +214,10 @@ const phases: Array<{
   },
   {
     name: "Phase 1 — NPPES + taxonomy filter",
-    status: "designed",
-    duration: "2 weeks",
+    status: "prototype",
+    duration: "Shipped (pipeline + fixture)",
     detail:
-      "Ingest the NPPES bulk dump, normalize, filter to menopause-relevant taxonomies. Output: ~80K candidate provider rows in our internal store. Swaps in behind the existing Experience API contract — MCP clients keep working."
+      "Built: provider_ingest streams the NPPES bulk schema, normalizes, filters to menopause-relevant NUCC taxonomies, overlays the MSCP credential list, and computes a graphScore. Output swaps in behind the existing Experience API contract — MCP and frontend clients keep working unchanged. Committed dataset is the pipeline over a synthetic NPPES-format fixture; running it on the national npidata_pfile produces the full ~80K-row slice."
   },
   {
     name: "Phase 2 — State license + service detection",
@@ -275,43 +278,46 @@ export default function ProviderGraphPage() {
     <ProposalShell
       eyebrow="Investor brief · Provider graph"
       title="Building a defensible menopause provider graph"
-      subtitle="The Experience API contract for a menopause-aware provider directory is live behind /api/mulesoft/providers and the MCP find_menopause_providers tool today, with ~4 hand-curated synthetic providers behind it so the shape and filtering UX are real. The full ingestion pipeline (CMS NPPES + state boards + clinic-site service detection) is designed for Phases 1–2; the closed-loop outcomes layer is the long-term moat."
+      subtitle="The Experience API contract for a menopause-aware provider directory is live behind /api/mulesoft/providers and the MCP find_menopause_providers tool, now backed by the provider_ingest pipeline: it streams the CMS NPPES bulk schema, filters on the real menopause NUCC taxonomies, overlays the MSCP credential list, and computes a graphScore (Phase 1). State boards + clinic-site service detection are Phase 2; the closed-loop outcomes layer is the long-term moat."
     >
       <section className="card" style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Today's reality</p>
         <h2 className="proposal-section-title" style={{ marginTop: 0 }}>
-          Contract first, data later — by design
+          Contract first — now backed by a real NPPES pipeline
         </h2>
         <p style={{ marginTop: "0.4rem" }}>
-          The provider directory is a hand-curated synthetic slice of
-          menopause-credentialed clinicians (~4 rows in{" "}
-          <code>frontend/lib/mulesoft-mocks.ts</code>) served through a
-          production-shaped Experience API contract at{" "}
-          <code>/api/mulesoft/providers</code> and exposed to LLM clients
-          via the MCP <code>find_menopause_providers</code> tool. The
-          contract — zip-prefix filter, <code>menopauseOnly</code> filter,
-          <code>limit</code>, a provenance block listing
-          source-of-truth attributions — is the part that survives. Phase 1
-          swaps real NPPES-derived data in behind the same contract;
-          MCP and frontend clients keep working unchanged.
+          The provider directory is served through a production-shaped
+          Experience API contract at <code>/api/mulesoft/providers</code> and
+          exposed to LLM clients via the MCP{" "}
+          <code>find_menopause_providers</code> tool. The rows behind it are no
+          longer hand-curated: the <code>provider_ingest</code> pipeline streams
+          the CMS NPPES bulk schema, filters on the real menopause NUCC
+          taxonomy codes, overlays the MSCP credential list, computes a{" "}
+          <code>graphScore</code>, and emits{" "}
+          <code>frontend/lib/provider-directory.generated.json</code>. The
+          committed dataset is that pipeline run over a synthetic NPPES-format
+          fixture (real schema + real codes); pointing it at the national{" "}
+          <code>npidata_pfile</code> produces the full slice behind the same
+          unchanged contract — zip-prefix filter, <code>menopauseOnly</code>,{" "}
+          <code>limit</code>, and a provenance block.
         </p>
         <ul className="metric-list" style={{ marginTop: "0.6rem" }}>
           <li>
             <span>What's wired today</span>
             <strong style={{ fontWeight: 500 }}>
               <StatusPill status="prototype" style={inlinePillStyle} />
-              Experience API contract + MCP tool + ZIP-prefix filtering
-              against the synthetic slice.
+              Experience API contract + MCP tool + the NPPES taxonomy
+              filter, MSCP overlay, and computed graphScore behind it.
             </strong>
           </li>
           <li>
             <span>What's still mocked</span>
             <strong style={{ fontWeight: 500 }}>
               <StatusPill status="designed" style={inlinePillStyle} />
-              Every data source listed below. NPPES is not ingested,
-              state boards are not wired, the clinic-site detector
-              is not built. The 4 synthetic rows carry MSCP credential
-              strings but no scoring logic is computed.
+              The MSCP credential list is synthetic, and the committed
+              dataset is the pipeline over an NPPES-format fixture rather
+              than the national file. State boards and the clinic-site
+              detector are not built.
             </strong>
           </li>
           <li>
@@ -346,7 +352,7 @@ export default function ProviderGraphPage() {
 
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Data sources</p>
-        <h2 className="proposal-section-title">All public-domain primary sources, end-to-end designed</h2>
+        <h2 className="proposal-section-title">All public-domain primary sources — NPPES live, the rest designed</h2>
         <p
           style={{
             color: "var(--muted)",
@@ -355,8 +361,10 @@ export default function ProviderGraphPage() {
           }}
         >
           Pills:{" "}
+          <StatusPill status="prototype" style={inlinePillStyle} />{" "}
+          built and serving data today ·{" "}
           <StatusPill status="designed" style={inlinePillStyle} />{" "}
-          committed choice, activates with Phase 1 or 2 ingestion ·{" "}
+          committed choice, activates with Phase 2 ingestion ·{" "}
           <StatusPill status="future" style={inlinePillStyle} />{" "}
           activates with Phase 3 once Pause referrals are flowing.
         </p>
@@ -385,13 +393,14 @@ export default function ProviderGraphPage() {
       <section className="card" style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Scoring model · per-row status</p>
         <h2 className="proposal-section-title" style={{ marginTop: 0 }}>
-          Five factors, all designed today
+          Five factors — credential + geography computed today
         </h2>
         <p style={{ marginTop: "0.4rem", color: "var(--muted)", fontSize: "0.92rem" }}>
-          The synthetic slice today carries an MSCP credential string and
-          a <code>menopauseCertified</code> boolean. Weighted scoring,
-          gating, and distance ranking are not yet computed — they
-          activate alongside Phase 1 ingestion and Phase 3 outcomes data.
+          The pipeline now computes a <code>graphScore</code> from taxonomy
+          relevance, the MSCP certification boost, accepting-new-patients,
+          and telehealth, and the directory ranks on it. License-standing
+          gating and clinic-site service-mention signal are Phase 2;
+          outcomes feedback activates with Phase 3 referral data.
         </p>
         <div className="table-wrap" style={{ marginTop: "0.5rem" }}>
           <table>

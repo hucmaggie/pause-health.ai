@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "provider-ingest"
+version = "0.1.0"
+description = "Pause-Health.ai provider-graph ingest (CMS NPPES → menopause provider directory)"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "Pause-Health.ai" }]
+license = { text = "Apache-2.0" }
+# Pure standard library — no third-party runtime dependencies. The NPPES file
+# is a plain CSV we stream with the csv module; output is JSON.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.5",
+]
+
+[project.scripts]
+pause-provider-build = "provider_ingest.build:main"
+
+[tool.setuptools.packages.find]
+include = ["provider_ingest*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

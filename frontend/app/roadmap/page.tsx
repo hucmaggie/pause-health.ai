@@ -108,8 +108,8 @@ const horizons: RoadmapHorizon[] = [
       {
         title: "Provider graph Phase 1 — NPPES + taxonomy filter",
         detail:
-          "Ingest the CMS NPPES bulk file, filter by OB/GYN + endocrinology taxonomies, and surface MSCP-credentialed contacts as a first-class search dimension. Sized at 2 weeks. Phase 2 (state license + service detection) follows in 4–6 weeks.",
-        status: "designed",
+          "Wired in prototype: the provider_ingest pipeline streams the CMS NPPES bulk schema, filters on the real menopause NUCC taxonomy codes (OB/GYN, endocrinology, NP women's health, CNM, PA, CNS), overlays the MSCP credential list, and computes a graphScore — emitting frontend/lib/provider-directory.generated.json behind the unchanged /api/mulesoft/providers contract. The committed dataset is the pipeline over a synthetic NPPES-format fixture; the national npidata_pfile produces the full slice with no contract change. Run + verify steps in docs/PROVIDER_GRAPH_PHASE_1_RUNBOOK.md. Phase 2 (state license + clinic-site service detection) follows in 4–6 weeks.",
+        status: "prototype",
         source: { href: "/proposal/provider-graph", label: "/proposal/provider-graph" }
       }
     ]

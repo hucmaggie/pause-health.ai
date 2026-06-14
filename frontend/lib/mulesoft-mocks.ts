@@ -9,6 +9,8 @@
  * Keep these fixtures dependency-free and pure JSON-serializable.
  */
 
+import generatedProviderDirectory from "./provider-directory.generated.json";
+
 export const DEMO_PATIENT_ID = "pause-demo-patient-001";
 const RAW_HRV_ID = "obs-hrv-raw-001";
 
@@ -300,7 +302,13 @@ export type ProviderRecord = {
   graphScore: number;
 };
 
-const PROVIDER_DIRECTORY: ProviderRecord[] = [
+/**
+ * Hand-curated fallback slice. Retained so the directory still answers if the
+ * generated dataset is ever empty/missing. The live directory is the
+ * NPPES-derived `provider-directory.generated.json` (see PROVIDER_DIRECTORY
+ * below), produced by the `provider_ingest` pipeline.
+ */
+const FALLBACK_DIRECTORY: ProviderRecord[] = [
   {
     npi: "1730155570",
     name: "Dr. Priya Anand, MD, MSCP",
@@ -368,6 +376,21 @@ const PROVIDER_DIRECTORY: ProviderRecord[] = [
   }
 ];
 
+/**
+ * Live directory: NPPES taxonomy-filtered providers with the MSCP credential
+ * overlay and a computed graphScore, emitted by `provider_ingest` into
+ * `provider-directory.generated.json`. The committed dataset is the pipeline
+ * run over a small NPPES-format fixture (real schema + real NUCC codes,
+ * synthetic rows); a full national run overwrites it behind this same shape.
+ */
+const PROVIDER_DIRECTORY: ProviderRecord[] =
+  (generatedProviderDirectory as ProviderRecord[]).length > 0
+    ? (generatedProviderDirectory as ProviderRecord[])
+    : FALLBACK_DIRECTORY;
+
+const USING_GENERATED_DIRECTORY =
+  (generatedProviderDirectory as ProviderRecord[]).length > 0;
+
 export function queryProviderDirectory(opts: {
   zip?: string;
   menopauseOnly?: boolean;
@@ -391,8 +414,13 @@ export function queryProviderDirectory(opts: {
     returned: rows.length,
     providers: rows,
     provenance: {
-      sources: ["CMS NPPES (synthetic slice)", "MSCP credential list (synthetic)"],
-      experienceApi: "pause-provider-directory-experience-api@0.4"
+      sources: USING_GENERATED_DIRECTORY
+        ? [
+            "CMS NPPES (taxonomy-filtered via provider_ingest)",
+            "MSCP credential overlay"
+          ]
+        : ["CMS NPPES (synthetic slice)", "MSCP credential list (synthetic)"],
+      experienceApi: "pause-provider-directory-experience-api@0.5"
     }
   };
 }

@@ -1,0 +1,15 @@
+NPI,Entity Type Code,Provider Last Name (Legal Name),Provider First Name,Provider Name Prefix Text,Provider Credential Text,Provider Business Practice Location Address City Name,Provider Business Practice Location Address State Name,Provider Business Practice Location Address Postal Code,Healthcare Provider Taxonomy Code_1,Healthcare Provider Primary Taxonomy Switch_1,Healthcare Provider Taxonomy Code_2,Healthcare Provider Primary Taxonomy Switch_2
+1730155570,1,Anand,Priya,Dr.,"MD, FACOG",Irvine,CA,92614-2201,207V00000X,Y,,
+1457390021,1,Okafor,Helen,Dr.,DO,Newport Beach,CA,92660,207RE0101X,Y,207R00000X,N
+1881903422,1,Reyes,Marisol,Dr.,"MD, FACOG",Santa Ana,CA,92705,207V00000X,Y,,
+1306188891,1,Chen,Aileen,,NP,Brooklyn,NY,11215,363LW0102X,Y,,
+1922450088,1,Levin,Samuel,Dr.,MD,New York,NY,10024,207RE0101X,Y,,
+1023456789,1,Nguyen,Thanh,Dr.,M.D.,Irvine,CA,92618,207VG0400X,Y,,
+1134567890,1,Patel,Rina,,CNM,Los Angeles,CA,90012,175M00000X,Y,,
+1245678901,1,Brooks,Dana,,PA-C,Costa Mesa,CA,92626,363AM0700X,Y,,
+1356789012,1,Sullivan,Megan,Dr.,"MD, FAAFP",Chicago,IL,60614,207Q00000X,Y,,
+1467890123,1,Garcia,Lucia,,"CNS, RN",Houston,TX,77002,364SW0102X,Y,,
+1578901234,1,Kim,Soo,Dr.,MD,San Diego,CA,92103,207VE0102X,Y,,
+1689012345,1,Adams,Robert,Dr.,MD,New York,NY,10016,207X00000X,Y,,
+1790123456,2,Womens Health Clinic of Irvine,,,,Irvine,CA,92614,207V00000X,Y,,
+1801234567,1,Torres,Bianca,,NP,Newark,NJ,07102,363LF0000X,Y,,

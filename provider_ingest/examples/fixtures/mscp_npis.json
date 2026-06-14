@@ -1,0 +1,12 @@
+{
+  "_comment": "Synthetic MSCP (Menopause Society Certified Practitioner) NPI list for the demo. Production source: The Menopause Society 'Find a Menopause Practitioner' directory (see /proposal/menopause-society) or a licensed credential feed. The join in mscp.py is identical regardless of provenance.",
+  "npis": [
+    "1730155570",
+    "1457390021",
+    "1306188891",
+    "1922450088",
+    "1134567890",
+    "1356789012",
+    "1467890123"
+  ]
+}
