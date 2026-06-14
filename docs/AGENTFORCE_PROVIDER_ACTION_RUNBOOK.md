@@ -173,6 +173,73 @@ that to the `zip` input instead of asking.)
 
 ---
 
+## Appendix — paste-ready agent copy
+
+Drop these verbatim into Agent Builder when creating the topic in Step 3.
+
+**Topic label**
+
+```
+Find a Provider
+```
+
+**Classification description** (when the topic should fire)
+
+```
+The patient wants to find, locate, or be referred to a menopause specialist,
+MSCP-credentialed clinician, OB/GYN, or endocrinologist — including questions
+like "which healthcare professional", "find a provider near me", "who should I
+see for menopause", or "is there a specialist near <ZIP>".
+```
+
+**Scope**
+
+```
+Help the patient find a menopause-credentialed provider using the Pause
+provider directory via the findMenopauseProviders action. Do not give generic
+"see your primary care physician" advice when this topic applies.
+```
+
+**Instructions**
+
+```
+1. If you do not already have the patient's 5-digit ZIP code, ask for it once.
+2. Call findMenopauseProviders with that zip, menopause=true, and limit=3. If
+   the patient declines or has no ZIP, call it without zip and tell them these
+   are top menopause specialists nationally.
+3. Present up to three results. For each provider, state the name, specialty,
+   and city/state, then note whether they offer telehealth and whether they are
+   accepting new patients — for example: "Dr. Priya Nair, MD, MSCP —
+   Obstetrics & Gynecology in Irvine, CA. Offers telehealth and is accepting
+   new patients."
+4. Only return providers the action gives you. Never invent or guess a provider,
+   NPI, or contact detail.
+5. If the action returns no providers, say you couldn't find a local match and
+   point the patient to The Menopause Society provider directory at
+   menopause.org.
+```
+
+**Example utterances** (for the topic classifier)
+
+```
+which healthcare professional?
+find a provider that specializes in menopause
+who should I see for menopause?
+is there a menopause specialist near 92614?
+find me an OB/GYN who handles menopause
+can you refer me to someone?
+```
+
+**Action input mapping**
+
+| Input | Value |
+| --- | --- |
+| `menopause` | fixed `true` |
+| `limit` | fixed `3` |
+| `zip` | conversation variable (patient-provided), optional |
+
+---
+
 ## When the live MuleSoft API replaces the public endpoint
 
 Repoint the Named Credential `endpoint` at the gateway/CloudHub base and add the
