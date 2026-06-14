@@ -44,11 +44,18 @@ Goal: a callable base URL for the provider endpoint.
 
 **Option A — deploy the repo metadata (legacy, no-auth, simplest):**
 
+This repo is not a Salesforce DX project, so `sf project deploy start` can't
+resolve the loose file under `salesforce/`. A throwaway SFDX harness lives at
+`.sf-deploy/` (a minimal `sfdx-project.json` + the same Named Credential in the
+standard `force-app/main/default/namedCredentials/` layout). Deploy from there:
+
 ```bash
-sf project deploy start \
-  --source-dir salesforce/named-credentials/Pause_Provider_API.namedCredential-meta.xml \
-  --target-org trailsignup
+cd .sf-deploy
+sf project deploy start --source-dir force-app --target-org trailsignup
 ```
+
+(The `.sf-deploy` copy mirrors `salesforce/named-credentials/` — the latter is
+the documented source of truth; keep them in sync if you edit the credential.)
 
 **Option B — create it in the UI** (Setup → Named Credentials → New):
 - Label / Name: `Pause Provider API` / `Pause_Provider_API`
