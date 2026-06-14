@@ -115,7 +115,10 @@ async function dcFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Data Cloud API ${path} failed (${res.status}): ${body.slice(0, 300)}`);
+    // Log the response body on its own line so Vercel's row-truncated log
+    // viewer doesn't eat the part that explains *why* the request failed.
+    console.warn(`[data-cloud] ${path} → ${res.status}\nbody: ${body.slice(0, 800)}`);
+    throw new Error(`Data Cloud API ${path} failed (${res.status})`);
   }
   return res.json() as Promise<T>;
 }
