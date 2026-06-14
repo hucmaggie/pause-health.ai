@@ -151,13 +151,20 @@ export async function dcInsightQuery(
 
 // ---------------------------------------------------------------------------
 // Phase 2 Calculated Insight names
-// These match the Developer Names you create in the Data Cloud UI / Metadata
-// API. See docs/MULESOFT_PHASE_2_DATA_CLOUD.md for the setup walkthrough.
+//
+// Data Cloud appends a "__cio" suffix to every CI's API name (Calculated
+// Insight Object), the same way custom sObjects get "__c". The Developer
+// Name you type in the New Insight modal becomes the bare prefix; the
+// Insight Query API expects the full __cio-suffixed name.
+//
+// Activated on the trailsignup org 2026-06-13 (session 3).
+// See docs/MULESOFT_PHASE_2_DATA_CLOUD.md and data-cloud/_mock_path.sql
+// for the source-of-truth definitions.
 // ---------------------------------------------------------------------------
 
-const CI_HRV_RMSSD_30D = "Pause_HRV_RMSSD_30d";
-const CI_VASOMOTOR_BURDEN_30D = "Pause_Vasomotor_Burden_30d";
-const CI_SLEEP_DISRUPTION_7D = "Pause_Sleep_Disruption_7d";
+const CI_HRV_RMSSD_30D = "Pause_HRV_RMSSD_30d__cio";
+const CI_VASOMOTOR_BURDEN_30D = "Pause_Vasomotor_Burden_30d__cio";
+const CI_SLEEP_DISRUPTION_7D = "Pause_Sleep_Disruption_7d__cio";
 
 /**
  * Fetch the three wearable/EHR Calculated Insights for a patient from
@@ -166,10 +173,13 @@ const CI_SLEEP_DISRUPTION_7D = "Pause_Sleep_Disruption_7d";
  * Returns null if Data Cloud is not configured or the tenant doesn't
  * have the CIs provisioned yet — callers fall back to the mock baseline.
  *
- * Row shapes expected (one row per insight, one column per metric):
- *   Pause_HRV_RMSSD_30d       → { ssot__Id__c, hrv_rmssd_ms, z_score, window_days }
- *   Pause_Vasomotor_Burden_30d → { ssot__Id__c, burden_score_0_100, flash_count_30d }
- *   Pause_Sleep_Disruption_7d  → { ssot__Id__c, disruption_index_0_1, disrupted_nights }
+ * Row shapes expected (one row per insight, one column per metric).
+ * All CI output columns get a "__c" suffix from the DC engine, and the
+ * Dimension column we GROUP BY on is named "unified_id" (renamed from
+ * the validator-incompatible "ssot__Id__c" alias):
+ *   Pause_HRV_RMSSD_30d__cio       → { unified_id__c, hrv_rmssd_ms__c, z_score__c, window_days__c }
+ *   Pause_Vasomotor_Burden_30d__cio → { unified_id__c, burden_score_0_100__c, flash_count_30d__c }
+ *   Pause_Sleep_Disruption_7d__cio  → { unified_id__c, disruption_index_0_1__c, disrupted_nights__c }
  */
 export async function getWearableInsights(unifiedPatientId: string): Promise<{
   hrv: CalculatedInsight | null;
@@ -180,7 +190,7 @@ export async function getWearableInsights(unifiedPatientId: string): Promise<{
 
   const now = new Date().toISOString();
   const src: FederatedSource = "dbdp-wearable-features";
-  const filter = `ssot__Id__c = '${unifiedPatientId.replace(/'/g, "\\'")}'`;
+  const filter = `unified_id__c = '${unifiedPatientId.replace(/'/g, "\\'")}'`;
 
   try {
     const [hrvRows, vasomotorRows, sleepRows] = await Promise.all([
@@ -193,8 +203,8 @@ export async function getWearableInsights(unifiedPatientId: string): Promise<{
       ? {
           id: "insight.hrv-rmssd-30d",
           name: "HRV RMSSD variability (30-day)",
-          description: `RMSSD ${hrvRows[0].hrv_rmssd_ms} ms · z-score ${hrvRows[0].z_score} vs menopause cohort. Source: Oura/DBDP via Data Cloud.`,
-          value: Number(hrvRows[0].z_score ?? 0),
+          description: `RMSSD ${hrvRows[0].hrv_rmssd_ms__c} ms · z-score ${hrvRows[0].z_score__c} vs menopause cohort. Source: Oura/DBDP via Data Cloud.`,
+          value: Number(hrvRows[0].z_score__c ?? 0),
           unit: "z-score",
           computedAt: now,
           sourceWindow: "30d",
@@ -206,8 +216,8 @@ export async function getWearableInsights(unifiedPatientId: string): Promise<{
       ? {
           id: "insight.vasomotor-burden-30d",
           name: "Vasomotor symptom burden (30-day)",
-          description: `Burden score ${vasomotorRows[0].burden_score_0_100}/100 · ${vasomotorRows[0].flash_count_30d} events in 30d. Source: wearable thermoregulation + intake via Data Cloud.`,
-          value: Number(vasomotorRows[0].burden_score_0_100 ?? 0),
+          description: `Burden score ${vasomotorRows[0].burden_score_0_100__c}/100 · ${vasomotorRows[0].flash_count_30d__c} events in 30d. Source: wearable thermoregulation + intake via Data Cloud.`,
+          value: Number(vasomotorRows[0].burden_score_0_100__c ?? 0),
           unit: "score",
           computedAt: now,
           sourceWindow: "30d",
@@ -219,8 +229,8 @@ export async function getWearableInsights(unifiedPatientId: string): Promise<{
       ? {
           id: "insight.sleep-disruption-7d",
           name: "Sleep disruption index (7-day)",
-          description: `Disruption index ${sleepRows[0].disruption_index_0_1} · ${sleepRows[0].disrupted_nights} disrupted nights. Source: Oura sleep staging via Data Cloud.`,
-          value: Number(sleepRows[0].disruption_index_0_1 ?? 0),
+          description: `Disruption index ${sleepRows[0].disruption_index_0_1__c} · ${sleepRows[0].disrupted_nights__c} disrupted nights. Source: Oura sleep staging via Data Cloud.`,
+          value: Number(sleepRows[0].disruption_index_0_1__c ?? 0),
           unit: "fraction",
           computedAt: now,
           sourceWindow: "7d",
