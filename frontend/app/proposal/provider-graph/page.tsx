@@ -299,7 +299,12 @@ export default function ProviderGraphPage() {
           fixture (real schema + real codes); pointing it at the national{" "}
           <code>npidata_pfile</code> produces the full slice behind the same
           unchanged contract — zip-prefix filter, <code>menopauseOnly</code>,{" "}
-          <code>limit</code>, and a provenance block.
+          <code>limit</code>, and a provenance block. The{" "}
+          <a href="/demo/routing">Care Router</a> now consumes this directory
+          directly: when it routes a patient to an MSCP visit, it attaches a
+          modality-ranked recommended-provider list (telehealth-first for
+          virtual, accepting-new-patients-first for in-person) to the routing
+          decision — so the graph feeds triage, not just the demo directory.
         </p>
         <ul className="metric-list" style={{ marginTop: "0.6rem" }}>
           <li>

@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  attachRecommendedProviders,
   claudeRoute,
+  route,
   scriptedRoute,
   type Data360GroundingHint,
-  type IntakeRecord
+  type IntakeRecord,
+  type ProviderLookup
 } from "./care-router";
+import type { ProviderRecord } from "./mulesoft-mocks";
 
 /**
  * Tests for lib/care-router.ts.
@@ -298,6 +302,129 @@ describe("scriptedRoute · modelProvenance + recommendedTargetResponse", () => {
           .recommendedTargetResponse.length
       ).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("attachRecommendedProviders · provider-graph wiring", () => {
+  function provider(over: Partial<ProviderRecord> = {}): ProviderRecord {
+    return {
+      npi: "1000000001",
+      name: "Dr. Test, MD, MSCP",
+      credentials: ["MD", "MSCP"],
+      specialty: "Obstetrics & Gynecology",
+      menopauseCertified: true,
+      city: "Irvine",
+      state: "CA",
+      zip: "92614",
+      acceptingNewPatients: true,
+      telehealth: true,
+      graphScore: 0.9,
+      ...over
+    };
+  }
+
+  function stubLookup(
+    providers: ProviderRecord[],
+    source: "live" | "mock" = "mock"
+  ): { lookup: ProviderLookup; calls: Array<{ zip?: string; menopauseOnly?: boolean; limit?: number }> } {
+    const calls: Array<{ zip?: string; menopauseOnly?: boolean; limit?: number }> = [];
+    const lookup: ProviderLookup = async (query) => {
+      calls.push(query);
+      return { source, result: { total: providers.length, providers } };
+    };
+    return { lookup, calls };
+  }
+
+  it("does NOT attach providers for a non-MSCP pathway", async () => {
+    const decision = scriptedRoute({ ...baseIntake, severity: "mild" }); // self-care
+    const { lookup, calls } = stubLookup([provider()]);
+    const out = await attachRecommendedProviders(decision, baseIntake, {
+      providerLookup: lookup
+    });
+    expect(out.recommendedProviders).toBeUndefined();
+    expect(calls).toHaveLength(0);
+  });
+
+  it("attaches a ranked MSCP list for a virtual visit, telehealth-first", async () => {
+    const decision = scriptedRoute({ ...baseIntake, severity: "moderate" }); // virtual
+    expect(decision.pathway).toBe("mscp-virtual-visit");
+    const { lookup, calls } = stubLookup(
+      [
+        provider({ npi: "in-person-1", telehealth: false, graphScore: 0.95 }),
+        provider({ npi: "tele-1", telehealth: true, graphScore: 0.8 })
+      ],
+      "mock"
+    );
+    const out = await attachRecommendedProviders(decision, baseIntake, {
+      providerLookup: lookup
+    });
+    expect(out.recommendedProviders?.modality).toBe("virtual");
+    expect(out.recommendedProviders?.source).toBe("mock");
+    // Telehealth-capable clinician should be pulled to the front despite
+    // a lower graphScore.
+    expect(out.recommendedProviders?.providers[0].npi).toBe("tele-1");
+    expect(calls[0].menopauseOnly).toBe(true);
+    expect(out.rationale.join(" ")).toMatch(/Provider graph/);
+  });
+
+  it("ranks in-person visits accepting-new-patients first", async () => {
+    const decision = scriptedRoute({ ...baseIntake, severity: "severe" }); // in-person
+    expect(decision.pathway).toBe("mscp-in-person");
+    const { lookup } = stubLookup([
+      provider({ npi: "closed", acceptingNewPatients: false, graphScore: 0.95 }),
+      provider({ npi: "open", acceptingNewPatients: true, graphScore: 0.7 })
+    ]);
+    const out = await attachRecommendedProviders(decision, baseIntake, {
+      providerLookup: lookup
+    });
+    expect(out.recommendedProviders?.modality).toBe("in-person");
+    expect(out.recommendedProviders?.providers[0].npi).toBe("open");
+  });
+
+  it("caps the list at 3 and forwards the patient ZIP to the lookup", async () => {
+    const decision = scriptedRoute({ ...baseIntake, severity: "moderate" });
+    const { lookup, calls } = stubLookup(
+      Array.from({ length: 8 }, (_, i) => provider({ npi: `p${i}` }))
+    );
+    const out = await attachRecommendedProviders(
+      decision,
+      { ...baseIntake, severity: "moderate", patientZip: "92614" },
+      { providerLookup: lookup }
+    );
+    expect(out.recommendedProviders?.providers).toHaveLength(3);
+    expect(out.recommendedProviders?.total).toBe(8);
+    expect(calls[0].zip).toBe("92614");
+    expect(out.recommendedProviders?.query.zip).toBe("92614");
+  });
+
+  it("omits recommendations when the directory returns none", async () => {
+    const decision = scriptedRoute({ ...baseIntake, severity: "moderate" });
+    const { lookup } = stubLookup([]);
+    const out = await attachRecommendedProviders(decision, baseIntake, {
+      providerLookup: lookup
+    });
+    expect(out.recommendedProviders).toBeUndefined();
+  });
+
+  it("never throws — a provider-graph failure leaves routing intact", async () => {
+    const decision = scriptedRoute({ ...baseIntake, severity: "moderate" });
+    const failing: ProviderLookup = async () => {
+      throw new Error("directory unavailable");
+    };
+    const out = await attachRecommendedProviders(decision, baseIntake, {
+      providerLookup: failing
+    });
+    expect(out.pathway).toBe("mscp-virtual-visit");
+    expect(out.recommendedProviders).toBeUndefined();
+  });
+
+  it("route() enriches the decision through the injected lookup", async () => {
+    delete process.env.ANTHROPIC_API_KEY;
+    const { lookup } = stubLookup([provider()], "mock");
+    const out = await route({ ...baseIntake, severity: "moderate" }, undefined, {
+      providerLookup: lookup
+    });
+    expect(out.recommendedProviders?.providers).toHaveLength(1);
   });
 });
 

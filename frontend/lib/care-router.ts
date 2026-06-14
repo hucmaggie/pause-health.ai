@@ -20,7 +20,16 @@
  * The chosen pathway is one of the five care pathways Pause currently
  * supports. The names match `/demo/routing` so the routing dashboard
  * can highlight the recommended row.
+ *
+ * When the chosen pathway is an MSCP visit (virtual or in-person), the
+ * decision is enriched with a ranked recommended-provider list pulled
+ * from the provider graph (NPPES taxonomy filter + MSCP overlay,
+ * served behind the /api/mulesoft/providers contract). This is the seam
+ * where the provider graph feeds routing, not just the demo directory.
  */
+
+import { getProvidersPreferReal } from "./mulesoft/providers";
+import type { ProviderRecord } from "./mulesoft-mocks";
 
 export type CarePathway =
   | "self-care-tracking"
@@ -39,6 +48,12 @@ export type IntakeRecord = {
   redFlagsAcknowledged?: "yes" | "no" | "none" | string;
   /** Optional free-form notes appended by the intake agent. */
   notes?: string;
+  /**
+   * Optional patient ZIP captured at intake. When present, the MSCP
+   * provider recommendations are narrowed to the patient's area
+   * (3-digit prefix); when absent we surface the top national matches.
+   */
+  patientZip?: string;
 };
 
 /**
@@ -87,7 +102,146 @@ export type RoutingDecision = {
     cohortName?: string;
     lastClinicianContactDaysAgo?: number;
   };
+  /**
+   * MSCP provider recommendations from the provider graph. Present only
+   * for the mscp-virtual-visit / mscp-in-person pathways. `source`
+   * reports whether the rows came from the live MuleSoft Experience API
+   * or the NPPES-derived in-process directory.
+   */
+  recommendedProviders?: {
+    source: "live" | "mock";
+    modality: "virtual" | "in-person";
+    query: { zip: string | null; menopauseOnly: true };
+    total: number;
+    providers: RecommendedProvider[];
+  };
 };
+
+/** Subset of ProviderRecord surfaced on a routing decision. */
+export type RecommendedProvider = Pick<
+  ProviderRecord,
+  | "npi"
+  | "name"
+  | "specialty"
+  | "credentials"
+  | "menopauseCertified"
+  | "city"
+  | "state"
+  | "telehealth"
+  | "acceptingNewPatients"
+  | "graphScore"
+>;
+
+/**
+ * Injectable provider lookup so the enrichment can be unit-tested
+ * without touching the network. Defaults to getProvidersPreferReal,
+ * which serves the live Mule app when MULESOFT_PROVIDERS_BASE_URL is
+ * set and otherwise the NPPES-derived in-process directory.
+ */
+export type ProviderLookup = (query: {
+  zip?: string;
+  menopauseOnly?: boolean;
+  limit?: number;
+}) => Promise<{
+  source: "live" | "mock";
+  result: { total: number; providers: ProviderRecord[] };
+}>;
+
+export type RouteOptions = {
+  providerLookup?: ProviderLookup;
+};
+
+const MAX_RECOMMENDED_PROVIDERS = 3;
+/** Pull a slightly larger candidate set so modality re-ranking has room. */
+const PROVIDER_CANDIDATE_POOL = 8;
+
+function isMscpPathway(p: CarePathway): boolean {
+  return p === "mscp-virtual-visit" || p === "mscp-in-person";
+}
+
+function toRecommendedProvider(p: ProviderRecord): RecommendedProvider {
+  return {
+    npi: p.npi,
+    name: p.name,
+    specialty: p.specialty,
+    credentials: p.credentials,
+    menopauseCertified: p.menopauseCertified,
+    city: p.city,
+    state: p.state,
+    telehealth: p.telehealth,
+    acceptingNewPatients: p.acceptingNewPatients,
+    graphScore: p.graphScore
+  };
+}
+
+/**
+ * Stable partition that pulls preference-matching providers to the
+ * front while preserving the directory's graphScore ordering within
+ * each group. Virtual visits prefer telehealth-capable clinicians;
+ * in-person visits prefer those accepting new patients.
+ */
+function rankForModality(
+  providers: ProviderRecord[],
+  modality: "virtual" | "in-person"
+): ProviderRecord[] {
+  const prefers = (p: ProviderRecord) =>
+    modality === "virtual" ? p.telehealth : p.acceptingNewPatients;
+  const preferred = providers.filter(prefers);
+  const rest = providers.filter((p) => !prefers(p));
+  return [...preferred, ...rest];
+}
+
+/**
+ * Attach MSCP provider recommendations to a routing decision when the
+ * pathway warrants it. Never throws — provider lookup is best-effort
+ * enrichment, and the routing decision must stand on its own if the
+ * provider graph is unavailable.
+ */
+export async function attachRecommendedProviders(
+  decision: RoutingDecision,
+  intake: IntakeRecord,
+  opts: RouteOptions = {}
+): Promise<RoutingDecision> {
+  if (!isMscpPathway(decision.pathway)) return decision;
+
+  const modality: "virtual" | "in-person" =
+    decision.pathway === "mscp-virtual-visit" ? "virtual" : "in-person";
+  const lookup = opts.providerLookup ?? getProvidersPreferReal;
+  const zip = intake.patientZip?.trim() || undefined;
+
+  try {
+    const { source, result } = await lookup({
+      zip,
+      menopauseOnly: true,
+      limit: PROVIDER_CANDIDATE_POOL
+    });
+    const ranked = rankForModality(result.providers, modality).slice(
+      0,
+      MAX_RECOMMENDED_PROVIDERS
+    );
+    if (ranked.length === 0) return decision;
+
+    const where = zip ? `near ${zip}` : "nationally";
+    const modalityLabel = modality === "virtual" ? "telehealth-capable" : "in-person";
+    return {
+      ...decision,
+      rationale: [
+        ...decision.rationale,
+        `Provider graph: surfaced ${ranked.length} MSCP-credentialed ${modalityLabel} ${ranked.length === 1 ? "clinician" : "clinicians"} ${where} (${source === "live" ? "live MuleSoft directory" : "NPPES-derived directory"}), ranked by graph score.`
+      ],
+      recommendedProviders: {
+        source,
+        modality,
+        query: { zip: zip ?? null, menopauseOnly: true },
+        total: result.total,
+        providers: ranked.map(toRecommendedProvider)
+      }
+    };
+  } catch {
+    // Best-effort: a provider-graph failure must not break routing.
+    return decision;
+  }
+}
 
 function numericInsight(
   grounding: Data360GroundingHint | undefined,
@@ -418,10 +572,11 @@ export async function claudeRoute(
  */
 export async function route(
   intake: IntakeRecord,
-  grounding?: Data360GroundingHint
+  grounding?: Data360GroundingHint,
+  opts: RouteOptions = {}
 ): Promise<RoutingDecision> {
-  if (process.env.ANTHROPIC_API_KEY) {
-    return claudeRoute(intake, grounding);
-  }
-  return scriptedRoute(intake, grounding);
+  const decision = process.env.ANTHROPIC_API_KEY
+    ? await claudeRoute(intake, grounding)
+    : scriptedRoute(intake, grounding);
+  return attachRecommendedProviders(decision, intake, opts);
 }

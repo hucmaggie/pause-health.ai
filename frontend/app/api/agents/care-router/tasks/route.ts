@@ -181,6 +181,12 @@ export async function POST(req: Request) {
       data360UnifiedPatientId: grounding?.unifiedPatientId,
       data360InsightsCited: decision.groundingUsed?.insightsCited ?? [],
       data360Cohort: decision.groundingUsed?.cohortName,
+      recommendedProviderCount: decision.recommendedProviders?.providers.length ?? 0,
+      recommendedProvidersSource: decision.recommendedProviders?.source,
+      recommendedProviderNames:
+        decision.recommendedProviders?.providers.map(
+          (p) => `${p.name} · ${p.specialty}`
+        ) ?? [],
       ...(personaId ? { personaId } : {})
     }
   });

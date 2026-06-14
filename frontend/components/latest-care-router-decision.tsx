@@ -15,6 +15,7 @@ type LatestDecision = {
   rationale: string[];
   recommendedTargetResponse: string;
   modelProvenance: { provider: string; model: string; via: string };
+  recommendedProviders: { source: string | null; names: string[] };
   taskId: string;
 };
 
@@ -50,12 +51,24 @@ export function LatestCareRouterDecision() {
             if (!pathway) continue;
             const pw = pathway as CareRouterPathway;
             if (cancelled) return;
+            const providerNames = Array.isArray(attrs.recommendedProviderNames)
+              ? (attrs.recommendedProviderNames as unknown[]).filter(
+                  (n): n is string => typeof n === "string"
+                )
+              : [];
             setDecision({
               pathway,
               pathwayLabel: PATHWAY_LABELS[pw] ?? pathway,
               acuity: typeof attrs.acuity === "string" ? attrs.acuity : "routine",
               rationale: [],
               recommendedTargetResponse: PATHWAY_TARGETS[pw] ?? "",
+              recommendedProviders: {
+                source:
+                  typeof attrs.recommendedProvidersSource === "string"
+                    ? (attrs.recommendedProvidersSource as string)
+                    : null,
+                names: providerNames
+              },
               modelProvenance: {
                 provider:
                   typeof attrs.provider === "string"
@@ -131,6 +144,38 @@ export function LatestCareRouterDecision() {
         <code>{decision.modelProvenance.model}</code> (
         {decision.modelProvenance.via}).
       </p>
+      {decision.recommendedProviders.names.length > 0 && (
+        <div
+          style={{
+            marginTop: "0.6rem",
+            paddingTop: "0.6rem",
+            borderTop: "1px solid var(--border, rgba(0,0,0,0.08))"
+          }}
+        >
+          <p
+            style={{
+              color: "var(--brand)",
+              fontWeight: 600,
+              fontSize: "0.8rem",
+              marginBottom: "0.3rem"
+            }}
+          >
+            Provider graph · MSCP recommendations
+            {decision.recommendedProviders.source
+              ? ` (${
+                  decision.recommendedProviders.source === "live"
+                    ? "live MuleSoft directory"
+                    : "NPPES-derived directory"
+                })`
+              : ""}
+          </p>
+          <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.85rem" }}>
+            {decision.recommendedProviders.names.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <p style={{ marginTop: "0.6rem" }}>
         <a
           href={`/demo/agent-fabric?taskId=${encodeURIComponent(decision.taskId)}`}
