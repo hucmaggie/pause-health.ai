@@ -1,5 +1,12 @@
 # Phase 2 — Data Cloud Activation Checklist
 
+> **✅ SHIPPED 2026-06-13 (session 3).** Production
+> `/api/data-360/patient/*/grounding` returns
+> `"Phase 2: SOQL (Health Cloud) + Data Cloud Calculated Insights
+> (HRV/vasomotor/sleep)"`. The "Gotchas we hit" section at the bottom
+> documents the five non-obvious things that had to be right. Leave
+> this doc as the institutional record for re-running on another org.
+
 **Goal:** Flip `/api/data-360/.../grounding` from Phase 1 (intake-only
 baselines) to Phase 2 (real Calculated Insights for HRV / vasomotor /
 sleep) on the `trailsignup` Salesforce org.
@@ -7,6 +14,38 @@ sleep) on the `trailsignup` Salesforce org.
 **Audience:** A human with Salesforce Setup access and ~3–5 hours.
 **Reference:** This is a checklist. The narrative + failure modes
 live in [`docs/MULESOFT_PHASE_2_DATA_CLOUD.md`](./MULESOFT_PHASE_2_DATA_CLOUD.md).
+
+## Gotchas we hit (the parts the runbook got wrong)
+
+1. **Token exchange is mandatory.** A core Salesforce
+   client_credentials token is NOT valid against the `c360a` tenant.
+   You must exchange it: `POST <instanceUrl>/services/a360/token` with
+   `grant_type=urn:salesforce:grant-type:external:cdp`. The c360a
+   gateway rejects un-exchanged tokens with a **400 and an empty body**
+   (not a 401), which is maximally confusing. The exchange response
+   also returns the authoritative tenant `instance_url` — prefer it
+   over a hardcoded `SF_DC_TENANT_URL`. (`data-cloud.ts` does this now.)
+2. **CI query endpoint** is
+   `GET /api/v1/insight/calculated-insights/{ci-name}?filters=[field=value]`
+   — NOT the `/insight/query?insight_api_name=...` shape the original
+   code used. Filter syntax is `[field=value]` (brackets literal,
+   value bare and case-sensitive), not SQL `field = 'value'`.
+3. **`__cio` suffix.** DC appends `__cio` to every CI's API name. The
+   constants in `data-cloud.ts` must include it
+   (`Pause_HRV_RMSSD_30d__cio`).
+4. **CI output columns must end in `__c`** and the query must
+   **aggregate + GROUP BY** (pure pass-through SELECTs are rejected).
+   We wrap mock constants in `MAX(...)`. The GROUP-BY dimension alias
+   `ssot__Id__c` was rejected by the validator (inner `__`), so it was
+   renamed to `unified_id__c` — and the code filters on that.
+5. **Source DMO.** The `Contact_Home` Data Stream's first ingestion
+   failed; `ssot__Individual__dlm` was already populated (1168 rows incl.
+   all six personas), so the CIs query that instead. See
+   `data-cloud/_mock_path.sql`.
+
+Also: the env var must be on the **Production** Vercel env (not just
+Preview/Development) and the deployment must be **created after** the
+var was added — env vars bake in at deploy time.
 
 **Status as of 2026-06-10 (end of session 2):**
 
