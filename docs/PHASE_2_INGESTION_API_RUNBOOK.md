@@ -117,8 +117,8 @@ python -m examples.data_cloud_push             # live push (expects 202s)
 Expected tail: `OK — pushed 282 wearable feature records to Pause_Wearable/wearable_feature.`
 
 Confirm rows landed: Data Cloud → Data Explorer → `Pause_Wearable_Feature__dlm`
-→ filter `unified_id__c = 003Hp00003b9bdqIAA` (Anika). You should see ~47 rows
-(30 HRV + 7 sleep + ~10 vasomotor).
+→ filter `unified_id__c = 003Hp00003b9bdqIAA` (Anika). You should see **51 rows**
+(30 HRV + 7 sleep + 14 vasomotor — Anika's vasomotor score is 7 → 7 × 2 events).
 
 ## Step 5 — Swap the three CIs from mock → real (15 min)
 
