@@ -720,30 +720,39 @@ App & Web → Allow file attachments** and pick the file types there.
    ZIP from context; only ask if it's blank." Re-activate the agent
    afterward.
 
-   Reasoning-instructions copy that ships (refined 2026-06-14 so the agent
-   uses the context ZIP *silently* and doesn't offer a redundant "search by
-   ZIP" when it already geo-narrowed):
+   **Design decision (2026-06-14): hard-bind the `zip` input, never ask.**
+   We briefly tried setting `zip` to *Agent Populated* with a "use the
+   variable, else ask" instruction so a blank-context session could fall back
+   to a typed ZIP. It backfired: the LLM doesn't reliably *see* a context
+   variable's value unless it's injected, so it asked for the ZIP **even when
+   `Pause_Patient_Zip` was populated** (verified: session had `92614` but the
+   agent still asked) — defeating the whole "no ZIP question" goal. Reverted
+   to binding `zip` directly to the `Pause Patient Zip` variable, which feeds
+   the value to the action deterministically without the LLM needing to see
+   it. Trade-off: a typed ZIP can't override a blank context (acceptable — the
+   demo personas always carry a ZIP and prechat usually delivers). To avoid
+   mislabeling national fallback results as local, the instructions present
+   providers neutrally rather than claiming "near you."
 
-   > When the patient asks to find or be referred to a provider, immediately
-   > call the PauseProviderDirectory action with menopause=true, limit=3, and
-   > zip set to the Pause Patient Zip variable — do this silently, without
-   > announcing that you're using their ZIP and without asking for one. Only
-   > ask the patient for a 5-digit ZIP if Pause Patient Zip is blank; if it's
-   > still blank or they decline, call the action without a zip.
+   Reasoning-instructions copy that ships:
+
+   > You help the patient find menopause-focused providers.
    >
-   > Present up to three providers. For each, state the name, specialty, and
-   > city/state, then note whether they offer telehealth and whether they are
-   > accepting new patients — for example: "Dr. Priya Nair, MD, MSCP —
-   > Obstetrics & Gynecology in Irvine, CA. Offers telehealth and is accepting
-   > new patients." If you used the patient's ZIP, present them as specialists
-   > near the patient and offer to share more detail about any of them — do
-   > NOT offer to search by ZIP again. Only when you had no ZIP and returned
-   > national results should you offer to narrow by ZIP.
-   >
-   > Only return providers the action gives you. Never invent or guess a
-   > provider, NPI, or contact detail. If the action returns no providers, say
-   > you couldn't find a local match and point the patient to The Menopause
-   > Society directory at menopause.org.
+   > - Immediately call the PauseProviderDirectory action with menopause=true
+   >   and limit=3. The zip is supplied automatically from the patient's intake
+   >   context — never ask the patient for a ZIP code.
+   > - Present up to three providers returned by the action only. For each,
+   >   state the name, specialty, and city/state, then note whether they offer
+   >   telehealth and whether they're accepting new patients — for example:
+   >   "Dr. Priya Nair, MD, MSCP — Obstetrics & Gynecology in Irvine, CA.
+   >   Offers telehealth and is accepting new patients."
+   > - Introduce them simply as menopause specialists that match the patient's
+   >   profile. Do not say they are "near you" or describe distance. Offer to
+   >   share more detail about any of them.
+   > - Never invent or guess a provider, NPI, or contact detail. Only return
+   >   providers the action gives you.
+   > - If the action returns no providers, say you couldn't find a match and
+   >   point the patient to The Menopause Society directory at menopause.org.
 
    Builder notes (current Agent Authoring experience): the field shows up
    under **Variables → Messaging Session → Excluded Fields** at first; you
