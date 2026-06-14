@@ -239,7 +239,13 @@ export async function getWearableInsights(unifiedPatientId: string): Promise<{
       : null;
 
     return { hrv, vasomotor, sleep };
-  } catch {
+  } catch (err) {
+    // Surface to logs so silent fallbacks are debuggable in production.
+    // The caller in grounding.ts still treats null as "degrade to baseline".
+    console.warn(
+      "[data-cloud] getWearableInsights failed; degrading to Phase 1 baseline.",
+      err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+    );
     return null;
   }
 }
