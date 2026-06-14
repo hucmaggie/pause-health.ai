@@ -95,11 +95,110 @@ type DcInsightResponse = {
   rowCount?: number;
 };
 
-async function dcFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const tenantUrl = getDataCloudTenantUrl();
-  if (!tenantUrl) throw new Error("SF_DC_TENANT_URL is not set or derivable");
+/**
+ * Data Cloud uses a two-legged token flow. A normal Salesforce
+ * client_credentials token (the one auth.ts mints, valid against
+ * <instanceUrl>/services/data/...) is NOT directly valid against the
+ * Data Cloud tenant API. It must first be exchanged at
+ *   POST <instanceUrl>/services/a360/token
+ * for a Data-Cloud-scoped token, which also returns the authoritative
+ * tenant host. Skipping this exchange produces a 400 with an empty body
+ * from the c360a gateway.
+ *
+ * Docs: https://developer.salesforce.com/docs/data/data-cloud-query-guide/references/data-cloud-query-api-reference/c360a-direct-api-connected-app.html
+ */
+type DataCloudToken = {
+  accessToken: string;
+  tenantUrl: string; // normalized, with scheme, no trailing slash
+  expiresAtMs: number;
+};
 
-  const { accessToken } = await getAccessToken();
+let cachedDcToken: DataCloudToken | null = null;
+let inflightDcToken: Promise<DataCloudToken> | null = null;
+
+const DC_TOKEN_SAFETY_MARGIN_MS = 60_000;
+const DC_TOKEN_FALLBACK_LIFETIME_MS = 5 * 60_000;
+
+function normalizeTenantHost(raw: string): string {
+  const trimmed = raw.trim().replace(/\/+$/, "");
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+async function requestDataCloudToken(): Promise<DataCloudToken> {
+  const { accessToken: coreToken, instanceUrl } = await getAccessToken();
+
+  const body = new URLSearchParams({
+    grant_type: "urn:salesforce:grant-type:external:cdp",
+    subject_token: coreToken,
+    subject_token_type: "urn:ietf:params:oauth:token-type:access_token"
+  });
+
+  const exchangeUrl = `${instanceUrl.replace(/\/+$/, "")}/services/a360/token`;
+  const res = await fetch(exchangeUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json"
+    },
+    body: body.toString(),
+    cache: "no-store"
+  });
+
+  const text = await res.text();
+  if (!res.ok) {
+    console.warn(`[data-cloud] token exchange → ${res.status}\nbody: ${text.slice(0, 800)}`);
+    throw new Error(`Data Cloud token exchange failed (${res.status})`);
+  }
+
+  const parsed = JSON.parse(text) as {
+    access_token?: string;
+    instance_url?: string;
+    expires_in?: number;
+  };
+
+  if (!parsed.access_token || !parsed.instance_url) {
+    throw new Error("Data Cloud token exchange response missing access_token or instance_url");
+  }
+
+  // Prefer the authoritative tenant host from the exchange; fall back to
+  // the configured SF_DC_TENANT_URL only if the response omits it.
+  const tenantUrl = normalizeTenantHost(
+    parsed.instance_url || getDataCloudTenantUrl() || ""
+  );
+  const lifetimeMs =
+    typeof parsed.expires_in === "number" && parsed.expires_in > 0
+      ? parsed.expires_in * 1000
+      : DC_TOKEN_FALLBACK_LIFETIME_MS;
+
+  return {
+    accessToken: parsed.access_token,
+    tenantUrl,
+    expiresAtMs: Date.now() + lifetimeMs - DC_TOKEN_SAFETY_MARGIN_MS
+  };
+}
+
+async function getDataCloudToken(): Promise<DataCloudToken> {
+  if (cachedDcToken && cachedDcToken.expiresAtMs > Date.now()) {
+    return cachedDcToken;
+  }
+  if (!inflightDcToken) {
+    inflightDcToken = requestDataCloudToken().finally(() => {
+      inflightDcToken = null;
+    });
+  }
+  cachedDcToken = await inflightDcToken;
+  return cachedDcToken;
+}
+
+/** Test-only: clear the cached Data Cloud token. */
+export function _resetDataCloudTokenCacheForTests(): void {
+  cachedDcToken = null;
+  inflightDcToken = null;
+}
+
+async function dcFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const { accessToken, tenantUrl } = await getDataCloudToken();
   const url = `${tenantUrl}${path}`;
 
   const res = await fetch(url, {
