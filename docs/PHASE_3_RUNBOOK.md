@@ -641,3 +641,135 @@ No code changes required.
 - Zscaler does NOT block `*.my.site.com` or `*.my.salesforce-scrt.com`
   but DOES block per-tenant CDP hostnames (irrelevant for Phase 3, only
   matters for Phase 2 Data Cloud)
+
+## Phase 18d: auto-pass the intake ZIP to the provider lookup (2026-06-14)
+
+Goal: stop the "Find a Provider" subagent from asking the patient for
+their ZIP. The intake page already knows the selected persona's ZIP, so
+hand it to the agent in-band and have the action read it from context.
+
+### The unblock: the V2 `prechatAPI` no-op is fixed
+
+The Phase 18c dead end (the `prechatAPI` Proxy was an empty no-op that
+silently swallowed `setHiddenPrechatFields`) no longer reproduces. On the
+current SDK, calling
+
+```js
+window.embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields({ Patient_Zip: "92614" })
+```
+
+now **validates** the field name and throws
+`setHiddenPrechatFields called with an invalid field name Patient_Zip`
+when the field isn't registered — i.e. it's a real implementation again,
+not a Proxy. That error is the signal that the binding works; the fix is
+to register `Patient_Zip` on the Salesforce side so the call is accepted.
+
+So Phase 18c's "leave `prechatFields={null}`" pivot is reverted for this
+one field: the embed now passes `{ Patient_Zip: selectedPersona.patientZip }`
+(see `frontend/components/agentforce-embed.tsx` and
+`frontend/app/api/intake/prechat-context/route.ts`, which adds
+`Patient_Zip: persona.patientZip` to the fields payload).
+
+### CLI-scriptable half — DEPLOYED to `trailsignup` (5/5, Deploy ID `0AfHp00003ocxqYKAQ`)
+
+Deployed from the throwaway `.sf-deploy/` SFDX harness with:
+
+```bash
+cd ~/Projects/pause-health.ai/.sf-deploy
+sf project deploy start --source-dir force-app --target-org trailsignup
+```
+
+| Component | Type | Change |
+| --- | --- | --- |
+| `MessagingSession.Pause_Patient_Zip__c` | CustomField | **Created** — Text(16) field that holds the inbound ZIP on the session |
+| `Pause_Intake_Prechat_Router` | Flow | **Changed** — new `Patient_Zip` input variable, assigned onto `MessagingSession.Pause_Patient_Zip__c` |
+| `Messaging_for_In_App_Web` | MessagingChannel | **Changed** — added the `Patient_Zip` customParameter (maxLength 16, mapped to action param `Patient_Zip`) |
+| `Pause_Health_Intake_Prechat_Dossier` | PermissionSet | **Changed** — FLS (read/edit) on `Pause_Patient_Zip__c` |
+| `Pause_Provider_API` | NamedCredential | **Changed** — re-confirmed (provider-lookup callout) |
+
+**Gotcha — MessagingChannel attachment validation.** The first deploy
+failed 4/5 on the channel with `The field value for Allowed file types
+can't be null or empty if Allow Inbound Files is enabled. (225:21)`. The
+`MessagingChannel` metadata type has **no element** for "allowed file
+types" (see the `EmbeddedConfig` spec — only `authMode`,
+`isAttachmentUploadEnabled`, `isSaveTranscriptEnabled`, the two JWT
+expiries, and `messagingAuthorizations`). The allowed-file-types list
+lives in org-side Messaging Settings and can't ride along in the channel
+metadata, so any deploy with `isAttachmentUploadEnabled>true` fails this
+validation. Fix: set `isAttachmentUploadEnabled>false` in the deploy copy
+(the intake/provider flow never uses attachments). To restore inbound
+uploads, re-enable via **Setup → Messaging Settings → Messaging for In
+App & Web → Allow file attachments** and pick the file types there.
+
+### Org-side UI half — three remaining steps (NOT scriptable)
+
+1. **Register the hidden prechat field.**
+   Setup → **Embedded Service Deployments** → `Pause_Health_Intake` →
+   edit the prechat config → add a **hidden** field named exactly
+   `Patient_Zip`. This is what makes the SDK accept the value the embed
+   sends instead of throwing "invalid field name".
+
+2. **Add the bot context variable.**
+   Agent Builder → the agent → **Variables / Connections** → add context
+   variable `Pause_Patient_Zip`, source `MessagingSession.Pause_Patient_Zip__c`.
+
+3. **Map the action input.**
+   Agent Builder → **Find a Provider** subagent → the `findMenopauseProviders`
+   action → set the `zip` input to `{!$Context.Pause_Patient_Zip}` instead
+   of asking the patient, and update the instruction to "use the patient's
+   ZIP from context; only ask if it's blank." Re-activate the agent
+   afterward.
+
+   Builder notes (current Agent Authoring experience): the field shows up
+   under **Variables → Messaging Session → Excluded Fields** at first; you
+   must **Include** it (only works in a *draft* version, not the active one).
+   Once included it appears in the flat Variables list as `Pause Patient Zip`
+   with Source = Messaging Session. The reasoning-instructions text box can
+   refuse clicks — the right-side **Agentforce assistant** can edit the
+   instructions for you if the inline editor is stuck.
+
+### ⚠️ THE STEP THAT ACTUALLY MADE IT WORK: re-Publish the deployment
+
+Everything above can be perfectly configured and the ZIP will **still arrive
+blank** until you **re-Publish the Embedded Service Deployment**. After adding
+`Patient_Zip` to the hidden prechat fields, Setup → **Embedded Service
+Deployments** → `Pause_Health_Intake` shows a **Publish** button and a stale
+"Published on" date — the live embed keeps using the *last published* config,
+which predates the new hidden field.
+
+The trap: `setHiddenPrechatFields({ Patient_Zip })` reports **"applied"** (no
+throw) even before publishing, because the SDK recognizes the channel variable
+name from the deployed customParameter. But the value is only sent as a routing
+attribute — and therefore only reaches the Flow input — once the deployment is
+**published** and the **~5–15 min CDN propagation** completes. A test 3 minutes
+after publishing still came back blank; a test ~10 minutes after came back with
+`Pause_Patient_Zip__c = 92614`.
+
+So the real closing sequence is: Save hidden field → **Publish** → confirm the
+"Published on" date flips to today → wait 10–15 min → test in a brand-new
+incognito session (the conversation must be *created* after propagation, since
+hidden fields only attach at conversation creation, not on resume).
+
+### Verified working (2026-06-14, live trailsignup embed)
+
+Persona Anika Patel (`92614`) → "find a provider that specializes in menopause"
+→ no ZIP question → Dr. Helen Okafor DO MSCP (Newport Beach) + Dr. Priya Anand
+MD FACOG MSCP (Irvine), both `926`-prefix, no national fallback. SOQL confirmed
+`MessagingSession.Pause_Patient_Zip__c = 92614` on the session.
+
+### Verify
+
+Open `/demo/intake` in a **fresh/incognito** session (live embeds cache
+the pre-activation session), pick a persona, and ask "find a provider
+that specializes in menopause." The embed sends `Patient_Zip` → the Flow
+stamps it on the session → the bot reads it from context → the lookup
+runs with no ZIP question. End-to-end flow:
+
+```
+selected persona.patientZip
+  └─ agentforce-embed → prechatAPI.setHiddenPrechatFields({ Patient_Zip })
+       └─ MessagingChannel customParameter Patient_Zip
+            └─ Pause_Intake_Prechat_Router Flow → MessagingSession.Pause_Patient_Zip__c
+                 └─ Bot context var $Context.Pause_Patient_Zip
+                      └─ findMenopauseProviders action zip input
+```

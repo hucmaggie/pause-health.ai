@@ -225,7 +225,7 @@
     <embeddedConfig>
         <anonymousUserJwtExpirationTime>360</anonymousUserJwtExpirationTime>
         <authMode>UnAuth</authMode>
-        <isAttachmentUploadEnabled>true</isAttachmentUploadEnabled>
+        <isAttachmentUploadEnabled>false</isAttachmentUploadEnabled>
         <isEstimatedWaitTimeEnabled>false</isEstimatedWaitTimeEnabled>
         <isSaveTranscriptEnabled>false</isSaveTranscriptEnabled>
         <verifiedUserJwtExpirationTime>60</verifiedUserJwtExpirationTime>
