@@ -210,16 +210,15 @@ curl -s "http://localhost:3000/api/data-360/patient/pause-demo-patient-001/groun
 
 After Step 7 is green:
 
-- [ ] `frontend/app/proposal/data-360/page.tsx`: bump the
-      "Calculated insights — wearable / EHR" row from `designed` to
-      `prototype` (per runbook's "What activates automatically" section)
-- [ ] `frontend/app/roadmap/page.tsx`: move the Phase 2 item from `Next`
-      to `Now` (or to a "Shipped" timeline entry) — see how the MuleSoft
-      iterations 1-7 update was done at `981c031` / `c70407f` for the
-      same pattern
-- [ ] `frontend/app/changelog/page.tsx`: add a "Phase 2 Data Cloud
-      grounding activated" entry
-- [ ] Commit and push
+- [x] `frontend/app/proposal/data-360/page.tsx`: bumped the
+      "Calculated insights — wearable / EHR" row (and the triage-features
+      card) from `partial` to `prototype` (commit `5ab77f0`)
+- [x] `frontend/app/roadmap/page.tsx`: Phase 2 item flipped to `shipped`
+      with current detail
+- [x] `frontend/app/changelog/page.tsx`: added the "Week of June 13 —
+      Data 360 Phase 2 is LIVE" entry (commit `5ab77f0`)
+- [x] `data-cloud/README.md`: status snapshot updated to SHIPPED
+- [x] Commit and push
 
 ## Failure modes — quick triage
 

@@ -101,8 +101,8 @@ const horizons: RoadmapHorizon[] = [
       {
         title: "Data 360 Phase 2 — Data Cloud unified profile",
         detail:
-          "Code ready: lib/salesforce/data-cloud.ts calls the Data Cloud Calculated Insights API and layers HRV z-score, vasomotor burden, and sleep disruption on top of the Phase 1 SOQL grounding. Activated by SF_DC_TENANT_URL env var. Next: provision the DC tenant on the trailsignup org (Setup → Data Cloud → Get Started), author the three CIs, set the env var — walkthrough in docs/MULESOFT_PHASE_2_DATA_CLOUD.md.",
-        status: "partial",
+          "LIVE in production: lib/salesforce/data-cloud.ts layers HRV z-score, vasomotor burden, and sleep disruption from three Data Cloud Calculated Insights on top of the Phase 1 SOQL grounding. The trailsignup DC tenant is provisioned, the CIs (Pause_HRV_RMSSD_30d, Pause_Vasomotor_Burden_30d, Pause_Sleep_Disruption_7d) are authored + activated over ssot__Individual__dlm, and SF_DC_TENANT_URL is set on Vercel; auth goes through the mandatory a360 token exchange. Each insight falls back to its intake baseline independently if a DC call fails. Demo-cohort values are seeded mock CIs — the next iteration swaps them for real JHE/DBDP wearable math (same client, same token flow). Walkthrough + gotchas in docs/PHASE_2_ACTIVATION_CHECKLIST.md.",
+        status: "shipped",
         source: { href: "/proposal/data-360", label: "/proposal/data-360" }
       },
       {
