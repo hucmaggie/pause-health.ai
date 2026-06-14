@@ -112,7 +112,7 @@ const keyFacts: Array<{ label: string; value: string; status?: StatusPillStatus 
   { label: "Company", value: "Pause-Health.ai" },
   { label: "Founded", value: "2026" },
   { label: "Headquarters", value: "Irvine, CA" },
-  { label: "Founder & CEO", value: "Maggie C. Hu" },
+  { label: "Founder | CEO | CTO", value: "Maggie C. Hu" },
   {
     label: "Focus",
     value: "Provider-first AI triage for menopause and perimenopause"
@@ -228,7 +228,7 @@ export default function PressPage() {
         <article className="card founder-card" style={{ marginTop: "0.6rem" }}>
           <Image
             src="/team/maggie-c-hu.jpg"
-            alt="Portrait of Maggie C. Hu, Founder & CEO of Pause-Health.ai."
+            alt="Portrait of Maggie C. Hu, Founder | CEO | CTO of Pause-Health.ai."
             width={200}
             height={200}
             sizes="(max-width: 600px) 160px, 200px"
@@ -243,10 +243,10 @@ export default function PressPage() {
                 marginBottom: "0.6rem"
               }}
             >
-              Founder &amp; CEO, Pause-Health.ai
+              Founder | CEO | CTO, Pause-Health.ai
             </p>
             <p style={{ marginBottom: "0.5rem" }}>
-              Maggie C. Hu is the founder and CEO of Pause-Health.ai,
+              Maggie C. Hu is the founder, CEO, and CTO of Pause-Health.ai,
               where she leads product, vision, and provider partnerships.
               Her background spans health-tech product leadership and
               applied AI, with a focus on building clinical software

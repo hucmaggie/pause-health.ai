@@ -210,7 +210,7 @@ export default function HomePage() {
             LinkedIn
           </a>
           {" · "}
-          Founder &amp; CEO. Reach out at{" "}
+          Founder | CEO | CTO. Reach out at{" "}
           <a href="/contact" style={{ color: "var(--brand)" }}>
             /contact
           </a>
