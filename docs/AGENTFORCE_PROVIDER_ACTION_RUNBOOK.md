@@ -310,6 +310,101 @@ asking (graceful). Register it the same way the dormant dossier fields were
   agent should return local providers straight away instead of asking for the
   ZIP first.
 
+### Metadata snippets (copy-paste)
+
+**1. MessagingSession field** — deployable now via the harness
+(`.sf-deploy/force-app/main/default/objects/MessagingSession/fields/Pause_Patient_Zip__c.field-meta.xml`):
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Pause_Patient_Zip__c</fullName>
+    <label>Pause Patient Zip</label>
+    <type>Text</type>
+    <length>10</length>
+    <required>false</required>
+</CustomField>
+```
+
+```bash
+cd .sf-deploy && sf project deploy start --source-dir force-app --target-org trailsignup
+```
+
+**2. Permission set FLS** — add to `Pause_Health_Intake_Prechat_Dossier.permissionset-meta.xml`
+(mirrors the existing `Pause_*__c` field permissions):
+
+```xml
+<fieldPermissions>
+    <field>MessagingSession.Pause_Patient_Zip__c</field>
+    <editable>true</editable>
+    <readable>true</readable>
+</fieldPermissions>
+```
+
+**3. Routing Flow** — in `Pause_Intake_Prechat_Router.flow-meta.xml`, add the
+input variable and an assignment onto the existing MessagingSession update
+(mirror an existing `Pause_*` field on that `recordUpdate`):
+
+```xml
+<variables>
+    <name>Patient_Zip</name>
+    <dataType>String</dataType>
+    <isCollection>false</isCollection>
+    <isInput>true</isInput>
+    <isOutput>false</isOutput>
+</variables>
+```
+
+```xml
+<!-- inside the existing <recordUpdates> that writes MessagingSession.Pause_*__c -->
+<inputAssignments>
+    <field>Pause_Patient_Zip__c</field>
+    <value>
+        <elementReference>Patient_Zip</elementReference>
+    </value>
+</inputAssignments>
+```
+
+**4. Channel customParameter** — in the `Messaging_for_In_App_Web` channel
+metadata, add a `Patient_Zip` parameter by copying an existing dossier param
+block and renaming (exact element shape varies by API version — mirror a
+known-good `Patient_Id` block rather than hand-writing):
+
+```xml
+<customParameters>
+    <name>Patient_Zip</name>
+    <!-- copy the <actionParameterMappings>/value shape from the existing
+         Patient_Id customParameter on this channel -->
+</customParameters>
+```
+
+**5. Bot context variable** — in the agent's `*.bot-meta.xml` (or
+`GenAiPlannerBundle`), add a context variable mapped to the field (again,
+clone an existing `Pause_*` context variable to match your API version):
+
+```xml
+<contextVariables>
+    <developerName>Pause_Patient_Zip</developerName>
+    <label>Pause Patient Zip</label>
+    <dataType>Text</dataType>
+    <contextVariableMappings>
+        <SObjectType>MessagingSession</SObjectType>
+        <fieldName>MessagingSession.Pause_Patient_Zip__c</fieldName>
+    </contextVariableMappings>
+</contextVariables>
+```
+
+**6. Prechat field registration** — the Embedded Service deployment's prechat
+form (UI: Setup → Embedded Service Deployments → `Pause_Health_Intake` → Chat
+Settings → Prechat) — add `Patient_Zip` as a **hidden** field. This is the
+registration that makes `validatePrechatField` accept it; without it the SDK
+logs "invalid field name Patient_Zip" and drops the value.
+
+> Snippets 3–5 edit existing multi-element metadata whose exact schema tracks
+> your org's API version — the safest path is to clone the corresponding
+> `Patient_Id` element (you already wired 20 of these in Phase 18a/b) and rename
+> to `Patient_Zip`. Snippets 1–2 are self-contained and deploy cleanly.
+
 ## When the live MuleSoft API replaces the public endpoint
 
 Repoint the Named Credential `endpoint` at the gateway/CloudHub base and add the
