@@ -136,19 +136,30 @@ export async function dcQuery(sql: string): Promise<Array<Record<string, unknown
 }
 
 /**
- * Query a named Calculated Insight via GET /api/v1/insight/query.
- * insightApiName  — the Developer Name of the CI in Data Cloud.
- * filterExpr      — optional SSOT filter, e.g. "ssot__Id__c = 'pause-demo-patient-001'"
+ * Query a named Calculated Insight via the official Data 360 endpoint:
+ *   GET /api/v1/insight/calculated-insights/{ci-name}?filters=[field=value]
+ *
+ * The previous shape we were using — /insight/query?insight_api_name=... —
+ * does not exist on this DC version and returns 400 with an empty body.
+ * See https://developer.salesforce.com/docs/data/data-cloud-query-guide/references/data-cloud-query-api-reference/c360a-api-insights-ci-ci-name.html
+ *
+ * insightApiName  — the API Name of the CI in Data Cloud (with __cio
+ *                   suffix, e.g. "Pause_HRV_RMSSD_30d__cio").
+ * filterExpr      — optional [field=value] filter expression. The brackets
+ *                   are part of the syntax, not template placeholders.
+ *                   Example: "[unified_id__c=003Hp00003b9bdqIAA]"
  */
 export async function dcInsightQuery(
   insightApiName: string,
   filterExpr?: string
 ): Promise<Array<Record<string, unknown>>> {
-  const params = new URLSearchParams({ insight_api_name: insightApiName });
-  if (filterExpr) params.set("filter", filterExpr);
-  const resp = await dcFetch<DcInsightResponse>(
-    `/api/${DC_API_VERSION}/insight/query?${params}`
-  );
+  const params = new URLSearchParams();
+  if (filterExpr) params.set("filters", filterExpr);
+  const queryString = params.toString();
+  const path =
+    `/api/${DC_API_VERSION}/insight/calculated-insights/${encodeURIComponent(insightApiName)}` +
+    (queryString ? `?${queryString}` : "");
+  const resp = await dcFetch<DcInsightResponse>(path);
   return resp.data ?? [];
 }
 
@@ -193,7 +204,13 @@ export async function getWearableInsights(unifiedPatientId: string): Promise<{
 
   const now = new Date().toISOString();
   const src: FederatedSource = "dbdp-wearable-features";
-  const filter = `unified_id__c = '${unifiedPatientId.replace(/'/g, "\\'")}'`;
+  // Data 360 CI filter syntax is [field=value] — brackets are literal,
+  // value is bare (no quotes). Filter values are case-sensitive per the
+  // official docs. We pre-strip any brackets/commas from the input id to
+  // avoid breaking the filter parser; Salesforce Contact IDs are
+  // [a-zA-Z0-9]{15,18} so this is a safety belt, not load-bearing.
+  const safeId = unifiedPatientId.replace(/[[\],=]/g, "");
+  const filter = `[unified_id__c=${safeId}]`;
 
   try {
     const [hrvRows, vasomotorRows, sleepRows] = await Promise.all([
