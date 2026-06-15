@@ -88,8 +88,23 @@ loads). The frozen contract is `ProviderRecord` in
 > lives; other states will land additively behind the same overlay
 > interface. Refresh the CSV by downloading
 > `suspended-ineligible-list-*.csv` from the CHHS dataset page and dropping
-> it next to the NPPES zip; the harness auto-detects the latest file. The
-> steps below reproduce or refresh this run.
+> it next to the NPPES zip; the harness auto-detects the latest file.
+
+> **Insurance acceptance — synthetic, real-shaped.** Every provider also
+> carries `insuranceAccepted: string[]` (canonical tokens: medicare,
+> medicaid, aetna, bcbs, uhc, cigna, humana, kaiser). There is no public,
+> free, structured payer/in-network feed; a real implementation needs a
+> paid data partnership (Ribbon Health, Turquoise) or per-payer contracts.
+> Today the field is **derived deterministically from a SHA-256 hash of
+> the NPI** in `provider_ingest/insurance.py` — calibrated so the
+> population distribution roughly matches real participation rates
+> (Medicare ~85%, Kaiser ~20%; ~3.8 plans per provider on average). The
+> shape is real (the API contract, the `?insurance=` filter UX, the
+> `Care Router` patientInsurance plumbing, the agent framing) and a real
+> feed can drop in later without any downstream change. Every Experience
+> API response calls this out under `provenance.sources` so consumers can
+> see the synthetic provenance. The steps below reproduce or refresh this
+> run.
 
 ---
 
@@ -281,8 +296,9 @@ serve the NPPES-derived rows to keep the two paths shape-identical.
 - **Clinic-site service-mention detection** — Phase 2 (NPPES-resident
   credential + multi-taxonomy signals landed; clinic-site scraping is the
   next layer).
-- **Insurance match** — Phase 2 (distance ranking landed; insurance is the next
-  filter on top of it).
+- **Real insurance / in-network match** — synthetic shape landed (filter UX,
+  contract, agent framing); ground-truth coverage needs a paid data
+  partnership.
 - **Closed-loop outcomes scoring** — Phase 3, after the first ~1,000 referrals.
 - **Real MSCP feed** — gated on the Menopause Society partnership; synthetic
   overlay today.

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { queryProviderDirectory, sortByCentroidForTest } from "./mulesoft-mocks";
+import {
+  normalizeInsurancePlan,
+  queryProviderDirectory,
+  sortByCentroidForTest
+} from "./mulesoft-mocks";
 import generated from "./provider-directory.generated.json";
 
 /**
@@ -291,5 +295,92 @@ describe("queryProviderDirectory · distance ranking", () => {
     // unit/sign swaps (km vs mi, lat/lng order, missing toRad).
     expect(ranked.distanceMiles).not.toBeNull();
     expect(Math.abs(ranked.distanceMiles! - 2436)).toBeLessThan(15);
+  });
+});
+
+/**
+ * Insurance filter — applied BEFORE the tier ladder.
+ *
+ * insuranceAccepted is synthetically derived per-NPI today (no public payer
+ * feed); the filter UX, the contract, and the agent framing are real. These
+ * tests pin the behavior end-to-end against the committed national run.
+ */
+describe("queryProviderDirectory · insurance filter", () => {
+  it("normalizes user-typed plan names and synonyms", () => {
+    expect(normalizeInsurancePlan("Aetna")).toBe("aetna");
+    expect(normalizeInsurancePlan("  BCBS  ")).toBe("bcbs");
+    expect(normalizeInsurancePlan("Blue Cross")).toBe("bcbs");
+    expect(normalizeInsurancePlan("United")).toBe("uhc");
+    expect(normalizeInsurancePlan("UnitedHealthcare")).toBe("uhc");
+    expect(normalizeInsurancePlan("Kaiser Permanente")).toBe("kaiser");
+    // Unknown plans pass through (lowercased) — honest no-match downstream.
+    expect(normalizeInsurancePlan("Wellcare")).toBe("wellcare");
+    expect(normalizeInsurancePlan(null)).toBeNull();
+    expect(normalizeInsurancePlan("")).toBeNull();
+  });
+
+  it("filters the directory to providers accepting the requested plan", () => {
+    const out = queryProviderDirectory({
+      menopauseOnly: false,
+      insurance: "aetna",
+      limit: 50
+    });
+    expect(out.query.insurance).toBe("aetna");
+    expect(out.providers.length).toBeGreaterThan(0);
+    for (const p of out.providers) {
+      expect(p.insuranceAccepted ?? []).toContain("aetna");
+    }
+  });
+
+  it("an unknown plan yields zero results (honest no-match, not a silent no-op)", () => {
+    const out = queryProviderDirectory({
+      menopauseOnly: false,
+      insurance: "wellcare-fake-plan",
+      limit: 50
+    });
+    expect(out.providers.length).toBe(0);
+    expect(out.matchType).toBe("none");
+    expect(out.query.insurance).toBe("wellcare-fake-plan");
+  });
+
+  it("applies BEFORE the tier ladder so each tier honors the plan", () => {
+    // certified-national tier (no ZIP, menopauseOnly=true) should also honor
+    // the insurance filter — we don't broaden insurance because the strict
+    // tier is empty.
+    const out = queryProviderDirectory({
+      menopauseOnly: true,
+      insurance: "aetna",
+      fallback: true
+    });
+    for (const p of out.providers) {
+      expect(p.menopauseCertified).toBe(true);
+      expect(p.insuranceAccepted ?? []).toContain("aetna");
+    }
+  });
+
+  it("synonym aliases work in real queries (Blue Cross → bcbs)", () => {
+    const a = queryProviderDirectory({
+      menopauseOnly: false,
+      insurance: "Blue Cross",
+      limit: 5
+    });
+    const b = queryProviderDirectory({
+      menopauseOnly: false,
+      insurance: "bcbs",
+      limit: 5
+    });
+    expect(a.query.insurance).toBe("bcbs");
+    expect(b.query.insurance).toBe("bcbs");
+    // Same canonical token → same first-N providers.
+    expect(a.providers.map((p) => p.npi)).toEqual(b.providers.map((p) => p.npi));
+  });
+
+  it("Medicare floor — every provider in the directory accepts at least one plan", () => {
+    // Sanity: insurance.PLANS.medicare is the conservative floor; the
+    // directory should never carry an empty insuranceAccepted row.
+    const out = queryProviderDirectory({ menopauseOnly: false, limit: 100 });
+    for (const p of out.providers) {
+      expect((p.insuranceAccepted ?? []).length).toBeGreaterThan(0);
+    }
   });
 });

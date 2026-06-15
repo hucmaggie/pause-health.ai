@@ -148,7 +148,7 @@ server.registerTool(
   {
     title: "Find menopause-experienced providers",
     description:
-      "Search Pause's provider directory (a defensible synthesis of CMS NPPES, self-reported MSCP/NCMP credentials, and a curated overlay). Supports filtering by ZIP prefix and a menopause-certified-only flag. Results are ranked by distance from the patient ZIP when its Census ZCTA centroid is known (each provider carries `distanceMiles`); otherwise by Pause's internal graph score. Read the response `sort` field to see which ranking applied, and prefer reporting distance (e.g. \"about 4 miles away\") to the patient when present. Each provider also carries `serviceSignals` — public-registry tokens (facog, faafp, whnp, cnm, multi-taxonomy) that strengthen the case for a NON-certified provider. When matchType=relevant-local, mention the strongest signal in plain English (e.g. \"board-certified OB/GYN\" for facog) instead of the raw token. When a certified search finds nobody in the patient's ZIP area, results gracefully fall back — to nearby menopause-relevant (non-certified) clinicians, or to telehealth-capable certified specialists nationally. ALWAYS read the response `matchType` and present accordingly: 'certified-local' = certified & local; 'relevant-local' = nearby but NOT menopause-certified (say so, then surface serviceSignals); 'certified-remote' = certified specialists elsewhere offering telehealth (no local match); 'none' = no match.",
+      "Search Pause's provider directory (a defensible synthesis of CMS NPPES, self-reported MSCP/NCMP credentials, and a curated overlay). Supports filtering by ZIP prefix, a menopause-certified-only flag, and an insurance plan. Results are ranked by distance from the patient ZIP when its Census ZCTA centroid is known (each provider carries `distanceMiles`); otherwise by Pause's internal graph score. Read the response `sort` field to see which ranking applied, and prefer reporting distance (e.g. \"about 4 miles away\") to the patient when present. Each provider also carries `serviceSignals` — public-registry tokens (facog, faafp, whnp, cnm, multi-taxonomy) that strengthen the case for a NON-certified provider — and `insuranceAccepted` (medicare, medicaid, aetna, bcbs, uhc, cigna, humana, kaiser). NOTE: insuranceAccepted is synthetically derived per-NPI today (no public payer feed exists); when the patient asks about insurance, mention provisionally rather than as ground truth. When matchType=relevant-local, mention the strongest service signal in plain English (e.g. \"board-certified OB/GYN\" for facog) instead of the raw token. When a certified search finds nobody in the patient's ZIP area, results gracefully fall back — to nearby menopause-relevant (non-certified) clinicians, or to telehealth-capable certified specialists nationally. ALWAYS read the response `matchType` and present accordingly: 'certified-local' = certified & local; 'relevant-local' = nearby but NOT menopause-certified (say so, then surface serviceSignals); 'certified-remote' = certified specialists elsewhere offering telehealth (no local match); 'none' = no match.",
     inputSchema: {
       zip: z
         .string()
@@ -167,15 +167,22 @@ server.registerTool(
         .min(1)
         .max(50)
         .default(10)
-        .describe("Maximum number of providers to return. Default 10, max 50.")
+        .describe("Maximum number of providers to return. Default 10, max 50."),
+      insurance: z
+        .string()
+        .optional()
+        .describe(
+          "Optional insurance plan to filter by. Case-insensitive; aliases like 'United' / 'Blue Cross' are normalized. Canonical tokens: medicare, medicaid, aetna, bcbs, uhc, cigna, humana, kaiser. Synthetically derived today (no public payer feed); use provisionally."
+        )
     }
   },
-  async ({ zip, menopauseOnly, limit }) => {
+  async ({ zip, menopauseOnly, limit, insurance }) => {
     try {
       const qs = new URLSearchParams();
       if (zip) qs.set("zip", zip);
       qs.set("menopause", String(menopauseOnly));
       qs.set("limit", String(limit));
+      if (insurance) qs.set("insurance", insurance);
       const data = await callExperienceApi(`/api/mulesoft/providers?${qs.toString()}`);
       const total = (data as { total?: number }).total ?? 0;
       const returned = (data as { returned?: number }).returned ?? 0;

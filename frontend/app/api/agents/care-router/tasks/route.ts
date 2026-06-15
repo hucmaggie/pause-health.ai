@@ -198,7 +198,8 @@ export async function POST(req: Request) {
           state: p.state,
           telehealth: p.telehealth,
           distanceMiles: p.distanceMiles ?? null,
-          serviceSignals: p.serviceSignals ?? []
+          serviceSignals: p.serviceSignals ?? [],
+          insuranceAccepted: p.insuranceAccepted ?? []
         })) ?? [],
       ...(personaId ? { personaId } : {})
     }

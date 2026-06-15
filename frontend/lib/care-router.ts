@@ -55,6 +55,14 @@ export type IntakeRecord = {
    * (3-digit prefix); when absent we surface the top national matches.
    */
   patientZip?: string;
+  /**
+   * Optional patient insurance plan captured at intake (e.g. "Aetna",
+   * "BCBS", "Medicare"). When present, the directory narrows
+   * recommendations to providers accepting that plan; common synonyms
+   * are normalized inside the directory ("United" → "uhc"). Absent =
+   * no insurance filter.
+   */
+  patientInsurance?: string;
 };
 
 /**
@@ -112,7 +120,7 @@ export type RoutingDecision = {
   recommendedProviders?: {
     source: "live" | "mock";
     modality: "virtual" | "in-person";
-    query: { zip: string | null; menopauseOnly: true };
+    query: { zip: string | null; menopauseOnly: true; insurance: string | null };
     total: number;
     providers: RecommendedProvider[];
   };
@@ -147,6 +155,12 @@ export type RecommendedProvider = Pick<
    * a board-certified OB/GYN, which is meaningful to surface to the patient.
    */
   serviceSignals?: string[];
+  /**
+   * Plans the provider accepts (e.g. ["medicare", "aetna", "bcbs"]).
+   * Synthesized at build time today (no public payer feed); see the OAS
+   * `Provider.insuranceAccepted` description for the canonical token list.
+   */
+  insuranceAccepted?: string[];
 };
 
 /**
@@ -165,6 +179,12 @@ export type ProviderLookup = (query: {
    * `distanceMiles` on each returned provider when this is supplied.
    */
   zipCentroid?: { latitude: number; longitude: number } | null;
+  /**
+   * Optional plan name (case-insensitive; synonyms normalized inside the
+   * directory). When set, only providers whose insuranceAccepted list
+   * contains the plan come back.
+   */
+  insurance?: string | null;
 }) => Promise<{
   source: "live" | "mock";
   result: {
@@ -200,7 +220,8 @@ function toRecommendedProvider(
     acceptingNewPatients: p.acceptingNewPatients,
     graphScore: p.graphScore,
     distanceMiles: p.distanceMiles ?? null,
-    serviceSignals: p.serviceSignals ?? []
+    serviceSignals: p.serviceSignals ?? [],
+    insuranceAccepted: p.insuranceAccepted ?? []
   };
 }
 
@@ -239,13 +260,15 @@ export async function attachRecommendedProviders(
   const lookup = opts.providerLookup ?? getProvidersPreferReal;
   const zip = intake.patientZip?.trim() || undefined;
   const zipCentroid = lookupZipCentroid(zip);
+  const insurance = intake.patientInsurance?.trim() || undefined;
 
   try {
     const { source, result } = await lookup({
       zip,
       menopauseOnly: true,
       limit: PROVIDER_CANDIDATE_POOL,
-      zipCentroid
+      zipCentroid,
+      insurance
     });
     const ranked = rankForModality(result.providers, modality).slice(
       0,
@@ -267,16 +290,17 @@ export async function attachRecommendedProviders(
 
     const where = zip ? `near ${zip}` : "nationally";
     const modalityLabel = modality === "virtual" ? "telehealth-capable" : "in-person";
+    const planNote = insurance ? ` accepting ${insurance}` : "";
     return {
       ...decision,
       rationale: [
         ...decision.rationale,
-        `Provider graph: surfaced ${ranked.length} MSCP-credentialed ${modalityLabel} ${ranked.length === 1 ? "clinician" : "clinicians"} ${where} (${source === "live" ? "live MuleSoft directory" : "NPPES-derived directory"}), ${rankingNote}.`
+        `Provider graph: surfaced ${ranked.length} MSCP-credentialed ${modalityLabel} ${ranked.length === 1 ? "clinician" : "clinicians"}${planNote} ${where} (${source === "live" ? "live MuleSoft directory" : "NPPES-derived directory"}), ${rankingNote}.`
       ],
       recommendedProviders: {
         source,
         modality,
-        query: { zip: zip ?? null, menopauseOnly: true },
+        query: { zip: zip ?? null, menopauseOnly: true, insurance: insurance ?? null },
         total: result.total,
         providers: ranked.map(toRecommendedProvider)
       }

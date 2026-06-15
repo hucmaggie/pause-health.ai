@@ -24,6 +24,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from .centroids import LatLng, default_centroids
+from .insurance import derive_insurance_accepted
 from .mscp import MscpOverlay
 from .records import ProviderRecord
 from .score import graph_score
@@ -209,6 +210,7 @@ def normalize_row(
             lat, lng = ll
 
     service_signals = detect_signals(credentials, _taxonomy_codes(row))
+    insurance_accepted = derive_insurance_accepted(npi)
 
     score = graph_score(
         relevance=taxonomy.relevance,
@@ -234,4 +236,5 @@ def normalize_row(
         latitude=lat,
         longitude=lng,
         serviceSignals=service_signals,
+        insuranceAccepted=insurance_accepted,
     )

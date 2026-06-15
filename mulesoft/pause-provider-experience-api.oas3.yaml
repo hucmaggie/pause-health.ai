@@ -130,6 +130,20 @@ paths:
           schema:
             type: boolean
             default: true
+        - name: insurance
+          in: query
+          description: >
+            Filter to providers whose `insuranceAccepted` list contains this
+            plan. Case-insensitive; common synonyms are normalized
+            ("United" → "uhc", "Blue Cross" → "bcbs"). Applied BEFORE the
+            tier ladder so all tiers honor it consistently. Unknown plan
+            tokens yield zero results — honest no-match rather than silent
+            no-op. Note: `insuranceAccepted` is synthetically derived
+            per-NPI today; see the Provider schema for the full caveat.
+          required: false
+          schema:
+            type: string
+            example: aetna
       responses:
         "200":
           description: Provider directory results
@@ -351,6 +365,22 @@ components:
           enum: [active, suspended, probation]
           default: active
           example: active
+        insuranceAccepted:
+          type: array
+          description: >
+            Plans the provider accepts. **Synthesized today** — derived
+            deterministically per-NPI by `provider_ingest/insurance.py`
+            because no public payer/in-network feed is available. The
+            **shape** is real (so the API contract, the `?insurance=`
+            filter UX, and the agent framing are real) and a paid data
+            partnership can replace the derivation later without changes
+            downstream. Canonical tokens: `medicare`, `medicaid`, `aetna`,
+            `bcbs`, `uhc`, `cigna`, `humana`, `kaiser`. Always non-empty
+            (Medicare is the conservative floor).
+          items:
+            type: string
+            example: aetna
+          example: [medicare, aetna, bcbs]
 
     ProviderDirectoryResponse:
       type: object
@@ -368,6 +398,14 @@ components:
               type: integer
             fallback:
               type: boolean
+            insurance:
+              type: string
+              nullable: true
+              description: >
+                Canonical insurance plan token applied to the filter, or
+                null when no filter was requested. Reflects the result of
+                synonym normalization (e.g. "United" → "uhc"), so it
+                may differ from what the caller passed.
         sort:
           type: string
           description: >

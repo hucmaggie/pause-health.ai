@@ -43,6 +43,13 @@ class ProviderRecord:
     # contract is honest about what was checked and so additional states /
     # statuses (e.g. "probation") can land additively.
     licenseStatus: str = "active"
+    # Plans the provider accepts — today derived synthetically per-NPI by
+    # `insurance.py` because no public payer feed is available; the shape is
+    # real (so the API contract, filter UX, and agent framing are real) and
+    # a paid data partnership can replace the derivation later without any
+    # downstream changes. Always non-empty (Medicare is the conservative
+    # floor).
+    insuranceAccepted: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return asdict(self)

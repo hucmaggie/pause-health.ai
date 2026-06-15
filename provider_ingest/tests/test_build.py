@@ -64,9 +64,12 @@ def test_record_shape_matches_contract():
         "longitude",
         "serviceSignals",
         "licenseStatus",
+        "insuranceAccepted",
     }
     # Build path with no sanctions overlay → every survivor is "active".
     assert rec.licenseStatus == "active"
+    # Every record carries at least one accepted plan (Medicare floor).
+    assert len(rec.insuranceAccepted) > 0
 
 
 def test_service_signals_stamped_for_non_certified_provider():

@@ -57,7 +57,13 @@ export async function GET(req: Request) {
   const distanceParam = searchParams.get("distance") !== "false";
   const zipCentroid = distanceParam ? lookupZipCentroid(zip) : null;
 
-  const query = { zip, menopauseOnly, limit, fallback, zipCentroid };
+  // Filter to providers accepting a specific plan. Passes through the same
+  // synonym normalization the directory uses (Aetna / aetna / "Blue Cross"
+  // → "bcbs"); unknown plans yield zero results honestly rather than
+  // silently no-op-ing.
+  const insurance = searchParams.get("insurance");
+
+  const query = { zip, menopauseOnly, limit, fallback, zipCentroid, insurance };
 
   if (!isMulesoftProvidersLive()) {
     const result = queryProviderDirectory(query);

@@ -326,6 +326,17 @@ export type ProviderRecord = {
    * list); future values like "probation" can land additively.
    */
   licenseStatus?: "active" | "suspended" | "probation";
+  /**
+   * Plans the provider accepts. Today **derived synthetically per-NPI** by
+   * `provider_ingest/insurance.py` (no public payer feed exists); the
+   * shape — and therefore the API contract, the filter UX, and the agent
+   * framing — is real, and a paid data partnership can replace the
+   * derivation later without changes downstream. The full set: medicare,
+   * medicaid, aetna, bcbs, uhc, cigna, humana, kaiser. Always non-empty
+   * (Medicare is the conservative floor); listed in canonical order so
+   * consumers can render without sorting.
+   */
+  insuranceAccepted?: string[];
 };
 
 /** Returned by queryProviderDirectory when the patient's ZIP centroid is known. */
@@ -513,19 +524,37 @@ export function queryProviderDirectory(opts: {
    * the ZIP-prefix tier ladder is unchanged either way.
    */
   zipCentroid?: { latitude: number; longitude: number } | null;
+  /**
+   * Filter to providers whose `insuranceAccepted` list contains this plan
+   * token. Case-insensitive; common synonyms are normalized (e.g. "United"
+   * → "uhc", "Blue Cross" → "bcbs") via `normalizeInsurancePlan` so the
+   * filter accepts user-typed names. Applied BEFORE the tier ladder so all
+   * tiers (certified-local, relevant-local, certified-remote, etc.) honor
+   * it consistently. Omit (or null) to skip the filter.
+   */
+  insurance?: string | null;
 }) {
-  const { zip, menopauseOnly, limit, fallback, zipCentroid } = opts;
+  const { zip, menopauseOnly, limit, fallback, zipCentroid, insurance } = opts;
   const prefix = zip && zip.length >= 3 ? zip.slice(0, 3) : undefined;
   const inArea = (r: ProviderRecord) => !prefix || r.zip.startsWith(prefix);
+
+  // Insurance filter narrows the candidate pool BEFORE the tier ladder so
+  // every tier honors it (a "relevant-local Aetna provider" stays relevant-
+  // local; we never silently broaden insurance just because the strict tier
+  // is empty — that would defeat the patient's filter intent).
+  const planQuery = normalizeInsurancePlan(insurance ?? null);
+  const acceptsPlan = (r: ProviderRecord) =>
+    !planQuery || (r.insuranceAccepted ?? []).includes(planQuery);
+  const POOL = PROVIDER_DIRECTORY.filter(acceptsPlan);
 
   let rows: ProviderRecord[];
   let matchType: ProviderMatchType;
 
   if (!menopauseOnly) {
-    rows = PROVIDER_DIRECTORY.filter(inArea);
+    rows = POOL.filter(inArea);
     matchType = prefix ? "local" : "all";
   } else {
-    const certified = PROVIDER_DIRECTORY.filter((r) => r.menopauseCertified);
+    const certified = POOL.filter((r) => r.menopauseCertified);
     if (!prefix) {
       rows = certified;
       matchType = "certified-national";
@@ -536,7 +565,7 @@ export function queryProviderDirectory(opts: {
         rows = certifiedLocal;
         matchType = "certified-local";
       } else {
-        const relevantLocal = PROVIDER_DIRECTORY.filter(
+        const relevantLocal = POOL.filter(
           (r) => !r.menopauseCertified && inArea(r)
         );
         if (relevantLocal.length > 0) {
@@ -577,7 +606,8 @@ export function queryProviderDirectory(opts: {
       zip: zip ?? null,
       menopauseOnly: !!menopauseOnly,
       limit: limit ?? null,
-      fallback: !!fallback
+      fallback: !!fallback,
+      insurance: planQuery ?? null
     },
     matchType,
     sort,
@@ -591,14 +621,57 @@ export function queryProviderDirectory(opts: {
             "Self-reported MSCP/NCMP credentials + curated overlay",
             ...(sort === "distance"
               ? ["Census 2020 ZCTA centroids (Haversine distance)"]
-              : [])
+              : []),
+            // Make it explicit in every response that insuranceAccepted is
+            // synthesized today — surfaces in the agent context too.
+            "Insurance acceptance is synthetically derived per-NPI (no public payer feed; replace with a real partner feed when available)"
           ]
         : ["CMS NPPES (synthetic slice)", "MSCP credential list (synthetic)"],
-      experienceApi: "pause-provider-directory-experience-api@0.8",
+      experienceApi: "pause-provider-directory-experience-api@0.9",
       dataset: DIRECTORY_DATASET_PROVENANCE
     }
   };
 }
+
+// Canonical insurance plan tokens — kept in lockstep with insurance.PLANS in
+// the Python module. Listed here so the frontend can validate / render
+// without round-tripping to the Python build output. If you add a plan,
+// update both lists.
+const INSURANCE_PLANS = [
+  "medicare",
+  "medicaid",
+  "aetna",
+  "bcbs",
+  "uhc",
+  "cigna",
+  "humana",
+  "kaiser"
+] as const;
+
+const INSURANCE_PLAN_ALIASES: Record<string, string> = {
+  "blue cross": "bcbs",
+  "blue cross blue shield": "bcbs",
+  "blue shield": "bcbs",
+  united: "uhc",
+  "united healthcare": "uhc",
+  unitedhealthcare: "uhc",
+  "kaiser permanente": "kaiser"
+};
+
+/**
+ * Normalize a user-typed insurance plan string into the canonical token
+ * used by `insuranceAccepted`. Lowercases + trims + maps common synonyms;
+ * unknown plans pass through lowercased so the filter is honest about
+ * yielding zero results rather than silently no-op-ing.
+ */
+export function normalizeInsurancePlan(plan: string | null | undefined): string | null {
+  if (!plan) return null;
+  const p = plan.trim().toLowerCase();
+  if (!p) return null;
+  return INSURANCE_PLAN_ALIASES[p] ?? p;
+}
+
+export type InsurancePlan = (typeof INSURANCE_PLANS)[number];
 
 /**
  * Annotate `distanceMiles` on each provider and sort distance-asc / score-desc.

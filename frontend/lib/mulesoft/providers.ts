@@ -42,6 +42,13 @@ type ProvidersQuery = {
    * graphScore until its DataWeave is updated.
    */
   zipCentroid?: { latitude: number; longitude: number } | null;
+  /**
+   * Plan name to filter on (case-insensitive; aliases like "United" → "uhc"
+   * are normalized inside the directory). Forwarded as-is to the live Mule
+   * API; if the live worker doesn't honor it yet, the response just won't
+   * be filtered, which is honest degradation.
+   */
+  insurance?: string | null;
 };
 
 export async function fetchLiveProviders(
@@ -62,6 +69,7 @@ export async function fetchLiveProviders(
   if (query.menopauseOnly) params.set("menopause", "true");
   if (query.limit != null) params.set("limit", String(query.limit));
   if (query.fallback) params.set("fallback", "true");
+  if (query.insurance) params.set("insurance", query.insurance);
 
   const url = `${baseUrl.replace(/\/$/, "")}/providers?${params}`;
   const controller = new AbortController();

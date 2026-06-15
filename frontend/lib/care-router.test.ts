@@ -477,6 +477,43 @@ describe("attachRecommendedProviders · provider-graph wiring", () => {
     expect(out.rationale.join(" ")).toMatch(/ranked by graph score/);
     expect(out.recommendedProviders?.providers[0].distanceMiles).toBeNull();
   });
+
+  it("forwards intake.patientInsurance to the provider lookup and surfaces it on the decision", async () => {
+    // The Care Router reads intake.patientInsurance, hands it to the lookup,
+    // and reports it on the decision so the agent fabric trace can show
+    // which plan filtered the recommendations.
+    const calls: Array<{ insurance?: string | null }> = [];
+    const insuranceLookup: ProviderLookup = async (query) => {
+      calls.push({ insurance: query.insurance ?? null });
+      return {
+        source: "mock",
+        result: {
+          total: 1,
+          providers: [
+            {
+              ...provider({ npi: "p1" }),
+              insuranceAccepted: ["medicare", "aetna", "bcbs"]
+            }
+          ]
+        }
+      };
+    };
+    const decision = scriptedRoute({ ...baseIntake, severity: "moderate" });
+    const out = await attachRecommendedProviders(
+      decision,
+      { ...baseIntake, severity: "moderate", patientInsurance: "Aetna" },
+      { providerLookup: insuranceLookup }
+    );
+    expect(calls[0].insurance).toBe("Aetna");
+    expect(out.recommendedProviders?.query.insurance).toBe("Aetna");
+    // Rationale calls out the plan filter so the agent fabric trace tells
+    // the truth about why these recommendations came back.
+    expect(out.rationale.join(" ")).toMatch(/accepting Aetna/);
+    // The recommendations carry the synthesized insuranceAccepted lists.
+    expect(out.recommendedProviders?.providers[0].insuranceAccepted).toContain(
+      "aetna"
+    );
+  });
 });
 
 describe("claudeRoute · fallback path", () => {

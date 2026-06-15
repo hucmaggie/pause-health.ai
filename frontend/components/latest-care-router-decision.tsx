@@ -16,6 +16,7 @@ type RecommendedProviderEntry = {
   telehealth?: boolean;
   distanceMiles?: number | null;
   serviceSignals?: string[];
+  insuranceAccepted?: string[];
 };
 
 // Plain-English labels for the public-registry signal tokens. Anything not in
@@ -29,6 +30,20 @@ const SIGNAL_LABELS: Record<string, string> = {
   whnp: "Women's Health NP",
   cnm: "Certified Nurse-Midwife",
   "multi-taxonomy": "Multi-specialty"
+};
+
+// Plain-English labels for the canonical insurance tokens. Same fallback rule
+// as SIGNAL_LABELS: unknown plans render as their raw lowercase token, which
+// is the honest answer for a real-but-unrecognized payer.
+const PLAN_LABELS: Record<string, string> = {
+  medicare: "Medicare",
+  medicaid: "Medicaid",
+  aetna: "Aetna",
+  bcbs: "BCBS",
+  uhc: "UHC",
+  cigna: "Cigna",
+  humana: "Humana",
+  kaiser: "Kaiser"
 };
 
 type LatestDecision = {
@@ -103,6 +118,11 @@ export function LatestCareRouterDecision() {
                         : null,
                     serviceSignals: Array.isArray(e.serviceSignals)
                       ? (e.serviceSignals as unknown[]).filter(
+                          (s): s is string => typeof s === "string"
+                        )
+                      : [],
+                    insuranceAccepted: Array.isArray(e.insuranceAccepted)
+                      ? (e.insuranceAccepted as unknown[]).filter(
                           (s): s is string => typeof s === "string"
                         )
                       : []
@@ -238,6 +258,11 @@ export function LatestCareRouterDecision() {
               }
               if (p.telehealth) meta.push("telehealth");
               const signals = p.serviceSignals ?? [];
+              const plans = p.insuranceAccepted ?? [];
+              // Cap plan chips at 4 so a row doesn't run away with chips when
+              // a provider accepts every plan; "+N more" tells the truth.
+              const planChipsShown = plans.slice(0, 4);
+              const planOverflow = Math.max(0, plans.length - planChipsShown.length);
               return (
                 <li key={`${p.name}-${p.city ?? ""}`} style={{ marginBottom: "0.25rem" }}>
                   {p.specialty ? `${p.name} · ${p.specialty}` : p.name}
@@ -263,6 +288,30 @@ export function LatestCareRouterDecision() {
                           {SIGNAL_LABELS[s] ?? s}
                         </span>
                       ))}
+                    </span>
+                  ) : null}
+                  {plans.length > 0 ? (
+                    <span style={{ marginLeft: "0.4rem", display: "inline-flex", gap: "0.3rem", flexWrap: "wrap" }}>
+                      {planChipsShown.map((plan) => (
+                        <span
+                          key={plan}
+                          style={{
+                            fontSize: "0.7rem",
+                            padding: "0.05rem 0.4rem",
+                            borderRadius: "999px",
+                            background: "rgba(120, 120, 120, 0.08)",
+                            color: "var(--muted)",
+                            border: "1px solid rgba(120, 120, 120, 0.2)"
+                          }}
+                        >
+                          {PLAN_LABELS[plan] ?? plan}
+                        </span>
+                      ))}
+                      {planOverflow > 0 ? (
+                        <span style={{ fontSize: "0.7rem", color: "var(--muted)" }}>
+                          +{planOverflow} more
+                        </span>
+                      ) : null}
                     </span>
                   ) : null}
                 </li>
