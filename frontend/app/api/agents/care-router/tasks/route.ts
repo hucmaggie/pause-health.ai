@@ -192,6 +192,7 @@ export async function POST(req: Request) {
       // `recommendedProviderNames` array so older trace consumers still work.
       recommendedProviders:
         decision.recommendedProviders?.providers.map((p) => ({
+          npi: p.npi,
           name: p.name,
           specialty: p.specialty,
           city: p.city,

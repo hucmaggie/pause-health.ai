@@ -687,6 +687,34 @@ export function normalizeInsurancePlan(plan: string | null | undefined): string 
 
 export type InsurancePlan = (typeof INSURANCE_PLANS)[number];
 
+// O(1) lookup by NPI for the provider profile page. Built once at module
+// init; covers the committed directory (curated fallback included via
+// PROVIDER_DIRECTORY's empty-generated branch). Last-write-wins on NPI
+// collisions, matching `queryProviderDirectory`'s tier-ladder semantics.
+const PROVIDER_DIRECTORY_BY_NPI: Map<string, ProviderRecord> = (() => {
+  const m = new Map<string, ProviderRecord>();
+  for (const r of PROVIDER_DIRECTORY) m.set(r.npi, r);
+  return m;
+})();
+
+/**
+ * Resolve a single provider record by NPI, or null if unknown. Reads from
+ * the same directory `queryProviderDirectory` searches (the NPPES-derived
+ * generated JSON when present, otherwise the curated fallback) so a
+ * provider visible in a tiered-fallback search is also resolvable here.
+ *
+ * NPI is normalized: trimmed, leading-zero-stripped only when the input
+ * is exactly `"0"` (CMS NPIs are 10 digits and don't carry a leading
+ * zero, but a defensive trim catches whitespace-padded route params).
+ * Non-digit input yields null without throwing.
+ */
+export function findProviderByNpi(npi: string | null | undefined): ProviderRecord | null {
+  if (!npi) return null;
+  const key = npi.trim();
+  if (!/^\d{1,10}$/.test(key)) return null;
+  return PROVIDER_DIRECTORY_BY_NPI.get(key) ?? null;
+}
+
 /**
  * Annotate `distanceMiles` on each provider and sort distance-asc / score-desc.
  * Providers without a centroid get `distanceMiles: null` and slide to the end.

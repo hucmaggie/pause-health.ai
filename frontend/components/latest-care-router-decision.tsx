@@ -9,6 +9,7 @@ import {
 } from "../lib/care-router-pathways";
 
 type RecommendedProviderEntry = {
+  npi?: string;
   name: string;
   specialty?: string;
   city?: string;
@@ -105,6 +106,7 @@ export function LatestCareRouterDecision() {
                       typeof e === "object" && e !== null
                   )
                   .map((e) => ({
+                    npi: typeof e.npi === "string" ? e.npi : undefined,
                     name: typeof e.name === "string" ? e.name : "",
                     specialty:
                       typeof e.specialty === "string" ? e.specialty : undefined,
@@ -263,9 +265,14 @@ export function LatestCareRouterDecision() {
               // a provider accepts every plan; "+N more" tells the truth.
               const planChipsShown = plans.slice(0, 4);
               const planOverflow = Math.max(0, plans.length - planChipsShown.length);
+              const nameLabel = p.specialty ? `${p.name} · ${p.specialty}` : p.name;
               return (
-                <li key={`${p.name}-${p.city ?? ""}`} style={{ marginBottom: "0.25rem" }}>
-                  {p.specialty ? `${p.name} · ${p.specialty}` : p.name}
+                <li key={`${p.npi ?? p.name}-${p.city ?? ""}`} style={{ marginBottom: "0.25rem" }}>
+                  {p.npi ? (
+                    <a href={`/provider/${encodeURIComponent(p.npi)}`}>{nameLabel}</a>
+                  ) : (
+                    nameLabel
+                  )}
                   {meta.length > 0 ? (
                     <span style={{ color: "var(--muted)", marginLeft: "0.4rem" }}>
                       ({meta.join(" · ")})

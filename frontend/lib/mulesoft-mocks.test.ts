@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  findProviderByNpi,
   normalizeInsurancePlan,
   queryProviderDirectory,
   sortByCentroidForTest
@@ -389,5 +390,44 @@ describe("queryProviderDirectory · insurance filter", () => {
     for (const p of out.providers) {
       expect((p.insuranceAccepted ?? []).length).toBeGreaterThan(0);
     }
+  });
+});
+
+/**
+ * findProviderByNpi — single-record lookup by NPI for the
+ * /provider/[npi] page. Reads the same directory queryProviderDirectory
+ * searches, so a provider visible in a tier-fallback search is also
+ * resolvable by NPI here. Tests pin the behavior on the committed
+ * directory + a representative demo persona (Anand, NPI 1730155570) and
+ * the contract on bad input.
+ */
+describe("findProviderByNpi", () => {
+  it("resolves a known NPI from the committed directory", () => {
+    const r = findProviderByNpi("1730155570");
+    expect(r).not.toBeNull();
+    // Anand is the demo persona at 92614. The fixture overrides the
+    // national row so this resolves to the curated record regardless of
+    // how the limit cap settled, which is the demo invariant the
+    // last-input-wins build was designed to preserve.
+    expect(r?.zip).toBe("92614");
+    expect(r?.menopauseCertified).toBe(true);
+  });
+
+  it("returns null for an unknown NPI", () => {
+    expect(findProviderByNpi("9999999999")).toBeNull();
+  });
+
+  it("returns null for non-digit / empty input without throwing", () => {
+    expect(findProviderByNpi("")).toBeNull();
+    expect(findProviderByNpi(null)).toBeNull();
+    expect(findProviderByNpi(undefined)).toBeNull();
+    expect(findProviderByNpi("not-an-npi")).toBeNull();
+    expect(findProviderByNpi("12345678901234")).toBeNull(); // too long
+  });
+
+  it("trims surrounding whitespace from route-param input", () => {
+    const r = findProviderByNpi("  1730155570  ");
+    expect(r).not.toBeNull();
+    expect(r?.npi).toBe("1730155570");
   });
 });
