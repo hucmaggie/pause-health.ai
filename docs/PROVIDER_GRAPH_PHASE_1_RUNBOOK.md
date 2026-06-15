@@ -52,7 +52,26 @@ loads). The frozen contract is `ProviderRecord` in
 > applied. The matchType tier ladder is unchanged — distance is a within-tier
 > sort, so certified-local still wins over relevant-local even when the latter
 > is geographically closer. Pass `?distance=false` to force the score-only
-> ordering. The steps below reproduce or refresh this run.
+> ordering.
+
+> **Service-line signals.** Beyond the binary `menopauseCertified` flag, the
+> pipeline detects service-line signals from the public NPPES record (see
+> `provider_ingest/signals.py`) and stamps them onto every provider as
+> `serviceSignals: string[]`. Tokens include `facog` (Fellow ACOG —
+> board-certified OB/GYN), `faafp` (board-certified family physician), `face`
+> (board-certified endocrinologist), `whnp` (Women's Health NP),
+> `cnm` (Certified Nurse-Midwife), and `multi-taxonomy` (provider lists ≥2
+> menopause-relevant NUCC codes). Each signal contributes a small +2%
+> graphScore bump capped at +5% total — bounded so a non-certified provider
+> with all signals still falls behind a certified provider at the same
+> baseline. In the June 2026 run, **435 of 2,014 (22%) providers carry at
+> least one signal** (primarily `multi-taxonomy`, with WHNP/CNM/FACOG/FAAFP
+> rounding it out), so the relevant-local tier now sub-ranks honestly: a
+> board-certified OB/GYN with FACOG outranks a generalist with the same
+> taxonomy. The agent (MCP `find_menopause_providers` tool) is told to render
+> the strongest signal in plain English (e.g. "board-certified OB/GYN" for
+> `facog`) when matchType=relevant-local. The steps below reproduce or
+> refresh this run.
 
 ---
 
@@ -216,7 +235,9 @@ serve the NPPES-derived rows to keep the two paths shape-identical.
 ## What Phase 1 deliberately does **not** do
 
 - **State license verification / disciplinary gating** — Phase 2.
-- **Clinic-site service-mention detection** — Phase 2.
+- **Clinic-site service-mention detection** — Phase 2 (NPPES-resident
+  credential + multi-taxonomy signals landed; clinic-site scraping is the
+  next layer).
 - **Insurance match** — Phase 2 (distance ranking landed; insurance is the next
   filter on top of it).
 - **Closed-loop outcomes scoring** — Phase 3, after the first ~1,000 referrals.

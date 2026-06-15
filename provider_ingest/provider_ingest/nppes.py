@@ -27,6 +27,7 @@ from .centroids import LatLng, default_centroids
 from .mscp import MscpOverlay
 from .records import ProviderRecord
 from .score import graph_score
+from .signals import detect_signals
 from .taxonomy import best_relevant
 
 # Exact NPPES column headers (npidata_pfile_* layout).
@@ -207,12 +208,15 @@ def normalize_row(
         if ll is not None:
             lat, lng = ll
 
+    service_signals = detect_signals(credentials, _taxonomy_codes(row))
+
     score = graph_score(
         relevance=taxonomy.relevance,
         accepting_new_patients=accepting,
         telehealth=telehealth,
         has_location=has_location,
         menopause_certified=certified,
+        service_signal_count=len(service_signals),
     )
 
     return ProviderRecord(
@@ -229,4 +233,5 @@ def normalize_row(
         graphScore=score,
         latitude=lat,
         longitude=lng,
+        serviceSignals=service_signals,
     )

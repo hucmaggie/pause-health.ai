@@ -54,7 +54,33 @@ def test_record_shape_matches_contract():
         "graphScore",
         "latitude",
         "longitude",
+        "serviceSignals",
     }
+
+
+def test_service_signals_stamped_for_non_certified_provider():
+    # Dr. Marisol Reyes lists "MD, FACOG" and is NOT on the MSCP overlay. The
+    # FACOG signal should land on serviceSignals and she stays non-certified —
+    # exactly the relevant-local case we want sub-ranked honestly.
+    reyes = next(r for r in _build() if r.npi == "1881903422")
+    assert reyes.menopauseCertified is False
+    assert "facog" in reyes.serviceSignals
+
+
+def test_certified_provider_can_still_carry_signals():
+    # Dr. Anand is overlay-certified AND has FACOG — both should be reflected.
+    anand = next(r for r in _build() if r.npi == "1730155570")
+    assert anand.menopauseCertified is True
+    assert "facog" in anand.serviceSignals
+
+
+def test_no_service_signals_when_credentials_have_no_match():
+    # Dr. Levin lists just "MD" — no signal tokens, signals stays empty.
+    levin = next(r for r in _build() if r.npi == "1922450088")
+    # MSCP got auto-appended because he's overlay-certified, but that token
+    # doesn't appear in serviceSignals — certification has its own field.
+    assert levin.menopauseCertified is True
+    assert levin.serviceSignals == []
 
 
 def test_centroids_stamp_lat_lng_for_known_zip():

@@ -326,6 +326,20 @@ components:
             practice ZIP centroid (Haversine). Present only when both centroids
             are known and `distance=true`; otherwise null.
           example: 4.2
+        serviceSignals:
+          type: array
+          description: >
+            Public-registry tokens detected in NPPES that suggest the provider
+            actually delivers menopause-relevant care. Examples include
+            `facog` (board-certified OB/GYN), `faafp` (board-certified family
+            physician), `whnp` (Women's Health NP), `cnm` (Certified Nurse-
+            Midwife), `multi-taxonomy` (provider lists ≥2 menopause-relevant
+            NUCC codes). Used to honestly sub-rank the relevant-local tier;
+            empty array when no signals matched.
+          items:
+            type: string
+            example: facog
+          example: [facog, multi-taxonomy]
 
     ProviderDirectoryResponse:
       type: object

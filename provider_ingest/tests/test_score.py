@@ -41,3 +41,21 @@ def test_accepting_and_telehealth_increase_score():
 
 def test_missing_location_lowers_score():
     assert _base(has_location=False) < _base(has_location=True)
+
+
+def test_service_signals_boost_score_but_capped():
+    no_signal = _base(relevance=0.5)
+    one = _base(relevance=0.5, service_signal_count=1)
+    five = _base(relevance=0.5, service_signal_count=5)
+    assert one > no_signal
+    # Cap is +5%; one signal is +2%; two would be +4%; three+ all share +5%.
+    assert five > one
+    assert five == _base(relevance=0.5, service_signal_count=10)
+
+
+def test_certified_still_outranks_signal_only_at_same_baseline():
+    # A non-certified provider with the maximum signal boost shouldn't outrank
+    # a certified provider with no signals at the same baseline.
+    signal_max = _base(relevance=0.7, service_signal_count=5)
+    certified_only = _base(relevance=0.7, menopause_certified=True)
+    assert certified_only > signal_max

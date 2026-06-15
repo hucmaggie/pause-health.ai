@@ -140,6 +140,13 @@ export type RecommendedProvider = Pick<
    * is null on every recommendation.
    */
   distanceMiles?: number | null;
+  /**
+   * Public-registry service-line signals (facog, whnp, cnm, multi-taxonomy,
+   * etc.) — empty array when none matched. Useful for sub-ranking the
+   * relevant-local tier honestly: a non-certified provider with `facog` is
+   * a board-certified OB/GYN, which is meaningful to surface to the patient.
+   */
+  serviceSignals?: string[];
 };
 
 /**
@@ -192,7 +199,8 @@ function toRecommendedProvider(
     telehealth: p.telehealth,
     acceptingNewPatients: p.acceptingNewPatients,
     graphScore: p.graphScore,
-    distanceMiles: p.distanceMiles ?? null
+    distanceMiles: p.distanceMiles ?? null,
+    serviceSignals: p.serviceSignals ?? []
   };
 }
 

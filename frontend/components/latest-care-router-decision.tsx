@@ -15,6 +15,20 @@ type RecommendedProviderEntry = {
   state?: string;
   telehealth?: boolean;
   distanceMiles?: number | null;
+  serviceSignals?: string[];
+};
+
+// Plain-English labels for the public-registry signal tokens. Anything not in
+// this map renders as the raw token in lowercase — fine, since the agent and
+// the UI both prefer the human label when one exists.
+const SIGNAL_LABELS: Record<string, string> = {
+  facog: "Board-cert OB/GYN",
+  faafp: "Board-cert family med",
+  face: "Board-cert endocrinology",
+  facp: "Board-cert internal med",
+  whnp: "Women's Health NP",
+  cnm: "Certified Nurse-Midwife",
+  "multi-taxonomy": "Multi-specialty"
 };
 
 type LatestDecision = {
@@ -86,7 +100,12 @@ export function LatestCareRouterDecision() {
                     distanceMiles:
                       typeof e.distanceMiles === "number"
                         ? e.distanceMiles
-                        : null
+                        : null,
+                    serviceSignals: Array.isArray(e.serviceSignals)
+                      ? (e.serviceSignals as unknown[]).filter(
+                          (s): s is string => typeof s === "string"
+                        )
+                      : []
                   }))
                   .filter((p) => p.name.length > 0)
               : Array.isArray(attrs.recommendedProviderNames)
@@ -218,12 +237,32 @@ export function LatestCareRouterDecision() {
                 meta.push(`${miles} mi away`);
               }
               if (p.telehealth) meta.push("telehealth");
+              const signals = p.serviceSignals ?? [];
               return (
-                <li key={`${p.name}-${p.city ?? ""}`}>
+                <li key={`${p.name}-${p.city ?? ""}`} style={{ marginBottom: "0.25rem" }}>
                   {p.specialty ? `${p.name} · ${p.specialty}` : p.name}
                   {meta.length > 0 ? (
                     <span style={{ color: "var(--muted)", marginLeft: "0.4rem" }}>
                       ({meta.join(" · ")})
+                    </span>
+                  ) : null}
+                  {signals.length > 0 ? (
+                    <span style={{ marginLeft: "0.4rem", display: "inline-flex", gap: "0.3rem", flexWrap: "wrap" }}>
+                      {signals.map((s) => (
+                        <span
+                          key={s}
+                          style={{
+                            fontSize: "0.7rem",
+                            padding: "0.05rem 0.4rem",
+                            borderRadius: "999px",
+                            background: "rgba(0, 122, 158, 0.08)",
+                            color: "var(--brand)",
+                            border: "1px solid rgba(0, 122, 158, 0.2)"
+                          }}
+                        >
+                          {SIGNAL_LABELS[s] ?? s}
+                        </span>
+                      ))}
                     </span>
                   ) : null}
                 </li>

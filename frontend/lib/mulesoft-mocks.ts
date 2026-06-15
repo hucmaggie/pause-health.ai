@@ -308,6 +308,15 @@ export type ProviderRecord = {
    */
   latitude?: number | null;
   longitude?: number | null;
+  /**
+   * Public-registry service-line signals — small set of tokens detected in
+   * NPPES data that suggest a non-certified provider actually delivers
+   * menopause care. Examples: "facog" (board-certified OB/GYN), "whnp"
+   * (Women's Health Nurse Practitioner), "multi-taxonomy" (≥2 menopause-
+   * relevant NUCC codes). Empty array when nothing matched. See
+   * provider_ingest/signals.py for the full list.
+   */
+  serviceSignals?: string[];
 };
 
 /** Returned by queryProviderDirectory when the patient's ZIP centroid is known. */
