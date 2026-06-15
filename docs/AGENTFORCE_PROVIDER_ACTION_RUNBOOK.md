@@ -127,10 +127,18 @@ builder. (Deactivate first if the builder requires it — see Step 5.)
    > their 5-digit ZIP code if you don't already have it, then call
    > findMenopauseProviders with that zip and menopause=true. Present up to
    > three providers by name, specialty, city/state, and whether they offer
-   > telehealth or are accepting new patients. If no ZIP is given, call the
-   > action without it and say these are top menopause specialists nationally.
-   > Never invent providers — only return what the action gives you. If the
-   > action returns none, point the patient to The Menopause Society directory.
+   > telehealth or are accepting new patients. Never invent providers — only
+   > return what the action gives you. Read the response `matchType` and frame
+   > the results honestly:
+   > • `certified-local` — menopause-certified specialists near the patient.
+   > • `relevant-local` — say there are no menopause-CERTIFIED providers in their
+   >   area, and offer these nearby clinicians as menopause-EXPERIENCED (not
+   >   certified) options.
+   > • `certified-remote` — say there are no providers in their immediate area, so
+   >   these are menopause-certified specialists elsewhere who offer telehealth.
+   > • `certified-national` — top menopause specialists nationally (no ZIP given).
+   > • `none` — point the patient to The Menopause Society "Find a Practitioner"
+   >   directory.
 
 4. **Example utterances** for the topic classifier: "which healthcare
    professional?", "find a provider that specializes in menopause", "who should

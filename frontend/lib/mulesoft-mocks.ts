@@ -395,25 +395,97 @@ const PROVIDER_DIRECTORY: ProviderRecord[] =
 const USING_GENERATED_DIRECTORY =
   (generatedProviderDirectory as ProviderRecord[]).length > 0;
 
+/**
+ * Which tier of the search answered, so callers (and the agent) can present
+ * results honestly:
+ *   - `certified-local`     menopause-certified provider(s) in the ZIP-3 area.
+ *   - `relevant-local`      no local certified provider, so nearby
+ *                           menopause-RELEVANT but NON-certified providers
+ *                           (e.g. OB/GYN) — only with `fallback`.
+ *   - `certified-remote`    no local provider at all, so telehealth-capable
+ *                           certified providers nationally — only with `fallback`.
+ *   - `certified-national`  menopause-certified, no ZIP given.
+ *   - `local` / `all`       general (non-menopause) browse, with/without ZIP.
+ *   - `none`                nothing matched.
+ */
+export type ProviderMatchType =
+  | "certified-local"
+  | "relevant-local"
+  | "certified-remote"
+  | "certified-national"
+  | "local"
+  | "all"
+  | "none";
+
 export function queryProviderDirectory(opts: {
   zip?: string;
   menopauseOnly?: boolean;
   limit?: number;
+  /**
+   * Graceful fallback for menopause-certified searches with no certified
+   * provider in the ZIP-3 area. When true and the certified-local tier is empty,
+   * the directory broadens — first to nearby menopause-relevant (non-certified)
+   * providers, then to telehealth-capable certified providers nationally — and
+   * reports the tier via `matchType`. OFF by default so the Care Router and the
+   * demo's strict certified-local invariant are preserved; the agent-facing
+   * Experience API (`/api/mulesoft/providers`) opts in.
+   */
+  fallback?: boolean;
 }) {
-  const { zip, menopauseOnly, limit } = opts;
-  let rows = PROVIDER_DIRECTORY.slice();
-  if (menopauseOnly) {
-    rows = rows.filter((r) => r.menopauseCertified);
+  const { zip, menopauseOnly, limit, fallback } = opts;
+  const prefix = zip && zip.length >= 3 ? zip.slice(0, 3) : undefined;
+  const inArea = (r: ProviderRecord) => !prefix || r.zip.startsWith(prefix);
+
+  let rows: ProviderRecord[];
+  let matchType: ProviderMatchType;
+
+  if (!menopauseOnly) {
+    rows = PROVIDER_DIRECTORY.filter(inArea);
+    matchType = prefix ? "local" : "all";
+  } else {
+    const certified = PROVIDER_DIRECTORY.filter((r) => r.menopauseCertified);
+    if (!prefix) {
+      rows = certified;
+      matchType = "certified-national";
+    } else {
+      const certifiedLocal = certified.filter(inArea);
+      if (certifiedLocal.length > 0 || !fallback) {
+        // Strict default (and the happy path): certified providers in-area.
+        rows = certifiedLocal;
+        matchType = "certified-local";
+      } else {
+        const relevantLocal = PROVIDER_DIRECTORY.filter(
+          (r) => !r.menopauseCertified && inArea(r)
+        );
+        if (relevantLocal.length > 0) {
+          // Prefer a nearby (non-certified) menopause-relevant clinician over a
+          // distant certified one — the patient can be seen locally.
+          rows = relevantLocal;
+          matchType = "relevant-local";
+        } else {
+          // Nothing local at all: offer telehealth-capable certified specialists
+          // who can see the patient remotely (any certified if none do telehealth).
+          const certifiedTelehealth = certified.filter((r) => r.telehealth);
+          rows = certifiedTelehealth.length > 0 ? certifiedTelehealth : certified;
+          matchType = "certified-remote";
+        }
+      }
+    }
   }
-  if (zip && zip.length >= 3) {
-    const prefix = zip.slice(0, 3);
-    rows = rows.filter((r) => r.zip.startsWith(prefix));
-  }
-  rows.sort((a, b) => b.graphScore - a.graphScore);
+
+  rows = rows.slice().sort((a, b) => b.graphScore - a.graphScore);
   const total = rows.length;
   if (limit && limit > 0) rows = rows.slice(0, limit);
+  if (total === 0) matchType = "none";
+
   return {
-    query: { zip: zip ?? null, menopauseOnly: !!menopauseOnly, limit: limit ?? null },
+    query: {
+      zip: zip ?? null,
+      menopauseOnly: !!menopauseOnly,
+      limit: limit ?? null,
+      fallback: !!fallback
+    },
+    matchType,
     total,
     returned: rows.length,
     providers: rows,

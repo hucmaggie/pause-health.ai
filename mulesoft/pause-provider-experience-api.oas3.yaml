@@ -106,6 +106,18 @@ paths:
             minimum: 1
             maximum: 100
             default: 10
+        - name: fallback
+          in: query
+          description: >
+            When `true` (and `menopause=true`), a search with no certified
+            provider in the ZIP area gracefully broadens — to nearby
+            menopause-relevant (non-certified) providers, then to telehealth-capable
+            certified providers nationally. The tier that answered is reported in
+            `matchType`. Defaults to `true` on the Experience API.
+          required: false
+          schema:
+            type: boolean
+            default: true
       responses:
         "200":
           description: Provider directory results
@@ -294,6 +306,27 @@ components:
               type: boolean
             limit:
               type: integer
+            fallback:
+              type: boolean
+        matchType:
+          type: string
+          description: >
+            Which search tier answered, so callers can present results honestly.
+            `certified-local`: certified provider(s) in the ZIP area.
+            `relevant-local`: no local certified provider, so nearby
+            menopause-relevant but NON-certified providers (present as
+            menopause-experienced, not certified). `certified-remote`: no local
+            match, so telehealth-capable certified specialists nationally.
+            `certified-national`: certified, no ZIP filter. `local`/`all`: general
+            (non-menopause) browse. `none`: no match.
+          enum:
+            - certified-local
+            - relevant-local
+            - certified-remote
+            - certified-national
+            - local
+            - all
+            - none
         total:
           type: integer
           description: Total matching providers before limit applied.

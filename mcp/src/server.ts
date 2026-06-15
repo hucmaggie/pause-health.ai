@@ -148,7 +148,7 @@ server.registerTool(
   {
     title: "Find menopause-experienced providers",
     description:
-      "Search Pause's provider directory (a future defensible synthesis of CMS NPPES, MSCP credential lists, and state board data; today a synthetic slice). Supports filtering by ZIP prefix and a menopause-certified-only flag. Returns providers ranked by Pause's internal graph score.",
+      "Search Pause's provider directory (a defensible synthesis of CMS NPPES, self-reported MSCP/NCMP credentials, and a curated overlay). Supports filtering by ZIP prefix and a menopause-certified-only flag, and returns providers ranked by Pause's internal graph score. When a certified search finds nobody in the patient's ZIP area, results gracefully fall back — to nearby menopause-relevant (non-certified) clinicians, or to telehealth-capable certified specialists nationally. ALWAYS read the response `matchType` and present accordingly: 'certified-local' = certified & local; 'relevant-local' = nearby but NOT menopause-certified (say so); 'certified-remote' = certified specialists elsewhere offering telehealth (no local match); 'none' = no match.",
     inputSchema: {
       zip: z
         .string()
@@ -179,9 +179,17 @@ server.registerTool(
       const data = await callExperienceApi(`/api/mulesoft/providers?${qs.toString()}`);
       const total = (data as { total?: number }).total ?? 0;
       const returned = (data as { returned?: number }).returned ?? 0;
+      const matchType = (data as { matchType?: string }).matchType ?? "certified-local";
+      const matchNote: Record<string, string> = {
+        "certified-local": "menopause-certified and local",
+        "relevant-local": "nearby but NOT menopause-certified — present them as menopause-experienced, not certified",
+        "certified-remote": "menopause-certified specialists elsewhere offering telehealth (no local certified match)",
+        "certified-national": "menopause-certified (no ZIP filter applied)",
+        none: "no matching providers"
+      };
       return ok(
         data,
-        `Pause provider directory: returned ${returned} of ${total} matching providers (zip=${zip ?? "any"}, menopauseOnly=${menopauseOnly}).`
+        `Pause provider directory: returned ${returned} of ${total} providers (zip=${zip ?? "any"}, menopauseOnly=${menopauseOnly}). matchType=${matchType} — ${matchNote[matchType] ?? matchType}.`
       );
     } catch (e) {
       return err((e as Error).message);

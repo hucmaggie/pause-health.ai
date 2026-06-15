@@ -32,7 +32,7 @@ export function isMulesoftProvidersLive(baseUrl?: string): boolean {
 }
 
 export async function fetchLiveProviders(
-  query: { zip?: string; menopauseOnly?: boolean; limit?: number },
+  query: { zip?: string; menopauseOnly?: boolean; limit?: number; fallback?: boolean },
   opts: LiveProvidersFetchOptions = {}
 ): Promise<ProviderDirectoryResult | null> {
   const baseUrl = (opts.baseUrl ?? process.env.MULESOFT_PROVIDERS_BASE_URL ?? "").trim();
@@ -48,6 +48,7 @@ export async function fetchLiveProviders(
   if (query.zip) params.set("zip", query.zip);
   if (query.menopauseOnly) params.set("menopause", "true");
   if (query.limit != null) params.set("limit", String(query.limit));
+  if (query.fallback) params.set("fallback", "true");
 
   const url = `${baseUrl.replace(/\/$/, "")}/providers?${params}`;
   const controller = new AbortController();
@@ -114,7 +115,7 @@ export function _resetProvidersWarnDedupForTests(): void {
 }
 
 export async function getProvidersPreferReal(
-  query: { zip?: string; menopauseOnly?: boolean; limit?: number },
+  query: { zip?: string; menopauseOnly?: boolean; limit?: number; fallback?: boolean },
   opts: LiveProvidersFetchOptions = {}
 ): Promise<{ source: "live" | "mock"; result: ProviderDirectoryResult }> {
   if (isMulesoftProvidersLive(opts.baseUrl)) {

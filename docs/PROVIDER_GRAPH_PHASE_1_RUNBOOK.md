@@ -35,7 +35,12 @@ loads). The frozen contract is `ProviderRecord` in
 > nationally), so the agent's `menopause=true` queries still have sparse real
 > certified coverage outside the demo metros. This is a data-availability ceiling,
 > not a pipeline limit — the licensed Menopause Society feed (Step 2) is the path
-> to dense certified coverage. The steps below reproduce or refresh this run.
+> to dense certified coverage. To keep the agent useful everywhere in the meantime,
+> the Experience API does **graceful fallback** (`?fallback=true`, default-on; see
+> the `matchType` field): no local certified provider → nearby menopause-relevant
+> (non-certified) clinicians → national telehealth-capable certified specialists,
+> each tier labeled so the agent presents it honestly. The steps below reproduce or
+> refresh this run.
 
 ---
 

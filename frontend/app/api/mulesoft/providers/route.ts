@@ -43,8 +43,13 @@ export async function GET(req: Request) {
     searchParams.get("menopauseOnly") === "true";
   const limitRaw = searchParams.get("limit");
   const limit = limitRaw ? Math.max(1, Math.min(50, Number(limitRaw) || 0)) : undefined;
+  // Graceful fallback is on by default for the agent-facing Experience API:
+  // a patient outside the certified-provider footprint still gets a useful,
+  // honestly-labeled answer (nearby relevant or national telehealth specialists)
+  // instead of an empty result. Pass ?fallback=false to force strict behavior.
+  const fallback = searchParams.get("fallback") !== "false";
 
-  const query = { zip, menopauseOnly, limit };
+  const query = { zip, menopauseOnly, limit, fallback };
 
   if (!isMulesoftProvidersLive()) {
     const result = queryProviderDirectory(query);
