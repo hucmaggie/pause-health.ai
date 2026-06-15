@@ -20,13 +20,22 @@ loads). The frozen contract is `ProviderRecord` in
   menopause NUCC taxonomy codes, overlays an MSCP credential list, computes a
   `graphScore`, and writes the generated JSON.
 - `queryProviderDirectory()` loads that JSON (falling back to the hand-curated
-  rows only if it's empty). The committed dataset is the pipeline run over
-  `provider_ingest/examples/fixtures/nppes_sample.csv` — real schema + real
-  NUCC codes, synthetic rows.
+  rows only if it's empty).
+- **The committed dataset is a real national run** of the CMS June 2026
+  `npidata_pfile` (8.5M rows) merged with the demo fixture: **2,014 providers**,
+  of which **14 are menopause-certified** — the 7 demo personas plus **7 real
+  practitioners who self-report MSCP/NCMP in NPPES** (CA, IA, ID, MN, NC×2, NJ).
+  The remaining 2,000 are real menopause-relevant providers across 55 states /
+  534 ZIP-3 prefixes for general (`menopause=false`) directory breadth.
 - `provenance.sources` on every response reports
-  `"CMS NPPES (taxonomy-filtered via provider_ingest)"` + `"MSCP credential overlay"`.
+  `"CMS NPPES (taxonomy-filtered via provider_ingest)"` +
+  `"Self-reported MSCP/NCMP credentials + curated overlay"`.
 
-The steps below swap the synthetic fixture for the real national file.
+> **Honest coverage note.** Self-reported MSCP/NCMP is *rare* in NPPES (≈7
+> nationally), so the agent's `menopause=true` queries still have sparse real
+> certified coverage outside the demo metros. This is a data-availability ceiling,
+> not a pipeline limit — the licensed Menopause Society feed (Step 2) is the path
+> to dense certified coverage. The steps below reproduce or refresh this run.
 
 ---
 
@@ -39,7 +48,7 @@ The steps below swap the synthetic fixture for the real national file.
 cd provider_ingest
 python3.13 -m venv .venv
 ./.venv/bin/pip install -e ".[dev]"
-./.venv/bin/python -m pytest -q      # expect 25 passed
+./.venv/bin/python -m pytest -q      # expect 33 passed
 ```
 
 ---
@@ -92,32 +101,45 @@ remains the authoritative source; the two are unioned.
 
 ## Step 3 — Run the pipeline
 
+You don't need to unzip the 11.5 GB CSV — stream it straight out of the
+dissemination zip through a FIFO:
+
 ```bash
 cd provider_ingest
+FIFO=$(mktemp -u); mkfifo "$FIFO"
+unzip -p ~/Downloads/NPPES_Data_Dissemination_*.zip 'npidata_pfile_*[0-9].csv' > "$FIFO" &
 pause-provider-build \
-  --nppes /path/to/npidata_pfile_YYYYMMDD-YYYYMMDD.csv \
+  --nppes "$FIFO" \
   --nppes examples/fixtures/nppes_sample.csv \
   --mscp  examples/fixtures/mscp_npis.json \
   --out   ../frontend/lib/provider-directory.generated.json \
-  --limit 5000
+  --keep-all-certified \
+  --limit 2000
+rm -f "$FIFO"
 ```
 
-- **Pass `--nppes` twice** (national file **and** the bundled demo fixture). Inputs
-  are merged and de-duplicated by NPI, so the six demo personas keep resolving to
-  their curated local certified providers (green demo) while the national file
-  adds real coverage for every other ZIP. Real NPPES NPIs never collide with the
-  synthetic demo NPIs.
-- The reader streams row-by-row (constant memory), so the full file is fine.
-- Output is sorted by `graphScore` descending; `--limit N` keeps the top-N.
-  Keep the committed/bundled dataset modest (a few thousand rows at most) so the
-  frontend bundle stays lean — the directory is filtered server-side per query,
-  not paginated client-side.
-- Expect roughly tens of thousands of survivors nationally before `--limit`
-  (the menopause taxonomy filter cuts the ~8.5M-row file by ~100×). `menopause=true`
-  queries then return real providers who are on the MSCP overlay **or** self-report
-  MSCP/NCMP in NPPES — no contract or agent change required.
+(If you've already extracted the CSV, just pass its path to the first `--nppes`.)
 
-It prints e.g. `Wrote 5000 providers (1234 MSCP-certified) from … → …`.
+- **Pass `--nppes` twice — national file FIRST, demo fixture LAST.** Inputs are
+  merged and de-duplicated by NPI; on collision the **later-listed input wins**, so
+  the demo fixture (listed last) always wins and the six personas keep resolving to
+  their curated local certified providers (green demo), even if a persona's
+  real-format NPI also exists nationally.
+- **`--keep-all-certified` is the important flag.** The agent queries
+  `menopause=true`, so a plain `--limit` (top-N by `graphScore`) could crowd
+  certified providers out behind higher-scoring non-certified ones. With this flag
+  every certified provider is kept and `--limit` caps only the non-certified
+  breadth. The committed run is `--limit 2000` → 2,014 rows, **654 KB**.
+- The reader streams row-by-row (constant memory) and parses only the ~40 columns
+  it needs, so the full 8.5M-row file runs in **~1m45s** (not the ~30 min a naive
+  `DictReader` over all ~330 columns would take).
+- Output is sorted by `graphScore` descending. Keep the non-certified `--limit`
+  modest so the frontend bundle stays lean — the directory is filtered
+  server-side per query, not paginated client-side.
+
+It prints e.g. `Wrote 2014 providers (14 MSCP-certified) from … → …`. The
+June 2026 run yielded exactly that: 14 certified (7 demo + 7 real self-reported)
+and 2,000 real non-certified rows across 55 states.
 
 ---
 

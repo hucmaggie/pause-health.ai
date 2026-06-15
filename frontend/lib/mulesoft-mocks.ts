@@ -377,11 +377,15 @@ const FALLBACK_DIRECTORY: ProviderRecord[] = [
 ];
 
 /**
- * Live directory: NPPES taxonomy-filtered providers with the MSCP credential
- * overlay and a computed graphScore, emitted by `provider_ingest` into
- * `provider-directory.generated.json`. The committed dataset is the pipeline
- * run over a small NPPES-format fixture (real schema + real NUCC codes,
- * synthetic rows); a full national run overwrites it behind this same shape.
+ * Live directory: NPPES taxonomy-filtered providers with a computed graphScore,
+ * emitted by `provider_ingest` into `provider-directory.generated.json`. The
+ * committed dataset is a national `npidata_pfile` run (CMS, June 2026) merged
+ * with the demo fixture: every menopause-certified provider is kept — where
+ * certification means a self-reported MSCP/NCMP credential in the NPPES record
+ * plus a curated overlay — and the non-certified breadth is capped for bundle
+ * size. Self-reported MSCP/NCMP is rare in NPPES, so real certified coverage is
+ * sparse (the Menopause Society feed remains the path to dense coverage); the
+ * non-certified rows give the directory national breadth for general browsing.
  */
 const PROVIDER_DIRECTORY: ProviderRecord[] =
   (generatedProviderDirectory as ProviderRecord[]).length > 0
@@ -417,7 +421,7 @@ export function queryProviderDirectory(opts: {
       sources: USING_GENERATED_DIRECTORY
         ? [
             "CMS NPPES (taxonomy-filtered via provider_ingest)",
-            "MSCP credential overlay"
+            "Self-reported MSCP/NCMP credentials + curated overlay"
           ]
         : ["CMS NPPES (synthetic slice)", "MSCP credential list (synthetic)"],
       experienceApi: "pause-provider-directory-experience-api@0.5"

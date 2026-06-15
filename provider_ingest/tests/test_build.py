@@ -95,6 +95,40 @@ def test_merge_combines_distinct_files(tmp_path):
     assert new.state == "TX"
 
 
+def test_later_input_wins_on_npi_collision(tmp_path):
+    # Same NPI as demo OB/GYN Anand (1730155570) but a different national record.
+    header = (
+        "NPI,Entity Type Code,Provider Last Name (Legal Name),Provider First Name,"
+        "Provider Name Prefix Text,Provider Credential Text,"
+        "Provider Business Practice Location Address City Name,"
+        "Provider Business Practice Location Address State Name,"
+        "Provider Business Practice Location Address Postal Code,"
+        "Healthcare Provider Taxonomy Code_1,Healthcare Provider Primary Taxonomy Switch_1,"
+        "Healthcare Provider Taxonomy Code_2,Healthcare Provider Primary Taxonomy Switch_2"
+    )
+    national = tmp_path / "national.csv"
+    national.write_text(
+        header + "\n" + "1730155570,1,Imposter,Nathan,Dr.,MD,Reno,NV,89501,207V00000X,Y,,\n"
+    )
+    overlay = MscpOverlay.from_file(MSCP)
+    # Curated demo fixture listed LAST → its Anand (Irvine, CA) must win.
+    merged = build_directory([national, NPPES], overlay)
+    anand = next(r for r in merged if r.npi == "1730155570")
+    assert anand.city == "Irvine"
+    assert anand.state == "CA"
+
+
+def test_keep_all_certified_overrides_limit():
+    overlay = MscpOverlay.from_file(MSCP)
+    # limit=1 would normally cut to 1 row; with keep_all_certified all 7 certified
+    # survive and the limit caps only the non-certified remainder.
+    records = build_directory(NPPES, overlay, limit=1, keep_all_certified=True)
+    certified = [r for r in records if r.menopauseCertified]
+    non_certified = [r for r in records if not r.menopauseCertified]
+    assert len(certified) == 7
+    assert len(non_certified) == 1
+
+
 def test_write_directory_roundtrip(tmp_path):
     import json
 

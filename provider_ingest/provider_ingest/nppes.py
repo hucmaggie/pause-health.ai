@@ -49,11 +49,49 @@ NUM_TAXONOMY_SLOTS = 15
 MENOPAUSE_CREDENTIAL_TOKENS = {"MSCP", "NCMP"}
 
 
+# Only these columns are consumed by normalize_row. The NPPES npidata_pfile has
+# ~330 columns; building a full per-row dict (csv.DictReader) over 8.5M rows is
+# the dominant cost. We instead use csv.reader + a header→index map and yield a
+# minimal dict of just these columns — a large speedup, and output-neutral (the
+# same field values reach normalize_row).
+_TAXONOMY_COLUMNS = [
+    f"Healthcare Provider Taxonomy Code_{i}" for i in range(1, NUM_TAXONOMY_SLOTS + 1)
+] + [
+    f"Healthcare Provider Primary Taxonomy Switch_{i}"
+    for i in range(1, NUM_TAXONOMY_SLOTS + 1)
+]
+_NEEDED_COLUMNS = [
+    COL_NPI,
+    COL_ENTITY_TYPE,
+    COL_LAST_NAME,
+    COL_FIRST_NAME,
+    COL_PREFIX,
+    COL_CREDENTIAL,
+    COL_CITY,
+    COL_STATE,
+    COL_POSTAL,
+    *_TAXONOMY_COLUMNS,
+]
+
+
 def iter_nppes_rows(path: str | Path) -> Iterator[dict]:
-    """Yield raw NPPES rows as dicts, streaming (constant memory)."""
+    """Yield NPPES rows as minimal dicts (only the columns normalize_row reads).
+
+    Streams row-by-row (constant memory). Subsets the ~330-column file to the
+    ~40 needed columns via csv.reader, which is much faster than csv.DictReader
+    on the national file and yields identical field values to normalize_row.
+    """
     with open(path, newline="", encoding="utf-8") as fh:
-        reader = csv.DictReader(fh)
-        yield from reader
+        reader = csv.reader(fh)
+        try:
+            header = next(reader)
+        except StopIteration:
+            return
+        index = {name: i for i, name in enumerate(header)}
+        wanted = [(name, index[name]) for name in _NEEDED_COLUMNS if name in index]
+        for parts in reader:
+            n = len(parts)
+            yield {name: parts[i] for name, i in wanted if i < n}
 
 
 def _taxonomy_codes(row: dict) -> list[str]:

@@ -30,13 +30,17 @@ def build_directory(
     overlay: MscpOverlay,
     *,
     limit: int | None = None,
+    keep_all_certified: bool = False,
 ) -> list[ProviderRecord]:
     """Stream one or more NPPES files → filtered, scored, sorted ProviderRecords.
 
     Accepts a single path or an iterable of paths. Multiple inputs are merged and
-    de-duplicated by NPI (highest graphScore wins on collision), so a national
-    `npidata_pfile` can be combined with the bundled demo fixture in one run —
-    keeping the demo personas green while adding national coverage.
+    de-duplicated by NPI; on collision the **later-listed input wins**, so a
+    national `npidata_pfile` can be combined with the bundled demo fixture in one
+    run — list the curated/demo file LAST and its rows always win, keeping the
+    demo personas green even if their (real-format) NPIs also exist nationally.
+    (Listing a weekly incremental after the monthly file likewise lets the newer
+    record win.)
     """
     if isinstance(nppes_paths, (str, Path)):
         nppes_paths = [nppes_paths]
@@ -47,15 +51,21 @@ def build_directory(
             rec = normalize_row(row, overlay)
             if rec is None:
                 continue
-            existing = by_npi.get(rec.npi)
-            if existing is None or rec.graphScore > existing.graphScore:
-                by_npi[rec.npi] = rec
+            by_npi[rec.npi] = rec
 
     records = list(by_npi.values())
     # Sort by graphScore desc, tie-break on NPI for determinism.
     records.sort(key=lambda r: (-r.graphScore, r.npi))
     if limit is not None and limit > 0:
-        records = records[:limit]
+        if keep_all_certified:
+            # The agent queries menopause=true (certified-only), so never drop a
+            # certified provider — the limit caps only the non-certified breadth.
+            certified = [r for r in records if r.menopauseCertified]
+            non_certified = [r for r in records if not r.menopauseCertified][:limit]
+            records = certified + non_certified
+            records.sort(key=lambda r: (-r.graphScore, r.npi))
+        else:
+            records = records[:limit]
     return records
 
 
@@ -93,10 +103,21 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Cap the number of providers emitted (top-N by graphScore).",
     )
+    parser.add_argument(
+        "--keep-all-certified",
+        action="store_true",
+        help=(
+            "Never drop a menopause-certified provider; --limit then caps only "
+            "the non-certified breadth. Recommended for national runs so the "
+            "agent's menopause=true queries get full certified coverage."
+        ),
+    )
     args = parser.parse_args(argv)
 
     overlay = MscpOverlay.from_file(args.mscp) if args.mscp else MscpOverlay.empty()
-    records = build_directory(args.nppes, overlay, limit=args.limit)
+    records = build_directory(
+        args.nppes, overlay, limit=args.limit, keep_all_certified=args.keep_all_certified
+    )
     write_directory(records, args.out)
 
     certified = sum(1 for r in records if r.menopauseCertified)
