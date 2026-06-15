@@ -49,6 +49,17 @@ export type DemoPersona = {
    * specialist for this persona rather than a top-national fallback.
    */
   patientZip: string;
+  /**
+   * Synthetic primary insurance plan. Chosen from the persona's local
+   * MSCP-certified provider's `insuranceAccepted` list (see insurance.py)
+   * so the demo flow's `?insurance=...` filter actually surfaces that
+   * provider — not silently empties the directory. The lib/demo-cohort
+   * test pins this invariant so a directory regen can't break the demo
+   * (sanctions / synthetic-derivation drift would otherwise be invisible).
+   * Canonical token: medicare, medicaid, aetna, bcbs, uhc, cigna, humana,
+   * kaiser. See provider_ingest/insurance.py.
+   */
+  patientInsurance: string;
   ageBand: string;
   cycleStatus: string;
   primarySymptom: string;
@@ -68,6 +79,7 @@ export const DEMO_COHORT: DemoPersona[] = [
     firstName: "Anika",
     lastName: "Patel",
     patientZip: "92614",
+    patientInsurance: "aetna",
     ageBand: "45-49",
     cycleStatus: "Perimenopausal",
     primarySymptom: "Hot flashes",
@@ -86,6 +98,7 @@ export const DEMO_COHORT: DemoPersona[] = [
     firstName: "Brianna",
     lastName: "Okafor",
     patientZip: "11215",
+    patientInsurance: "bcbs",
     ageBand: "50-54",
     cycleStatus: "Perimenopausal",
     primarySymptom: "Sleep disruption",
@@ -109,6 +122,7 @@ export const DEMO_COHORT: DemoPersona[] = [
     firstName: "Carmen",
     lastName: "Diaz",
     patientZip: "90012",
+    patientInsurance: "medicare",
     ageBand: "55-59",
     cycleStatus: "Postmenopausal",
     primarySymptom: "Vaginal dryness",
@@ -127,6 +141,7 @@ export const DEMO_COHORT: DemoPersona[] = [
     firstName: "Deepa",
     lastName: "Krishnan",
     patientZip: "10024",
+    patientInsurance: "bcbs",
     ageBand: "48-52",
     cycleStatus: "Perimenopausal",
     primarySymptom: "Hot flashes",
@@ -145,6 +160,7 @@ export const DEMO_COHORT: DemoPersona[] = [
     firstName: "Elena",
     lastName: "Rossi",
     patientZip: "60614",
+    patientInsurance: "bcbs",
     ageBand: "46-50",
     cycleStatus: "Perimenopausal",
     primarySymptom: "Mood changes",
@@ -163,6 +179,7 @@ export const DEMO_COHORT: DemoPersona[] = [
     firstName: "Fatima",
     lastName: "Khan",
     patientZip: "77002",
+    patientInsurance: "uhc",
     ageBand: "51-55",
     cycleStatus: "Postmenopausal",
     primarySymptom: "Joint pain",
@@ -215,6 +232,7 @@ export function personaToCareRouterIntake(persona: DemoPersona): {
   severity: "mild" | "moderate" | "severe";
   redFlagsAcknowledged: "yes" | "no" | "none";
   patientZip: string;
+  patientInsurance: string;
 } {
   const sym = persona.primarySymptom.toLowerCase();
   let primarySymptom = "hot_flashes";
@@ -264,6 +282,7 @@ export function personaToCareRouterIntake(persona: DemoPersona): {
     primarySymptom,
     severity,
     redFlagsAcknowledged,
-    patientZip: persona.patientZip
+    patientZip: persona.patientZip,
+    patientInsurance: persona.patientInsurance
   };
 }

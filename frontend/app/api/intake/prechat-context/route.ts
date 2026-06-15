@@ -53,6 +53,11 @@ import { isSalesforceConfigured } from "../../../../lib/salesforce/auth";
  *   Age_Band, Cycle_Status, Primary_Symptom
  *   Patient_Zip                               -- 5-digit ZIP; feeds the
  *                                                Find-a-Provider action's zip input
+ *   Patient_Insurance                         -- canonical plan token
+ *                                                (medicare/aetna/bcbs/...);
+ *                                                feeds the Find-a-Provider
+ *                                                action's insurance input.
+ *                                                Synthetically derived today.
  *   Vasomotor_Score, Sleep_Score, Mood_Score  -- 0-10 ints as strings
  *   Care_Program_Status                       -- e.g. "Enrolled" | "Not enrolled"
  *   Care_Plan_Status                          -- e.g. "Active" | "None"
@@ -253,6 +258,14 @@ async function buildPrechatFields(
     // variable ($Context.Pause_Patient_Zip), mapped to the action's zip input.
     // See docs/AGENTFORCE_PROVIDER_ACTION_RUNBOOK.md ("Auto-passing the ZIP").
     Patient_Zip: persona.patientZip,
+    // Patient insurance — same prechat plumbing as Patient_Zip; forwards
+    // to the Find-a-Provider action's insurance input so the agent's
+    // recommendations are filtered by the patient's plan without asking.
+    // Today the directory's insuranceAccepted is synthetically derived
+    // (see provider_ingest/insurance.py); the ?insurance= filter is
+    // server-side and the agent surfaces it provisionally per the MCP
+    // tool framing.
+    Patient_Insurance: persona.patientInsurance,
     Vasomotor_Score: String(persona.vasomotorScore),
     Sleep_Score: String(persona.sleepScore),
     Mood_Score: String(persona.moodScore),

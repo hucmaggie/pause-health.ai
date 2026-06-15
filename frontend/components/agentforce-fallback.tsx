@@ -41,6 +41,7 @@ type AgentMessage = {
 type IntakeFieldKey =
   | "preferredName"
   | "patientZip"
+  | "patientInsurance"
   | "ageBand"
   | "cycleStatus"
   | "primarySymptom"
@@ -81,6 +82,25 @@ const SCRIPT: IntakeStep[] = [
         ? null
         : "Please enter a 5-digit US ZIP code, or leave it blank to skip.";
     }
+  },
+  {
+    id: "patientInsurance",
+    inputType: "choice",
+    prompt:
+      "Which insurance do you have? I'll narrow recommendations to in-network providers.",
+    helper:
+      "Optional — pick \"Skip\" to see everyone. Pause's in-network signal is synthetically derived today (no public payer feed), so treat the match as a soft filter, not a guarantee.",
+    options: [
+      { value: "", label: "Skip" },
+      { value: "medicare", label: "Medicare" },
+      { value: "medicaid", label: "Medicaid" },
+      { value: "aetna", label: "Aetna" },
+      { value: "bcbs", label: "Blue Cross Blue Shield" },
+      { value: "uhc", label: "UnitedHealthcare" },
+      { value: "cigna", label: "Cigna" },
+      { value: "humana", label: "Humana" },
+      { value: "kaiser", label: "Kaiser Permanente" }
+    ]
   },
   {
     id: "ageBand",
@@ -203,7 +223,12 @@ export function AgentforceFallback() {
       redFlagsAcknowledged: captured.redFlagsAcknowledged,
       // Blank ZIP is sent as undefined so the Care Router falls back to
       // top-national matches rather than filtering on an empty string.
-      patientZip: captured.patientZip?.trim() ? captured.patientZip.trim() : undefined
+      patientZip: captured.patientZip?.trim() ? captured.patientZip.trim() : undefined,
+      // "Skip" maps to "" and we forward as undefined so the Care Router
+      // doesn't filter on an empty string and silently empty the directory.
+      patientInsurance: captured.patientInsurance && captured.patientInsurance.length > 0
+        ? captured.patientInsurance
+        : undefined
     };
     setA2aStatus("handing-off");
     (async () => {

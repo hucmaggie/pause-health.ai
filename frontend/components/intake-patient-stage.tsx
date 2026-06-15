@@ -248,11 +248,17 @@ function IntakePatientStageInner({ agentforceConfig }: Props) {
         // rest of the dossier still renders visibly via PreBriefPanel above.
         key={selectedId}
         config={agentforceConfig}
-        prechatFields={
-          selectedPersona?.patientZip
-            ? { Patient_Zip: selectedPersona.patientZip }
-            : null
-        }
+        prechatFields={(() => {
+          if (!selectedPersona) return null;
+          const fields: Record<string, string> = {};
+          if (selectedPersona.patientZip) {
+            fields.Patient_Zip = selectedPersona.patientZip;
+          }
+          if (selectedPersona.patientInsurance) {
+            fields.Patient_Insurance = selectedPersona.patientInsurance;
+          }
+          return Object.keys(fields).length > 0 ? fields : null;
+        })()}
       />
     </>
   );

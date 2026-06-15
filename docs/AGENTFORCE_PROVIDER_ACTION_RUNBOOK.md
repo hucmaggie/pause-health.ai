@@ -413,6 +413,44 @@ logs "invalid field name Patient_Zip" and drops the value.
 > `Patient_Id` element (you already wired 20 of these in Phase 18a/b) and rename
 > to `Patient_Zip`. Snippets 1–2 are self-contained and deploy cleanly.
 
+### Auto-passing the insurance plan (parallel to Patient_Zip)
+
+Identical mechanics, different field. The repo emits `Patient_Insurance` as a
+hidden prechat field alongside `Patient_Zip` — `/api/intake/prechat-context`
+includes it on every persona payload, and `intake-patient-stage.tsx` passes it
+to the embed. Until it's registered + mapped on the Salesforce side, the SDK
+drops it (graceful — the agent just uses whatever the patient says, or
+nothing).
+
+To wire it up, follow the same six steps from "Auto-passing the ZIP" above
+with `Patient_Zip` → `Patient_Insurance` substituted throughout:
+
+1. Add `Patient_Insurance` as a **hidden** prechat field on the
+   `Pause_Health_Intake` deployment.
+2. Add `<customParameters>` `Patient_Insurance` to the
+   `Messaging_for_In_App_Web` channel.
+3. Create `Pause_Patient_Insurance__c` (Text, 32) on `MessagingSession` and
+   grant FLS on the `Pause_Health_Intake_Prechat_Dossier` permission set.
+4. Add input variable `Patient_Insurance` to `Pause_Intake_Prechat_Router` and
+   write it to `MessagingSession.Pause_Patient_Insurance__c`.
+5. Add bot context variable `Pause_Patient_Insurance` mapped to that field.
+6. In the **Find a Provider** subagent, set the `findMenopauseProviders`
+   action's **`insurance` input** to **`$Context.Pause_Patient_Insurance`**.
+   Update reasoning so the agent only asks about insurance when that variable
+   is empty:
+
+   > If `$Context.Pause_Patient_Insurance` has a value, use it as the
+   > insurance and do NOT ask the patient. Surface in-network info
+   > provisionally — Pause's insuranceAccepted is synthetically derived
+   > today (no public payer feed), so frame the match as a soft filter,
+   > not a guarantee.
+
+   Then **Commit Version → Activate**.
+
+The Care Router and the AgentforceFallback fallback flow already use
+`patientInsurance` end-to-end today; the live agent inherits the same
+behavior the moment Patient_Insurance is registered upstream.
+
 ## When the live MuleSoft API replaces the public endpoint
 
 Repoint the Named Credential `endpoint` at the gateway/CloudHub base and add the

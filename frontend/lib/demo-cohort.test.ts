@@ -42,4 +42,48 @@ describe("demo cohort · patientZip", () => {
       }
     }
   });
+
+  it("each persona has a canonical insurance plan", () => {
+    const canonical = new Set([
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc",
+      "cigna",
+      "humana",
+      "kaiser"
+    ]);
+    for (const p of DEMO_COHORT) {
+      expect(canonical.has(p.patientInsurance), `${p.id} insurance "${p.patientInsurance}" not canonical`).toBe(true);
+    }
+  });
+
+  it("personaToCareRouterIntake forwards the patient insurance plan", () => {
+    for (const p of DEMO_COHORT) {
+      expect(personaToCareRouterIntake(p).patientInsurance).toBe(p.patientInsurance);
+    }
+  });
+
+  it("each persona's plan resolves to a local certified provider that accepts it", () => {
+    // The synthetic insuranceAccepted derivation can drift on regen, so this
+    // test pins the demo invariant: filtering the patient's local certified
+    // providers by their plan must STILL yield a non-empty list. If a future
+    // hash change breaks this, the persona's plan needs to be re-picked from
+    // the local provider's accepted list — never the other way around.
+    for (const p of DEMO_COHORT) {
+      const filtered = queryProviderDirectory({
+        zip: p.patientZip,
+        menopauseOnly: true,
+        insurance: p.patientInsurance
+      });
+      expect(
+        filtered.providers.length,
+        `${p.id} (${p.patientZip}, ${p.patientInsurance}) — pick a plan their local provider accepts`
+      ).toBeGreaterThan(0);
+      for (const provider of filtered.providers) {
+        expect(provider.insuranceAccepted ?? []).toContain(p.patientInsurance);
+      }
+    }
+  });
 });
