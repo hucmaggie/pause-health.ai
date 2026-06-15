@@ -335,29 +335,6 @@
     ]
   },
   {
-    "npi": "1003050402",
-    "name": "Dr. Marcos Ikeda, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Houston",
-    "state": "TX",
-    "zip": "77091",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 29.853067,
-    "longitude": -95.435966,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid"
-    ]
-  },
-  {
     "npi": "1003056847",
     "name": "Dr. Arthur Brock, MD",
     "credentials": [
@@ -24789,31 +24766,6 @@
       "medicare",
       "medicaid",
       "uhc"
-    ]
-  },
-  {
-    "npi": "1043221989",
-    "name": "Dr. Donald Blair, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Dallas",
-    "state": "TX",
-    "zip": "75237",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 32.665617,
-    "longitude": -96.873056,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "uhc",
-      "cigna"
     ]
   },
   {
@@ -50681,6 +50633,61 @@
       "medicaid",
       "aetna",
       "bcbs"
+    ]
+  },
+  {
+    "npi": "1083108369",
+    "name": "Dr. Hope Bauer, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Grand Rapids",
+    "state": "MI",
+    "zip": "49503",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.96212,
+    "longitude": -85.659394,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "uhc",
+      "cigna"
+    ]
+  },
+  {
+    "npi": "1083108476",
+    "name": "Dr. Nia Pellone, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "New York",
+    "state": "NY",
+    "zip": "10034",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.867076,
+    "longitude": -73.924312,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "humana",
+      "kaiser"
     ]
   },
   {

@@ -9,6 +9,7 @@ NPPES = FIXTURES / "nppes_sample.csv"
 MSCP = FIXTURES / "mscp_npis.json"
 SANCTIONS = FIXTURES / "ca_sanctions_sample.csv"
 SANCTIONS_NY = FIXTURES / "ny_opmc_sample.csv"
+SANCTIONS_TX = FIXTURES / "tx_tmb_sample.csv"
 
 
 def test_overlay_extracts_npis_from_provider_number_column():
@@ -140,6 +141,75 @@ def test_overlay_merge_runs_both_filters_in_one_pass():
     npis = {r.npi for r in filtered}
     assert "1881903422" not in npis  # Reyes (CA)
     assert "1922450088" not in npis  # Levin (NY)
+
+
+# ---------- TX TMB overlay (license-number-keyed via licensee registry) ---
+
+
+def test_tx_overlay_picks_up_only_sanctioned_rows():
+    """The TX dataset is the FULL licensee registry — most rows are clean.
+    Only rows whose disciplinary_status or license_status is non-NONE enter
+    the overlay. Empty license numbers are skipped, and clean rows
+    (NONE/NONE) must NOT be hits even when currently_licensed is 'N'
+    (a lapsed clean license isn't a sanction)."""
+    overlay = SanctionOverlay.from_tx_tmb_csv(SANCTIONS_TX)
+    # The fixture has 4 rows: Cooper (REVOKED, hit), Clean (NONE/NONE, no
+    # hit), Empty (no license number, skipped), Lapsed (NONE/NONE, no hit
+    # despite currently_licensed=N).
+    assert overlay.license_count() == 1
+    assert overlay.is_sanctioned_license_set([("TX", "TX_DISC_88")])
+    assert not overlay.is_sanctioned_license_set([("TX", "TX_CLEAN_42")])
+    assert not overlay.is_sanctioned_license_set([("TX", "TX_LAPSED_77")])
+
+
+def test_tx_state_isolation_against_ny():
+    """A TX-licensed candidate must not match an NY overlay entry that
+    happens to share a license number, and vice versa."""
+    tx = SanctionOverlay.from_tx_tmb_csv(SANCTIONS_TX)
+    # Cooper's license under any other state shouldn't fire.
+    assert not tx.is_sanctioned_license_set([("CA", "TX_DISC_88")])
+    assert not tx.is_sanctioned_license_set([("NY", "TX_DISC_88")])
+
+
+def test_build_filters_tx_sanctioned_provider_via_license_crosswalk():
+    """Cooper (NPI 1912345678) has TX license TX_DISC_88, which is on the
+    TX TMB overlay (REVOKED). He's filtered, attributed to license_drops."""
+    mscp = MscpOverlay.from_file(MSCP)
+    tx = SanctionOverlay.from_tx_tmb_csv(SANCTIONS_TX)
+
+    baseline, _ = build_directory_with_stats(NPPES, mscp)
+    assert any(r.npi == "1912345678" for r in baseline), (
+        "fixture sanity: Cooper survives baseline"
+    )
+
+    filtered, stats = build_directory_with_stats(NPPES, mscp, sanctions=tx)
+    assert not any(r.npi == "1912345678" for r in filtered)
+    assert stats.npi_drops == 0
+    assert stats.license_drops == 1
+    assert len(filtered) == len(baseline) - 1
+
+
+def test_per_source_attribution_tx_vs_ny():
+    """When CA + NY + TX overlays all run against the merged sanction set,
+    license_drops_by_state must attribute each license-keyed drop to the
+    state whose overlay actually matched (NY drops Levin, TX drops Cooper)."""
+    mscp = MscpOverlay.from_file(MSCP)
+    ca = SanctionOverlay.from_chhs_csv(SANCTIONS)
+    ny = SanctionOverlay.from_ny_opmc_csv(SANCTIONS_NY)
+    tx = SanctionOverlay.from_tx_tmb_csv(SANCTIONS_TX)
+    sources = {"ca": ca, "ny": ny, "tx": tx}
+    merged = SanctionOverlay.merge(*sources.values())
+
+    filtered, stats = build_directory_with_stats(
+        NPPES, mscp, sanctions=merged, sanctions_by_source=sources
+    )
+    assert stats.npi_drops == 1  # Reyes (CA-NPI)
+    assert stats.license_drops == 2  # Levin (NY) + Cooper (TX)
+    assert stats.license_drops_by_state == {"ny": 1, "tx": 1}
+    npis = {r.npi for r in filtered}
+    assert "1881903422" not in npis  # Reyes
+    assert "1922450088" not in npis  # Levin
+    assert "1912345678" not in npis  # Cooper
 
 
 def test_overlay_merge_preserves_membership_disjointly():

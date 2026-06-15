@@ -20,9 +20,15 @@ calls both, drops candidates where either fires, and counts each filter source
 separately so the sidecar metadata can report `caFiltered` / `nyFiltered`
 distinctly.
 
-CA today, NY today, NJ TBD (no public structured feed; NJ DCA disciplinary
-actions are PDFs scraped per-action — not the right shape for an honest
-overlay). New states land additively behind the same class.
+CA today, NY today, TX today (Texas Medical Board's "DataSet-01-All
+Licenses" — data.texas.gov tm3v-pfq9 — is a comprehensive licensee
+registry with explicit `disciplinary_status` + `license_status` +
+`currently_licensed` columns, so we filter directly on a sanctioned
+disposition rather than enumerating disciplinary orders).
+
+NJ TBD (no public structured feed; NJ DCA disciplinary actions are PDFs
+scraped per-action — not the right shape for an honest overlay). New
+states land additively behind the same class.
 
 Source CSVs are downloaded out-of-band (see scripts/refresh_national.sh and
 the runbook); we don't fetch them during the build to keep the pipeline
@@ -106,6 +112,88 @@ class SanctionOverlay:
                 for m in _NPI_TOKEN.findall(cell):
                     npis.add(m)
         return cls(npis=npis)
+
+    # Disciplinary-status values from the TX TMB dataset that represent an
+    # ACTIVE sanction we should filter on. Allowlist approach (rather than
+    # `!= NONE`) because the field also carries values like
+    # "DISP. ACTION CLEARED", "COMPLAINT DISMISSED", "SEE PREVIOUS ORDER" —
+    # historical references that don't necessarily mean the provider is
+    # currently sanctioned. False negatives (missing a real sanction) are
+    # bad, but so are false positives (dropping a cleared physician). When
+    # in doubt, leave it out — the overlay is one of several safety
+    # signals and we'd rather under-filter on this signal than misattribute.
+    _TX_ACTIVE_DISCIPLINARY_STATUSES: frozenset[str] = frozenset(
+        {
+            "SUSPENDED BY BOARD",
+            "CANCELLED BY BOARD",
+            "REVOKED",
+            "REVOKED BY BOARD",
+            "UNDER BOARD ORDER",
+            "TEMPORARILY SUSPENDED",
+            "FILED BY BOARD",
+        }
+    )
+    _TX_ACTIVE_LICENSE_STATUSES: frozenset[str] = frozenset(
+        {
+            "REVOKED",
+            "SUSPENDED",
+            "PERM. LICENSE RESTRICTED",
+            "AUTOMATIC LICENSURE CANCELLED",
+            "AUTOMATIC LIC (CANC) PENDING",
+        }
+    )
+
+    @classmethod
+    def from_tx_tmb_csv(cls, path: str | Path) -> "SanctionOverlay":
+        """Load Texas Medical Board's "DataSet-01-All Licenses" CSV.
+
+        Schema (data.texas.gov tm3v-pfq9, observed): License Type, First
+        Name, Last Name, License Number, Disciplinary Status, License
+        Status, Currently Licensed, plus address/date columns. The dataset
+        is the full Texas licensee registry, not just disciplinary actions
+        — so we filter directly on a sanctioned disposition rather than
+        enumerating orders. A licensee enters the overlay when its
+        `Disciplinary Status` or `License Status` is one of the active-
+        sanction values listed above (`_TX_ACTIVE_*`). This is an
+        allowlist, not a `!= NONE` test, because the dataset also carries
+        cleared / dismissed / historical references whose presence does NOT
+        mean the provider is currently sanctioned.
+
+        We deliberately do NOT use `Currently Licensed = N` as a sanction
+        signal: a provider may have let their TX license lapse cleanly
+        without any disciplinary stain (e.g. they moved out of state), and
+        they shouldn't be filtered from the directory on that basis when
+        they could be practicing under a clean license elsewhere.
+
+        Header naming: data.texas.gov exports column names with whitespace
+        (e.g. "License Number"); the underlying SODA API uses snake_case
+        (`license_number`). We accept both spellings on read so the same
+        loader works whether the maintainer downloads the CSV from the
+        web UI or from the API endpoint.
+        """
+        # Accept both "License Number" and "license_number" / etc.
+        def pick(row: dict, *aliases: str) -> str:
+            for a in aliases:
+                v = row.get(a)
+                if v is not None:
+                    return v
+            return ""
+
+        license_pairs: set[tuple[str, str]] = set()
+        with open(path, newline="", encoding="utf-8-sig") as fh:
+            reader = csv.DictReader(fh)
+            for row in reader:
+                disc = pick(row, "disciplinary_status", "Disciplinary Status").strip().upper()
+                stat = pick(row, "license_status", "License Status").strip().upper()
+                ln = pick(row, "license_number", "License Number").strip()
+                if not ln:
+                    continue
+                if (
+                    disc in cls._TX_ACTIVE_DISCIPLINARY_STATUSES
+                    or stat in cls._TX_ACTIVE_LICENSE_STATUSES
+                ):
+                    license_pairs.add(("TX", ln))
+        return cls(license_pairs=license_pairs)
 
     @classmethod
     def from_ny_opmc_csv(cls, path: str | Path) -> "SanctionOverlay":

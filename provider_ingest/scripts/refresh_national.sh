@@ -20,6 +20,10 @@
 #   SANCTIONS_NY Path to the NY Professional Medical Conduct Board Actions
 #                CSV (data.ny.gov ebmi-8ctw). Default: latest ny_opmc*.csv
 #                under the same dir as NPPES_ZIP. Set to empty string to skip.
+#   SANCTIONS_TX Path to the Texas Medical Board All-Licenses CSV
+#                (data.texas.gov tm3v-pfq9). Default: latest
+#                tx_tmb*licenses*.csv under the same dir as NPPES_ZIP.
+#                Set to empty string to skip.
 #
 # Flags:
 #   --dry-run    Print what would happen without invoking the build.
@@ -96,6 +100,9 @@ fi
 if [[ "${SANCTIONS_NY+set}" != "set" ]]; then
   SANCTIONS_NY="$(ls -1t "${NPPES_DIR}"/ny_opmc*.csv 2>/dev/null | head -1 || true)"
 fi
+if [[ "${SANCTIONS_TX+set}" != "set" ]]; then
+  SANCTIONS_TX="$(ls -1t "${NPPES_DIR}"/tx_tmb*licenses*.csv 2>/dev/null | head -1 || true)"
+fi
 
 # Use the zip's mtime as the dataset's source date. unzip preserves member
 # mtimes from the archive; the zip-itself mtime tracks the maintainer's
@@ -124,6 +131,11 @@ if [[ -n "$SANCTIONS_NY" ]]; then
 else
   echo "→ Sanctions NY: (none — set SANCTIONS_NY=/path/to/csv or place ny_opmc*.csv next to NPPES_ZIP)"
 fi
+if [[ -n "$SANCTIONS_TX" ]]; then
+  echo "→ Sanctions TX: $SANCTIONS_TX"
+else
+  echo "→ Sanctions TX: (none — set SANCTIONS_TX=/path/to/csv or place tx_tmb*licenses*.csv next to NPPES_ZIP)"
+fi
 
 if (( DRY_RUN )); then
   echo "DRY RUN — exiting without running the build."
@@ -148,6 +160,9 @@ if [[ -n "$SANCTIONS" ]]; then
 fi
 if [[ -n "$SANCTIONS_NY" ]]; then
   SANCTIONS_FLAG+=(--sanctions-ny "$SANCTIONS_NY")
+fi
+if [[ -n "$SANCTIONS_TX" ]]; then
+  SANCTIONS_FLAG+=(--sanctions-tx "$SANCTIONS_TX")
 fi
 
 time ./provider_ingest/.venv/bin/pause-provider-build \

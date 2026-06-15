@@ -496,14 +496,18 @@ components:
                     type: integer
                   description: >
                     Per-source breakdown of sanctioned drops, e.g.
-                    `{"ca": 588, "ny": 849}`. Keys: `ca` (Medi-Cal Suspended
-                    & Ineligible — NPI-keyed), `ny` (NY Professional Medical
-                    Conduct Board Actions — license-number-keyed via the
-                    NPPES `Provider License Number_<i>` cross-walk). New
-                    states land additively as new keys.
+                    `{"ca": 588, "ny": 849, "tx": 283}`. Keys: `ca`
+                    (Medi-Cal Suspended & Ineligible — NPI-keyed), `ny`
+                    (NY Professional Medical Conduct Board Actions —
+                    license-number-keyed via the NPPES `Provider License
+                    Number_<i>` cross-walk), `tx` (Texas Medical Board
+                    All-Licenses — license-number-keyed, allowlist of
+                    active-sanction dispositions). New states land
+                    additively as new keys.
                   example:
                     ca: 588
                     ny: 849
+                    tx: 283
                 sanctionsOverlaysUsed:
                   type: object
                   additionalProperties:

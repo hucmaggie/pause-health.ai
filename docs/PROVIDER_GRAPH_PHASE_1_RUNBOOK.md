@@ -75,29 +75,38 @@ loads). The frozen contract is `ProviderRecord` in
 > the strongest signal in plain English (e.g. "board-certified OB/GYN" for
 > `facog`) when matchType=relevant-local.
 
-> **Sanction filtering.** Every directory candidate is checked against two
+> **Sanction filtering.** Every directory candidate is checked against three
 > public-domain disciplinary feeds (see `provider_ingest/sanctions.py`):
 >
 > - **CA — Medi-Cal Suspended & Ineligible List** (CHHS, NPI-keyed): a
 >   free CSV refreshed monthly at data.chhs.ca.gov. NPIs that appear are
 >   dropped from the directory.
-> - **NY — Professional Medical Conduct Board Actions** (data.ny.gov,
->   17,950+ rows since 1990, license-number-keyed): the dataset doesn't
->   carry NPIs, so the build cross-walks `(NY, license_num)` against each
->   NPPES candidate's own `Provider License Number_<i>` columns and drops
->   the matches. The cross-walk is built during the same single NPPES pass
->   the rest of the pipeline uses — no second walk over the 9.6M-row file.
+> - **NY — Professional Medical Conduct Board Actions** (data.ny.gov
+>   ebmi-8ctw, 17,950+ rows since 1990, license-number-keyed): the dataset
+>   doesn't carry NPIs, so the build cross-walks `(NY, license_num)`
+>   against each NPPES candidate's own `Provider License Number_<i>`
+>   columns and drops the matches.
+> - **TX — Texas Medical Board All-Licenses** (data.texas.gov tm3v-pfq9,
+>   ~507K rows, license-number-keyed): the full TX licensee registry with
+>   `Disciplinary Status` and `License Status` columns. We use an
+>   *allowlist* of active-sanction values (e.g. SUSPENDED BY BOARD, REVOKED,
+>   UNDER BOARD ORDER, AUTOMATIC LICENSURE CANCELLED) — `!= NONE` would
+>   drop providers whose orders have been CLEARED or COMPLAINT DISMISSED,
+>   so we only filter on the explicitly-active dispositions. Cross-walk
+>   mechanics identical to NY.
 >
-> Survivors carry `licenseStatus: "active"`. Per-source counts ride on the
-> sidecar metadata (`provenance.dataset.sanctionedFilteredBySource`) so
-> consumers can attribute each drop to its source. The committed June 2026
-> run dropped **588** providers via CA + **849** via NY (1,437 total),
-> verified end-to-end. Refresh: download `suspended-ineligible-list-*.csv`
-> (CHHS) and `ny_opmc-*.csv` (data.ny.gov ebmi-8ctw) into the same
-> directory as the NPPES zip — the harness auto-detects the latest of each.
-> NJ stays out for now — the NJ Board's disciplinary actions are PDFs
-> scraped per-action, not a structured feed; we don't ship a brittle
-> scraper. New states land additively behind the same overlay class.
+> All three filters run during the same single NPPES pass — no second walk
+> over the 9.6M-row file. Survivors carry `licenseStatus: "active"`.
+> Per-source counts ride on the sidecar metadata
+> (`provenance.dataset.sanctionedFilteredBySource`). The committed June
+> 2026 run dropped **588** via CA + **849** via NY + **283** via TX (1,720
+> total) before sort/limit, verified end-to-end. Refresh: download
+> `suspended-ineligible-list-*.csv` (CHHS), `ny_opmc-*.csv` (data.ny.gov),
+> and `tx_tmb_all_licenses-*.csv` (data.texas.gov) into the same directory
+> as the NPPES zip — the harness auto-detects the latest of each. NJ stays
+> out for now — the NJ Board's disciplinary actions are PDFs scraped
+> per-action, not a structured feed; we don't ship a brittle scraper. New
+> states land additively behind the same overlay class.
 
 > **Insurance acceptance — synthetic, real-shaped.** Every provider also
 > carries `insuranceAccepted: string[]` (canonical tokens: medicare,
@@ -299,9 +308,10 @@ serve the NPPES-derived rows to keep the two paths shape-identical.
 
 ## What Phase 1 deliberately does **not** do
 
-- **State license verification — broad coverage** — Phase 2 (CA Medi-Cal
-  S&I + NY OPMC filters landed; NJ stays out until they publish structured
-  data; other states will land additively behind the same overlay class).
+- **State license verification — broader coverage** — Phase 2 (CA Medi-Cal
+  S&I + NY OPMC + TX TMB filters landed; NJ stays out until they publish
+  structured data; other states land additively behind the same overlay
+  class).
 - **Clinic-site service-mention detection** — Phase 2 (NPPES-resident
   credential + multi-taxonomy signals landed; clinic-site scraping is the
   next layer).

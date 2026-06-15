@@ -23,8 +23,8 @@ def _build():
 
 def test_build_filters_orgs_and_irrelevant():
     records = _build()
-    # 14 fixture rows: 1 org + 1 orthopaedist filtered → 12 kept.
-    assert len(records) == 12
+    # 15 fixture rows: 1 org + 1 orthopaedist filtered → 13 kept.
+    assert len(records) == 13
     npis = {r.npi for r in records}
     assert "1790123456" not in npis  # org (Entity Type 2)
     assert "1689012345" not in npis  # orthopaedic surgeon

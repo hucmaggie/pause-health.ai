@@ -16,7 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field as dataclass_field
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -36,13 +36,18 @@ class BuildStats:
     `npi_drops` is candidates filtered by an NPI-keyed sanction overlay
     (e.g. CA Medi-Cal S&I). `license_drops` is candidates filtered because
     one of their (state, license_num) pairs matched a state-license-keyed
-    overlay (e.g. NY OPMC). `sanction_drops` is the total of both — kept
-    as a back-compat alias for callers that don't care about the source
-    breakdown.
+    overlay (e.g. NY OPMC, TX TMB). `license_drops_by_state` attributes
+    each license-keyed drop to the state whose overlay matched (resolved
+    by re-checking each per-source overlay against the dropped candidate
+    so two overlays matching the same candidate both get credit; the
+    `license_drops` total stays equal to the unique-candidate count).
+    `sanction_drops` is the total of NPI + license — kept as a back-compat
+    alias for callers that don't care about the source breakdown.
     """
 
     npi_drops: int = 0
     license_drops: int = 0
+    license_drops_by_state: dict[str, int] = dataclass_field(default_factory=dict)
 
     @property
     def sanction_drops(self) -> int:
@@ -57,6 +62,7 @@ def build_directory(
     keep_all_certified: bool = False,
     centroids: dict[str, LatLng] | None = None,
     sanctions: SanctionOverlay | None = None,
+    sanctions_by_source: dict[str, SanctionOverlay] | None = None,
 ) -> list[ProviderRecord]:
     """Stream one or more NPPES files → filtered, scored, sorted ProviderRecords.
 
@@ -85,6 +91,7 @@ def build_directory(
         keep_all_certified=keep_all_certified,
         centroids=centroids,
         sanctions=sanctions,
+        sanctions_by_source=sanctions_by_source,
     )
     return records
 
@@ -97,11 +104,15 @@ def build_directory_with_stats(
     keep_all_certified: bool = False,
     centroids: dict[str, LatLng] | None = None,
     sanctions: SanctionOverlay | None = None,
+    sanctions_by_source: dict[str, SanctionOverlay] | None = None,
 ) -> tuple[list[ProviderRecord], BuildStats]:
     """Same as build_directory, plus the BuildStats the CLI surfaces.
 
     Kept as a sibling so the historical `build_directory(...) -> list[...]`
-    signature stays untouched for in-tree callers and tests.
+    signature stays untouched for in-tree callers and tests. When
+    `sanctions_by_source` is supplied (a {source_key: SanctionOverlay} map),
+    license-keyed drops are attributed back to each overlay so the sidecar
+    can report `{ ny: 849, tx: 211 }` rather than just a rolled-up count.
     """
     if isinstance(nppes_paths, (str, Path)):
         nppes_paths = [nppes_paths]
@@ -114,6 +125,7 @@ def build_directory_with_stats(
         keep_all_certified=keep_all_certified,
         centroids=centroids,
         sanctions=sanctions,
+        sanctions_by_source=sanctions_by_source,
     )
 
 
@@ -125,6 +137,7 @@ def _build_with_stats(
     keep_all_certified: bool,
     centroids: dict[str, LatLng] | None,
     sanctions: SanctionOverlay | None,
+    sanctions_by_source: dict[str, SanctionOverlay] | None = None,
 ) -> tuple[list[ProviderRecord], BuildStats]:
     if isinstance(nppes_paths, (str, Path)):
         nppes_paths = [nppes_paths]
@@ -149,17 +162,30 @@ def _build_with_stats(
     # Sanction filter: drop every candidate matching an NPI-keyed overlay
     # entry OR any of its (state, license_num) pairs matching a state-
     # license-keyed overlay entry. Counts are tracked separately so the CLI
-    # / sidecar metadata can report each source's contribution.
+    # / sidecar metadata can report each source's contribution. When
+    # `sanctions_by_source` is provided, license-keyed drops are also
+    # attributed back to the per-source overlay that matched (the unified
+    # `sanctions` overlay drives the actual filter — we just re-check each
+    # per-source overlay against the dropped candidate's licenses to
+    # attribute it).
     npi_drops = 0
     license_drops = 0
+    license_drops_by_state: dict[str, int] = {}
     if sanctions is not None and len(sanctions) > 0:
         kept: dict[str, ProviderRecord] = {}
         for npi, rec in by_npi.items():
             if sanctions.is_sanctioned_npi(npi):
                 npi_drops += 1
                 continue
-            if sanctions.is_sanctioned_license_set(licenses_by_npi.get(npi, [])):
+            licenses = licenses_by_npi.get(npi, [])
+            if sanctions.is_sanctioned_license_set(licenses):
                 license_drops += 1
+                if sanctions_by_source:
+                    for source, source_overlay in sanctions_by_source.items():
+                        if source_overlay.is_sanctioned_license_set(licenses):
+                            license_drops_by_state[source] = (
+                                license_drops_by_state.get(source, 0) + 1
+                            )
                 continue
             kept[npi] = rec
         by_npi = kept
@@ -177,7 +203,11 @@ def _build_with_stats(
             records.sort(key=lambda r: (-r.graphScore, r.npi))
         else:
             records = records[:limit]
-    return records, BuildStats(npi_drops=npi_drops, license_drops=license_drops)
+    return records, BuildStats(
+        npi_drops=npi_drops,
+        license_drops=license_drops,
+        license_drops_by_state=license_drops_by_state,
+    )
 
 
 def write_directory(records: list[ProviderRecord], out_path: str | Path) -> None:
@@ -345,20 +375,33 @@ def main(argv: list[str] | None = None) -> int:
             "the sidecar metadata."
         ),
     )
+    parser.add_argument(
+        "--sanctions-tx",
+        default=None,
+        help=(
+            "Optional path to the Texas Medical Board All-Licenses CSV "
+            "(data.texas.gov tm3v-pfq9). Filters by (TX, license_num) for "
+            "rows with non-NONE disciplinary_status or license_status. "
+            "Counted separately under the 'tx' source key in the sidecar "
+            "metadata."
+        ),
+    )
     args = parser.parse_args(argv)
 
     overlay = MscpOverlay.from_file(args.mscp) if args.mscp else MscpOverlay.empty()
 
-    # Merge per-source sanction overlays into a single union so the build
-    # pass only walks NPPES once. Per-source counts come from BuildStats.
-    sanction_sources: list[SanctionOverlay] = []
+    # Build per-source overlays so license-keyed drops can be attributed
+    # back (NY vs TX), then merge them into the union the build pass uses.
+    sources_by_key: dict[str, SanctionOverlay] = {}
     if args.sanctions:
-        sanction_sources.append(SanctionOverlay.from_chhs_csv(args.sanctions))
+        sources_by_key["ca"] = SanctionOverlay.from_chhs_csv(args.sanctions)
     if args.sanctions_ny:
-        sanction_sources.append(SanctionOverlay.from_ny_opmc_csv(args.sanctions_ny))
+        sources_by_key["ny"] = SanctionOverlay.from_ny_opmc_csv(args.sanctions_ny)
+    if args.sanctions_tx:
+        sources_by_key["tx"] = SanctionOverlay.from_tx_tmb_csv(args.sanctions_tx)
     sanctions = (
-        SanctionOverlay.merge(*sanction_sources)
-        if sanction_sources
+        SanctionOverlay.merge(*sources_by_key.values())
+        if sources_by_key
         else SanctionOverlay.empty()
     )
 
@@ -368,19 +411,22 @@ def main(argv: list[str] | None = None) -> int:
         limit=args.limit,
         keep_all_certified=args.keep_all_certified,
         sanctions=sanctions,
+        sanctions_by_source=sources_by_key,
     )
     write_directory(records, args.out)
 
     source_date = args.source_date or _largest_input_mtime_iso(args.nppes)
-    # Per-source counts: NPI-keyed overlays today are CA-only, license-keyed
-    # are NY-only. If new states with the same shape land later, this
-    # mapping widens (CA-keyed by NPI doesn't conflict with NJ-keyed-by-NPI;
-    # we'd need a more granular tag then).
+    # Per-source drop attribution. CA is NPI-keyed (today the only NPI
+    # overlay), so it claims the full npi_drops. NY/TX are license-keyed and
+    # come from license_drops_by_state. New NPI-keyed overlays would need a
+    # more granular npi_drops_by_source the same way.
     drops_by_source: dict[str, int] = {}
     if args.sanctions:
         drops_by_source["ca"] = stats.npi_drops
     if args.sanctions_ny:
-        drops_by_source["ny"] = stats.license_drops
+        drops_by_source["ny"] = stats.license_drops_by_state.get("ny", 0)
+    if args.sanctions_tx:
+        drops_by_source["tx"] = stats.license_drops_by_state.get("tx", 0)
     meta = build_metadata(
         records=records,
         nppes_paths=args.nppes,
@@ -388,7 +434,11 @@ def main(argv: list[str] | None = None) -> int:
         limit=args.limit,
         keep_all_certified=args.keep_all_certified,
         source_date=source_date,
-        sanctions_paths={"ca": args.sanctions, "ny": args.sanctions_ny},
+        sanctions_paths={
+            "ca": args.sanctions,
+            "ny": args.sanctions_ny,
+            "tx": args.sanctions_tx,
+        },
         sanction_drops=stats.sanction_drops,
         sanction_drops_by_source=drops_by_source,
     )
@@ -400,7 +450,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.sanctions:
         note_parts.append(f"CA filtered {stats.npi_drops}")
     if args.sanctions_ny:
-        note_parts.append(f"NY filtered {stats.license_drops}")
+        note_parts.append(f"NY filtered {stats.license_drops_by_state.get('ny', 0)}")
+    if args.sanctions_tx:
+        note_parts.append(f"TX filtered {stats.license_drops_by_state.get('tx', 0)}")
     sanction_note = f" — {', '.join(note_parts)}" if note_parts else ""
     print(
         f"Wrote {len(records)} providers ({certified} MSCP-certified{sanction_note}) "

@@ -1,0 +1,5 @@
+license_type,first_name,last_name,license_number,license_issue_date,license_expiration_date,registration_status,registration_status_date,disciplinary_status,license_status,degree,currently_licensed
+Physician,Avery,Cooper,TX_DISC_88,2010-01-01T00:00:00.000,2026-12-31T00:00:00.000,Active,2024-01-01T00:00:00.000,REVOKED,REVOKED,MD,N
+Physician,Sample,Clean,TX_CLEAN_42,2015-06-01T00:00:00.000,2027-06-30T00:00:00.000,Active,2025-01-01T00:00:00.000,NONE,NONE,MD,Y
+Physician,Sample,Empty,,2015-06-01T00:00:00.000,2027-06-30T00:00:00.000,Active,2025-01-01T00:00:00.000,REVOKED,REVOKED,MD,N
+Physician,Sample,Lapsed,TX_LAPSED_77,2010-01-01T00:00:00.000,2020-12-31T00:00:00.000,Terminated,2020-12-31T00:00:00.000,NONE,NONE,MD,N
