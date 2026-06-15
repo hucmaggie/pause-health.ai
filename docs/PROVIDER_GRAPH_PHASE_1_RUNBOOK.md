@@ -77,6 +77,17 @@ Sources, in order of preference:
 The join in `mscp.py` is identical regardless of provenance. Omit `--mscp`
 entirely to build with no certification overlay.
 
+**Plus: self-reported credentials in NPPES (no overlay needed).** Independent of
+the overlay, the pipeline also marks a provider `menopauseCertified` when they
+self-report **MSCP** (or its former name **NCMP**) in the NPPES "Provider
+Credential Text" field (`nppes.py` → `_has_menopause_credential`). This is an
+honest signal from the public registry — not a fabricated certification — so a
+national run yields real certified coverage for the providers who list it, even
+before a licensed feed lands. Coverage is necessarily **partial** (many
+certified practitioners don't record it in NPPES), and the tokens are specific
+enough that false positives are rare. The licensed Menopause Society feed
+remains the authoritative source; the two are unioned.
+
 ---
 
 ## Step 3 — Run the pipeline
@@ -85,18 +96,26 @@ entirely to build with no certification overlay.
 cd provider_ingest
 pause-provider-build \
   --nppes /path/to/npidata_pfile_YYYYMMDD-YYYYMMDD.csv \
-  --mscp  /path/to/mscp_npis.json \
+  --nppes examples/fixtures/nppes_sample.csv \
+  --mscp  examples/fixtures/mscp_npis.json \
   --out   ../frontend/lib/provider-directory.generated.json \
   --limit 5000
 ```
 
+- **Pass `--nppes` twice** (national file **and** the bundled demo fixture). Inputs
+  are merged and de-duplicated by NPI, so the six demo personas keep resolving to
+  their curated local certified providers (green demo) while the national file
+  adds real coverage for every other ZIP. Real NPPES NPIs never collide with the
+  synthetic demo NPIs.
 - The reader streams row-by-row (constant memory), so the full file is fine.
 - Output is sorted by `graphScore` descending; `--limit N` keeps the top-N.
   Keep the committed/bundled dataset modest (a few thousand rows at most) so the
   frontend bundle stays lean — the directory is filtered server-side per query,
   not paginated client-side.
 - Expect roughly tens of thousands of survivors nationally before `--limit`
-  (the menopause taxonomy filter cuts the ~8.5M-row file by ~100×).
+  (the menopause taxonomy filter cuts the ~8.5M-row file by ~100×). `menopause=true`
+  queries then return real providers who are on the MSCP overlay **or** self-report
+  MSCP/NCMP in NPPES — no contract or agent change required.
 
 It prints e.g. `Wrote 5000 providers (1234 MSCP-certified) from … → …`.
 

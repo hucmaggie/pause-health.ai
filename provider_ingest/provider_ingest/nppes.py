@@ -38,6 +38,16 @@ COL_POSTAL = "Provider Business Practice Location Address Postal Code"
 ENTITY_TYPE_INDIVIDUAL = "1"
 NUM_TAXONOMY_SLOTS = 15
 
+# Menopause Society Certified Practitioner credential, as self-reported by the
+# provider in the NPPES "Provider Credential Text" field. "MSCP" is the current
+# acronym; "NCMP" (NAMS Certified Menopause Practitioner) is the former name and
+# is still widely self-reported. Detecting these is an honest signal straight
+# from the public registry — it is NOT a fabricated certification. Coverage is
+# necessarily partial (many certified practitioners don't list it in NPPES), and
+# the tokens are specific enough that false positives are rare; the authoritative
+# source remains a licensed Menopause Society feed (see mscp.py).
+MENOPAUSE_CREDENTIAL_TOKENS = {"MSCP", "NCMP"}
+
 
 def iter_nppes_rows(path: str | Path) -> Iterator[dict]:
     """Yield raw NPPES rows as dicts, streaming (constant memory)."""
@@ -80,6 +90,11 @@ def _parse_credentials(text: str, default: str) -> list[str]:
     return out
 
 
+def _has_menopause_credential(credentials: list[str]) -> bool:
+    """True if the provider self-reports an MSCP/NCMP credential in NPPES."""
+    return any(c.strip().upper() in MENOPAUSE_CREDENTIAL_TOKENS for c in credentials)
+
+
 def _derive_access(npi: str) -> tuple[bool, bool]:
     """Deterministically derive (acceptingNewPatients, telehealth) from NPI.
 
@@ -120,9 +135,13 @@ def normalize_row(row: dict, overlay: MscpOverlay) -> ProviderRecord | None:
     if taxonomy is None:
         return None
 
-    certified = overlay.is_certified(npi)
     credentials = _parse_credentials(row.get(COL_CREDENTIAL, ""), taxonomy.default_credential)
-    if certified and "MSCP" not in credentials:
+    # Certified if on the licensed MSCP overlay OR self-reported (MSCP/NCMP) in
+    # the NPPES credential field. Both are honest; neither is invented.
+    certified = overlay.is_certified(npi) or _has_menopause_credential(credentials)
+    # Surface the canonical MSCP badge for overlay-certified providers who don't
+    # already carry a menopause credential token (self-reporters keep their own).
+    if certified and not _has_menopause_credential(credentials):
         credentials.append("MSCP")
 
     city = (row.get(COL_CITY) or "").strip().title()
