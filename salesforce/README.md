@@ -25,6 +25,7 @@ salesforce/
 │   └── pause-provider-directory.oas.yaml   # OAS 3.0 input for the External Service
 └── force-app/main/default/
     ├── namedCredentials/Pause_Provider_API.namedCredential-meta.xml
+    ├── objects/MessagingSession/fields/Pause_Patient_Insurance__c.field-meta.xml
     ├── objects/MessagingSession/fields/Pause_Patient_Zip__c.field-meta.xml
     ├── flows/Pause_Intake_Prechat_Router.flow-meta.xml
     ├── messagingChannels/Messaging_for_In_App_Web.messagingChannel-meta.xml
@@ -41,8 +42,9 @@ salesforce/
 | --- | --- | --- |
 | `Pause_Provider_API` | NamedCredential | No-auth callout to `https://pause-health.ai` for the Find-a-Provider action |
 | `MessagingSession.Pause_Patient_Zip__c` | CustomField | Patient ZIP handed in-band via hidden prechat → bot context → action `zip` input |
+| `MessagingSession.Pause_Patient_Insurance__c` | CustomField | Patient insurance plan handed in-band via hidden prechat → bot context → action `insurance` input (synthetic source today; soft filter) |
 | `Pause_Intake_Prechat_Router` | Flow | Routing flow that stamps the prechat dossier onto the MessagingSession |
-| `Messaging_for_In_App_Web` | MessagingChannel | Channel with the `Patient_Zip` custom parameter + parameter mapping |
+| `Messaging_for_In_App_Web` | MessagingChannel | Channel with the `Patient_Zip` + `Patient_Insurance` custom parameters + parameter mappings |
 | `Pause_Health_Intake_Prechat_Dossier` | PermissionSet | FLS for the dossier fields on MessagingSession |
 
 **Still org-managed — not yet committed** (pull with `./retrieve.sh`):
@@ -52,6 +54,10 @@ salesforce/
   `Pause_Patient_Context_JSON__c`, etc.). The permission set above grants FLS on all
   of them; their `CustomField` definitions were retrieved to `/tmp` historically and
   have not been committed.
+- The **agent's bot context variable** `Pause_Patient_Insurance` and the
+  **`findMenopauseProviders` action `insurance` input binding** to that variable
+  (parallel to `Pause_Patient_Zip` on the existing zip input). Authored in
+  Agent Builder UI; the runbook has paste-ready copy.
 - The **Agent** itself: `Pause_Health_Intake_Agent` (`Bot` context variables +
   `GenAiPlannerBundle` topic/reasoning instructions + `GenAiPlugin`/`GenAiFunction`
   topics). The agent is authored in **Agent Builder (UI)**; its reasoning copy lives
@@ -74,7 +80,7 @@ This deploys only the members in `manifest/package.xml`. It works against
 `trailsignup` because the broader dossier fields already exist there.
 
 **Fresh org?** Run `./retrieve.sh` first (or deploy the dossier fields some other
-way) — the permission set references ~21 fields, so deploying it before those
+way) — the permission set references ~22 fields, so deploying it before those
 fields exist fails with undefined-field errors.
 
 ## Retrieve (make the repo the full source of truth)

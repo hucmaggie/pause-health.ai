@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Pause_Patient_Insurance__c</fullName>
+    <label>Pause Patient Insurance</label>
+    <type>Text</type>
+    <length>32</length>
+    <required>false</required>
+    <externalId>false</externalId>
+    <trackHistory>false</trackHistory>
+    <description>Patient insurance plan handed in-band via hidden prechat (canonical token: medicare/medicaid/aetna/bcbs/uhc/cigna/humana/kaiser); mapped to bot context Pause_Patient_Insurance and the Find-a-Provider action insurance input. Note: insuranceAccepted on the Pause provider directory is synthetically derived today (no public payer feed); agent should frame the match as a soft filter, not a guarantee.</description>
+</CustomField>

@@ -21,6 +21,7 @@
         <members>Pause_Mood_Score__c</members>
         <members>Pause_Patient_Context_JSON__c</members>
         <members>Pause_Patient_Id__c</members>
+        <members>Pause_Patient_Insurance__c</members>
         <members>Pause_Patient_Percentile__c</members>
         <members>Pause_Patient_Zip__c</members>
         <members>Pause_Primary_Symptom__c</members>

@@ -422,18 +422,26 @@ to the embed. Until it's registered + mapped on the Salesforce side, the SDK
 drops it (graceful — the agent just uses whatever the patient says, or
 nothing).
 
-To wire it up, follow the same six steps from "Auto-passing the ZIP" above
-with `Patient_Zip` → `Patient_Insurance` substituted throughout:
+**Steps 1–4 are version-controlled** in `salesforce/` and deploy via
+`./salesforce/deploy.sh trailsignup`:
 
-1. Add `Patient_Insurance` as a **hidden** prechat field on the
-   `Pause_Health_Intake` deployment.
-2. Add `<customParameters>` `Patient_Insurance` to the
-   `Messaging_for_In_App_Web` channel.
-3. Create `Pause_Patient_Insurance__c` (Text, 32) on `MessagingSession` and
-   grant FLS on the `Pause_Health_Intake_Prechat_Dossier` permission set.
-4. Add input variable `Patient_Insurance` to `Pause_Intake_Prechat_Router` and
-   write it to `MessagingSession.Pause_Patient_Insurance__c`.
-5. Add bot context variable `Pause_Patient_Insurance` mapped to that field.
+1. ✅ **MessagingSession field** — `Pause_Patient_Insurance__c` (Text, 32) is
+   tracked at
+   `salesforce/force-app/main/default/objects/MessagingSession/fields/Pause_Patient_Insurance__c.field-meta.xml`.
+2. ✅ **Permission set** — `Pause_Health_Intake_Prechat_Dossier` already
+   grants FLS on the new field (deployed alongside the field).
+3. ✅ **Routing Flow** — `Pause_Intake_Prechat_Router` declares the
+   `Patient_Insurance` input variable and writes it to
+   `Pause_Patient_Insurance__c` on the existing `Write_Dossier_To_Session`
+   record-update.
+4. ✅ **Channel customParameter** — `Messaging_for_In_App_Web` declares the
+   `Patient_Insurance` `<customParameters>` block with the same
+   `actionParameterMappings` shape as the other dossier fields.
+
+**Steps 5–6 stay org-managed** (Agent Builder UI; not in repo):
+
+5. **Bot context variable** — add `Pause_Patient_Insurance` (Text), mapped to
+   `MessagingSession.Pause_Patient_Insurance__c`.
 6. In the **Find a Provider** subagent, set the `findMenopauseProviders`
    action's **`insurance` input** to **`$Context.Pause_Patient_Insurance`**.
    Update reasoning so the agent only asks about insurance when that variable
@@ -447,9 +455,15 @@ with `Patient_Zip` → `Patient_Insurance` substituted throughout:
 
    Then **Commit Version → Activate**.
 
+**Last step — register the prechat field on the deployment**: in Setup →
+Embedded Service Deployments → `Pause_Health_Intake` → Chat Settings →
+Prechat, add `Patient_Insurance` as a *hidden* field. (Same one-click step
+as for `Patient_Zip`; not deployable as metadata.) Until this is done the
+SDK logs `invalid field name Patient_Insurance` and drops the value.
+
 The Care Router and the AgentforceFallback fallback flow already use
 `patientInsurance` end-to-end today; the live agent inherits the same
-behavior the moment Patient_Insurance is registered upstream.
+behavior the moment steps 5–6 + the prechat registration are done.
 
 ## When the live MuleSoft API replaces the public endpoint
 

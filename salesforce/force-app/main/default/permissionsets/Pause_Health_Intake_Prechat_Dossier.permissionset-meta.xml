@@ -83,6 +83,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>MessagingSession.Pause_Patient_Insurance__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>MessagingSession.Pause_Patient_Percentile__c</field>
         <readable>true</readable>
     </fieldPermissions>
