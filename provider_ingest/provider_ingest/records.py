@@ -36,6 +36,13 @@ class ProviderRecord:
     # actually delivers menopause care — feeds a capped bump on graphScore and
     # is shown to the patient as chips. Empty list when nothing matched.
     serviceSignals: list[str] = field(default_factory=list)
+    # Disposition against published state sanction lists. Today the only
+    # source is the CA Medi-Cal Suspended & Ineligible list (see
+    # sanctions.py); a provider on that list is filtered out at build time,
+    # so survivors always carry "active" here. The field exists so the
+    # contract is honest about what was checked and so additional states /
+    # statuses (e.g. "probation") can land additively.
+    licenseStatus: str = "active"
 
     def to_dict(self) -> dict:
         return asdict(self)

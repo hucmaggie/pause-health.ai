@@ -14,6 +14,9 @@
 #   NPPES_OUT    Output directory JSON. Default: the committed
 #                frontend/lib/provider-directory.generated.json.
 #   NPPES_LIMIT  Non-certified provider cap. Default: 2000.
+#   SANCTIONS    Path to the CA Medi-Cal Suspended & Ineligible List CSV.
+#                Default: latest suspended-ineligible-list-*.csv under the
+#                same dir as NPPES_ZIP. Set to empty string to skip.
 #
 # Flags:
 #   --dry-run    Print what would happen without invoking the build.
@@ -80,6 +83,14 @@ NPPES_OUT="${NPPES_OUT:-frontend/lib/provider-directory.generated.json}"
 NPPES_LIMIT="${NPPES_LIMIT:-2000}"
 FIFO=".scratch/npi_refresh.fifo"
 
+# Sanctions overlay (CA Medi-Cal Suspended & Ineligible List). Auto-discover
+# the latest CSV beside the NPPES zip; an empty SANCTIONS env var skips the
+# overlay entirely (useful for clean baseline diffs against an old build).
+if [[ "${SANCTIONS+set}" != "set" ]]; then
+  NPPES_DIR="$(dirname "$NPPES_ZIP")"
+  SANCTIONS="$(ls -1t "${NPPES_DIR}"/suspended-ineligible-list-*.csv 2>/dev/null | head -1 || true)"
+fi
+
 # Use the zip's mtime as the dataset's source date. unzip preserves member
 # mtimes from the archive; the zip-itself mtime tracks the maintainer's
 # download time. Both are honest signals — we report the file as the source
@@ -97,6 +108,11 @@ echo "→ NPPES member: $MEMBER"
 echo "→ Source date:  $SOURCE_DATE"
 echo "→ Output:       $NPPES_OUT"
 echo "→ Limit:        $NPPES_LIMIT (--keep-all-certified)"
+if [[ -n "$SANCTIONS" ]]; then
+  echo "→ Sanctions:    $SANCTIONS"
+else
+  echo "→ Sanctions:    (none — set SANCTIONS=/path/to/csv or place suspended-ineligible-list-*.csv next to NPPES_ZIP)"
+fi
 
 if (( DRY_RUN )); then
   echo "DRY RUN — exiting without running the build."
@@ -115,6 +131,11 @@ UNZIP_PID=$!
 
 # National file FIRST, demo fixture LAST (last-wins so the demo personas keep
 # resolving to their curated local certified providers — see build.py docs).
+SANCTIONS_FLAG=()
+if [[ -n "$SANCTIONS" ]]; then
+  SANCTIONS_FLAG=(--sanctions "$SANCTIONS")
+fi
+
 time ./provider_ingest/.venv/bin/pause-provider-build \
   --nppes "$FIFO" \
   --nppes provider_ingest/examples/fixtures/nppes_sample.csv \
@@ -122,7 +143,8 @@ time ./provider_ingest/.venv/bin/pause-provider-build \
   --out   "$NPPES_OUT" \
   --keep-all-certified \
   --limit "$NPPES_LIMIT" \
-  --source-date "$SOURCE_DATE"
+  --source-date "$SOURCE_DATE" \
+  "${SANCTIONS_FLAG[@]}"
 
 wait "$UNZIP_PID" 2>/dev/null || true
 echo "DONE: refreshed $NPPES_OUT (and ${NPPES_OUT%.json}.meta.json)."

@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -23,8 +24,16 @@ from .centroids import LatLng, default_centroids
 from .mscp import MscpOverlay
 from .nppes import iter_nppes_rows, normalize_row
 from .records import ProviderRecord
+from .sanctions import SanctionOverlay
 
 PathLike = str | Path
+
+
+@dataclass(frozen=True)
+class BuildStats:
+    """Counts the CLI surfaces; not part of the directory contract."""
+
+    sanction_drops: int = 0
 
 
 def build_directory(
@@ -34,6 +43,7 @@ def build_directory(
     limit: int | None = None,
     keep_all_certified: bool = False,
     centroids: dict[str, LatLng] | None = None,
+    sanctions: SanctionOverlay | None = None,
 ) -> list[ProviderRecord]:
     """Stream one or more NPPES files → filtered, scored, sorted ProviderRecords.
 
@@ -55,6 +65,59 @@ def build_directory(
     if centroids is None:
         centroids = default_centroids()
 
+    records, _ = _build_with_stats(
+        nppes_paths,
+        overlay,
+        limit=limit,
+        keep_all_certified=keep_all_certified,
+        centroids=centroids,
+        sanctions=sanctions,
+    )
+    return records
+
+
+def build_directory_with_stats(
+    nppes_paths: PathLike | Iterable[PathLike],
+    overlay: MscpOverlay,
+    *,
+    limit: int | None = None,
+    keep_all_certified: bool = False,
+    centroids: dict[str, LatLng] | None = None,
+    sanctions: SanctionOverlay | None = None,
+) -> tuple[list[ProviderRecord], BuildStats]:
+    """Same as build_directory, plus the BuildStats the CLI surfaces.
+
+    Kept as a sibling so the historical `build_directory(...) -> list[...]`
+    signature stays untouched for in-tree callers and tests.
+    """
+    if isinstance(nppes_paths, (str, Path)):
+        nppes_paths = [nppes_paths]
+    if centroids is None:
+        centroids = default_centroids()
+    return _build_with_stats(
+        nppes_paths,
+        overlay,
+        limit=limit,
+        keep_all_certified=keep_all_certified,
+        centroids=centroids,
+        sanctions=sanctions,
+    )
+
+
+def _build_with_stats(
+    nppes_paths: Iterable[PathLike],
+    overlay: MscpOverlay,
+    *,
+    limit: int | None,
+    keep_all_certified: bool,
+    centroids: dict[str, LatLng] | None,
+    sanctions: SanctionOverlay | None,
+) -> tuple[list[ProviderRecord], BuildStats]:
+    if isinstance(nppes_paths, (str, Path)):
+        nppes_paths = [nppes_paths]
+    if centroids is None:
+        centroids = default_centroids()
+
     by_npi: dict[str, ProviderRecord] = {}
     for path in nppes_paths:
         for row in iter_nppes_rows(path):
@@ -62,6 +125,16 @@ def build_directory(
             if rec is None:
                 continue
             by_npi[rec.npi] = rec
+
+    # Sanction filter: drop every NPI on the suspended/ineligible overlay.
+    # The count rides on BuildStats so the CLI / sidecar metadata can report
+    # how many directory candidates were filtered for safety.
+    if sanctions is not None and len(sanctions) > 0:
+        before = len(by_npi)
+        by_npi = {n: r for n, r in by_npi.items() if not sanctions.is_sanctioned(n)}
+        sanction_drops = before - len(by_npi)
+    else:
+        sanction_drops = 0
 
     records = list(by_npi.values())
     # Sort by graphScore desc, tie-break on NPI for determinism.
@@ -76,7 +149,7 @@ def build_directory(
             records.sort(key=lambda r: (-r.graphScore, r.npi))
         else:
             records = records[:limit]
-    return records
+    return records, BuildStats(sanction_drops=sanction_drops)
 
 
 def write_directory(records: list[ProviderRecord], out_path: str | Path) -> None:
@@ -92,6 +165,8 @@ def build_metadata(
     limit: int | None,
     keep_all_certified: bool,
     source_date: str | None = None,
+    sanctions_path: str | Path | None = None,
+    sanction_drops: int = 0,
 ) -> dict:
     """Sidecar metadata for the generated directory.
 
@@ -99,6 +174,9 @@ def build_metadata(
     `source_date` is the dataset's freshness (typically the NPPES file's
     mtime ISO 8601 in UTC) — that's what the directory actually reflects, not
     "when the script ran". `generatedAt` is the wall-clock build timestamp.
+    `sanction_drops` is how many candidates were removed by the sanctions
+    overlay; surfaces in provenance so consumers can see the safety filter
+    was applied even when zero matched (which is the expected, healthy case).
     """
     nppes_list = [str(p) for p in nppes_paths]
     certified = sum(1 for r in records if r.menopauseCertified)
@@ -109,6 +187,7 @@ def build_metadata(
         "sourceDate": source_date,
         "nppesInputs": nppes_list,
         "mscpOverlay": str(mscp_path) if mscp_path else None,
+        "sanctionsOverlay": str(sanctions_path) if sanctions_path else None,
         "limit": limit,
         "keepAllCertified": keep_all_certified,
         "providers": {
@@ -116,6 +195,7 @@ def build_metadata(
             "certified": certified,
             "states": len(states),
             "zip3Prefixes": len(zip3),
+            "sanctionedFiltered": sanction_drops,
         },
         "schemaVersion": 1,
     }
@@ -209,11 +289,30 @@ def main(argv: list[str] | None = None) -> int:
             "the input is a FIFO so the date reflects the underlying source."
         ),
     )
+    parser.add_argument(
+        "--sanctions",
+        default=None,
+        help=(
+            "Optional path to the CA Medi-Cal Suspended & Ineligible List CSV "
+            "(see provider_ingest/sanctions.py). Every NPI on the list is "
+            "filtered out of the directory and the count is reported in the "
+            "sidecar metadata. Omit for no sanctions overlay."
+        ),
+    )
     args = parser.parse_args(argv)
 
     overlay = MscpOverlay.from_file(args.mscp) if args.mscp else MscpOverlay.empty()
-    records = build_directory(
-        args.nppes, overlay, limit=args.limit, keep_all_certified=args.keep_all_certified
+    sanctions = (
+        SanctionOverlay.from_chhs_csv(args.sanctions)
+        if args.sanctions
+        else SanctionOverlay.empty()
+    )
+    records, stats = build_directory_with_stats(
+        args.nppes,
+        overlay,
+        limit=args.limit,
+        keep_all_certified=args.keep_all_certified,
+        sanctions=sanctions,
     )
     write_directory(records, args.out)
 
@@ -225,13 +324,22 @@ def main(argv: list[str] | None = None) -> int:
         limit=args.limit,
         keep_all_certified=args.keep_all_certified,
         source_date=source_date,
+        sanctions_path=args.sanctions,
+        sanction_drops=stats.sanction_drops,
     )
     meta_path = Path(args.meta) if args.meta else Path(args.out).with_suffix(".meta.json")
     write_metadata(meta, meta_path)
 
     certified = sum(1 for r in records if r.menopauseCertified)
+    sanction_note = (
+        f" — filtered {stats.sanction_drops} sanctioned"
+        if stats.sanction_drops > 0
+        else " — no sanctioned matches"
+        if args.sanctions
+        else ""
+    )
     print(
-        f"Wrote {len(records)} providers ({certified} MSCP-certified) "
+        f"Wrote {len(records)} providers ({certified} MSCP-certified{sanction_note}) "
         f"from {', '.join(str(p) for p in args.nppes)} → {args.out} "
         f"(meta → {meta_path})"
     )

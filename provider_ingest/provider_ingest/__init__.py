@@ -16,17 +16,21 @@ Modules:
 
 from __future__ import annotations
 
-from .build import build_directory, write_directory
+from .build import BuildStats, build_directory, build_directory_with_stats, write_directory
 from .mscp import MscpOverlay
 from .nppes import normalize_row
 from .records import ProviderRecord
+from .sanctions import SanctionOverlay
 from .score import graph_score
 from .taxonomy import MENOPAUSE_TAXONOMIES, Taxonomy, best_relevant, is_menopause_relevant
 
 __all__ = [
     "build_directory",
+    "build_directory_with_stats",
+    "BuildStats",
     "write_directory",
     "MscpOverlay",
+    "SanctionOverlay",
     "normalize_row",
     "ProviderRecord",
     "graph_score",

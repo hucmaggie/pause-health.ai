@@ -244,6 +244,30 @@ describe("queryProviderDirectory · distance ranking", () => {
     expect(ds.total).toBe(generated.length);
   });
 
+  it("surfaces sanctions filter results in dataset provenance (count + overlay path)", () => {
+    const out = queryProviderDirectory({ menopauseOnly: true, fallback: true });
+    const ds = out.provenance.dataset!;
+    // sanctionedFiltered is an integer count; zero is the healthy default,
+    // a positive number means real candidates were dropped for safety.
+    expect(typeof ds.sanctionedFiltered).toBe("number");
+    expect(ds.sanctionedFiltered).toBeGreaterThanOrEqual(0);
+    // overlay-used reports the path of the sanctions list applied; null when
+    // no overlay was passed at build time.
+    expect(
+      ds.sanctionsOverlayUsed === null || typeof ds.sanctionsOverlayUsed === "string"
+    ).toBe(true);
+  });
+
+  it("every loaded provider has licenseStatus 'active' (sanctioned providers were filtered at build time)", () => {
+    // Sanctioned providers are dropped during build, so survivors must all
+    // carry licenseStatus 'active' (or undefined for older builds without
+    // the field — both are honest, neither implies "suspended").
+    const out = queryProviderDirectory({ menopauseOnly: true, fallback: true });
+    for (const p of out.providers) {
+      expect(p.licenseStatus === undefined || p.licenseStatus === "active").toBe(true);
+    }
+  });
+
   it("Haversine produces sensible values (Irvine CA → Brooklyn NY ≈ 2,450 mi)", () => {
     const irvine = { latitude: 33.68021, longitude: -117.833355 };
     const brooklyn = {

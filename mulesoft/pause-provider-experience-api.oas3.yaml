@@ -340,6 +340,17 @@ components:
             type: string
             example: facog
           example: [facog, multi-taxonomy]
+        licenseStatus:
+          type: string
+          description: >
+            Disposition against published state sanction overlays. Survivors
+            of the build always carry `active` — sanctioned providers are
+            filtered out at build time so the directory never recommends one.
+            See `provenance.dataset.providers.sanctionedFiltered` for the
+            count of providers filtered by sanctions in the most recent build.
+          enum: [active, suspended, probation]
+          default: active
+          example: active
 
     ProviderDirectoryResponse:
       type: object
@@ -432,3 +443,16 @@ components:
                   type: integer
                 zip3Prefixes:
                   type: integer
+                sanctionedFiltered:
+                  type: integer
+                  description: >
+                    Count of provider candidates dropped by the sanctions
+                    overlay (e.g. CA Medi-Cal Suspended & Ineligible List)
+                    during the most recent build. Zero is the healthy default;
+                    the field exists so consumers can confirm the safety
+                    filter actually ran.
+                  example: 0
+                sanctionsOverlayUsed:
+                  type: string
+                  nullable: true
+                  description: Path of the sanctions overlay used, or null if no overlay.

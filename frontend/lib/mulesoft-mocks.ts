@@ -318,6 +318,14 @@ export type ProviderRecord = {
    * provider_ingest/signals.py for the full list.
    */
   serviceSignals?: string[];
+  /**
+   * Disposition against the published state sanction overlays. Survivors of
+   * the build always carry "active" — sanctioned providers are filtered out
+   * at build time so the directory never recommends one. The field is here
+   * so the contract documents what was checked (today: CA Medi-Cal S&I
+   * list); future values like "probation" can land additively.
+   */
+  licenseStatus?: "active" | "suspended" | "probation";
 };
 
 /** Returned by queryProviderDirectory when the patient's ZIP centroid is known. */
@@ -433,7 +441,14 @@ const USING_GENERATED_DIRECTORY =
 type DirectoryMeta = {
   generatedAt?: string;
   sourceDate?: string | null;
-  providers?: { total?: number; certified?: number; states?: number; zip3Prefixes?: number };
+  sanctionsOverlay?: string | null;
+  providers?: {
+    total?: number;
+    certified?: number;
+    states?: number;
+    zip3Prefixes?: number;
+    sanctionedFiltered?: number;
+  };
 };
 const DIRECTORY_META = generatedProviderDirectoryMeta as DirectoryMeta;
 const DIRECTORY_DATASET_PROVENANCE = USING_GENERATED_DIRECTORY
@@ -445,7 +460,12 @@ const DIRECTORY_DATASET_PROVENANCE = USING_GENERATED_DIRECTORY
         DIRECTORY_META.providers?.certified ??
         PROVIDER_DIRECTORY.filter((r) => r.menopauseCertified).length,
       states: DIRECTORY_META.providers?.states,
-      zip3Prefixes: DIRECTORY_META.providers?.zip3Prefixes
+      zip3Prefixes: DIRECTORY_META.providers?.zip3Prefixes,
+      // Counts how many candidate providers were filtered out by the
+      // sanctions overlay during the most recent build. Zero is the healthy,
+      // expected default — surfacing it confirms the safety filter ran.
+      sanctionedFiltered: DIRECTORY_META.providers?.sanctionedFiltered ?? 0,
+      sanctionsOverlayUsed: DIRECTORY_META.sanctionsOverlay ?? null
     }
   : null;
 
@@ -574,7 +594,7 @@ export function queryProviderDirectory(opts: {
               : [])
           ]
         : ["CMS NPPES (synthetic slice)", "MSCP credential list (synthetic)"],
-      experienceApi: "pause-provider-directory-experience-api@0.7",
+      experienceApi: "pause-provider-directory-experience-api@0.8",
       dataset: DIRECTORY_DATASET_PROVENANCE
     }
   };

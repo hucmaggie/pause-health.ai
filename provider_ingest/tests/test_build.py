@@ -63,7 +63,10 @@ def test_record_shape_matches_contract():
         "latitude",
         "longitude",
         "serviceSignals",
+        "licenseStatus",
     }
+    # Build path with no sanctions overlay → every survivor is "active".
+    assert rec.licenseStatus == "active"
 
 
 def test_service_signals_stamped_for_non_certified_provider():

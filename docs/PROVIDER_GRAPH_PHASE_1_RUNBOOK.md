@@ -73,8 +73,23 @@ loads). The frozen contract is `ProviderRecord` in
 > board-certified OB/GYN with FACOG outranks a generalist with the same
 > taxonomy. The agent (MCP `find_menopause_providers` tool) is told to render
 > the strongest signal in plain English (e.g. "board-certified OB/GYN" for
-> `facog`) when matchType=relevant-local. The steps below reproduce or
-> refresh this run.
+> `facog`) when matchType=relevant-local.
+
+> **Sanction filtering.** Every directory candidate is checked against the
+> California Health & Human Services Agency *Provider Suspended and
+> Ineligible List* (see `provider_ingest/sanctions.py`) — a free,
+> public-domain CSV refreshed monthly at data.chhs.ca.gov. NPIs that match
+> the list are filtered out at build time so the directory never recommends
+> a sanctioned provider. The committed June 2026 run dropped **588** post-
+> taxonomy candidates that were on the CA S&I list. Survivors carry
+> `licenseStatus: "active"`; the count rides on the sidecar metadata
+> (`provenance.dataset.sanctionedFiltered`) so the filter is verifiable from
+> the API response. Today CA only — Phase 2 starts where the demo cohort
+> lives; other states will land additively behind the same overlay
+> interface. Refresh the CSV by downloading
+> `suspended-ineligible-list-*.csv` from the CHHS dataset page and dropping
+> it next to the NPPES zip; the harness auto-detects the latest file. The
+> steps below reproduce or refresh this run.
 
 ---
 
@@ -260,7 +275,9 @@ serve the NPPES-derived rows to keep the two paths shape-identical.
 
 ## What Phase 1 deliberately does **not** do
 
-- **State license verification / disciplinary gating** — Phase 2.
+- **State license verification — broad coverage** — Phase 2 (CA Medi-Cal
+  Suspended & Ineligible filter landed; other states will land additively
+  behind the same overlay interface).
 - **Clinic-site service-mention detection** — Phase 2 (NPPES-resident
   credential + multi-taxonomy signals landed; clinic-site scraping is the
   next layer).
