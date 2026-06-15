@@ -687,7 +687,9 @@
     "graphScore": 1.0,
     "latitude": 36.115379,
     "longitude": -79.734641,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1003159393",
@@ -948,7 +950,9 @@
     "graphScore": 1.0,
     "latitude": 40.659957,
     "longitude": -75.387306,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1003249491",
@@ -1447,7 +1451,9 @@
     "graphScore": 1.0,
     "latitude": 29.706787,
     "longitude": -95.401748,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1003348491",
@@ -1521,7 +1527,9 @@
     "graphScore": 1.0,
     "latitude": null,
     "longitude": null,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1003370180",
@@ -1828,7 +1836,9 @@
     "graphScore": 1.0,
     "latitude": null,
     "longitude": null,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1003479775",
@@ -2564,6 +2574,26 @@
     "serviceSignals": []
   },
   {
+    "npi": "1003818394",
+    "name": "Dr. Kimberly Miller-Miles, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Gynecology",
+    "menopauseCertified": false,
+    "city": "Houston",
+    "state": "TX",
+    "zip": "77054",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 29.68025,
+    "longitude": -95.404913,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
+  },
+  {
     "npi": "1003819137",
     "name": "Dr. Susan Mou, MD",
     "credentials": [
@@ -2869,7 +2899,29 @@
     "graphScore": 1.0,
     "latitude": 41.784725,
     "longitude": -71.396103,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
+  },
+  {
+    "npi": "1003839267",
+    "name": "Dr. Christine O Connor, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Gynecology",
+    "menopauseCertified": false,
+    "city": "Baltimore",
+    "state": "MD",
+    "zip": "21202",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 39.296526,
+    "longitude": -76.607016,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1003843582",
@@ -3351,7 +3403,9 @@
     "graphScore": 1.0,
     "latitude": 37.418256,
     "longitude": -122.170871,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1003877184",
@@ -3847,7 +3901,9 @@
     "graphScore": 1.0,
     "latitude": 40.475855,
     "longitude": -88.99267,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1003916297",
@@ -3901,7 +3957,9 @@
     "graphScore": 1.0,
     "latitude": 39.747495,
     "longitude": -104.838627,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1003920216",
@@ -7225,7 +7283,9 @@
     "graphScore": 1.0,
     "latitude": 40.426324,
     "longitude": -79.761379,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1013906445",
@@ -7262,6 +7322,26 @@
     "latitude": 38.005828,
     "longitude": -84.533469,
     "serviceSignals": []
+  },
+  {
+    "npi": "1013908037",
+    "name": "Dr. Mary Brandes, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Gynecology",
+    "menopauseCertified": false,
+    "city": "South Portland",
+    "state": "ME",
+    "zip": "04106",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.631402,
+    "longitude": -70.285989,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1013908318",
@@ -7881,7 +7961,9 @@
     "graphScore": 1.0,
     "latitude": 38.26689,
     "longitude": -85.656947,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1013944768",
@@ -8099,7 +8181,9 @@
     "graphScore": 1.0,
     "latitude": 42.268426,
     "longitude": -71.613309,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1013962778",
@@ -9333,7 +9417,9 @@
     "graphScore": 1.0,
     "latitude": 38.830236,
     "longitude": -77.214725,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1023047156",
@@ -10501,7 +10587,9 @@
     "graphScore": 1.0,
     "latitude": 42.350518,
     "longitude": -71.059077,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1023121563",
@@ -10667,6 +10755,26 @@
     "latitude": 37.357461,
     "longitude": -122.14439,
     "serviceSignals": []
+  },
+  {
+    "npi": "1023151115",
+    "name": "Dr. Bertha Chen, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Gynecology",
+    "menopauseCertified": false,
+    "city": "Stanford",
+    "state": "CA",
+    "zip": "94305",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 37.418256,
+    "longitude": -122.170871,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1023156163",
@@ -11281,7 +11389,9 @@
     "graphScore": 1.0,
     "latitude": 42.056214,
     "longitude": -87.692402,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1023249174",
@@ -11409,7 +11519,9 @@
     "graphScore": 1.0,
     "latitude": 39.061125,
     "longitude": -84.276136,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1023276748",
@@ -12353,7 +12465,9 @@
     "graphScore": 1.0,
     "latitude": 29.772179,
     "longitude": -95.514203,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1023515426",
@@ -12371,7 +12485,9 @@
     "graphScore": 1.0,
     "latitude": 41.230478,
     "longitude": -75.757439,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1023527363",
@@ -14157,6 +14273,26 @@
     "serviceSignals": []
   },
   {
+    "npi": "1033174644",
+    "name": "Dr. Emilio Gomez-Madrazo, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Gynecology",
+    "menopauseCertified": false,
+    "city": "South Miami",
+    "state": "FL",
+    "zip": "33143",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 25.703032,
+    "longitude": -80.297375,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
+  },
+  {
     "npi": "1033175005",
     "name": "Dr. Gordon Ostrum, MD",
     "credentials": [
@@ -14246,7 +14382,9 @@
     "graphScore": 1.0,
     "latitude": 39.004839,
     "longitude": -77.103004,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1033182084",
@@ -14302,7 +14440,9 @@
     "graphScore": 1.0,
     "latitude": 34.750326,
     "longitude": -92.351206,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1033185566",
@@ -14706,7 +14846,9 @@
     "graphScore": 1.0,
     "latitude": 18.388011,
     "longitude": -66.072089,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1033208475",
@@ -15040,7 +15182,9 @@
     "graphScore": 1.0,
     "latitude": 32.362434,
     "longitude": -95.315262,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1033238316",
@@ -15612,7 +15756,9 @@
     "graphScore": 1.0,
     "latitude": 41.263218,
     "longitude": -96.049586,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1033319868",
@@ -16326,7 +16472,9 @@
     "graphScore": 1.0,
     "latitude": 42.363174,
     "longitude": -71.068646,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1033475371",
@@ -16643,7 +16791,9 @@
     "graphScore": 1.0,
     "latitude": null,
     "longitude": null,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1033538483",
@@ -17031,7 +17181,9 @@
     "graphScore": 1.0,
     "latitude": 39.73382,
     "longitude": -104.916568,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1033616198",
@@ -18082,6 +18234,26 @@
     "serviceSignals": []
   },
   {
+    "npi": "1043221047",
+    "name": "Dr. Stephen Yim, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Gynecology",
+    "menopauseCertified": false,
+    "city": "Chesterfield",
+    "state": "MO",
+    "zip": "63017",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 38.656285,
+    "longitude": -90.541867,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
+  },
+  {
     "npi": "1043221989",
     "name": "Dr. Donald Blair, MD",
     "credentials": [
@@ -18441,7 +18613,9 @@
     "graphScore": 1.0,
     "latitude": 32.538612,
     "longitude": -85.489708,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1043251572",
@@ -18589,7 +18763,9 @@
     "graphScore": 1.0,
     "latitude": 33.020165,
     "longitude": -117.123297,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1043263163",
@@ -18643,7 +18819,9 @@
     "graphScore": 1.0,
     "latitude": 39.27486,
     "longitude": -76.542833,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1043268873",
@@ -19340,6 +19518,26 @@
     "latitude": 40.84164,
     "longitude": -74.578522,
     "serviceSignals": []
+  },
+  {
+    "npi": "1043312457",
+    "name": "Dr. Toni Sylvester, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Gynecology",
+    "menopauseCertified": false,
+    "city": "Pooler",
+    "state": "GA",
+    "zip": "31322",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 32.109885,
+    "longitude": -81.255465,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1043316912",
@@ -20336,7 +20534,9 @@
     "graphScore": 1.0,
     "latitude": 42.504694,
     "longitude": -83.349204,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1043449341",
@@ -21117,7 +21317,9 @@
     "graphScore": 1.0,
     "latitude": 32.067003,
     "longitude": -84.127711,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1043577380",
@@ -21153,7 +21355,9 @@
     "graphScore": 1.0,
     "latitude": 43.994246,
     "longitude": -91.625441,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1043577539",
@@ -21225,7 +21429,9 @@
     "graphScore": 1.0,
     "latitude": 34.071225,
     "longitude": -118.443373,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1043604374",
@@ -21395,7 +21601,9 @@
     "graphScore": 1.0,
     "latitude": 40.64959,
     "longitude": -73.934374,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1043634173",
@@ -21820,7 +22028,9 @@
     "graphScore": 1.0,
     "latitude": 41.893929,
     "longitude": -87.614497,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1043716038",
@@ -22387,7 +22597,9 @@
     "graphScore": 1.0,
     "latitude": 39.747495,
     "longitude": -104.838627,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1043879489",
@@ -23813,7 +24025,9 @@
     "graphScore": 1.0,
     "latitude": 39.966129,
     "longitude": -83.125346,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1053376855",
@@ -26836,7 +27050,9 @@
     "graphScore": 1.0,
     "latitude": 39.747495,
     "longitude": -104.838627,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1053946202",
@@ -28368,7 +28584,9 @@
     "graphScore": 1.0,
     "latitude": null,
     "longitude": null,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1063453520",
@@ -28922,7 +29140,9 @@
     "graphScore": 1.0,
     "latitude": 40.060612,
     "longitude": -75.080176,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1063478220",
@@ -30260,7 +30480,9 @@
     "graphScore": 1.0,
     "latitude": 34.071225,
     "longitude": -118.443373,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1063612463",
@@ -30350,7 +30572,9 @@
     "graphScore": 1.0,
     "latitude": null,
     "longitude": null,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1063623205",
@@ -30516,7 +30740,9 @@
     "graphScore": 1.0,
     "latitude": 40.764628,
     "longitude": -73.963144,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1063649838",
@@ -32844,6 +33070,26 @@
     "serviceSignals": []
   },
   {
+    "npi": "1073505681",
+    "name": "Dr. Maurice Chung, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Gynecology",
+    "menopauseCertified": false,
+    "city": "Lima",
+    "state": "OH",
+    "zip": "45805",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.72777,
+    "longitude": -84.162772,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
+  },
+  {
     "npi": "1073506374",
     "name": "Dr. Laurie Swaim, MD",
     "credentials": [
@@ -33409,7 +33655,9 @@
     "graphScore": 1.0,
     "latitude": 40.722537,
     "longitude": -73.252183,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1073532792",
@@ -34032,6 +34280,26 @@
     "serviceSignals": []
   },
   {
+    "npi": "1073581724",
+    "name": "Dr. Andrew Croak, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Gynecology",
+    "menopauseCertified": false,
+    "city": "Maumee",
+    "state": "OH",
+    "zip": "43537",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.574823,
+    "longitude": -83.686622,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
+  },
+  {
     "npi": "1073582912",
     "name": "Dr. Kerry Kline, MD",
     "credentials": [
@@ -34327,7 +34595,9 @@
     "graphScore": 1.0,
     "latitude": null,
     "longitude": null,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1073606042",
@@ -34875,7 +35145,9 @@
     "graphScore": 1.0,
     "latitude": null,
     "longitude": null,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1073676813",
@@ -35928,7 +36200,9 @@
     "graphScore": 1.0,
     "latitude": 30.270438,
     "longitude": -81.467894,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1073824959",
@@ -36038,7 +36312,9 @@
     "graphScore": 1.0,
     "latitude": 42.011762,
     "longitude": -87.843434,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1073870242",
@@ -36279,7 +36555,9 @@
     "graphScore": 1.0,
     "latitude": 38.006972,
     "longitude": -78.59506,
-    "serviceSignals": []
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1073904256",
@@ -36724,176 +37002,6 @@
     "serviceSignals": []
   },
   {
-    "npi": "1083034821",
-    "name": "Dr. Josephine Urbina, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Staten Island",
-    "state": "NY",
-    "zip": "10310",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 40.632646,
-    "longitude": -74.116148,
-    "serviceSignals": []
-  },
-  {
-    "npi": "1083057590",
-    "name": "Dr. Maria Kon, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "New York",
-    "state": "NY",
-    "zip": "10019",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 40.765829,
-    "longitude": -73.987341,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ]
-  },
-  {
-    "npi": "1083059273",
-    "name": "Dr. Callie Crider, DO",
-    "credentials": [
-      "DO"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Zanesville",
-    "state": "OH",
-    "zip": "43701",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 39.969318,
-    "longitude": -81.990897,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ]
-  },
-  {
-    "npi": "1083077507",
-    "name": "Dr. Elizabeth Wilson, DO",
-    "credentials": [
-      "DO"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Foley",
-    "state": "AL",
-    "zip": "36535",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 30.383999,
-    "longitude": -87.727359,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ]
-  },
-  {
-    "npi": "1083077952",
-    "name": "Dr. Anna Smith, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Philadelphia",
-    "state": "PA",
-    "zip": "19104",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 39.958518,
-    "longitude": -75.198856,
-    "serviceSignals": []
-  },
-  {
-    "npi": "1083078075",
-    "name": "Dr. Clara Lee, DO",
-    "credentials": [
-      "DO"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "San Leandro",
-    "state": "CA",
-    "zip": "94577",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 37.713275,
-    "longitude": -122.16735,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ]
-  },
-  {
-    "npi": "1083091110",
-    "name": "Dr. Florene Odulana, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Memphis",
-    "state": "TN",
-    "zip": "38163",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": []
-  },
-  {
-    "npi": "1083092118",
-    "name": "Dr. Joseph Chen, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Dallas",
-    "state": "TX",
-    "zip": "75390",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 32.814164,
-    "longitude": -96.84065,
-    "serviceSignals": []
-  },
-  {
-    "npi": "1083097000",
-    "name": "Dr. Pilar Rainey, DO",
-    "credentials": [
-      "DO"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Peoria",
-    "state": "IL",
-    "zip": "61634",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": []
-  },
-  {
     "npi": "1457390021",
     "name": "Dr. Helen Okafor, DO, MSCP",
     "credentials": [
@@ -36999,6 +37107,29 @@
     "latitude": 40.798452,
     "longitude": -73.974414,
     "serviceSignals": []
+  },
+  {
+    "npi": "1497181507",
+    "name": "Dr. Lindsey Mehran-Rezaii, DNP, RN, CNP, MSCP",
+    "credentials": [
+      "DNP",
+      "RN",
+      "CNP",
+      "MSCP"
+    ],
+    "specialty": "Nurse Practitioner \u2014 Gerontology",
+    "menopauseCertified": true,
+    "city": "Apple Valley",
+    "state": "MN",
+    "zip": "55124",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 0.9924,
+    "latitude": 44.745301,
+    "longitude": -93.199413,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ]
   },
   {
     "npi": "1902601156",

@@ -23,11 +23,14 @@ loads). The frozen contract is `ProviderRecord` in
 - `queryProviderDirectory()` loads that JSON (falling back to the hand-curated
   rows only if it's empty).
 - **The committed dataset is a real national run** of the CMS June 2026
-  `npidata_pfile` (8.5M rows) merged with the demo fixture: **2,014 providers**,
-  of which **14 are menopause-certified** — the 7 demo personas plus **7 real
-  practitioners who self-report MSCP/NCMP in NPPES** (CA, IA, ID, MN, NC×2, NJ).
+  `npidata_pfile` (9.6M rows) merged with the demo fixture: **2,015 providers**,
+  of which **15 are menopause-certified** — the 7 demo personas plus **8 real
+  practitioners who self-report MSCP/NCMP in NPPES**. (One additional certified
+  practitioner — a NP — Gerontology — was surfaced when the curated taxonomy
+  set was broadened in Phase 2; she had been filtered out before despite
+  carrying MSCP because her primary NUCC code wasn't in the curated set.)
   The remaining 2,000 are real menopause-relevant providers across 55 states /
-  534 ZIP-3 prefixes for general (`menopause=false`) directory breadth.
+  532 ZIP-3 prefixes for general (`menopause=false`) directory breadth.
 - `provenance.sources` on every response reports
   `"CMS NPPES (taxonomy-filtered via provider_ingest)"` +
   `"Self-reported MSCP/NCMP credentials + curated overlay"`.
@@ -173,8 +176,8 @@ rm -f "$FIFO"
   modest so the frontend bundle stays lean — the directory is filtered
   server-side per query, not paginated client-side.
 
-It prints e.g. `Wrote 2014 providers (14 MSCP-certified) from … → …`. The
-June 2026 run yielded exactly that: 14 certified (7 demo + 7 real self-reported)
+It prints e.g. `Wrote 2015 providers (15 MSCP-certified) from … → …`. The
+June 2026 run yielded exactly that: 15 certified (7 demo + 8 real self-reported)
 and 2,000 real non-certified rows across 55 states.
 
 ---

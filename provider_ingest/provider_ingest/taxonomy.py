@@ -35,29 +35,50 @@ MENOPAUSE_TAXONOMIES: dict[str, Taxonomy] = {
     # Obstetrics & Gynecology family
     "207V00000X": Taxonomy("207V00000X", "Obstetrics & Gynecology", "MD", 1.00),
     "207VG0400X": Taxonomy("207VG0400X", "Gynecology", "MD", 0.98),
+    "207VF0040X": Taxonomy(
+        "207VF0040X",
+        "Urogynecology & Reconstructive Pelvic Surgery",
+        "MD",
+        0.95,
+    ),
     "207VE0102X": Taxonomy(
         "207VE0102X", "Reproductive Endocrinology & Infertility", "MD", 0.95
     ),
+    "207VX0201X": Taxonomy("207VX0201X", "Gynecologic Oncology", "MD", 0.78),
     "207VM0101X": Taxonomy("207VM0101X", "Maternal & Fetal Medicine", "MD", 0.70),
     # Endocrinology (vasomotor / metabolic overlap)
     "207RE0101X": Taxonomy(
         "207RE0101X", "Endocrinology, Diabetes & Metabolism", "MD", 0.90
     ),
-    # Primary care that commonly manages midlife women
+    # Primary care that commonly manages midlife / postmenopausal women
     "207Q00000X": Taxonomy("207Q00000X", "Family Medicine", "MD", 0.75),
     "207R00000X": Taxonomy("207R00000X", "Internal Medicine", "MD", 0.72),
+    "207RG0300X": Taxonomy(
+        "207RG0300X", "Internal Medicine — Geriatric Medicine", "MD", 0.68
+    ),
     # Advanced practice
     "363LW0102X": Taxonomy(
         "363LW0102X", "Nurse Practitioner — Women's Health", "NP", 0.88
     ),
     "363LF0000X": Taxonomy("363LF0000X", "Nurse Practitioner — Family", "NP", 0.74),
-    "175M00000X": Taxonomy("175M00000X", "Certified Nurse-Midwife (Lactation)", "CNM", 0.80),
+    "363LG0600X": Taxonomy(
+        "363LG0600X", "Nurse Practitioner — Gerontology", "NP", 0.72
+    ),
+    "363LA2200X": Taxonomy(
+        "363LA2200X", "Nurse Practitioner — Adult Health", "NP", 0.66
+    ),
+    "175M00000X": Taxonomy(
+        "175M00000X", "Certified Nurse-Midwife (Lactation)", "CNM", 0.80
+    ),
     "176B00000X": Taxonomy("176B00000X", "Midwife", "CNM", 0.70),
     "363AM0700X": Taxonomy(
         "363AM0700X", "Physician Assistant — Medical", "PA", 0.68
     ),
     "364SW0102X": Taxonomy(
         "364SW0102X", "Clinical Nurse Specialist — Women's Health", "CNS", 0.82
+    ),
+    "364SG0600X": Taxonomy(
+        "364SG0600X", "Clinical Nurse Specialist — Gerontology", "CNS", 0.66
     ),
 }
 
