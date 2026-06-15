@@ -10,6 +10,7 @@
  */
 
 import generatedProviderDirectory from "./provider-directory.generated.json";
+import generatedProviderDirectoryMeta from "./provider-directory.generated.meta.json";
 
 export const DEMO_PATIENT_ID = "pause-demo-patient-001";
 const RAW_HRV_ID = "obs-hrv-raw-001";
@@ -419,6 +420,36 @@ const USING_GENERATED_DIRECTORY =
   (generatedProviderDirectory as ProviderRecord[]).length > 0;
 
 /**
+ * Build metadata for the generated directory — what's reported in
+ * `provenance.dataset` so callers (the agent, customers reading the
+ * Experience API responses) can answer "how fresh is this directory?".
+ *
+ * `sourceDate` is the dataset's freshness (the NPPES dissemination zip's
+ * mtime); `generatedAt` is the wall-clock build time. Both are written by
+ * `provider_ingest/scripts/refresh_national.sh`. When the generated file is
+ * empty (sparse checkout / unbuilt dataset), we surface `null` so consumers
+ * know they're on the curated fallback.
+ */
+type DirectoryMeta = {
+  generatedAt?: string;
+  sourceDate?: string | null;
+  providers?: { total?: number; certified?: number; states?: number; zip3Prefixes?: number };
+};
+const DIRECTORY_META = generatedProviderDirectoryMeta as DirectoryMeta;
+const DIRECTORY_DATASET_PROVENANCE = USING_GENERATED_DIRECTORY
+  ? {
+      generatedAt: DIRECTORY_META.generatedAt ?? null,
+      sourceDate: DIRECTORY_META.sourceDate ?? null,
+      total: DIRECTORY_META.providers?.total ?? PROVIDER_DIRECTORY.length,
+      certified:
+        DIRECTORY_META.providers?.certified ??
+        PROVIDER_DIRECTORY.filter((r) => r.menopauseCertified).length,
+      states: DIRECTORY_META.providers?.states,
+      zip3Prefixes: DIRECTORY_META.providers?.zip3Prefixes
+    }
+  : null;
+
+/**
  * Which tier of the search answered, so callers (and the agent) can present
  * results honestly:
  *   - `certified-local`     menopause-certified provider(s) in the ZIP-3 area.
@@ -543,7 +574,8 @@ export function queryProviderDirectory(opts: {
               : [])
           ]
         : ["CMS NPPES (synthetic slice)", "MSCP credential list (synthetic)"],
-      experienceApi: "pause-provider-directory-experience-api@0.6"
+      experienceApi: "pause-provider-directory-experience-api@0.7",
+      dataset: DIRECTORY_DATASET_PROVENANCE
     }
   };
 }

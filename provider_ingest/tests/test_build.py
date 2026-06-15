@@ -1,6 +1,14 @@
+import json
+import os
 from pathlib import Path
 
-from provider_ingest.build import build_directory, write_directory
+from provider_ingest.build import (
+    _largest_input_mtime_iso,
+    build_directory,
+    build_metadata,
+    write_directory,
+    write_metadata,
+)
 from provider_ingest.mscp import MscpOverlay
 from provider_ingest.records import ProviderRecord
 
@@ -180,8 +188,6 @@ def test_keep_all_certified_overrides_limit():
 
 
 def test_write_directory_roundtrip(tmp_path):
-    import json
-
     out = tmp_path / "dir.json"
     write_directory(_build(), out)
     data = json.loads(out.read_text())
@@ -189,3 +195,115 @@ def test_write_directory_roundtrip(tmp_path):
     assert data[0]["npi"]
     # Top provider should be a certified OB/GYN (relevance 1.0 + boost).
     assert data[0]["menopauseCertified"] is True
+
+
+def test_build_metadata_shape():
+    records = _build()
+    meta = build_metadata(
+        records=records,
+        nppes_paths=[NPPES],
+        mscp_path=MSCP,
+        limit=2000,
+        keep_all_certified=True,
+        source_date="2026-06-15T00:00:00+00:00",
+    )
+    assert meta["schemaVersion"] == 1
+    assert meta["sourceDate"] == "2026-06-15T00:00:00+00:00"
+    assert meta["mscpOverlay"] == str(MSCP)
+    assert meta["limit"] == 2000
+    assert meta["keepAllCertified"] is True
+    # Counts are derived from the records list, so they can't drift from the
+    # JSON the same build wrote out.
+    assert meta["providers"]["total"] == len(records)
+    assert meta["providers"]["certified"] == sum(1 for r in records if r.menopauseCertified)
+    # `generatedAt` is wall-clock; just shape-check.
+    assert isinstance(meta["generatedAt"], str)
+    assert meta["generatedAt"].endswith("+00:00")  # UTC, ISO 8601
+
+
+def test_write_metadata_writes_valid_json(tmp_path):
+    out = tmp_path / "dir.meta.json"
+    meta = build_metadata(
+        records=_build(),
+        nppes_paths=[NPPES],
+        mscp_path=MSCP,
+        limit=None,
+        keep_all_certified=False,
+    )
+    write_metadata(meta, out)
+    parsed = json.loads(out.read_text())
+    assert parsed["schemaVersion"] == 1
+
+
+def test_largest_input_mtime_is_iso_utc(tmp_path):
+    a = tmp_path / "a.csv"
+    a.write_text("x" * 10)
+    b = tmp_path / "b.csv"
+    b.write_text("y" * 100)  # bigger → wins
+    # Force b's mtime to a known value so the assertion isn't time-flaky.
+    target = 1718352000  # 2024-06-14T08:00:00Z
+    os.utime(b, (target, target))
+    iso = _largest_input_mtime_iso([a, b])
+    assert iso == "2024-06-14T08:00:00+00:00"
+
+
+def test_largest_input_mtime_returns_none_when_no_real_files(tmp_path):
+    # FIFOs and missing paths return None — the harness then passes
+    # --source-date explicitly when streaming via a FIFO.
+    fifo = tmp_path / "fifo"
+    os.mkfifo(fifo)
+    assert _largest_input_mtime_iso([fifo]) is None
+    # The FIFO is still a path that .stat()s; make sure it's the is_file
+    # check that filters it, not a hard error. Fallback when the path doesn't
+    # exist at all:
+    assert _largest_input_mtime_iso([tmp_path / "missing.csv"]) is None
+
+
+def test_main_writes_meta_sidecar(tmp_path):
+    """End-to-end: --meta sidecar contains the same counts as the data JSON."""
+    out = tmp_path / "dir.json"
+    meta_path = tmp_path / "dir.meta.json"
+    from provider_ingest.build import main
+
+    rc = main(
+        [
+            "--nppes",
+            str(NPPES),
+            "--mscp",
+            str(MSCP),
+            "--out",
+            str(out),
+            "--meta",
+            str(meta_path),
+            "--source-date",
+            "2026-01-01T00:00:00+00:00",
+        ]
+    )
+    assert rc == 0
+    data = json.loads(out.read_text())
+    meta = json.loads(meta_path.read_text())
+    assert meta["providers"]["total"] == len(data)
+    assert meta["providers"]["certified"] == sum(
+        1 for r in data if r["menopauseCertified"]
+    )
+    assert meta["sourceDate"] == "2026-01-01T00:00:00+00:00"
+
+
+def test_main_default_meta_path_is_alongside_out(tmp_path):
+    """Default --meta is <out>.meta.json next to the array file."""
+    out = tmp_path / "subdir" / "dir.json"
+    out.parent.mkdir()
+    from provider_ingest.build import main
+
+    rc = main(
+        [
+            "--nppes",
+            str(NPPES),
+            "--out",
+            str(out),
+            "--source-date",
+            "2026-01-01T00:00:00+00:00",
+        ]
+    )
+    assert rc == 0
+    assert (tmp_path / "subdir" / "dir.meta.json").exists()

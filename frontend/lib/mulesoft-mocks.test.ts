@@ -225,6 +225,25 @@ describe("queryProviderDirectory · distance ranking", () => {
     expect(ranked[2].distanceMiles).toBeNull();
   });
 
+  it("surfaces dataset provenance (generatedAt + sourceDate + counts) when the generated directory is in use", () => {
+    const out = queryProviderDirectory({ menopauseOnly: true, fallback: true });
+    expect(out.provenance.dataset).not.toBeNull();
+    const ds = out.provenance.dataset!;
+    // The committed sidecar is written by refresh_national.sh; it always
+    // carries an ISO-8601 generatedAt and a sourceDate from the NPPES zip's
+    // mtime. We don't pin specific dates (the file refreshes), just the shape.
+    expect(typeof ds.generatedAt).toBe("string");
+    expect((ds.generatedAt as string).length).toBeGreaterThan(10);
+    expect(typeof ds.sourceDate === "string" || ds.sourceDate === null).toBe(true);
+    // Counts should be consistent with the loaded directory (the meta is
+    // emitted by the same build as the array, so they can't drift).
+    const certifiedInArray = (generated as Array<{ menopauseCertified: boolean }>).filter(
+      (r) => r.menopauseCertified
+    ).length;
+    expect(ds.certified).toBe(certifiedInArray);
+    expect(ds.total).toBe(generated.length);
+  });
+
   it("Haversine produces sensible values (Irvine CA → Brooklyn NY ≈ 2,450 mi)", () => {
     const irvine = { latitude: 33.68021, longitude: -117.833355 };
     const brooklyn = {

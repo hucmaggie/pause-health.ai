@@ -140,8 +140,27 @@ remains the authoritative source; the two are unioned.
 
 ## Step 3 — Run the pipeline
 
-You don't need to unzip the 11.5 GB CSV — stream it straight out of the
-dissemination zip through a FIFO:
+The committed harness handles the streaming + FIFO + invocation in one
+command. From the repo root:
+
+```bash
+./provider_ingest/scripts/refresh_national.sh
+# Or to see what it would do without invoking the build:
+./provider_ingest/scripts/refresh_national.sh --dry-run
+```
+
+It auto-discovers the latest `NPPES_Data_Dissemination_*.zip` under
+`~/Documents/Personal/Pause-Health.ai/`, picks the `npidata_pfile_*.csv`
+member, streams it straight out of the zip through a FIFO (no extraction),
+and writes both the generated array (`frontend/lib/provider-directory.generated.json`)
+and the sidecar metadata (`frontend/lib/provider-directory.generated.meta.json`)
+that records `generatedAt`, `sourceDate` (the NPPES zip's mtime — what the
+directory actually reflects), input paths, and per-build counts. Override
+defaults via `NPPES_ZIP=/path/to/zip`, `NPPES_OUT=/path/to/out.json`, or
+`NPPES_LIMIT=N`.
+
+If you'd rather invoke the underlying build directly (e.g. against an
+already-extracted CSV):
 
 ```bash
 cd provider_ingest
@@ -153,11 +172,15 @@ pause-provider-build \
   --mscp  examples/fixtures/mscp_npis.json \
   --out   ../frontend/lib/provider-directory.generated.json \
   --keep-all-certified \
-  --limit 2000
+  --limit 2000 \
+  --source-date 2026-06-15T00:00:00+00:00
 rm -f "$FIFO"
 ```
 
-(If you've already extracted the CSV, just pass its path to the first `--nppes`.)
+(`pause-provider-build` always writes a `<out>.meta.json` sidecar; pass
+`--meta /custom/path.json` to override.) If you've already extracted the
+CSV, just pass its path to the first `--nppes` and the source-date defaults
+to the file's mtime.
 
 - **Pass `--nppes` twice — national file FIRST, demo fixture LAST.** Inputs are
   merged and de-duplicated by NPI; on collision the **later-listed input wins**, so
@@ -170,7 +193,7 @@ rm -f "$FIFO"
   every certified provider is kept and `--limit` caps only the non-certified
   breadth. The committed run is `--limit 2000` → 2,014 rows, **654 KB**.
 - The reader streams row-by-row (constant memory) and parses only the ~40 columns
-  it needs, so the full 8.5M-row file runs in **~1m45s** (not the ~30 min a naive
+  it needs, so the full 9.6M-row file runs in **~1m50s** (not the ~30 min a naive
   `DictReader` over all ~330 columns would take).
 - Output is sorted by `graphScore` descending. Keep the non-certified `--limit`
   modest so the frontend bundle stays lean — the directory is filtered

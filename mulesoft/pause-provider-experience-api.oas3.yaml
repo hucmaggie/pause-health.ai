@@ -406,3 +406,29 @@ components:
               type: string
             servedBy:
               type: string
+            dataset:
+              type: object
+              nullable: true
+              description: >
+                Build metadata for the directory backing this response. Null
+                when the directory is the curated fallback (no national run
+                committed). `sourceDate` is the dataset's freshness (CMS NPPES
+                dissemination zip mtime); `generatedAt` is the wall-clock
+                build time.
+              properties:
+                generatedAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+                sourceDate:
+                  type: string
+                  format: date-time
+                  nullable: true
+                total:
+                  type: integer
+                certified:
+                  type: integer
+                states:
+                  type: integer
+                zip3Prefixes:
+                  type: integer

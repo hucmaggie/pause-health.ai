@@ -1,0 +1,18 @@
+{
+  "generatedAt": "2026-06-15T11:20:09+00:00",
+  "sourceDate": "2026-06-15T00:48:52+00:00",
+  "nppesInputs": [
+    ".scratch/npi_refresh.fifo",
+    "provider_ingest/examples/fixtures/nppes_sample.csv"
+  ],
+  "mscpOverlay": "provider_ingest/examples/fixtures/mscp_npis.json",
+  "limit": 2000,
+  "keepAllCertified": true,
+  "providers": {
+    "total": 2015,
+    "certified": 15,
+    "states": 55,
+    "zip3Prefixes": 532
+  },
+  "schemaVersion": 1
+}
