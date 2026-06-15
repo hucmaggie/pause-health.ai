@@ -452,13 +452,18 @@ const USING_GENERATED_DIRECTORY =
 type DirectoryMeta = {
   generatedAt?: string;
   sourceDate?: string | null;
+  // schemaVersion 1: single `sanctionsOverlay` string. schemaVersion 2:
+  // `sanctionsOverlays` map keyed by source ("ca", "ny"). We accept both so
+  // older committed sidecars still parse.
   sanctionsOverlay?: string | null;
+  sanctionsOverlays?: Record<string, string | null>;
   providers?: {
     total?: number;
     certified?: number;
     states?: number;
     zip3Prefixes?: number;
     sanctionedFiltered?: number;
+    sanctionedFilteredBySource?: Record<string, number>;
   };
 };
 const DIRECTORY_META = generatedProviderDirectoryMeta as DirectoryMeta;
@@ -472,11 +477,20 @@ const DIRECTORY_DATASET_PROVENANCE = USING_GENERATED_DIRECTORY
         PROVIDER_DIRECTORY.filter((r) => r.menopauseCertified).length,
       states: DIRECTORY_META.providers?.states,
       zip3Prefixes: DIRECTORY_META.providers?.zip3Prefixes,
-      // Counts how many candidate providers were filtered out by the
-      // sanctions overlay during the most recent build. Zero is the healthy,
-      // expected default — surfacing it confirms the safety filter ran.
+      // Total candidates dropped by ANY sanctions overlay this build; the
+      // per-source breakdown rides on `sanctionedFilteredBySource` so a
+      // reader can attribute each safety drop to CA / NY / future states.
       sanctionedFiltered: DIRECTORY_META.providers?.sanctionedFiltered ?? 0,
-      sanctionsOverlayUsed: DIRECTORY_META.sanctionsOverlay ?? null
+      sanctionedFilteredBySource:
+        DIRECTORY_META.providers?.sanctionedFilteredBySource ?? {},
+      // Path of each overlay that actually contributed; null entries mean
+      // the source wasn't applied this build. Accept the legacy
+      // single-overlay key too so older sidecars don't silently drop info.
+      sanctionsOverlaysUsed:
+        DIRECTORY_META.sanctionsOverlays ??
+        (DIRECTORY_META.sanctionsOverlay
+          ? { ca: DIRECTORY_META.sanctionsOverlay }
+          : {})
     }
   : null;
 

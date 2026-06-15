@@ -75,20 +75,29 @@ loads). The frozen contract is `ProviderRecord` in
 > the strongest signal in plain English (e.g. "board-certified OB/GYN" for
 > `facog`) when matchType=relevant-local.
 
-> **Sanction filtering.** Every directory candidate is checked against the
-> California Health & Human Services Agency *Provider Suspended and
-> Ineligible List* (see `provider_ingest/sanctions.py`) — a free,
-> public-domain CSV refreshed monthly at data.chhs.ca.gov. NPIs that match
-> the list are filtered out at build time so the directory never recommends
-> a sanctioned provider. The committed June 2026 run dropped **588** post-
-> taxonomy candidates that were on the CA S&I list. Survivors carry
-> `licenseStatus: "active"`; the count rides on the sidecar metadata
-> (`provenance.dataset.sanctionedFiltered`) so the filter is verifiable from
-> the API response. Today CA only — Phase 2 starts where the demo cohort
-> lives; other states will land additively behind the same overlay
-> interface. Refresh the CSV by downloading
-> `suspended-ineligible-list-*.csv` from the CHHS dataset page and dropping
-> it next to the NPPES zip; the harness auto-detects the latest file.
+> **Sanction filtering.** Every directory candidate is checked against two
+> public-domain disciplinary feeds (see `provider_ingest/sanctions.py`):
+>
+> - **CA — Medi-Cal Suspended & Ineligible List** (CHHS, NPI-keyed): a
+>   free CSV refreshed monthly at data.chhs.ca.gov. NPIs that appear are
+>   dropped from the directory.
+> - **NY — Professional Medical Conduct Board Actions** (data.ny.gov,
+>   17,950+ rows since 1990, license-number-keyed): the dataset doesn't
+>   carry NPIs, so the build cross-walks `(NY, license_num)` against each
+>   NPPES candidate's own `Provider License Number_<i>` columns and drops
+>   the matches. The cross-walk is built during the same single NPPES pass
+>   the rest of the pipeline uses — no second walk over the 9.6M-row file.
+>
+> Survivors carry `licenseStatus: "active"`. Per-source counts ride on the
+> sidecar metadata (`provenance.dataset.sanctionedFilteredBySource`) so
+> consumers can attribute each drop to its source. The committed June 2026
+> run dropped **588** providers via CA + **849** via NY (1,437 total),
+> verified end-to-end. Refresh: download `suspended-ineligible-list-*.csv`
+> (CHHS) and `ny_opmc-*.csv` (data.ny.gov ebmi-8ctw) into the same
+> directory as the NPPES zip — the harness auto-detects the latest of each.
+> NJ stays out for now — the NJ Board's disciplinary actions are PDFs
+> scraped per-action, not a structured feed; we don't ship a brittle
+> scraper. New states land additively behind the same overlay class.
 
 > **Insurance acceptance — synthetic, real-shaped.** Every provider also
 > carries `insuranceAccepted: string[]` (canonical tokens: medicare,
@@ -291,8 +300,8 @@ serve the NPPES-derived rows to keep the two paths shape-identical.
 ## What Phase 1 deliberately does **not** do
 
 - **State license verification — broad coverage** — Phase 2 (CA Medi-Cal
-  Suspended & Ineligible filter landed; other states will land additively
-  behind the same overlay interface).
+  S&I + NY OPMC filters landed; NJ stays out until they publish structured
+  data; other states will land additively behind the same overlay class).
 - **Clinic-site service-mention detection** — Phase 2 (NPPES-resident
   credential + multi-taxonomy signals landed; clinic-site scraping is the
   next layer).

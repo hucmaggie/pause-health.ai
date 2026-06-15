@@ -1,0 +1,4 @@
+Last Name,First Name,Middle Name,Name Suffix,Address,License Number,License Type,Year of Birth,Effective Date,Action,Misconduct Description,Date Updated
+Levin,Sample,J,,Address redacted,999111,MD,1960,01/15/2024,Order limiting practice,This action is not disciplinary in nature.,01/10/2024
+Nobody,Pre-issuance,,,Address redacted,000000,MD,1990,02/01/2024,Order before licensure,Sentinel row that must NOT match every blank-license NPPES record.,02/01/2024
+Mancini-Real,Joseph,C,,Address redacted,114313,MD,1944,05/25/2026,License limitation,A real-shaped row that doesn't match the fixture so the overlay carries content beyond Levin alone.,05/18/2026

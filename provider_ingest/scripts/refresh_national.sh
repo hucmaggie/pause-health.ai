@@ -17,6 +17,9 @@
 #   SANCTIONS    Path to the CA Medi-Cal Suspended & Ineligible List CSV.
 #                Default: latest suspended-ineligible-list-*.csv under the
 #                same dir as NPPES_ZIP. Set to empty string to skip.
+#   SANCTIONS_NY Path to the NY Professional Medical Conduct Board Actions
+#                CSV (data.ny.gov ebmi-8ctw). Default: latest ny_opmc*.csv
+#                under the same dir as NPPES_ZIP. Set to empty string to skip.
 #
 # Flags:
 #   --dry-run    Print what would happen without invoking the build.
@@ -83,12 +86,15 @@ NPPES_OUT="${NPPES_OUT:-frontend/lib/provider-directory.generated.json}"
 NPPES_LIMIT="${NPPES_LIMIT:-2000}"
 FIFO=".scratch/npi_refresh.fifo"
 
-# Sanctions overlay (CA Medi-Cal Suspended & Ineligible List). Auto-discover
-# the latest CSV beside the NPPES zip; an empty SANCTIONS env var skips the
-# overlay entirely (useful for clean baseline diffs against an old build).
+# Sanctions overlays. Auto-discover the latest CSVs beside the NPPES zip;
+# an empty env var skips that overlay entirely (useful for clean baseline
+# diffs against an old build).
+NPPES_DIR="$(dirname "$NPPES_ZIP")"
 if [[ "${SANCTIONS+set}" != "set" ]]; then
-  NPPES_DIR="$(dirname "$NPPES_ZIP")"
   SANCTIONS="$(ls -1t "${NPPES_DIR}"/suspended-ineligible-list-*.csv 2>/dev/null | head -1 || true)"
+fi
+if [[ "${SANCTIONS_NY+set}" != "set" ]]; then
+  SANCTIONS_NY="$(ls -1t "${NPPES_DIR}"/ny_opmc*.csv 2>/dev/null | head -1 || true)"
 fi
 
 # Use the zip's mtime as the dataset's source date. unzip preserves member
@@ -109,9 +115,14 @@ echo "→ Source date:  $SOURCE_DATE"
 echo "→ Output:       $NPPES_OUT"
 echo "→ Limit:        $NPPES_LIMIT (--keep-all-certified)"
 if [[ -n "$SANCTIONS" ]]; then
-  echo "→ Sanctions:    $SANCTIONS"
+  echo "→ Sanctions CA: $SANCTIONS"
 else
-  echo "→ Sanctions:    (none — set SANCTIONS=/path/to/csv or place suspended-ineligible-list-*.csv next to NPPES_ZIP)"
+  echo "→ Sanctions CA: (none — set SANCTIONS=/path/to/csv or place suspended-ineligible-list-*.csv next to NPPES_ZIP)"
+fi
+if [[ -n "$SANCTIONS_NY" ]]; then
+  echo "→ Sanctions NY: $SANCTIONS_NY"
+else
+  echo "→ Sanctions NY: (none — set SANCTIONS_NY=/path/to/csv or place ny_opmc*.csv next to NPPES_ZIP)"
 fi
 
 if (( DRY_RUN )); then
@@ -133,7 +144,10 @@ UNZIP_PID=$!
 # resolving to their curated local certified providers — see build.py docs).
 SANCTIONS_FLAG=()
 if [[ -n "$SANCTIONS" ]]; then
-  SANCTIONS_FLAG=(--sanctions "$SANCTIONS")
+  SANCTIONS_FLAG+=(--sanctions "$SANCTIONS")
+fi
+if [[ -n "$SANCTIONS_NY" ]]; then
+  SANCTIONS_FLAG+=(--sanctions-ny "$SANCTIONS_NY")
 fi
 
 time ./provider_ingest/.venv/bin/pause-provider-build \

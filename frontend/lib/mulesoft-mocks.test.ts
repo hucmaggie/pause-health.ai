@@ -248,18 +248,25 @@ describe("queryProviderDirectory · distance ranking", () => {
     expect(ds.total).toBe(generated.length);
   });
 
-  it("surfaces sanctions filter results in dataset provenance (count + overlay path)", () => {
+  it("surfaces sanctions filter results in dataset provenance (counts + overlay paths)", () => {
     const out = queryProviderDirectory({ menopauseOnly: true, fallback: true });
     const ds = out.provenance.dataset!;
-    // sanctionedFiltered is an integer count; zero is the healthy default,
-    // a positive number means real candidates were dropped for safety.
+    // sanctionedFiltered is the total integer count; zero is the healthy
+    // default, a positive number means real candidates were dropped for
+    // safety. The per-source breakdown rides on `sanctionedFilteredBySource`.
     expect(typeof ds.sanctionedFiltered).toBe("number");
     expect(ds.sanctionedFiltered).toBeGreaterThanOrEqual(0);
-    // overlay-used reports the path of the sanctions list applied; null when
-    // no overlay was passed at build time.
-    expect(
-      ds.sanctionsOverlayUsed === null || typeof ds.sanctionsOverlayUsed === "string"
-    ).toBe(true);
+    expect(typeof ds.sanctionedFilteredBySource).toBe("object");
+    // Sum of per-source drops must match the rolled-up total — invariant
+    // pinned so a future state-overlay can't silently drop records without
+    // attribution.
+    const summed = Object.values(
+      ds.sanctionedFilteredBySource as Record<string, number>
+    ).reduce((acc, n) => acc + n, 0);
+    expect(summed).toBe(ds.sanctionedFiltered);
+    // sanctionsOverlaysUsed maps source → file path (or null when not
+    // applied this build); types-only check since paths are maintainer-local.
+    expect(typeof ds.sanctionsOverlaysUsed).toBe("object");
   });
 
   it("every loaded provider has licenseStatus 'active' (sanctioned providers were filtered at build time)", () => {

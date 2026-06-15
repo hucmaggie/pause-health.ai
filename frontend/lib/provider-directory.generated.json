@@ -4158,32 +4158,6 @@
     ]
   },
   {
-    "npi": "1003854621",
-    "name": "Dr. Jennifer Lafontant, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Bronx",
-    "state": "NY",
-    "zip": "10462",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 40.843267,
-    "longitude": -73.860417,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs",
-      "cigna",
-      "humana"
-    ]
-  },
-  {
     "npi": "1003854696",
     "name": "Dr. Gina Land, MD",
     "credentials": [
@@ -4539,32 +4513,6 @@
       "cigna",
       "humana",
       "kaiser"
-    ]
-  },
-  {
-    "npi": "1003873290",
-    "name": "Dr. Deborah Duello, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Massena",
-    "state": "NY",
-    "zip": "13662",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 44.933698,
-    "longitude": -74.883295,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "uhc",
-      "cigna"
     ]
   },
   {
@@ -14766,35 +14714,6 @@
     ]
   },
   {
-    "npi": "1023156163",
-    "name": "Dr. Carol Livoti, MD, FACOG",
-    "credentials": [
-      "MD",
-      "FACOG"
-    ],
-    "specialty": "Gynecology",
-    "menopauseCertified": false,
-    "city": "Bronx",
-    "state": "NY",
-    "zip": "10453",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 40.852319,
-    "longitude": -73.913512,
-    "serviceSignals": [
-      "facog"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "uhc",
-      "kaiser"
-    ]
-  },
-  {
     "npi": "1023161262",
     "name": "Dr. Carolyn Piszczek, MD",
     "credentials": [
@@ -19928,32 +19847,6 @@
     ]
   },
   {
-    "npi": "1033190871",
-    "name": "Dr. .William Baerthlein, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Gouverneur",
-    "state": "NY",
-    "zip": "13642",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 44.335388,
-    "longitude": -75.455879,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "uhc",
-      "cigna",
-      "kaiser"
-    ]
-  },
-  {
     "npi": "1033192356",
     "name": "Dr. Kimberly Gregory, MD",
     "credentials": [
@@ -20954,30 +20847,6 @@
     ]
   },
   {
-    "npi": "1033265897",
-    "name": "Dr. Ellen Sterman, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Williamsville",
-    "state": "NY",
-    "zip": "14221",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 42.984481,
-    "longitude": -78.722761,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "aetna",
-      "humana"
-    ]
-  },
-  {
     "npi": "1033268487",
     "name": "Dr. Ying Chih Hsu, MD",
     "credentials": [
@@ -21857,31 +21726,6 @@
       "aetna",
       "bcbs",
       "uhc",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1033381538",
-    "name": "Dr. Rafik Saddeek, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "New York",
-    "state": "NY",
-    "zip": "10027",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 40.811407,
-    "longitude": -73.95306,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "cigna",
       "kaiser"
     ]
   },
@@ -34176,31 +34020,6 @@
     ]
   },
   {
-    "npi": "1053461350",
-    "name": "Dr. John Gomes, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Garden City",
-    "state": "NY",
-    "zip": "11530",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 40.726854,
-    "longitude": -73.637009,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "kaiser"
-    ]
-  },
-  {
     "npi": "1053462135",
     "name": "Dr. Katherine Brown, MD",
     "credentials": [
@@ -40461,29 +40280,6 @@
     ]
   },
   {
-    "npi": "1063511970",
-    "name": "Dr. Aiman Abboud, MD DO",
-    "credentials": [
-      "MD DO"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Brooklyn",
-    "state": "NY",
-    "zip": "11235",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 40.583949,
-    "longitude": -73.949096,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid"
-    ]
-  },
-  {
     "npi": "1063512812",
     "name": "Dr. Samantha Han, MD",
     "credentials": [
@@ -40634,32 +40430,6 @@
       "medicaid",
       "aetna",
       "cigna"
-    ]
-  },
-  {
-    "npi": "1063519304",
-    "name": "Dr. Husam Rimawi, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Brooklyn",
-    "state": "NY",
-    "zip": "11220",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 40.641087,
-    "longitude": -74.016552,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "uhc",
-      "cigna",
-      "humana"
     ]
   },
   {
@@ -42110,32 +41880,6 @@
       "medicare",
       "medicaid",
       "aetna"
-    ]
-  },
-  {
-    "npi": "1063658797",
-    "name": "Dr. Vladimir Breslau, DO, PHD",
-    "credentials": [
-      "DO",
-      "PHD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Norwich",
-    "state": "NY",
-    "zip": "13815",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": 42.547866,
-    "longitude": -75.530855,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "humana"
     ]
   },
   {
@@ -50676,6 +50420,267 @@
       "aetna",
       "uhc",
       "humana"
+    ]
+  },
+  {
+    "npi": "1083059273",
+    "name": "Dr. Callie Crider, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Zanesville",
+    "state": "OH",
+    "zip": "43701",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 39.969318,
+    "longitude": -81.990897,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "uhc",
+      "cigna"
+    ]
+  },
+  {
+    "npi": "1083077507",
+    "name": "Dr. Elizabeth Wilson, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Foley",
+    "state": "AL",
+    "zip": "36535",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 30.383999,
+    "longitude": -87.727359,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "humana"
+    ]
+  },
+  {
+    "npi": "1083077952",
+    "name": "Dr. Anna Smith, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Philadelphia",
+    "state": "PA",
+    "zip": "19104",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 39.958518,
+    "longitude": -75.198856,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "uhc",
+      "humana",
+      "kaiser"
+    ]
+  },
+  {
+    "npi": "1083078075",
+    "name": "Dr. Clara Lee, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "San Leandro",
+    "state": "CA",
+    "zip": "94577",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 37.713275,
+    "longitude": -122.16735,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "uhc",
+      "cigna",
+      "humana"
+    ]
+  },
+  {
+    "npi": "1083091110",
+    "name": "Dr. Florene Odulana, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Memphis",
+    "state": "TN",
+    "zip": "38163",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": null,
+    "longitude": null,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare"
+    ]
+  },
+  {
+    "npi": "1083092118",
+    "name": "Dr. Joseph Chen, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Dallas",
+    "state": "TX",
+    "zip": "75390",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 32.814164,
+    "longitude": -96.84065,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "aetna",
+      "uhc"
+    ]
+  },
+  {
+    "npi": "1083097000",
+    "name": "Dr. Pilar Rainey, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Peoria",
+    "state": "IL",
+    "zip": "61634",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": null,
+    "longitude": null,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "cigna",
+      "humana"
+    ]
+  },
+  {
+    "npi": "1083101612",
+    "name": "Dr. Jessica Floyd, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Houston",
+    "state": "TX",
+    "zip": "77030",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 29.706787,
+    "longitude": -95.401748,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "uhc",
+      "humana",
+      "kaiser"
+    ]
+  },
+  {
+    "npi": "1083102131",
+    "name": "Dr. Kassandra Colletta, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Las Vegas",
+    "state": "NV",
+    "zip": "89109",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 36.13172,
+    "longitude": -115.168382,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs"
+    ]
+  },
+  {
+    "npi": "1083102982",
+    "name": "Dr. Christina Swallow, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Saint Paul",
+    "state": "MN",
+    "zip": "55130",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 44.973302,
+    "longitude": -93.08241,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "aetna",
+      "bcbs"
     ]
   },
   {

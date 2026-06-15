@@ -213,7 +213,7 @@ def test_build_metadata_shape():
         keep_all_certified=True,
         source_date="2026-06-15T00:00:00+00:00",
     )
-    assert meta["schemaVersion"] == 1
+    assert meta["schemaVersion"] == 2
     assert meta["sourceDate"] == "2026-06-15T00:00:00+00:00"
     assert meta["mscpOverlay"] == str(MSCP)
     assert meta["limit"] == 2000
@@ -238,7 +238,7 @@ def test_write_metadata_writes_valid_json(tmp_path):
     )
     write_metadata(meta, out)
     parsed = json.loads(out.read_text())
-    assert parsed["schemaVersion"] == 1
+    assert parsed["schemaVersion"] == 2
 
 
 def test_largest_input_mtime_is_iso_utc(tmp_path):

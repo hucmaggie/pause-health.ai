@@ -484,13 +484,33 @@ components:
                 sanctionedFiltered:
                   type: integer
                   description: >
-                    Count of provider candidates dropped by the sanctions
-                    overlay (e.g. CA Medi-Cal Suspended & Ineligible List)
-                    during the most recent build. Zero is the healthy default;
-                    the field exists so consumers can confirm the safety
-                    filter actually ran.
+                    Total count of provider candidates dropped by ANY
+                    sanctions overlay during the most recent build. Zero is
+                    the healthy default; the field exists so consumers can
+                    confirm the safety filter actually ran. The per-source
+                    breakdown rides on `sanctionedFilteredBySource`.
                   example: 0
-                sanctionsOverlayUsed:
-                  type: string
-                  nullable: true
-                  description: Path of the sanctions overlay used, or null if no overlay.
+                sanctionedFilteredBySource:
+                  type: object
+                  additionalProperties:
+                    type: integer
+                  description: >
+                    Per-source breakdown of sanctioned drops, e.g.
+                    `{"ca": 588, "ny": 849}`. Keys: `ca` (Medi-Cal Suspended
+                    & Ineligible — NPI-keyed), `ny` (NY Professional Medical
+                    Conduct Board Actions — license-number-keyed via the
+                    NPPES `Provider License Number_<i>` cross-walk). New
+                    states land additively as new keys.
+                  example:
+                    ca: 588
+                    ny: 849
+                sanctionsOverlaysUsed:
+                  type: object
+                  additionalProperties:
+                    type: string
+                    nullable: true
+                  description: >
+                    Per-source overlay file path that contributed to this
+                    build, or null if the source wasn't applied. Mirrors
+                    `sanctionedFilteredBySource` so a reader can correlate
+                    each drop count with the overlay file that produced it.

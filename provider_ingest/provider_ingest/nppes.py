@@ -67,6 +67,16 @@ _TAXONOMY_COLUMNS = [
     f"Healthcare Provider Primary Taxonomy Switch_{i}"
     for i in range(1, NUM_TAXONOMY_SLOTS + 1)
 ]
+# State license number + state code, slots 1..15. Consumed by extract_licenses
+# for the sanctions cross-walk against state-license-keyed overlays (e.g. NY
+# OPMC). 30 extra columns is a small marginal cost on top of the ~40 we
+# already read.
+_LICENSE_COLUMNS = [
+    f"Provider License Number_{i}" for i in range(1, NUM_TAXONOMY_SLOTS + 1)
+] + [
+    f"Provider License Number State Code_{i}"
+    for i in range(1, NUM_TAXONOMY_SLOTS + 1)
+]
 _NEEDED_COLUMNS = [
     COL_NPI,
     COL_ENTITY_TYPE,
@@ -78,6 +88,7 @@ _NEEDED_COLUMNS = [
     COL_STATE,
     COL_POSTAL,
     *_TAXONOMY_COLUMNS,
+    *_LICENSE_COLUMNS,
 ]
 
 
@@ -152,6 +163,24 @@ def _derive_access(npi: str) -> tuple[bool, bool]:
     accepting = (sum(digits[::2]) % 10) < 7
     telehealth = (sum(digits[1::2]) % 10) < 6
     return accepting, telehealth
+
+
+def extract_licenses(row: dict) -> list[tuple[str, str]]:
+    """Pull every populated `(state, license_num)` pair from a row.
+
+    Returns the list in NPPES slot order (1..15). Empty license cells are
+    dropped. Used by the sanctions filter to cross-walk the candidate
+    against state license-number-keyed overlays (e.g. NY OPMC) — kept out
+    of `normalize_row` so it stays a pure record-shape function and
+    consumers that don't need licenses don't pay for the parse.
+    """
+    out: list[tuple[str, str]] = []
+    for i in range(1, NUM_TAXONOMY_SLOTS + 1):
+        num = (row.get(f"Provider License Number_{i}") or "").strip()
+        st = (row.get(f"Provider License Number State Code_{i}") or "").strip()
+        if num:
+            out.append((st, num))
+    return out
 
 
 def _format_name(row: dict, credentials: list[str]) -> str:

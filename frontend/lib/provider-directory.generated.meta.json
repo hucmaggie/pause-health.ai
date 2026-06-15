@@ -1,12 +1,15 @@
 {
-  "generatedAt": "2026-06-15T14:26:55+00:00",
+  "generatedAt": "2026-06-15T15:23:33+00:00",
   "sourceDate": "2026-06-15T00:48:52+00:00",
   "nppesInputs": [
     ".scratch/npi_refresh.fifo",
     "provider_ingest/examples/fixtures/nppes_sample.csv"
   ],
   "mscpOverlay": "provider_ingest/examples/fixtures/mscp_npis.json",
-  "sanctionsOverlay": "/Users/maggie.hu/Documents/Personal/Pause-Health.ai/suspended-ineligible-list-may-2026.csv",
+  "sanctionsOverlays": {
+    "ca": "/Users/maggie.hu/Documents/Personal/Pause-Health.ai/suspended-ineligible-list-may-2026.csv",
+    "ny": "/Users/maggie.hu/Documents/Personal/Pause-Health.ai/ny_opmc-may-2026.csv"
+  },
   "limit": 2000,
   "keepAllCertified": true,
   "providers": {
@@ -14,7 +17,11 @@
     "certified": 15,
     "states": 55,
     "zip3Prefixes": 532,
-    "sanctionedFiltered": 588
+    "sanctionedFiltered": 1437,
+    "sanctionedFilteredBySource": {
+      "ca": 588,
+      "ny": 849
+    }
   },
-  "schemaVersion": 1
+  "schemaVersion": 2
 }
