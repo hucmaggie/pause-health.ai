@@ -18,6 +18,7 @@ import json
 from collections.abc import Iterable
 from pathlib import Path
 
+from .centroids import LatLng, default_centroids
 from .mscp import MscpOverlay
 from .nppes import iter_nppes_rows, normalize_row
 from .records import ProviderRecord
@@ -31,6 +32,7 @@ def build_directory(
     *,
     limit: int | None = None,
     keep_all_certified: bool = False,
+    centroids: dict[str, LatLng] | None = None,
 ) -> list[ProviderRecord]:
     """Stream one or more NPPES files → filtered, scored, sorted ProviderRecords.
 
@@ -45,10 +47,17 @@ def build_directory(
     if isinstance(nppes_paths, (str, Path)):
         nppes_paths = [nppes_paths]
 
+    # Load the bundled ZCTA centroid map exactly once. Callers can pass an
+    # explicit dict (tests, alternate datasets); `{}` opts distance-stamping
+    # off entirely, which keeps the pipeline working even when the data file
+    # isn't on disk.
+    if centroids is None:
+        centroids = default_centroids()
+
     by_npi: dict[str, ProviderRecord] = {}
     for path in nppes_paths:
         for row in iter_nppes_rows(path):
-            rec = normalize_row(row, overlay)
+            rec = normalize_row(row, overlay, centroids=centroids)
             if rec is None:
                 continue
             by_npi[rec.npi] = rec

@@ -148,7 +148,7 @@ server.registerTool(
   {
     title: "Find menopause-experienced providers",
     description:
-      "Search Pause's provider directory (a defensible synthesis of CMS NPPES, self-reported MSCP/NCMP credentials, and a curated overlay). Supports filtering by ZIP prefix and a menopause-certified-only flag, and returns providers ranked by Pause's internal graph score. When a certified search finds nobody in the patient's ZIP area, results gracefully fall back — to nearby menopause-relevant (non-certified) clinicians, or to telehealth-capable certified specialists nationally. ALWAYS read the response `matchType` and present accordingly: 'certified-local' = certified & local; 'relevant-local' = nearby but NOT menopause-certified (say so); 'certified-remote' = certified specialists elsewhere offering telehealth (no local match); 'none' = no match.",
+      "Search Pause's provider directory (a defensible synthesis of CMS NPPES, self-reported MSCP/NCMP credentials, and a curated overlay). Supports filtering by ZIP prefix and a menopause-certified-only flag. Results are ranked by distance from the patient ZIP when its Census ZCTA centroid is known (each provider carries `distanceMiles`); otherwise by Pause's internal graph score. Read the response `sort` field to see which ranking applied, and prefer reporting distance (e.g. \"about 4 miles away\") to the patient when present. When a certified search finds nobody in the patient's ZIP area, results gracefully fall back — to nearby menopause-relevant (non-certified) clinicians, or to telehealth-capable certified specialists nationally. ALWAYS read the response `matchType` and present accordingly: 'certified-local' = certified & local; 'relevant-local' = nearby but NOT menopause-certified (say so); 'certified-remote' = certified specialists elsewhere offering telehealth (no local match); 'none' = no match.",
     inputSchema: {
       zip: z
         .string()
@@ -180,6 +180,7 @@ server.registerTool(
       const total = (data as { total?: number }).total ?? 0;
       const returned = (data as { returned?: number }).returned ?? 0;
       const matchType = (data as { matchType?: string }).matchType ?? "certified-local";
+      const sort = (data as { sort?: string }).sort ?? "score";
       const matchNote: Record<string, string> = {
         "certified-local": "menopause-certified and local",
         "relevant-local": "nearby but NOT menopause-certified — present them as menopause-experienced, not certified",
@@ -189,7 +190,7 @@ server.registerTool(
       };
       return ok(
         data,
-        `Pause provider directory: returned ${returned} of ${total} providers (zip=${zip ?? "any"}, menopauseOnly=${menopauseOnly}). matchType=${matchType} — ${matchNote[matchType] ?? matchType}.`
+        `Pause provider directory: returned ${returned} of ${total} providers (zip=${zip ?? "any"}, menopauseOnly=${menopauseOnly}). sort=${sort}${sort === "distance" ? " (distanceMiles ascending)" : " (graphScore descending)"}. matchType=${matchType} — ${matchNote[matchType] ?? matchType}.`
       );
     } catch (e) {
       return err((e as Error).message);

@@ -52,7 +52,31 @@ def test_record_shape_matches_contract():
         "acceptingNewPatients",
         "telehealth",
         "graphScore",
+        "latitude",
+        "longitude",
     }
+
+
+def test_centroids_stamp_lat_lng_for_known_zip():
+    # The fixture has 92614 (Irvine, CA), which has a real ZCTA centroid.
+    records = _build()
+    irvine = next(r for r in records if r.zip == "92614")
+    assert irvine.latitude is not None
+    assert irvine.longitude is not None
+    # Loose box around Orange County, CA — guards against accidentally swapping
+    # lat/lng or pulling the wrong column.
+    assert 33.0 < irvine.latitude < 34.5
+    assert -118.5 < irvine.longitude < -117.0
+
+
+def test_centroids_off_when_empty_dict_passed():
+    # Explicit empty centroid map opts the build out of distance-stamping;
+    # ProviderRecords still produce, just with null coordinates.
+    records = build_directory(NPPES, MscpOverlay.from_file(MSCP), centroids={})
+    assert len(records) > 0
+    for r in records:
+        assert r.latitude is None
+        assert r.longitude is None
 
 
 def test_limit_caps_output():

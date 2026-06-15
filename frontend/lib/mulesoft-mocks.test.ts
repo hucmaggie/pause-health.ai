@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { queryProviderDirectory } from "./mulesoft-mocks";
+import { queryProviderDirectory, sortByCentroidForTest } from "./mulesoft-mocks";
 import generated from "./provider-directory.generated.json";
 
 /**
@@ -103,5 +103,150 @@ describe("queryProviderDirectory · graceful fallback tiers", () => {
     const out = queryProviderDirectory({ menopauseOnly: true, limit: 3, fallback: true });
     expect(out.returned).toBeLessThanOrEqual(3);
     expect(out.total).toBeGreaterThanOrEqual(out.returned);
+  });
+});
+
+/**
+ * Distance ranking — separate from the tier ladder.
+ *
+ * The tier (matchType) decides WHICH providers are eligible; the sort decides
+ * the order within that tier. Distance ranking is purely additive: when the
+ * patient ZIP centroid is supplied AND at least one eligible provider has a
+ * centroid, we rank by Haversine miles ascending and stamp `distanceMiles` on
+ * each row. Without a centroid, the prior graphScore-only ranking is preserved.
+ */
+describe("queryProviderDirectory · distance ranking", () => {
+  it("sorts by distance ascending when a ZIP centroid is supplied", () => {
+    // Use the demo persona ZIP (Irvine, CA) — its centroid is in the bundled
+    // gazetteer and the directory contains rows in 926* with real centroids.
+    const irvine = { latitude: 33.68021, longitude: -117.833355 };
+    const out = queryProviderDirectory({
+      zip: "92614",
+      menopauseOnly: true,
+      fallback: true,
+      zipCentroid: irvine,
+      limit: 5
+    });
+    expect(out.sort).toBe("distance");
+    expect(out.providers.length).toBeGreaterThan(0);
+
+    // Distance is stamped on every returned row (not null) for in-area providers
+    // — every certified-local row has a known centroid in the Census table.
+    for (const p of out.providers) {
+      expect(p.distanceMiles).not.toBeNull();
+      expect(typeof p.distanceMiles).toBe("number");
+      expect(p.distanceMiles!).toBeGreaterThanOrEqual(0);
+      expect(p.distanceMiles!).toBeLessThan(50); // certified-local stays local
+    }
+
+    // Monotonically non-decreasing — the contract for sort=distance.
+    for (let i = 1; i < out.providers.length; i++) {
+      const prev = out.providers[i - 1].distanceMiles!;
+      const curr = out.providers[i].distanceMiles!;
+      expect(curr).toBeGreaterThanOrEqual(prev);
+    }
+  });
+
+  it("falls back to graphScore ordering when no centroid is supplied", () => {
+    const out = queryProviderDirectory({
+      zip: "92614",
+      menopauseOnly: true,
+      fallback: true,
+      limit: 5
+    });
+    expect(out.sort).toBe("score");
+    // distanceMiles is null on every row when sort=score (no centroid known).
+    for (const p of out.providers) {
+      expect(p.distanceMiles).toBeNull();
+    }
+    // Still descending by graphScore, like before.
+    for (let i = 1; i < out.providers.length; i++) {
+      expect(out.providers[i - 1].graphScore).toBeGreaterThanOrEqual(
+        out.providers[i].graphScore
+      );
+    }
+  });
+
+  it("places providers without coordinates at the end (null distances last)", () => {
+    // Custom directory with mixed coverage so we can observe the slide-to-end
+    // behavior deterministically. Patient is at (0, 0); B is closest, A next,
+    // C has no centroid → must end up last regardless of graphScore.
+    const here = { latitude: 0, longitude: 0 };
+    const dir = [
+      {
+        npi: "1000000001",
+        name: "A",
+        credentials: ["MD"],
+        specialty: "Obstetrics & Gynecology",
+        menopauseCertified: true,
+        city: "X",
+        state: "XX",
+        zip: "00001",
+        acceptingNewPatients: true,
+        telehealth: true,
+        graphScore: 0.5,
+        latitude: 0.5,
+        longitude: 0.5
+      },
+      {
+        npi: "1000000002",
+        name: "B",
+        credentials: ["MD"],
+        specialty: "Obstetrics & Gynecology",
+        menopauseCertified: true,
+        city: "Y",
+        state: "YY",
+        zip: "00002",
+        acceptingNewPatients: true,
+        telehealth: true,
+        graphScore: 0.4,
+        latitude: 0.1,
+        longitude: 0.1
+      },
+      {
+        npi: "1000000003",
+        name: "C-no-coords",
+        credentials: ["MD"],
+        specialty: "Obstetrics & Gynecology",
+        menopauseCertified: true,
+        city: "Z",
+        state: "ZZ",
+        zip: "99999",
+        acceptingNewPatients: true,
+        telehealth: true,
+        graphScore: 0.99,
+        latitude: null,
+        longitude: null
+      }
+    ];
+    const ranked = sortByCentroidForTest(dir, here);
+    expect(ranked.map((p) => p.name)).toEqual(["B", "A", "C-no-coords"]);
+    expect(ranked[0].distanceMiles).toBeLessThan(ranked[1].distanceMiles!);
+    expect(ranked[2].distanceMiles).toBeNull();
+  });
+
+  it("Haversine produces sensible values (Irvine CA → Brooklyn NY ≈ 2,450 mi)", () => {
+    const irvine = { latitude: 33.68021, longitude: -117.833355 };
+    const brooklyn = {
+      npi: "1306188891",
+      name: "Brooklyn",
+      credentials: ["NP"],
+      specialty: "Family Medicine",
+      menopauseCertified: true,
+      city: "Brooklyn",
+      state: "NY",
+      zip: "11215",
+      acceptingNewPatients: true,
+      telehealth: true,
+      graphScore: 0.9,
+      latitude: 40.662688,
+      longitude: -73.98674
+    };
+    const [ranked] = sortByCentroidForTest([brooklyn], irvine);
+    // True great-circle distance is ~2,436 miles — accept ±15 mi for centroid
+    // sourcing and Earth-radius approximation. Mostly a guard against accidental
+    // unit/sign swaps (km vs mi, lat/lng order, missing toRad).
+    expect(ranked.distanceMiles).not.toBeNull();
+    expect(Math.abs(ranked.distanceMiles! - 2436)).toBeLessThan(15);
   });
 });

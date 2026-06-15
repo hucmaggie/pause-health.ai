@@ -22,9 +22,13 @@ dev = [
 
 [project.scripts]
 pause-provider-build = "provider_ingest.build:main"
+pause-provider-centroids = "provider_ingest.centroids:regenerate_main"
 
 [tool.setuptools.packages.find]
 include = ["provider_ingest*"]
+
+[tool.setuptools.package-data]
+"provider_ingest" = ["data/zip_centroids.json"]
 
 [tool.ruff]
 line-length = 100

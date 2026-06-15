@@ -4,6 +4,7 @@ import {
   isMulesoftProvidersLive
 } from "../../../../lib/mulesoft/providers";
 import { queryProviderDirectory } from "../../../../lib/mulesoft-mocks";
+import { lookupZipCentroid } from "../../../../lib/zip-centroids";
 
 /**
  * Pause-Health.ai Experience-tier endpoint: GET /api/mulesoft/providers
@@ -49,7 +50,14 @@ export async function GET(req: Request) {
   // instead of an empty result. Pass ?fallback=false to force strict behavior.
   const fallback = searchParams.get("fallback") !== "false";
 
-  const query = { zip, menopauseOnly, limit, fallback };
+  // When the patient ZIP resolves to a Census ZCTA centroid, the directory
+  // ranks providers by distance from that centroid (Haversine miles). No
+  // centroid → score-only ranking, no errors. Skipped via ?distance=false
+  // for callers that need the prior score-only ordering.
+  const distanceParam = searchParams.get("distance") !== "false";
+  const zipCentroid = distanceParam ? lookupZipCentroid(zip) : null;
+
+  const query = { zip, menopauseOnly, limit, fallback, zipCentroid };
 
   if (!isMulesoftProvidersLive()) {
     const result = queryProviderDirectory(query);

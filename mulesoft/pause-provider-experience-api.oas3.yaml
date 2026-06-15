@@ -118,6 +118,18 @@ paths:
           schema:
             type: boolean
             default: true
+        - name: distance
+          in: query
+          description: >
+            When `true` (default) and the `zip` resolves to a Census ZCTA
+            centroid, providers are ranked by Haversine distance ascending and
+            each carries a `distanceMiles` field. Set to `false` to keep the
+            prior `graphScore`-only ranking. The response `sort` field reports
+            which ranking actually applied.
+          required: false
+          schema:
+            type: boolean
+            default: true
       responses:
         "200":
           description: Provider directory results
@@ -291,6 +303,29 @@ components:
           maximum: 1
           description: Provider relevance score from the Pause knowledge graph.
           example: 0.95
+        latitude:
+          type: number
+          format: float
+          nullable: true
+          description: >
+            Latitude of the practice ZIP centroid (Census 2020 ZCTA). Null if
+            the ZIP has no ZCTA centroid (rare PO-box-only / very new ZIPs).
+          example: 33.68
+        longitude:
+          type: number
+          format: float
+          nullable: true
+          description: Longitude of the practice ZIP centroid (Census 2020 ZCTA).
+          example: -117.83
+        distanceMiles:
+          type: number
+          format: float
+          nullable: true
+          description: >
+            Great-circle distance in miles from the patient ZIP centroid to the
+            practice ZIP centroid (Haversine). Present only when both centroids
+            are known and `distance=true`; otherwise null.
+          example: 4.2
 
     ProviderDirectoryResponse:
       type: object
@@ -308,6 +343,15 @@ components:
               type: integer
             fallback:
               type: boolean
+        sort:
+          type: string
+          description: >
+            Which ranking actually applied. `distance` when the patient ZIP
+            centroid was known and at least one provider had a centroid;
+            `score` otherwise (graphScore desc).
+          enum:
+            - distance
+            - score
         matchType:
           type: string
           description: >

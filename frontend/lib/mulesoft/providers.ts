@@ -31,8 +31,21 @@ export function isMulesoftProvidersLive(baseUrl?: string): boolean {
   return true;
 }
 
+type ProvidersQuery = {
+  zip?: string;
+  menopauseOnly?: boolean;
+  limit?: number;
+  fallback?: boolean;
+  /**
+   * Patient ZIP centroid; used by the mock fallback to rank by distance.
+   * Not forwarded to the live Mule API yet — the live worker still ranks by
+   * graphScore until its DataWeave is updated.
+   */
+  zipCentroid?: { latitude: number; longitude: number } | null;
+};
+
 export async function fetchLiveProviders(
-  query: { zip?: string; menopauseOnly?: boolean; limit?: number; fallback?: boolean },
+  query: ProvidersQuery,
   opts: LiveProvidersFetchOptions = {}
 ): Promise<ProviderDirectoryResult | null> {
   const baseUrl = (opts.baseUrl ?? process.env.MULESOFT_PROVIDERS_BASE_URL ?? "").trim();
@@ -115,7 +128,7 @@ export function _resetProvidersWarnDedupForTests(): void {
 }
 
 export async function getProvidersPreferReal(
-  query: { zip?: string; menopauseOnly?: boolean; limit?: number; fallback?: boolean },
+  query: ProvidersQuery,
   opts: LiveProvidersFetchOptions = {}
 ): Promise<{ source: "live" | "mock"; result: ProviderDirectoryResult }> {
   if (isMulesoftProvidersLive(opts.baseUrl)) {

@@ -18,7 +18,8 @@ loads). The frozen contract is `ProviderRecord` in
 
 - `provider_ingest` streams the NPPES bulk schema, filters on the real
   menopause NUCC taxonomy codes, overlays an MSCP credential list, computes a
-  `graphScore`, and writes the generated JSON.
+  `graphScore`, **stamps `latitude`/`longitude` from the bundled Census 2020
+  ZCTA gazetteer**, and writes the generated JSON.
 - `queryProviderDirectory()` loads that JSON (falling back to the hand-curated
   rows only if it's empty).
 - **The committed dataset is a real national run** of the CMS June 2026
@@ -39,8 +40,19 @@ loads). The frozen contract is `ProviderRecord` in
 > the Experience API does **graceful fallback** (`?fallback=true`, default-on; see
 > the `matchType` field): no local certified provider → nearby menopause-relevant
 > (non-certified) clinicians → national telehealth-capable certified specialists,
-> each tier labeled so the agent presents it honestly. The steps below reproduce or
-> refresh this run.
+> each tier labeled so the agent presents it honestly.
+
+> **Distance ranking.** The Experience API also ranks providers by Haversine
+> distance from the patient's ZIP centroid (Census 2020 ZCTA gazetteer, public
+> domain). When the patient ZIP resolves to a centroid AND at least one in-tier
+> provider has its own centroid, every returned row carries a `distanceMiles`
+> field (rounded to 0.1 mi) and rows sort distance-asc / `graphScore`-desc;
+> otherwise the directory keeps the previous score-only ranking. The
+> `sort: "distance" | "score"` field on the response reports which ranking
+> applied. The matchType tier ladder is unchanged — distance is a within-tier
+> sort, so certified-local still wins over relevant-local even when the latter
+> is geographically closer. Pass `?distance=false` to force the score-only
+> ordering. The steps below reproduce or refresh this run.
 
 ---
 
@@ -205,8 +217,28 @@ serve the NPPES-derived rows to keep the two paths shape-identical.
 
 - **State license verification / disciplinary gating** — Phase 2.
 - **Clinic-site service-mention detection** — Phase 2.
-- **Distance ranking + insurance match** — Phase 2 (today: ZIP-prefix filter +
-  graphScore only).
+- **Insurance match** — Phase 2 (distance ranking landed; insurance is the next
+  filter on top of it).
 - **Closed-loop outcomes scoring** — Phase 3, after the first ~1,000 referrals.
 - **Real MSCP feed** — gated on the Menopause Society partnership; synthetic
   overlay today.
+
+---
+
+## Refreshing the bundled ZIP centroids (rare)
+
+The Census ZCTA boundaries are updated on a multi-year cadence; we don't expect
+to redo this often. When a new gazetteer drops:
+
+```bash
+curl -sSL -o /tmp/zcta.zip \
+  "https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2020_Gazetteer/2020_Gaz_zcta_national.zip"
+unzip -d /tmp /tmp/zcta.zip
+pause-provider-centroids --gazetteer /tmp/2020_Gaz_zcta_national.txt
+cp provider_ingest/provider_ingest/data/zip_centroids.json \
+   frontend/lib/zip-centroids.generated.json
+```
+
+Then re-run Step 3 (the directory build) so the lat/lng on every provider
+reflects the new centroid table. Both files are checked in — the regenerator is
+a one-liner only when the source data actually changes.

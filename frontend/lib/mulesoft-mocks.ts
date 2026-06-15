@@ -300,6 +300,20 @@ export type ProviderRecord = {
   acceptingNewPatients: boolean;
   telehealth: boolean;
   graphScore: number;
+  /**
+   * Centroid of the practice ZIP, from the Census 2020 ZCTA gazetteer
+   * (see provider_ingest/centroids.py). Both null when the ZIP has no ZCTA
+   * centroid (rare: PO-box-only / very new ZIPs); the directory then
+   * falls back to score-only ranking for that provider.
+   */
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
+/** Returned by queryProviderDirectory when the patient's ZIP centroid is known. */
+export type ProviderRecordRanked = ProviderRecord & {
+  /** Great-circle distance from the patient's ZIP to the practice ZIP, in miles. */
+  distanceMiles?: number | null;
 };
 
 /**
@@ -431,8 +445,16 @@ export function queryProviderDirectory(opts: {
    * Experience API (`/api/mulesoft/providers`) opts in.
    */
   fallback?: boolean;
+  /**
+   * (lat, lng) of the patient's ZIP. When supplied, providers are stamped
+   * with `distanceMiles` (Haversine) and sorted by distance ascending within
+   * the resolved tier — graphScore descending becomes the tiebreak. Pass
+   * `null` (or omit) and the directory keeps the original score-only ranking;
+   * the ZIP-prefix tier ladder is unchanged either way.
+   */
+  zipCentroid?: { latitude: number; longitude: number } | null;
 }) {
-  const { zip, menopauseOnly, limit, fallback } = opts;
+  const { zip, menopauseOnly, limit, fallback, zipCentroid } = opts;
   const prefix = zip && zip.length >= 3 ? zip.slice(0, 3) : undefined;
   const inArea = (r: ProviderRecord) => !prefix || r.zip.startsWith(prefix);
 
@@ -473,9 +495,21 @@ export function queryProviderDirectory(opts: {
     }
   }
 
-  rows = rows.slice().sort((a, b) => b.graphScore - a.graphScore);
-  const total = rows.length;
-  if (limit && limit > 0) rows = rows.slice(0, limit);
+  // Stamp distance when the patient ZIP centroid is known and the provider
+  // has its own centroid. Anything unstamped just falls through to score-only
+  // ranking — no errors, no zero-distance lies.
+  const canRankByDistance =
+    !!zipCentroid && rows.some((r) => r.latitude != null && r.longitude != null);
+  const ranked: ProviderRecordRanked[] = canRankByDistance
+    ? sortByCentroid(rows, zipCentroid!)
+    : rows
+        .slice()
+        .sort((a, b) => b.graphScore - a.graphScore)
+        .map((r) => ({ ...r, distanceMiles: null }));
+  const sort: "distance" | "score" = canRankByDistance ? "distance" : "score";
+
+  const total = ranked.length;
+  const sliced = limit && limit > 0 ? ranked.slice(0, limit) : ranked;
   if (total === 0) matchType = "none";
 
   return {
@@ -486,17 +520,76 @@ export function queryProviderDirectory(opts: {
       fallback: !!fallback
     },
     matchType,
+    sort,
     total,
-    returned: rows.length,
-    providers: rows,
+    returned: sliced.length,
+    providers: sliced,
     provenance: {
       sources: USING_GENERATED_DIRECTORY
         ? [
             "CMS NPPES (taxonomy-filtered via provider_ingest)",
-            "Self-reported MSCP/NCMP credentials + curated overlay"
+            "Self-reported MSCP/NCMP credentials + curated overlay",
+            ...(sort === "distance"
+              ? ["Census 2020 ZCTA centroids (Haversine distance)"]
+              : [])
           ]
         : ["CMS NPPES (synthetic slice)", "MSCP credential list (synthetic)"],
-      experienceApi: "pause-provider-directory-experience-api@0.5"
+      experienceApi: "pause-provider-directory-experience-api@0.6"
     }
   };
+}
+
+/**
+ * Annotate `distanceMiles` on each provider and sort distance-asc / score-desc.
+ * Providers without a centroid get `distanceMiles: null` and slide to the end.
+ * Pure function — extracted so tests can target the ranking surgically without
+ * having to construct a full tier-ladder query.
+ */
+function sortByCentroid(
+  rows: ProviderRecord[],
+  centroid: { latitude: number; longitude: number }
+): ProviderRecordRanked[] {
+  const ranked: ProviderRecordRanked[] = rows.map((r) => ({
+    ...r,
+    distanceMiles:
+      r.latitude != null && r.longitude != null
+        ? haversineMiles(centroid.latitude, centroid.longitude, r.latitude, r.longitude)
+        : null
+  }));
+  ranked.sort((a, b) => {
+    const da = a.distanceMiles ?? Number.POSITIVE_INFINITY;
+    const db = b.distanceMiles ?? Number.POSITIVE_INFINITY;
+    if (da !== db) return da - db;
+    return b.graphScore - a.graphScore;
+  });
+  return ranked;
+}
+
+/** @internal — exported only for tests. Same semantics as the inlined ranker. */
+export const sortByCentroidForTest = sortByCentroid;
+
+/**
+ * Great-circle distance in miles between two (lat, lng) points.
+ *
+ * Earth radius is 3,958.7613 miles (mean radius); good to <0.5% over the
+ * ranges this directory cares about — far better than the precision the
+ * patient ZIP centroid itself carries (a centroid is the area's middle, not
+ * the patient's actual address). Pure scalar math; no I/O.
+ */
+function haversineMiles(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const R = 3958.7613;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  // Round to 0.1 mi — beyond that is false precision given centroid sourcing.
+  return Math.round(R * c * 10) / 10;
 }

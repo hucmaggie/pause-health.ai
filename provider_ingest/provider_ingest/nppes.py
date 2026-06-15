@@ -11,6 +11,10 @@ Two ProviderRecord fields have no NPPES source — `acceptingNewPatients` and
 from the NPI so the demo directory is stable and reproducible; a production
 feed (or a service-line overlay, Phase 2) supplies the real values. This is
 called out so the synthetic-ness is never mistaken for ground truth.
+
+`latitude`/`longitude` come from the bundled Census 2020 ZCTA gazetteer
+(see `centroids.py`); they are nullable since not every USPS ZIP has a ZCTA
+centroid (rare PO-box-only / very new ZIPs).
 """
 
 from __future__ import annotations
@@ -19,6 +23,7 @@ import csv
 from collections.abc import Iterator
 from pathlib import Path
 
+from .centroids import LatLng, default_centroids
 from .mscp import MscpOverlay
 from .records import ProviderRecord
 from .score import graph_score
@@ -156,11 +161,17 @@ def _format_name(row: dict, credentials: list[str]) -> str:
     return f"{core}, {cred_suffix}" if cred_suffix else core
 
 
-def normalize_row(row: dict, overlay: MscpOverlay) -> ProviderRecord | None:
+def normalize_row(
+    row: dict,
+    overlay: MscpOverlay,
+    centroids: dict[str, LatLng] | None = None,
+) -> ProviderRecord | None:
     """Filter + normalize one NPPES row, or None if it isn't a keeper.
 
     Keeps individual providers whose taxonomy set intersects the curated
-    menopause-relevant codes; everything else returns None.
+    menopause-relevant codes; everything else returns None. When a ZCTA
+    centroid is known for the provider's 5-digit ZIP, stamps `latitude`/
+    `longitude` so downstream code can rank by distance.
     """
     if (row.get(COL_ENTITY_TYPE) or "").strip() != ENTITY_TYPE_INDIVIDUAL:
         return None
@@ -189,6 +200,13 @@ def normalize_row(row: dict, overlay: MscpOverlay) -> ProviderRecord | None:
 
     accepting, telehealth = _derive_access(npi)
 
+    lat: float | None = None
+    lng: float | None = None
+    if zip_code and centroids:
+        ll = centroids.get(zip_code)
+        if ll is not None:
+            lat, lng = ll
+
     score = graph_score(
         relevance=taxonomy.relevance,
         accepting_new_patients=accepting,
@@ -209,4 +227,6 @@ def normalize_row(row: dict, overlay: MscpOverlay) -> ProviderRecord | None:
         acceptingNewPatients=accepting,
         telehealth=telehealth,
         graphScore=score,
+        latitude=lat,
+        longitude=lng,
     )

@@ -25,6 +25,11 @@ class ProviderRecord:
     acceptingNewPatients: bool
     telehealth: bool
     graphScore: float
+    # Centroid of the practice ZIP (Census 2020 ZCTA). Both null if the ZIP
+    # has no ZCTA centroid (rare PO-box-only / very new ZIPs); the directory
+    # then falls back to non-distance ranking for that provider.
+    latitude: float | None = None
+    longitude: float | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
