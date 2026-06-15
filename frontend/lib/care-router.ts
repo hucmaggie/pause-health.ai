@@ -30,6 +30,7 @@
 
 import { getProvidersPreferReal } from "./mulesoft/providers";
 import type { ProviderRecord } from "./mulesoft-mocks";
+import { lookupZipCentroid } from "./zip-centroids";
 
 export type CarePathway =
   | "self-care-tracking"
@@ -130,7 +131,16 @@ export type RecommendedProvider = Pick<
   | "telehealth"
   | "acceptingNewPatients"
   | "graphScore"
->;
+> & {
+  /**
+   * Great-circle miles from the patient's ZIP centroid. Present when the
+   * provider lookup ranked by distance (i.e. the patient ZIP resolved to a
+   * Census ZCTA centroid AND the provider has its own coordinates); null
+   * otherwise. The UI should fall back to graphScore-only ordering when this
+   * is null on every recommendation.
+   */
+  distanceMiles?: number | null;
+};
 
 /**
  * Injectable provider lookup so the enrichment can be unit-tested
@@ -142,9 +152,18 @@ export type ProviderLookup = (query: {
   zip?: string;
   menopauseOnly?: boolean;
   limit?: number;
+  /**
+   * Patient ZIP centroid forwarded to the directory so it can rank by
+   * Haversine distance. The lookup is responsible for stamping
+   * `distanceMiles` on each returned provider when this is supplied.
+   */
+  zipCentroid?: { latitude: number; longitude: number } | null;
 }) => Promise<{
   source: "live" | "mock";
-  result: { total: number; providers: ProviderRecord[] };
+  result: {
+    total: number;
+    providers: Array<ProviderRecord & { distanceMiles?: number | null }>;
+  };
 }>;
 
 export type RouteOptions = {
@@ -159,7 +178,9 @@ function isMscpPathway(p: CarePathway): boolean {
   return p === "mscp-virtual-visit" || p === "mscp-in-person";
 }
 
-function toRecommendedProvider(p: ProviderRecord): RecommendedProvider {
+function toRecommendedProvider(
+  p: ProviderRecord & { distanceMiles?: number | null }
+): RecommendedProvider {
   return {
     npi: p.npi,
     name: p.name,
@@ -170,7 +191,8 @@ function toRecommendedProvider(p: ProviderRecord): RecommendedProvider {
     state: p.state,
     telehealth: p.telehealth,
     acceptingNewPatients: p.acceptingNewPatients,
-    graphScore: p.graphScore
+    graphScore: p.graphScore,
+    distanceMiles: p.distanceMiles ?? null
   };
 }
 
@@ -180,11 +202,11 @@ function toRecommendedProvider(p: ProviderRecord): RecommendedProvider {
  * each group. Virtual visits prefer telehealth-capable clinicians;
  * in-person visits prefer those accepting new patients.
  */
-function rankForModality(
-  providers: ProviderRecord[],
+function rankForModality<P extends ProviderRecord>(
+  providers: P[],
   modality: "virtual" | "in-person"
-): ProviderRecord[] {
-  const prefers = (p: ProviderRecord) =>
+): P[] {
+  const prefers = (p: P) =>
     modality === "virtual" ? p.telehealth : p.acceptingNewPatients;
   const preferred = providers.filter(prefers);
   const rest = providers.filter((p) => !prefers(p));
@@ -208,12 +230,14 @@ export async function attachRecommendedProviders(
     decision.pathway === "mscp-virtual-visit" ? "virtual" : "in-person";
   const lookup = opts.providerLookup ?? getProvidersPreferReal;
   const zip = intake.patientZip?.trim() || undefined;
+  const zipCentroid = lookupZipCentroid(zip);
 
   try {
     const { source, result } = await lookup({
       zip,
       menopauseOnly: true,
-      limit: PROVIDER_CANDIDATE_POOL
+      limit: PROVIDER_CANDIDATE_POOL,
+      zipCentroid
     });
     const ranked = rankForModality(result.providers, modality).slice(
       0,
@@ -221,13 +245,25 @@ export async function attachRecommendedProviders(
     );
     if (ranked.length === 0) return decision;
 
+    // The directory ranks by Haversine distance when both centroids are
+    // present (every returned row carries distanceMiles); the rationale line
+    // calls that out so it's traceable in the agent fabric. When unranked by
+    // distance — no patient centroid, or the live Mule worker hasn't been
+    // updated to honor it — we say "ranked by graph score" honestly.
+    const rankedByDistance = ranked.some(
+      (p) => typeof p.distanceMiles === "number"
+    );
+    const rankingNote = rankedByDistance
+      ? "ranked by distance from the patient's ZIP"
+      : "ranked by graph score";
+
     const where = zip ? `near ${zip}` : "nationally";
     const modalityLabel = modality === "virtual" ? "telehealth-capable" : "in-person";
     return {
       ...decision,
       rationale: [
         ...decision.rationale,
-        `Provider graph: surfaced ${ranked.length} MSCP-credentialed ${modalityLabel} ${ranked.length === 1 ? "clinician" : "clinicians"} ${where} (${source === "live" ? "live MuleSoft directory" : "NPPES-derived directory"}), ranked by graph score.`
+        `Provider graph: surfaced ${ranked.length} MSCP-credentialed ${modalityLabel} ${ranked.length === 1 ? "clinician" : "clinicians"} ${where} (${source === "live" ? "live MuleSoft directory" : "NPPES-derived directory"}), ${rankingNote}.`
       ],
       recommendedProviders: {
         source,

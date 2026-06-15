@@ -187,6 +187,18 @@ export async function POST(req: Request) {
         decision.recommendedProviders?.providers.map(
           (p) => `${p.name} · ${p.specialty}`
         ) ?? [],
+      // Richer per-provider attributes so the UI can show distance + creds
+      // without re-fetching the directory. Kept alongside the legacy
+      // `recommendedProviderNames` array so older trace consumers still work.
+      recommendedProviders:
+        decision.recommendedProviders?.providers.map((p) => ({
+          name: p.name,
+          specialty: p.specialty,
+          city: p.city,
+          state: p.state,
+          telehealth: p.telehealth,
+          distanceMiles: p.distanceMiles ?? null
+        })) ?? [],
       ...(personaId ? { personaId } : {})
     }
   });

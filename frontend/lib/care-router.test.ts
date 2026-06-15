@@ -426,6 +426,57 @@ describe("attachRecommendedProviders · provider-graph wiring", () => {
     });
     expect(out.recommendedProviders?.providers).toHaveLength(1);
   });
+
+  it("forwards the patient ZIP centroid and propagates distanceMiles onto the recommendations", async () => {
+    // 92614 (Irvine, CA) resolves to a Census centroid in the bundled gazetteer,
+    // so the lookup should be called with `zipCentroid` and the rationale
+    // should report distance ranking. The stub doesn't compute distances —
+    // it just records what `distanceMiles` it was handed and echoes them
+    // back, mirroring what queryProviderDirectory would do under real centroids.
+    const calls: Array<{ zip?: string; zipCentroid?: { latitude: number; longitude: number } | null }> = [];
+    const distanceLookup: ProviderLookup = async (query) => {
+      calls.push({ zip: query.zip, zipCentroid: query.zipCentroid ?? null });
+      return {
+        source: "mock",
+        result: {
+          total: 2,
+          providers: [
+            { ...provider({ npi: "near", graphScore: 0.7 }), distanceMiles: 1.4 },
+            { ...provider({ npi: "far", graphScore: 0.95 }), distanceMiles: 18.6 }
+          ]
+        }
+      };
+    };
+    const decision = scriptedRoute({ ...baseIntake, severity: "moderate" });
+    const out = await attachRecommendedProviders(
+      decision,
+      { ...baseIntake, severity: "moderate", patientZip: "92614" },
+      { providerLookup: distanceLookup }
+    );
+    expect(calls[0].zip).toBe("92614");
+    expect(calls[0].zipCentroid).not.toBeNull();
+    expect(typeof calls[0].zipCentroid?.latitude).toBe("number");
+    expect(typeof calls[0].zipCentroid?.longitude).toBe("number");
+    // distanceMiles rides through onto every recommendation.
+    const recs = out.recommendedProviders?.providers ?? [];
+    expect(recs).toHaveLength(2);
+    for (const r of recs) {
+      expect(typeof r.distanceMiles).toBe("number");
+    }
+    // Rationale calls out distance ranking when the lookup returned
+    // distance-stamped rows.
+    expect(out.rationale.join(" ")).toMatch(/ranked by distance/);
+  });
+
+  it("falls back to score-only rationale when no distances are returned", async () => {
+    const decision = scriptedRoute({ ...baseIntake, severity: "moderate" });
+    const { lookup } = stubLookup([provider({ npi: "p1" })], "mock");
+    const out = await attachRecommendedProviders(decision, baseIntake, {
+      providerLookup: lookup
+    });
+    expect(out.rationale.join(" ")).toMatch(/ranked by graph score/);
+    expect(out.recommendedProviders?.providers[0].distanceMiles).toBeNull();
+  });
 });
 
 describe("claudeRoute · fallback path", () => {

@@ -8,6 +8,15 @@ import {
   type CareRouterPathway
 } from "../lib/care-router-pathways";
 
+type RecommendedProviderEntry = {
+  name: string;
+  specialty?: string;
+  city?: string;
+  state?: string;
+  telehealth?: boolean;
+  distanceMiles?: number | null;
+};
+
 type LatestDecision = {
   pathway: string;
   pathwayLabel: string;
@@ -15,7 +24,10 @@ type LatestDecision = {
   rationale: string[];
   recommendedTargetResponse: string;
   modelProvenance: { provider: string; model: string; via: string };
-  recommendedProviders: { source: string | null; names: string[] };
+  recommendedProviders: {
+    source: string | null;
+    providers: RecommendedProviderEntry[];
+  };
   taskId: string;
 };
 
@@ -51,11 +63,37 @@ export function LatestCareRouterDecision() {
             if (!pathway) continue;
             const pw = pathway as CareRouterPathway;
             if (cancelled) return;
-            const providerNames = Array.isArray(attrs.recommendedProviderNames)
-              ? (attrs.recommendedProviderNames as unknown[]).filter(
-                  (n): n is string => typeof n === "string"
-                )
-              : [];
+            // Prefer the richer `recommendedProviders` attribute; fall back
+            // to `recommendedProviderNames` for traces written before that
+            // field shipped (only the name+specialty string is recoverable
+            // from the legacy shape).
+            const richProviders: RecommendedProviderEntry[] = Array.isArray(
+              attrs.recommendedProviders
+            )
+              ? (attrs.recommendedProviders as unknown[])
+                  .filter(
+                    (e): e is Record<string, unknown> =>
+                      typeof e === "object" && e !== null
+                  )
+                  .map((e) => ({
+                    name: typeof e.name === "string" ? e.name : "",
+                    specialty:
+                      typeof e.specialty === "string" ? e.specialty : undefined,
+                    city: typeof e.city === "string" ? e.city : undefined,
+                    state: typeof e.state === "string" ? e.state : undefined,
+                    telehealth:
+                      typeof e.telehealth === "boolean" ? e.telehealth : undefined,
+                    distanceMiles:
+                      typeof e.distanceMiles === "number"
+                        ? e.distanceMiles
+                        : null
+                  }))
+                  .filter((p) => p.name.length > 0)
+              : Array.isArray(attrs.recommendedProviderNames)
+                ? (attrs.recommendedProviderNames as unknown[])
+                    .filter((n): n is string => typeof n === "string")
+                    .map((label) => ({ name: label }))
+                : [];
             setDecision({
               pathway,
               pathwayLabel: PATHWAY_LABELS[pw] ?? pathway,
@@ -67,7 +105,7 @@ export function LatestCareRouterDecision() {
                   typeof attrs.recommendedProvidersSource === "string"
                     ? (attrs.recommendedProvidersSource as string)
                     : null,
-                names: providerNames
+                providers: richProviders
               },
               modelProvenance: {
                 provider:
@@ -144,7 +182,7 @@ export function LatestCareRouterDecision() {
         <code>{decision.modelProvenance.model}</code> (
         {decision.modelProvenance.via}).
       </p>
-      {decision.recommendedProviders.names.length > 0 && (
+      {decision.recommendedProviders.providers.length > 0 && (
         <div
           style={{
             marginTop: "0.6rem",
@@ -170,9 +208,27 @@ export function LatestCareRouterDecision() {
               : ""}
           </p>
           <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.85rem" }}>
-            {decision.recommendedProviders.names.map((name) => (
-              <li key={name}>{name}</li>
-            ))}
+            {decision.recommendedProviders.providers.map((p) => {
+              const meta: string[] = [];
+              if (p.city && p.state) meta.push(`${p.city}, ${p.state}`);
+              if (typeof p.distanceMiles === "number") {
+                // Tight rounding for the chip — the source value is already
+                // 0.1-mi-precision, but a single decimal reads cleaner inline.
+                const miles = Math.round(p.distanceMiles * 10) / 10;
+                meta.push(`${miles} mi away`);
+              }
+              if (p.telehealth) meta.push("telehealth");
+              return (
+                <li key={`${p.name}-${p.city ?? ""}`}>
+                  {p.specialty ? `${p.name} · ${p.specialty}` : p.name}
+                  {meta.length > 0 ? (
+                    <span style={{ color: "var(--muted)", marginLeft: "0.4rem" }}>
+                      ({meta.join(" · ")})
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
