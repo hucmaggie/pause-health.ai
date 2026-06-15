@@ -44,18 +44,18 @@ Goal: a callable base URL for the provider endpoint.
 
 **Option A — deploy the repo metadata (legacy, no-auth, simplest):**
 
-This repo is not a Salesforce DX project, so `sf project deploy start` can't
-resolve the loose file under `salesforce/`. A throwaway SFDX harness lives at
-`.sf-deploy/` (a minimal `sfdx-project.json` + the same Named Credential in the
-standard `force-app/main/default/namedCredentials/` layout). Deploy from there:
+`salesforce/` is now a real Salesforce DX project (Phase 18b), so deploy the
+Named Credential (and the rest of the tracked metadata) straight from there:
 
 ```bash
-cd .sf-deploy
-sf project deploy start --source-dir force-app --target-org trailsignup
+cd salesforce
+./deploy.sh trailsignup
 ```
 
-(The `.sf-deploy` copy mirrors `salesforce/named-credentials/` — the latter is
-the documented source of truth; keep them in sync if you edit the credential.)
+The Named Credential lives at
+`salesforce/force-app/main/default/namedCredentials/Pause_Provider_API.namedCredential-meta.xml`;
+`deploy.sh` deploys the members in `salesforce/manifest/package.xml`. See
+`salesforce/README.md` for the full layout, the retrieve path, and gotchas.
 
 **Option B — create it in the UI** (Setup → Named Credentials → New):
 - Label / Name: `Pause Provider API` / `Pause_Provider_API`
@@ -312,8 +312,8 @@ asking (graceful). Register it the same way the dormant dossier fields were
 
 ### Metadata snippets (copy-paste)
 
-**1. MessagingSession field** — deployable now via the harness
-(`.sf-deploy/force-app/main/default/objects/MessagingSession/fields/Pause_Patient_Zip__c.field-meta.xml`):
+**1. MessagingSession field** — version-controlled at
+`salesforce/force-app/main/default/objects/MessagingSession/fields/Pause_Patient_Zip__c.field-meta.xml`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -327,7 +327,7 @@ asking (graceful). Register it the same way the dormant dossier fields were
 ```
 
 ```bash
-cd .sf-deploy && sf project deploy start --source-dir force-app --target-org trailsignup
+cd salesforce && ./deploy.sh trailsignup
 ```
 
 **2. Permission set FLS** — add to `Pause_Health_Intake_Prechat_Dossier.permissionset-meta.xml`

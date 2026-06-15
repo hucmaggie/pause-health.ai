@@ -161,18 +161,22 @@ All values are strings clamped to <=255 chars by `clampForChannel()`.
 
 | Artifact | Salesforce type | Source of truth |
 |---|---|---|
-| 20 custom fields on `MessagingSession` | CustomField | `/tmp/sf-md-fields/force-app/main/default/objects/MessagingSession/fields/Pause_*__c.field-meta.xml` |
-| `Pause_Health_Intake_Prechat_Dossier` permission set (FLS) | PermissionSet | Same |
-| `Pause_Intake_Prechat_Router` routing flow | Flow / RoutingFlow | `/tmp/sf-md-flow/force-app/main/default/flows/Pause_Intake_Prechat_Router.flow-meta.xml` |
-| `Messaging_for_In_App_Web` channel | MessagingChannel | `/tmp/sf-md-retrieve/force-app/main/default/messagingChannels/Messaging_for_In_App_Web.messagingChannel-meta.xml` (custom-params + flow handler) |
-| `Pause_Health_Intake_Agent` Bot (contextVariables) | Bot | `/tmp/sf-agent/force-app/main/default/bots/Pause_Health_Intake_Agent/Pause_Health_Intake_Agent.bot-meta.xml` |
-| `Pause_Health_Intake_Agent` GenAiPlannerBundle (topic instructions) | GenAiPlannerBundle | `/tmp/sf-agent/force-app/main/default/genAiPlannerBundles/Pause_Health_Intake_Agent/...genAiPlannerBundle` |
+| `MessagingSession.Pause_Patient_Zip__c` | CustomField | ✅ `salesforce/force-app/main/default/objects/MessagingSession/fields/` |
+| `Pause_Health_Intake_Prechat_Dossier` permission set (FLS) | PermissionSet | ✅ `salesforce/force-app/main/default/permissionsets/` |
+| `Pause_Intake_Prechat_Router` routing flow | Flow / RoutingFlow | ✅ `salesforce/force-app/main/default/flows/` |
+| `Messaging_for_In_App_Web` channel | MessagingChannel | ✅ `salesforce/force-app/main/default/messagingChannels/` (custom-params + flow handler) |
+| `Pause_Provider_API` named credential | NamedCredential | ✅ `salesforce/force-app/main/default/namedCredentials/` |
+| ~20 other custom fields on `MessagingSession` | CustomField | ⏳ org-managed; `salesforce/retrieve.sh` (was `/tmp/sf-md-fields/…`) |
+| `Pause_Health_Intake_Agent` Bot (contextVariables) | Bot | ⏳ org-managed (Agent Builder); `salesforce/retrieve.sh` |
+| `Pause_Health_Intake_Agent` GenAiPlannerBundle (topic instructions) | GenAiPlannerBundle | ⏳ org-managed (Agent Builder); `salesforce/retrieve.sh` |
 
-These metadata bundles currently live under `/tmp` because Phase 18a
-treated the Salesforce org as the source of truth. If we want to make
-the org's state version-controlled, the next step is to move these
-into `salesforce/` in the repo root and add a deploy script. (Tracked
-as a Phase 18b follow-up.)
+**Phase 18b — DONE.** The deployable metadata is now version-controlled under
+`salesforce/` (a real SFDX project: `sfdx-project.json` + `force-app/` +
+`manifest/` + `deploy.sh`/`retrieve.sh` + `README.md`), replacing the retired
+`.sf-deploy/` scaffold and the `/tmp` retrieves. The remaining ~20 dossier
+fields and the Agent (Bot/GenAiPlannerBundle) are still org-managed; one
+`salesforce/retrieve.sh` run on an SF-reachable network pulls them in. See
+[`salesforce/README.md`](../salesforce/README.md).
 
 ### Verifying end-to-end
 
@@ -672,11 +676,13 @@ one field: the embed now passes `{ Patient_Zip: selectedPersona.patientZip }`
 
 ### CLI-scriptable half — DEPLOYED to `trailsignup` (5/5, Deploy ID `0AfHp00003ocxqYKAQ`)
 
-Deployed from the throwaway `.sf-deploy/` SFDX harness with:
+Originally deployed from a throwaway `.sf-deploy/` scaffold; that scaffold is now
+retired and the metadata is version-controlled under `salesforce/` (Phase 18b).
+Redeploy with:
 
 ```bash
-cd ~/Projects/pause-health.ai/.sf-deploy
-sf project deploy start --source-dir force-app --target-org trailsignup
+cd ~/Projects/pause-health.ai/salesforce
+./deploy.sh trailsignup
 ```
 
 | Component | Type | Change |

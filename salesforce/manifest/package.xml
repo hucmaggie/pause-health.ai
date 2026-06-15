@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>Pause_Provider_API</members>
+        <name>NamedCredential</name>
+    </types>
+    <types>
+        <members>MessagingSession.Pause_Patient_Zip__c</members>
+        <name>CustomField</name>
+    </types>
+    <types>
+        <members>Pause_Intake_Prechat_Router</members>
+        <name>Flow</name>
+    </types>
+    <types>
+        <members>Messaging_for_In_App_Web</members>
+        <name>MessagingChannel</name>
+    </types>
+    <types>
+        <members>Pause_Health_Intake_Prechat_Dossier</members>
+        <name>PermissionSet</name>
+    </types>
+    <version>62.0</version>
+</Package>
