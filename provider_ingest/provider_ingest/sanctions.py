@@ -26,9 +26,15 @@ registry with explicit `disciplinary_status` + `license_status` +
 `currently_licensed` columns, so we filter directly on a sanctioned
 disposition rather than enumerating disciplinary orders).
 
-NJ TBD (no public structured feed; NJ DCA disciplinary actions are PDFs
-scraped per-action — not the right shape for an honest overlay). New
-states land additively behind the same class.
+Other states surveyed but skipped (see PROVIDER_GRAPH_PHASE_1_RUNBOOK
+"State data landscape" for the full audit):
+  - FL — bulk file gated behind Azure AD B2C auth at
+    data-download.mqa.flhealthsource.gov; legacy public URL is NXDOMAIN.
+  - NJ — disciplinary actions are PDFs scraped per-action.
+  - IL/MA/WA/OH/MI/VA — no structured feed found.
+  - OR — Socrata feed is aggregated counts only, not per-licensee.
+
+New states land additively behind the same class once they publish.
 
 Source CSVs are downloaded out-of-band (see scripts/refresh_national.sh and
 the runbook); we don't fetch them during the build to keep the pipeline

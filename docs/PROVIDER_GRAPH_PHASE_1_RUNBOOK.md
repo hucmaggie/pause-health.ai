@@ -103,10 +103,39 @@ loads). The frozen contract is `ProviderRecord` in
 > total) before sort/limit, verified end-to-end. Refresh: download
 > `suspended-ineligible-list-*.csv` (CHHS), `ny_opmc-*.csv` (data.ny.gov),
 > and `tx_tmb_all_licenses-*.csv` (data.texas.gov) into the same directory
-> as the NPPES zip — the harness auto-detects the latest of each. NJ stays
-> out for now — the NJ Board's disciplinary actions are PDFs scraped
-> per-action, not a structured feed; we don't ship a brittle scraper. New
+> as the NPPES zip — the harness auto-detects the latest of each. New
 > states land additively behind the same overlay class.
+
+### State data landscape (why CA / NY / TX, why not the others)
+
+We surveyed disciplinary-data publication for 11+ states; **structured public
+access is rarer than the demand suggests**. Skip-list and the reason each is
+out:
+
+- **FL** — Florida Department of Health's Practitioner Profile bulk file
+  (`data-download.mqa.flhealthsource.gov`) is gated behind Azure AD B2C
+  auth; the legacy public URL `mqadatadownload.azurewebsites.net` is
+  NXDOMAIN. The Practitioner Profile Search lookup at
+  `mqa-internet.doh.state.fl.us` is per-license HTML only. No
+  Socrata/CKAN mirror.
+- **NJ** — NJ DCA disciplinary actions are PDFs (one per action) on the
+  Consumer Affairs page; no structured feed.
+- **IL, MA, WA, OH, MI, VA** — federated Socrata search returned no
+  practitioner-disciplinary datasets; state-board pages are HTML-only or
+  PDF-only.
+- **OR** — Oregon Medical Board has a Socrata feed, but it's
+  *aggregated counts by license type and status* (`ifun-evx5`), not
+  per-licensee data.
+
+Unblockers (when a partner brings them):
+- A licensed feed (Verisys, ProviderTrust, etc.) covering all 50 states.
+- Paid Azure AD B2C account at FL DOH for the FL bulk file.
+- A scraper for the NJ DCA + IL IDFPR HTML pages (we don't ship one
+  today — too brittle and pulls per-action context that's a poor fit
+  for `(state, license_num)` overlays).
+
+CA + NY + TX is large by license count (CA ~140K licensed physicians, NY
+~110K, TX ~70K — together about half of US physicians).
 
 > **Insurance acceptance — synthetic, real-shaped.** Every provider also
 > carries `insuranceAccepted: string[]` (canonical tokens: medicare,
@@ -309,9 +338,10 @@ serve the NPPES-derived rows to keep the two paths shape-identical.
 ## What Phase 1 deliberately does **not** do
 
 - **State license verification — broader coverage** — Phase 2 (CA Medi-Cal
-  S&I + NY OPMC + TX TMB filters landed; NJ stays out until they publish
-  structured data; other states land additively behind the same overlay
-  class).
+  S&I + NY OPMC + TX TMB filters landed; FL/NJ/IL/MA/WA/OH/MI/VA/OR all
+  surveyed but lack structured public bulk access — see "State data
+  landscape" above; new states land additively behind the same overlay
+  class as they publish).
 - **Clinic-site service-mention detection** — Phase 2 (NPPES-resident
   credential + multi-taxonomy signals landed; clinic-site scraping is the
   next layer).
