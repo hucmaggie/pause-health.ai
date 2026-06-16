@@ -22,7 +22,7 @@
 
     <groupId>56707cc3-a0e3-4318-b110-78126aace370</groupId>
     <artifactId>pause-mulesoft-health-v1</artifactId>
-    <version>1.0.3</version>
+    <version>1.0.4</version>
     <packaging>mule-application</packaging>
 
     <name>pause-mulesoft-health-v1</name>
