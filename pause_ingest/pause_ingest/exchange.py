@@ -18,16 +18,24 @@ import httpx
 from .config import IngestConfig
 
 
-def _fetch_oauth_token(config: IngestConfig, scope: str) -> str:
-    """Exchange the client credentials for a short-lived OAuth2 token."""
+def _fetch_oauth_token(config: IngestConfig, scope: str | None = None) -> str:
+    """Exchange the client credentials for a short-lived OAuth2 token.
+
+    `scope` is optional: real JHE's OAuth2 vocabulary is `openid email`
+    and rejects custom strings like `observation.write` with
+    `invalid_scope`. JHE authorizes FHIR writes by Study/Patient/Scope
+    consent at the resource layer, not by OAuth scope.
+    """
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": config.jhe_client_id,
+        "client_secret": config.jhe_client_secret,
+    }
+    if scope:
+        data["scope"] = scope
     response = httpx.post(
         f"{config.jhe_base_url}/o/token/",
-        data={
-            "grant_type": "client_credentials",
-            "client_id": config.jhe_client_id,
-            "client_secret": config.jhe_client_secret,
-            "scope": scope,
-        },
+        data=data,
         timeout=10.0,
     )
     response.raise_for_status()
@@ -49,13 +57,13 @@ def upload_observation(
     Returns the server-echoed Observation (including its server-assigned id).
     Raises ``httpx.HTTPStatusError`` on non-2xx.
     """
-    token = _fetch_oauth_token(config, scope="observation.write")
+    token = _fetch_oauth_token(config)
     response = httpx.post(
         f"{config.jhe_base_url}/fhir/r5/Observation",
         headers={
             "Authorization": f"Bearer {token}",
-            "Content-Type": "application/fhir+json",
-            "Accept": "application/fhir+json",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
         },
         json=observation,
         timeout=15.0,
@@ -89,7 +97,7 @@ def read_recent_observations(
             "inside pause_ingest/."
         ) from exc
 
-    token = _fetch_oauth_token(config, scope="observation.read")
+    token = _fetch_oauth_token(config)
     client = JupyterHealthClient(url=config.jhe_base_url, token=token)
     # The 0.2.0 client takes `limit`, not `count`, and returns a Generator.
     observations = client.list_observations(

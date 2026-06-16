@@ -68,12 +68,12 @@ const pieces: Array<{
 }> = [
   {
     name: "JupyterHealth Exchange (JHE)",
-    status: "designed",
+    status: "prototype",
     repo: "https://github.com/jupyterhealth/jupyterhealth-exchange",
     role:
       "FHIR R5 + Open mHealth data plane. OAuth2/OIDC, scope-based consent, multi-tenant orgs and studies. Django app deployable into a customer VPC.",
     why:
-      "We adopt this instead of building it. Customers see open standards, not a black box. Today the Django server isn't standing up locally; Phase 1 is the local dev loop."
+      "We adopt this instead of building it. Customers see open standards, not a black box. Stood up locally on 2026-06-16 (Docker postgres + JHE Django container, OIDC RS256 key, seeded study + Patient + Oura Data Source + client_credentials OAuth app) and pause_ingest's examples/oura_sample_upload.py round-trips a real Oura sample through omh-shim → FHIR R5 Observation → POST → readback against it. Transcript at docs/JHE_REAL_RUN_2026-06-16.md."
   },
   {
     name: "jupyterhealth-client",
@@ -145,10 +145,10 @@ const phases: Array<{
   },
   {
     name: "Phase 1 · Local dev loop against real JHE",
-    status: "designed",
-    duration: "1 afternoon (per docs/JHE_SETUP_RUNBOOK.md)",
+    status: "prototype",
+    duration: "Shipped 2026-06-16",
     detail:
-      "Swap the wire-level mock for a real JupyterHealth Exchange Django instance via docker-compose. Re-run the same contract-test assertions against real JHE — runbook at docs/JHE_SETUP_RUNBOOK.md captures the OAuth client + Patient + Data Source setup, the .env values to wire, and the known-unknowns list of strict-validator gotchas to expect on first run. Gated only on Docker availability."
+      "Real JupyterHealth Exchange Django container brought up against a Docker postgres on the maintainer's box, OIDC RS256 key generated, seeded with the canonical RBAC fixtures, an OAuth client_credentials app named pause-ingest bound to a real Patient + Oura DataSource through a Study with explicit per-scope consent rows, and pause_ingest's full pipeline (convert → omh_to_fhir_observation → upload_observation → JupyterHealthClient readback) ran end-to-end with a server-issued Observation id. Three real-JHE-only gotchas the wire-level mock had not pinned were surfaced and fixed in the same session: pause_ingest was requesting OAuth scope strings (observation.read / observation.write) JHE's vocabulary rejects with invalid_scope; pause_ingest used Content-Type: application/fhir+json which JHE's parser rejects (must be application/json); and pause_ingest's OMH coding system / code shape did not match JHE's mapped-Observation routing criteria (system https://w3id.org/openmhealth, code omh:<schema>:<version>), so writes silently fell through to the auxiliary FhirAuxResource handler which then 400s on the missing X-JHE-FHIR-Source-ID header. Full transcript including each error → fix at docs/JHE_REAL_RUN_2026-06-16.md."
   },
   {
     name: "Phase 2 · Real wearable ingest",

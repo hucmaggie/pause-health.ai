@@ -358,7 +358,7 @@ def test_full_pipeline_raw_plus_derived_features_round_trips(
     schemas = {
         obs["code"]["coding"][0]["code"] for obs in fetched
     }
-    assert schemas == {"heart-rate", "hrv-time-domain"}
+    assert schemas == {"omh:heart-rate:2.0", "hrv-time-domain"}
 
     # The feature observation read back must still carry the
     # derivedFrom pointers it was uploaded with.

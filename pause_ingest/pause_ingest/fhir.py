@@ -85,10 +85,9 @@ def omh_to_fhir_observation(
         "code": {
             "coding": [
                 {
-                    "system": f"https://w3id.org/openmhealth/schemas/{schema_namespace}",
-                    "code": schema_name,
+                    "system": "https://w3id.org/openmhealth",
+                    "code": f"{schema_namespace}:{schema_name}:{schema_version}",
                     "display": schema_name.replace("-", " ").title(),
-                    "version": str(schema_version),
                 }
             ],
             "text": schema_name.replace("-", " "),

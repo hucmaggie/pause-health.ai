@@ -94,7 +94,7 @@ const horizons: RoadmapHorizon[] = [
       {
         title: "pause_ingest → real JupyterHealth Exchange round-trip",
         detail:
-          "Wire-level contract test against an in-process JHE mock now exercises the full pipeline end-to-end: raw Oura sample → omh-shim → FHIR R5 Observation upload → DBDP HRV feature computation → derived Observation upload (with derivedFrom provenance) → readback via jupyterhealth-client. 27 / 27 tests pass. Surfaced and fixed a real bug in read_recent_observations along the way. Next: swap the mock for a real JHE Docker instance per docs/JHE_SETUP_RUNBOOK.md (~1 afternoon, gated only on Docker availability).",
+          "Now runs against a real JupyterHealth Exchange Django instance (docker postgres + jhe-local container, OIDC RS256 key, seeded RBAC + Patient + Oura DataSource + Study with explicit per-scope consent rows + a client_credentials OAuth app named pause-ingest). examples/oura_sample_upload.py round-trips a real Oura sample through omh-shim → FHIR R5 Observation → POST /fhir/r5/Observation → readback via jupyterhealth-client and prints 'OK — uploaded and round-tripped 1 observation' with a server-issued Observation id. Three real-JHE-only gotchas the wire-level mock had not pinned were surfaced and fixed in the same session: pause_ingest was requesting OAuth scope strings JHE rejects, used Content-Type application/fhir+json which JHE's parser rejects, and wrote OMH codings whose system/code shape did not match JHE's mapped-Observation routing criteria so writes silently fell through to the auxiliary handler. Transcript at docs/JHE_REAL_RUN_2026-06-16.md.",
         status: "prototype",
         source: { href: "/proposal/integration", label: "/proposal/integration" }
       },
