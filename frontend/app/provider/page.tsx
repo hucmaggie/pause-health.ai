@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
 import { pageMetadata } from "../../lib/page-metadata";
 import {
   queryProviderDirectory,
+  type ProviderMatchType,
   type ProviderRecord,
   type ProviderRecordRanked
 } from "../../lib/mulesoft-mocks";
@@ -65,18 +67,86 @@ const PLAN_LABELS: Record<string, string> = {
 };
 const PLAN_OPTIONS = Object.entries(PLAN_LABELS);
 
-const MATCH_TYPE_NOTES: Record<string, string> = {
-  "certified-local":
-    "Menopause-certified providers within your ZIP-3 area.",
-  "relevant-local":
-    "No certified provider in your area, so showing nearby menopause-experienced (non-certified) clinicians.",
-  "certified-remote":
-    "No local match — showing telehealth-capable certified specialists nationally.",
-  "certified-national": "Menopause-certified providers nationally.",
-  local: "All menopause-relevant providers within your ZIP-3 area.",
-  all: "All menopause-relevant providers, no ZIP filter applied.",
-  none: "No providers matched your filters."
-};
+/**
+ * Human-facing, ZIP-aware framing for each search tier — the same honest
+ * matchType story the agent gets, made visible to a browsing patient. The
+ * fallback tiers (no certified provider locally) return `tone: "info"` so the
+ * banner is prominent and clearly distinguishes "experienced" from "certified";
+ * the happy path stays quiet (`tone: "ok"`).
+ */
+function matchBanner(
+  matchType: ProviderMatchType,
+  zip: string | undefined
+): { tone: "ok" | "info" | "empty"; label: string; text: ReactNode } | null {
+  const area: ReactNode = zip ? <strong>{zip}</strong> : "your";
+  switch (matchType) {
+    case "certified-local":
+      return {
+        tone: "ok",
+        label: "Certified · local",
+        text: <>Menopause-certified specialists in the {area} area.</>
+      };
+    case "certified-national":
+      return {
+        tone: "ok",
+        label: "Certified · national",
+        text: (
+          <>
+            Menopause-certified specialists nationally. Add your ZIP to find
+            local options.
+          </>
+        )
+      };
+    case "relevant-local":
+      return {
+        tone: "info",
+        label: "No certified match nearby",
+        text: (
+          <>
+            No menopause-<em>certified</em> providers in the {area} area, so
+            we&rsquo;re showing nearby menopause-<strong>experienced</strong>{" "}
+            clinicians (not certified).
+          </>
+        )
+      };
+    case "certified-remote":
+      return {
+        tone: "info",
+        label: "Telehealth options",
+        text: (
+          <>
+            No providers in the {area} area, so we&rsquo;re showing
+            menopause-certified specialists elsewhere who offer{" "}
+            <strong>telehealth</strong>.
+          </>
+        )
+      };
+    case "local":
+      return {
+        tone: "ok",
+        label: "Local",
+        text: <>Menopause-relevant providers in the {area} area.</>
+      };
+    case "all":
+      return {
+        tone: "ok",
+        label: "All providers",
+        text: (
+          <>Menopause-relevant providers. Add your ZIP to narrow by location.</>
+        )
+      };
+    case "none":
+      return {
+        tone: "empty",
+        label: "No matches",
+        text: (
+          <>No providers matched your filters{zip ? <> in the {area} area</> : null}.</>
+        )
+      };
+    default:
+      return null;
+  }
+}
 
 function param(
   searchParams: Record<string, string | string[] | undefined>,
@@ -194,7 +264,7 @@ export default async function ProviderIndexPage({
       ? "ranked by distance from your ZIP"
       : "ranked by graph score";
 
-  const matchNote = MATCH_TYPE_NOTES[result.matchType] ?? "";
+  const banner = matchBanner(result.matchType, zip);
 
   return (
     <main className="container" style={{ paddingTop: "2.4rem", paddingBottom: "3rem", maxWidth: "60rem" }}>
@@ -278,10 +348,11 @@ export default async function ProviderIndexPage({
             {result.matchType !== "none" ? ` · matchType: ${result.matchType}` : ""}
           </p>
         </header>
-        {matchNote ? (
-          <p style={{ color: "var(--muted)", fontSize: "0.85rem", marginBottom: "0.8rem" }}>
-            {matchNote}
-          </p>
+        {banner ? (
+          <div className={`match-banner match-banner-${banner.tone}`} role="status">
+            <span className="match-banner-label">{banner.label}</span>
+            <p className="match-banner-text">{banner.text}</p>
+          </div>
         ) : null}
         {result.providers.length === 0 ? (
           <p>
