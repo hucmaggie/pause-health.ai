@@ -7,7 +7,7 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Full Proposal",
   description:
-    "The complete Pause-Health.ai investor brief — market thesis, target outcomes, technology foundation, business model, 24-month objectives, and the full architecture deep-dives.",
+    "The complete Pause-Health.ai investor brief — market thesis, target outcomes, technology foundation, business model, 24-month objectives, and the architecture deep-dives. Phase 2 is shipped: 2,015-provider directory with distance ranking + state license-sanction filters + synthetic-shaped insurance, Salesforce Data Cloud Calculated Insights live in production, MuleSoft live worker carrying iterations 1–7 + iteration 8 awaiting deploy.",
   path: "/proposal/full",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Full investor proposal — Pause-Health.ai."
@@ -101,10 +101,17 @@ const whatPauseProvides: Capability[] = [
   },
   {
     title: "Federated Data 360 grounding",
-    status: "partial",
+    status: "prototype",
     detail:
-      "Live grounding path federates against Salesforce Health Cloud today (Phase 1, OAuth Client Credentials). Phase 2 swaps the target for the Data Cloud Federated Query API against JupyterHealth FHIR + DBDP; Phase 3 onboards the customer's EHR-of-record. Interface stays constant across phases.",
+      "Phase 1 (Salesforce Health Cloud SOQL) and Phase 2 (Data Cloud Calculated Insights — HRV z-score, vasomotor burden, sleep disruption) are both live in production on the trailsignup org. The grounding endpoint reports 'Phase 2: SOQL (Health Cloud) + Data Cloud Calculated Insights' on every call; each insight falls back to its intake baseline independently if a DC call fails. Phase 2-bis swaps the demo-cohort seeded CIs for real JHE/DBDP wearable math; Phase 3 onboards the customer's EHR-of-record. Interface stays constant across phases.",
     cta: { href: "/proposal/data-360", label: "Architecture brief →" }
+  },
+  {
+    title: "Defensible provider graph",
+    status: "prototype",
+    detail:
+      "2,015 NPPES-derived providers behind a frozen Experience API contract. Census 2020 ZCTA distance ranking, six NPPES board-cert + multi-specialty signals, three state license-sanction filters dropping 1,720 sanctioned candidates at build (CA Medi-Cal + NY OPMC + TX TMB), real-shaped synthetic insurance acceptance. Browseable UI at /provider, per-NPI profiles at /provider/<npi>, MCP tool find_menopause_providers. The Care Router consumes the same query function so triage and the directory stay in lockstep. Closed-loop outcomes scoring (Phase 3) activates with referral volume.",
+    cta: { href: "/proposal/provider-graph", label: "Provider-graph brief →" }
   },
   {
     title: "Outcomes telemetry baked in",
@@ -144,17 +151,17 @@ const techFoundation: Substrate[] = [
   },
   {
     title: "Salesforce Data 360",
-    status: "partial",
+    status: "prototype",
     detail:
-      "Identity Resolution + grounding wired against Salesforce Health Cloud today via OAuth Client Credentials. The full Data 360 surface (Calculated Insights + Segments + federated query) is Phase 2 — the Care Router interface doesn't change across phases.",
+      "Identity Resolution + grounding wired against Salesforce Health Cloud via OAuth Client Credentials (Phase 1, live). Three Data Cloud Calculated Insights (Pause_HRV_RMSSD_30d, Pause_Vasomotor_Burden_30d, Pause_Sleep_Disruption_7d) authored over ssot__Individual__dlm and activated on the trailsignup tenant (Phase 2, live; auth flows through the mandatory a360 token exchange — see PHASE_2_ACTIVATION_CHECKLIST.md for the five gotchas). Segments + federated query against JHE/DBDP wearable math is Phase 2-bis. The Care Router interface doesn't change across phases.",
     href: "/proposal/data-360",
     cta: "Data 360 brief →"
   },
   {
-    title: "MuleSoft Agent Fabric",
-    status: "designed",
+    title: "MuleSoft + Agent Fabric",
+    status: "partial",
     detail:
-      "Multi-agent control plane: agent registry, policy catalog, trace plane. The Anthropic-backed Care Router runs against a Pause-internal A2A endpoint today; the MuleSoft Agent Fabric is the designed production home for it.",
+      "MuleSoft CloudHub 2.0 worker live (iterations 1–7 shipped: Flex Gateway runtime enforcement, Auth0 RS256 JWT validation, plain Rate Limiting, OAS 3.0 spec in Exchange). Iteration 8 (Phase-2 contract DataWeave matching the mock's full shape — distance, signals, sanctions, insurance, dataset provenance) is committed and awaiting CloudHub deploy; production degrades cleanly to mock-fallback in the meantime so there's no patient-visible regression. The Agent Fabric multi-agent control plane (agent registry, policy catalog, trace plane) is the designed production home for the Anthropic-backed Care Router; the underlying MuleSoft surface is more than 'designed' — it's running.",
     href: "/proposal/agent-fabric",
     cta: "Agent Fabric brief →"
   }
@@ -338,14 +345,16 @@ const archDeepDives = [
   {
     href: "/proposal/dbdp",
     title: "DBDP feature engineering",
-    summary: "Phase 1 shipped: FLIRT-backed RMSSD with closed-form correctness tests.",
+    summary:
+      "FLIRT-backed RMSSD shipped in pause_ingest with 20 passing unit tests + closed-form correctness check; FHIR persistence is Phase 2.",
     demoHref: null
   },
   {
     href: "/proposal/provider-graph",
     title: "Provider graph",
-    summary: "How we build the menopause-clinician routing graph (NPPES + boards + outcomes).",
-    demoHref: null
+    summary:
+      "Phase 1+2 shipped: 2,015 NPPES-derived providers, distance ranking from Census ZCTA centroids, six NPPES board-cert + multi-specialty signals, three state license-sanction filters dropping 1,720 candidates at build, synthetic-but-real-shaped insurance, /provider browseable UI.",
+    demoHref: "/provider"
   },
   {
     href: "/proposal/menopause-society",
@@ -403,7 +412,12 @@ export default function FullProposalPage() {
           menopause-related symptoms faster and more accurately by combining
           patient history, wearable signals, and AI guidance inside normal
           clinical workflows — EHR-native, never a sidecar. The prototype is
-          live and open-source today; provider organizations onboard in 2026 H2.
+          live and open-source today: a 2,015-provider directory with distance
+          ranking + state license-sanction filters, Salesforce Data Cloud
+          Calculated Insights grounding live in production, and a MuleSoft
+          Experience API contract verifiable from any{" "}
+          <code>curl</code> against <a href="/api/mulesoft/providers">/api/mulesoft/providers</a>.
+          Provider organizations onboard in 2026 H2.
         </p>
       </section>
 
@@ -455,7 +469,7 @@ export default function FullProposalPage() {
 
       <section style={{ marginTop: "2rem" }}>
         <p className="eyebrow">What Pause-Health.ai provides</p>
-        <h2 className="proposal-section-title">Four capabilities, each verifiable in the live prototype</h2>
+        <h2 className="proposal-section-title">Five capabilities, each verifiable in the live prototype</h2>
         <div className="card-grid" style={{ marginTop: "0.8rem" }}>
           {whatPauseProvides.map((c) => (
             <article key={c.title} className="card">
