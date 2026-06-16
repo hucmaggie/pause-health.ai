@@ -5,7 +5,7 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Salesforce Data 360",
   description:
-    "How Pause-Health.ai grounds its Care Router agent in a Salesforce Data 360 federated patient view. Today: real Salesforce Health Cloud objects via OAuth Client Credentials, with identity resolution against real seeded Contacts. Phase 2: federate JupyterHealth, DBDP, and the customer's EHR-of-record.",
+    "How Pause-Health.ai grounds its Care Router agent in a Salesforce Data 360 federated patient view. Phase 1 (real Salesforce Health Cloud SOQL + identity resolution) and Phase 2 (Data Cloud Calculated Insights — HRV z-score, vasomotor burden, sleep disruption) are both LIVE in production on trailsignup. Phase 2-bis swaps the demo-cohort seeded CIs for real JHE/DBDP wearable math; Phase 3 federates the customer's EHR-of-record.",
   path: "/proposal/data-360",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Pause × Salesforce Data 360 — investor brief."
@@ -223,11 +223,18 @@ const phases: Array<{
       "Pause's Care Router is now grounded on real Salesforce Health Cloud objects from a connected dev org: real Contact, real CareProgramEnrollee, real CarePlan, real Case. OAuth 2.0 Client Credentials Flow via an External Client App. The Agent Fabric console shows a LIVE badge on every span served by the real org. Zero-credential mock path remains the default for previews and CI."
   },
   {
-    name: "Phase 2 — Data Cloud unified profile",
-    status: "partial",
-    duration: "Code ready · org provisioning outstanding",
+    name: "Phase 2 — Data Cloud Calculated Insights",
+    status: "prototype",
+    duration: "Shipped on trailsignup",
     detail:
-      "The Data Cloud Calculated Insights client is live in lib/salesforce/data-cloud.ts. Three CIs (HRV RMSSD z-score, vasomotor burden, sleep disruption) are called in parallel with the Phase 1 SOQL grounding and layer on top when SF_DC_TENANT_URL is set. Remaining: provision the DC tenant on the connected org, author the three CI definitions, set the env var. Full walkthrough in docs/MULESOFT_PHASE_2_DATA_CLOUD.md."
+      "Three CIs authored + activated on the trailsignup tenant over ssot__Individual__dlm: Pause_HRV_RMSSD_30d, Pause_Vasomotor_Burden_30d, Pause_Sleep_Disruption_7d. SF_DC_TENANT_URL wired into Vercel; auth flows through the mandatory a360 token exchange (a core Salesforce token is NOT valid against the c360a tenant — must hit /services/a360/token first). Each CI falls back to its intake-only baseline independently if a DC call fails, so the Care Router degrades cleanly. The grounding endpoint now reports 'Phase 2: SOQL (Health Cloud) + Data Cloud Calculated Insights' on every call. The path here surfaced five things the original runbook got wrong (a360 token exchange chief among them) — all documented in docs/PHASE_2_ACTIVATION_CHECKLIST.md so re-running on a customer org is a checklist, not an archaeology dig. Demo-cohort values are seeded mock CIs; Phase 2-bis swaps them for real wearable math."
+  },
+  {
+    name: "Phase 2-bis — Real wearable math behind the same CIs",
+    status: "designed",
+    duration: "Same client, same token flow, only the CI SQL changes",
+    detail:
+      "The Data Cloud Calculated Insights client doesn't care what's behind the DMO. Phase 2-bis swaps the seeded mock CIs for real Data Cloud Calculated Insights jobs against the customer's JupyterHealth FHIR observations and DBDP feature warehouse — same lib/salesforce/data-cloud.ts, same a360 token flow, same fall-back semantics. What changes is the CI definition (the SQL behind ssot__Individual__dlm) and where the source data lands. No Care Router, agent, or UI change required."
   },
   {
     name: "Phase 3 — First customer deployment",
@@ -260,7 +267,7 @@ const investorTakeaways: Array<{
     label: "Longitudinal context makes the agent visibly smarter",
     status: "prototype",
     detail:
-      "Without Data 360 grounding, the Care Router sees one intake. With it, the agent sees real Health Cloud enrollment status, real care-plan status, and real days-since-last-clinical-contact today; the 30-day HRV trend / vasomotor trajectory / cohort percentile arrive with Phase 2. The same code path already produces materially better routing decisions — and the rationale shows it."
+      "Without Data 360 grounding, the Care Router sees one intake. With it, the agent sees real Health Cloud enrollment status, real care-plan status, real days-since-last-clinical-contact (Phase 1, SOQL), and the 30-day HRV z-score / vasomotor burden composite / sleep disruption index (Phase 2, Data Cloud Calculated Insights — LIVE on trailsignup) on every routing call. The same code path produces materially better routing decisions — and the rationale shows it."
   },
   {
     label: "Open ecosystem at every tier — including data",
@@ -333,7 +340,7 @@ export default function Data360Page() {
     <ProposalShell
       eyebrow="Investor brief · Salesforce Data 360"
       title="Unified patient memory, federated in place"
-      subtitle="Pause-Health.ai's Care Router is grounded on real Salesforce Health Cloud objects today via OAuth Client Credentials, with identity resolution against real seeded Contacts. Phase 2 swaps the federation target for the Data Cloud Federated Query API against JupyterHealth FHIR + DBDP feature warehouse; Phase 3 onboards the customer's EHR-of-record. The Care Router interface doesn't change across phases."
+      subtitle="Pause-Health.ai's Care Router is grounded on real Salesforce Health Cloud objects today via OAuth Client Credentials, with identity resolution against real seeded Contacts (Phase 1). Phase 2 — Data Cloud Calculated Insights (HRV z-score, vasomotor burden, sleep disruption) — is LIVE on the trailsignup tenant; the endpoint reports 'Phase 2: SOQL (Health Cloud) + Data Cloud Calculated Insights' on every routing call. Phase 2-bis swaps the demo-cohort seeded CIs for real JHE FHIR + DBDP wearable math through the same client + token flow; Phase 3 onboards the customer's EHR-of-record. The Care Router interface doesn't change across phases."
     >
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Why Data 360</p>
@@ -346,10 +353,12 @@ export default function Data360Page() {
           }}
         >
           Pills:{" "}
-          <StatusPill status="partial" style={inlinePillStyle} /> some
-          surface is LIVE in the prototype; the rest is Phase 2/3 ·{" "}
+          <StatusPill status="prototype" style={inlinePillStyle} /> wired
+          and live in the prototype today ·{" "}
+          <StatusPill status="partial" style={inlinePillStyle} /> shape live,
+          values still synthetic / demo-cohort seeded ·{" "}
           <StatusPill status="designed" style={inlinePillStyle} /> committed
-          path, activates with Phase 2 or first customer.
+          path, activates with Phase 2-bis or first customer.
         </p>
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {whyData360.map((item) => (
