@@ -366,6 +366,67 @@ All of these must be true before calling iteration 2 complete:
 | 5 | 2026-06-09 | OAS 3.0 spec (`pause-provider-experience-api.oas3.yaml`), published to Exchange as `pause-provider-experience-api-spec` v1.0.1 |
 | 6 | 2026-06-09 | Stable ngrok domain (`cattail-reactive-sassy.ngrok-free.dev`) pinned in docker-compose |
 | 7 | 2026-06-09 | JWT Validation (Auth0 RS256/JWKS) replaces Client ID Enforcement; plain Rate Limiting replaces SLA-based; Next.js proxy fetches Auth0 M2M token via `lib/mulesoft/auth.ts`; OAS spec updated to v1.0.2 |
+| 8 | 2026-06-15 | Phase-2 contract DataWeave (commit `cf4a42d`): 9-row curated slice with `lat`/`lng`, `serviceSignals`, `licenseStatus`, `insuranceAccepted`, `matchType` tier ladder, `?insurance=` filter. Source updated; **deploy is the maintainer's manual step** (not yet on CloudHub). |
+
+---
+
+## Phase-2 deploy verification checklist (iteration 8)
+
+Source landed in `cf4a42d` but is **not yet deployed**. Production
+`https://pause-health.ai/api/mulesoft/providers` currently reports
+`_source: "mock-fallback"` because (a) the new DataWeave hasn't been
+pushed and (b) the ngrok tunnel host (`cattail-reactive-sassy.ngrok-
+free.dev`) is dormant — TLS handshake gets `Connection reset by peer`,
+which is the documented free-tier-tunnel-not-running gotcha. The route
+handler degrades cleanly to the mock so production keeps serving the
+full Phase-2 contract via the in-process directory; no patient-visible
+regression. After redeploy:
+
+1. **Restart the local ngrok tunnel** (off VPN):
+   ```bash
+   ngrok http 8081
+   ```
+   Confirm the URL is still `cattail-reactive-sassy.ngrok-free.dev`
+   (free tier pins the subdomain).
+
+2. **Deploy the new DataWeave to CloudHub 2.0** via Anypoint Code
+   Builder or Maven (Zulu 17 `JAVA_HOME`). The artifact is
+   `mulesoft/pause-mulesoft-health-v1/`.
+
+3. **Probe the live worker directly** with a fresh Auth0 M2M JWT:
+   ```bash
+   TOKEN=$(curl -sX POST -H "Content-Type: application/json" \
+     -d '{
+       "client_id":"<AUTH0_MULESOFT_CLIENT_ID>",
+       "client_secret":"<AUTH0_MULESOFT_CLIENT_SECRET>",
+       "audience":"<AUTH0_MULESOFT_AUDIENCE>",
+       "grant_type":"client_credentials"
+     }' \
+     "https://<AUTH0_MULESOFT_DOMAIN>/oauth/token" | jq -r '.access_token')
+
+   curl -sH "Authorization: Bearer $TOKEN" \
+     "https://cattail-reactive-sassy.ngrok-free.dev/providers?zip=92614&menopause=true&limit=2" \
+     | jq '.providers[0] | keys'
+   ```
+   Expect the keys to include `serviceSignals`, `licenseStatus`,
+   `insuranceAccepted`, `latitude`, `longitude`, `distanceMiles`. Top
+   level should include `matchType`, `sort`, `provenance.dataset`.
+
+4. **Verify the production route flips to live**:
+   ```bash
+   curl -s "https://pause-health.ai/api/mulesoft/providers?zip=92614&menopause=true" \
+     | jq '.meta._source'
+   # Expected: "live-mulesoft"  (was "mock-fallback" pre-deploy)
+   ```
+
+5. **Verify the contract-shape test stays green** with live data flowing:
+   ```bash
+   cd frontend && ./node_modules/.bin/vitest run lib/mulesoft/providers.test.ts
+   ```
+   The hand-authored snapshot in
+   `frontend/lib/mulesoft/providers.test.ts` mirrors what the live
+   worker emits today; if the deploy adds or renames a field, that test
+   tells you to update both the snapshot and the DataWeave row schema.
 
 ## Remaining backlog
 
