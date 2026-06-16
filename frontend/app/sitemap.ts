@@ -23,6 +23,7 @@ const STATIC_PATHS: { path: string; priority: number; changeFrequency: "yearly" 
   { path: "/proposal/mcp", priority: 0.7, changeFrequency: "monthly" },
   { path: "/proposal/agent-fabric", priority: 0.75, changeFrequency: "monthly" },
   { path: "/proposal/data-360", priority: 0.75, changeFrequency: "monthly" },
+  { path: "/provider", priority: 0.75, changeFrequency: "weekly" },
   { path: "/contact", priority: 0.7, changeFrequency: "monthly" },
   { path: "/careers", priority: 0.7, changeFrequency: "weekly" },
   { path: "/press", priority: 0.4, changeFrequency: "monthly" },

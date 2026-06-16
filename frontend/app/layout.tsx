@@ -230,6 +230,7 @@ export default function RootLayout({
               </div>
               <div>
                 <h4>Product</h4>
+                <a href="/provider">Find a Provider</a>
                 <a href="/demo/intake">Prototype</a>
                 <a href="/proposal">Investor Brief</a>
                 <a href="/proposal/full">Full Proposal</a>

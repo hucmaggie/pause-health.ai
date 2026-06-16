@@ -183,6 +183,10 @@ export async function POST(req: Request) {
       data360Cohort: decision.groundingUsed?.cohortName,
       recommendedProviderCount: decision.recommendedProviders?.providers.length ?? 0,
       recommendedProvidersSource: decision.recommendedProviders?.source,
+      // The patient ZIP that drove the distance ranking, so the live-decision
+      // card can carry ?from=<zip> through to each profile link (matching the
+      // scripted intake fallback). Null when the patient gave no ZIP.
+      recommendedProvidersZip: decision.recommendedProviders?.query?.zip ?? null,
       recommendedProviderNames:
         decision.recommendedProviders?.providers.map(
           (p) => `${p.name} · ${p.specialty}`

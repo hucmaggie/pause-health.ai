@@ -19,6 +19,7 @@ type LatestDecision = {
   rationale: string[];
   recommendedTargetResponse: string;
   modelProvenance: { provider: string; model: string; via: string };
+  fromZip: string | null;
   recommendedProviders: {
     source: string | null;
     providers: RecommendedProviderEntry[];
@@ -106,6 +107,10 @@ export function LatestCareRouterDecision() {
               acuity: typeof attrs.acuity === "string" ? attrs.acuity : "routine",
               rationale: [],
               recommendedTargetResponse: PATHWAY_TARGETS[pw] ?? "",
+              fromZip:
+                typeof attrs.recommendedProvidersZip === "string"
+                  ? attrs.recommendedProvidersZip
+                  : null,
               recommendedProviders: {
                 source:
                   typeof attrs.recommendedProvidersSource === "string"
@@ -191,6 +196,7 @@ export function LatestCareRouterDecision() {
       <RecommendedProviders
         providers={decision.recommendedProviders.providers}
         source={decision.recommendedProviders.source}
+        fromZip={decision.fromZip ?? undefined}
       />
       <p style={{ marginTop: "0.6rem" }}>
         <a
