@@ -43,10 +43,12 @@ type ProvidersQuery = {
    */
   zipCentroid?: { latitude: number; longitude: number } | null;
   /**
-   * Plan name to filter on (case-insensitive; aliases like "United" → "uhc"
-   * are normalized inside the directory). Forwarded as-is to the live Mule
-   * API; if the live worker doesn't honor it yet, the response just won't
-   * be filtered, which is honest degradation.
+   * Canonical plan token to filter on (e.g. "uhc", "bcbs"). The API route
+   * normalizes user input (aliases like "United" → "uhc") BEFORE building this
+   * query, so it is forwarded verbatim to the live Mule API — the live worker
+   * only lowercases, so it relies on receiving the canonical token. If the live
+   * worker doesn't honor the param yet, the response just won't be filtered,
+   * which is honest degradation.
    */
   insurance?: string | null;
 };

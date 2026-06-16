@@ -3,7 +3,10 @@ import {
   getProvidersPreferReal,
   isMulesoftProvidersLive
 } from "../../../../lib/mulesoft/providers";
-import { queryProviderDirectory } from "../../../../lib/mulesoft-mocks";
+import {
+  normalizeInsurancePlan,
+  queryProviderDirectory
+} from "../../../../lib/mulesoft-mocks";
 import { lookupZipCentroid } from "../../../../lib/zip-centroids";
 
 /**
@@ -57,11 +60,13 @@ export async function GET(req: Request) {
   const distanceParam = searchParams.get("distance") !== "false";
   const zipCentroid = distanceParam ? lookupZipCentroid(zip) : null;
 
-  // Filter to providers accepting a specific plan. Passes through the same
-  // synonym normalization the directory uses (Aetna / aetna / "Blue Cross"
-  // → "bcbs"); unknown plans yield zero results honestly rather than
-  // silently no-op-ing.
-  const insurance = searchParams.get("insurance");
+  // Filter to providers accepting a specific plan. Normalize at the route
+  // boundary (Aetna / aetna / "Blue Cross" → "bcbs", "United" → "uhc") so BOTH
+  // paths receive the canonical token: the mock re-normalizes idempotently, but
+  // the live Mule worker only lowercases — without this, ?insurance=United
+  // matched in mock mode yet returned zero against the live API. Unknown plans
+  // pass through (lowercased) and yield an honest zero match. null when absent.
+  const insurance = normalizeInsurancePlan(searchParams.get("insurance"));
 
   const query = { zip, menopauseOnly, limit, fallback, zipCentroid, insurance };
 
