@@ -23,6 +23,7 @@ class IngestConfig:
     patient_fhir_id: str
     data_source_id: str
     default_tz: ZoneInfo
+    fhir_source_id: str | None = None
 
     @classmethod
     def from_env(cls, *, dotenv_path: str | None = None) -> "IngestConfig":
@@ -50,6 +51,8 @@ class IngestConfig:
                 f"PAUSE_INGEST_DEFAULT_TZ={tz_name!r} is not a valid IANA timezone"
             ) from exc
 
+        fhir_source_id = os.environ.get("JHE_FHIR_SOURCE_ID", "").strip() or None
+
         return cls(
             jhe_base_url=required("JHE_BASE_URL").rstrip("/"),
             jhe_client_id=required("JHE_CLIENT_ID"),
@@ -57,4 +60,5 @@ class IngestConfig:
             patient_fhir_id=required("JHE_PATIENT_FHIR_ID"),
             data_source_id=required("JHE_DATA_SOURCE_ID"),
             default_tz=tz,
+            fhir_source_id=fhir_source_id,
         )

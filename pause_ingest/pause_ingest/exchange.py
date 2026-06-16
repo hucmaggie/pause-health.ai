@@ -54,17 +54,32 @@ def upload_observation(
 ) -> dict[str, Any]:
     """POST a FHIR R5 Observation to JupyterHealth Exchange.
 
+    JHE routes Observation writes between two handlers based on the
+    coding ``system`` in the resource: codings under
+    ``https://w3id.org/openmhealth`` go to the *mapped* OMH handler; any
+    other coding (e.g. our derived ``https://pause-health.ai/schemas/derived``
+    HRV-features payload) goes to the *auxiliary* handler, which requires
+    an ``X-JHE-FHIR-Source-ID`` header pointing at a registered
+    ``FhirSource`` row that ties the patient to the data source.
+
+    We send the header whenever the config carries a fhir_source_id. The
+    real JHE ignores the header when the observation routes to the
+    mapped handler, so it's safe to always send it.
+
     Returns the server-echoed Observation (including its server-assigned id).
     Raises ``httpx.HTTPStatusError`` on non-2xx.
     """
     token = _fetch_oauth_token(config)
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    if config.fhir_source_id:
+        headers["X-JHE-FHIR-Source-ID"] = config.fhir_source_id
     response = httpx.post(
         f"{config.jhe_base_url}/fhir/r5/Observation",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        },
+        headers=headers,
         json=observation,
         timeout=15.0,
     )

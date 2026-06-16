@@ -70,6 +70,11 @@ class JheMockState:
         # Tests can flip this to test the auth-failure branch of
         # exchange.upload_observation if we ever add one.
         self.strict_auth = True
+        # Last X-JHE-FHIR-Source-ID header value the mock observed on a
+        # write. Tests inspect this to assert the client routes the header
+        # for aux-handler writes (derived features) and skips it for
+        # mapped-handler writes (raw OMH).
+        self.last_fhir_source_id_header: str | None = None
 
 
 def _make_handler(state: JheMockState) -> type[BaseHTTPRequestHandler]:
@@ -177,6 +182,30 @@ def _make_handler(state: JheMockState) -> type[BaseHTTPRequestHandler]:
                     400, "valueAttachment.data is required"
                 )
                 return
+            # Mirror real JHE's mapped-vs-auxiliary handler routing: codings
+            # under https://w3id.org/openmhealth go to the mapped Observation
+            # handler; anything else (e.g. our derived
+            # https://pause-health.ai/schemas/derived HRV-features payload)
+            # routes to the auxiliary FhirAuxResource handler, which 400s
+            # without an X-JHE-FHIR-Source-ID header. Without this check
+            # in the mock, the routing-criteria contract (the bug fixed in
+            # 2026-06-16's first real-JHE run) can drift back unnoticed.
+            coding = (
+                obs.get("code", {}).get("coding", [{}])[0]
+                if isinstance(obs.get("code"), dict)
+                else {}
+            )
+            system = coding.get("system", "")
+            routes_to_aux = system != "https://w3id.org/openmhealth"
+            if routes_to_aux and not self.headers.get("X-JHE-FHIR-Source-ID"):
+                self._send_error_json(
+                    400,
+                    "Header 'X-JHE-FHIR-Source-ID' is required to write this resource.",
+                )
+                return
+            state.last_fhir_source_id_header = self.headers.get(
+                "X-JHE-FHIR-Source-ID"
+            )
             # Assign a server-side id (overrides the client-side UUID
             # the way the real JHE does -- this is important to verify
             # the client trusts the server's id and doesn't re-use the

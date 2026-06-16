@@ -25,6 +25,7 @@ What these tests catch that the existing unit tests don't:
 from __future__ import annotations
 
 import base64
+import dataclasses
 import json
 from zoneinfo import ZoneInfo
 
@@ -119,6 +120,66 @@ def test_upload_observation_round_trips_against_wire_mock(
         "Exactly one /o/token/ call expected per upload"
     )
     assert jhe_server.state.upload_calls == 1
+    # A mapped-handler write (OMH coding) does NOT need the
+    # X-JHE-FHIR-Source-ID header -- the config above carries no
+    # fhir_source_id, and the mock's mapped-route shouldn't have
+    # observed the header. This pins the symmetric direction of the
+    # routing contract surfaced in the 2026-06-16 real-JHE run.
+    assert jhe_server.state.last_fhir_source_id_header is None, (
+        "mapped-handler writes (OMH codings) must not require / carry "
+        "X-JHE-FHIR-Source-ID"
+    )
+
+
+def test_upload_aux_routed_observation_requires_fhir_source_id_header(
+    jhe_server: JheMockServer,
+):
+    """A non-OMH coding routes to JHE's auxiliary handler, which 400s
+    without the X-JHE-FHIR-Source-ID header.
+
+    This is the third real-JHE-only bug surfaced in the 2026-06-16 run
+    (after invalid_scope + Content-Type fhir+json) -- pause_ingest's
+    derived HRV-features upload emits a coding under
+    https://pause-health.ai/schemas/derived which JHE routes to its
+    aux handler. Without `IngestConfig.fhir_source_id`, the upload
+    fails. With it, the header is threaded through and the write
+    succeeds.
+    """
+    import httpx
+
+    no_source_config = IngestConfig(
+        jhe_base_url=jhe_server.base_url,
+        jhe_client_id=VALID_CLIENT_ID,
+        jhe_client_secret=VALID_CLIENT_SECRET,
+        patient_fhir_id=PATIENT_FHIR_ID,
+        data_source_id=DATA_SOURCE_ID,
+        default_tz=ZoneInfo("UTC"),
+        # Deliberately omit fhir_source_id.
+    )
+    with_source_config = dataclasses.replace(
+        no_source_config, fhir_source_id="90003"
+    )
+
+    hrv = hrv_time_domain_fallback([800.0, 820.0, 790.0, 810.0, 805.0, 815.0])
+    derived_observation = hrv_features_to_fhir_observation(
+        hrv=hrv,
+        patient_fhir_id=PATIENT_FHIR_ID,
+        data_source_id=DATA_SOURCE_ID,
+        derived_from_observation_ids=[],
+        window_start="2026-04-09T08:00:00Z",
+        window_end="2026-04-09T08:05:00Z",
+    )
+
+    # No fhir_source_id -> 400 from the aux handler.
+    with pytest.raises(httpx.HTTPStatusError) as exc_info:
+        upload_observation(derived_observation, config=no_source_config)
+    assert exc_info.value.response.status_code == 400
+    assert "X-JHE-FHIR-Source-ID" in exc_info.value.response.text
+
+    # With fhir_source_id -> success, and the mock observed the header.
+    stored = upload_observation(derived_observation, config=with_source_config)
+    assert stored["code"]["coding"][0]["code"] == "hrv-time-domain"
+    assert jhe_server.state.last_fhir_source_id_header == "90003"
 
 
 def test_upload_fails_on_invalid_client_credentials(
@@ -346,9 +407,19 @@ def test_full_pipeline_raw_plus_derived_features_round_trips(
         "Observation/"
     )
 
-    # 4. Upload the feature observation.
-    stored_feature = upload_observation(feature_observation, config=config)
+    # 4. Upload the feature observation. Real JHE routes non-OMH codings
+    # to the auxiliary handler, which 400s without an X-JHE-FHIR-Source-ID
+    # header pointing at a registered FhirSource row. The mock now
+    # mirrors that contract -- so this upload path must use a config
+    # that carries fhir_source_id, or it 400s. We swap to a derived-
+    # capable config just for this call (the raw observations above were
+    # mapped-handler writes, which ignore the header).
+    derived_config = dataclasses.replace(config, fhir_source_id="90003")
+    stored_feature = upload_observation(feature_observation, config=derived_config)
     assert stored_feature["code"]["coding"][0]["code"] == "hrv-time-domain"
+    assert (
+        jhe_server.state.last_fhir_source_id_header == "90003"
+    ), "X-JHE-FHIR-Source-ID must be threaded for aux-handler writes"
 
     # 5. Read everything back and verify both kinds are present.
     fetched = read_recent_observations(config=config, count=20)

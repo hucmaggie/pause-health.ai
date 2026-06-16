@@ -148,16 +148,74 @@ JHE.
 | 2 | `POST /fhir/r5/Observation` → `415 {"diagnostics":"Unsupported media type \"application/fhir+json\""}` | pause_ingest set both `Content-Type` and `Accept` to `application/fhir+json`. JHE's DRF parser only registers `application/json`. | Both headers in `upload_observation` are now `application/json`. |
 | 3 | `POST /fhir/r5/Observation` → `400 {"diagnostics":"Header 'X-JHE-FHIR-Source-ID' is required to write this resource."}` | JHE routes Observations between a *mapped* (Open mHealth) handler and an *aux* (opaque JSON) handler based on `core/fhir/fhir_config.json`'s criteria `code=https://w3id.org/openmhealth\|`. pause_ingest emitted `system: https://w3id.org/openmhealth/schemas/<namespace>` with code `<schema-name>` (`heart-rate`), which did not match the criteria. The Observation silently fell through to the aux handler, which then 400'd because aux writes require an `X-JHE-FHIR-Source-ID` header. | `omh_to_fhir_observation` in `pause_ingest/fhir.py` now emits `system: https://w3id.org/openmhealth` with code in the colon-namespaced `omh:<schema>:<version>` form (e.g. `omh:heart-rate:2.0`). The wire-level mock's round-trip assertion was updated from `{"heart-rate"}` to `{"omh:heart-rate:2.0"}` so it pins the new shape too. |
 
-The remaining two known unknowns (FHIR R5 strict-validator quirks beyond
-header validation; `derivedFrom` resolution) did not fire on this run
-because the smoke script only writes a single raw Observation. The
-derived-features path (`hrv_features_to_fhir_observation`) emits
-`system: https://pause-health.ai/schemas/derived` which will not match
-JHE's mapped routing, so it will be aux-routed and require the
-`X-JHE-FHIR-Source-ID` header at upload time. The `FhirSource` row needed
-already exists in the seeded DB (`pk=90003`, label "pause-ingest demo
-Oura source"); wiring the header into `pause_ingest.exchange` for derived
-features is the next iteration's work.
+## Update — derived-features (auxiliary handler) write path now wired
+
+A second pass in the same session closed out the auxiliary-handler
+write path that the original smoke script had skipped. The HRV-features
+helper (`hrv_features_to_fhir_observation`) emits
+`system: https://pause-health.ai/schemas/derived` which JHE routes to
+its `FhirAuxResource` handler — and that handler 400s without an
+`X-JHE-FHIR-Source-ID` header pointing at a registered `FhirSource` row.
+
+Changes:
+
+- `IngestConfig` got a new optional `fhir_source_id: str | None` field,
+  loaded from `JHE_FHIR_SOURCE_ID` in the env (kept optional so a
+  raw-only config still works).
+- `upload_observation` adds the `X-JHE-FHIR-Source-ID` request header
+  whenever the config carries the id. The mapped (OMH) handler ignores
+  the header so always sending it is safe.
+- `examples/oura_sample_upload.py` now uploads BOTH the raw OMH
+  heart-rate observation (mapped handler, integer pk) and a derived
+  HRV-time-domain observation (auxiliary handler, UUID pk) computed from
+  a synthetic IBI series, with `derivedFrom` pointing at the raw row's
+  server id. End-of-run prints `OK — uploaded and round-tripped 2
+  observation(s)`.
+- `jhe-local/bootstrap.sh` reads back the `FhirSource.pk` after creation
+  and surfaces it in the printed `.env` block as `JHE_FHIR_SOURCE_ID=`,
+  so the next contributor's first run uploads through both paths
+  without extra Django shell work.
+- Wire-level mock now mirrors JHE's mapped-vs-aux routing: codings
+  outside `https://w3id.org/openmhealth` 400 without the header. A new
+  `test_upload_aux_routed_observation_requires_fhir_source_id_header`
+  test pins both directions of the contract — without the id the upload
+  raises `HTTPStatusError` with status 400, with the id the mock
+  observes the header and the write succeeds. The existing core test
+  was tightened to also assert the mock did NOT observe the header on
+  a mapped-handler write.
+
+The two-row real-JHE output (run after the wiring landed):
+
+```
+Loaded fixture: {'bpm': 72, 'timestamp': '2026-04-09T08:00:00Z'}
+Converted to OMH (schema={'namespace': 'omh', 'name': 'heart-rate', 'version': '2.0'})
+Built raw FHIR Observation id=...
+Uploaded raw observation to JHE; server id=60014
+Computed HRV: rmssd=12.56 ms, sdnn=7.15 ms, n=10
+Built derived FHIR Observation id=...
+Uploaded derived observation to JHE; server id=1d752859-fef9-4c9c-9d13-fb117fc58c8a
+Read back 9 recent observation(s) for patient
+OK — uploaded and round-tripped 2 observation(s)
+```
+
+The integer vs. UUID server id is the visible signal of the routing
+split — JHE's mapped Observation handler returns a Postgres integer pk,
+while the auxiliary `FhirAuxResource` handler returns a UUID. The
+`/fhir/r5/Observation?patient=40001` Bundle search returns both in a
+single search-set Bundle, with the derived row carrying its
+`derivedFrom` pointer back at the raw row.
+
+## Original (raw-only) Known Unknowns assessment
+
+The first pass of the smoke script wrote only a single raw Observation,
+so the remaining two known unknowns from the runbook (FHIR R5 strict-
+validator quirks beyond header validation; `derivedFrom` resolution) did
+not fire on that run. With the derived-features path now wired, the
+`derivedFrom` field is populated with a server-issued raw-row id and
+JHE accepts it without complaint — that closes the fourth known unknown
+empirically. The fifth (FHIR R5 strict-validator quirks) is still
+unverified beyond the header / OAuth / Content-Type checks JHE imposes
+in its current shape.
 
 ## The actual round-trip
 

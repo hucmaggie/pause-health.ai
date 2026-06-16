@@ -101,8 +101,10 @@ if [[ "$NEED_SEED" == "1" ]]; then
   docker exec "$WEB_NAME" python manage.py seed >/dev/null
 fi
 
-# 7. OAuth client + Study + Patient + DataSource + Scope + Consent wiring
-docker exec -i "$WEB_NAME" python <<PY >/dev/null
+# 7. OAuth client + Study + Patient + DataSource + Scope + Consent wiring.
+# The script prints the FhirSource pk on the last line so the bash side can
+# include it in the env block; everything else is silenced.
+FHIR_SOURCE_ID=$(docker exec -i "$WEB_NAME" python <<PY 2>/dev/null | tail -1
 import django, os
 os.environ['DJANGO_SETTINGS_MODULE']='jhe.settings'
 django.setup()
@@ -164,14 +166,16 @@ for code in ("omh:heart-rate:2.0", "omh:rr-interval:1.0",
         defaults={"consented": True, "scope_actions": sr.scope_actions, "consented_time": now},
     )
 
-# A FhirSource is required for derived (auxiliary) Observation writes.
-# pause_ingest does not write derived observations through this path yet,
-# but the row is cheap and lets us add the X-JHE-FHIR-Source-ID header later.
-FhirSource.objects.get_or_create(
+# FhirSource is required for derived (auxiliary) Observation writes —
+# pause_ingest's HRV-features path emits a non-OMH coding that JHE routes
+# to its auxiliary handler, which 400s on missing X-JHE-FHIR-Source-ID.
+fs, _ = FhirSource.objects.get_or_create(
     patient=patient, data_source=oura,
     defaults={"label": "pause-ingest demo Oura source", "fhir_base_url": ""},
 )
+print(fs.pk)
 PY
+)
 
 cat <<EOF
 
@@ -187,6 +191,7 @@ JHE_CLIENT_ID=${CLIENT_ID}
 JHE_CLIENT_SECRET=${CLIENT_SECRET}
 JHE_PATIENT_FHIR_ID=${PATIENT_ID}
 JHE_DATA_SOURCE_ID=${DATA_SOURCE_ID}
+JHE_FHIR_SOURCE_ID=${FHIR_SOURCE_ID}
 PAUSE_INGEST_DEFAULT_TZ=UTC
 
 Then:
