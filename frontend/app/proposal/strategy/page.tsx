@@ -45,8 +45,8 @@ const pillars: Array<{
     intent:
       "Pause is delivered as a SMART-on-FHIR app inside Epic and Cerner workflows. The clinician never leaves their chart. This single architectural choice is the difference between adopted product and shelfware.",
     today:
-      "JupyterHealth FHIR R5 substrate is wired; MuleSoft Process API design is documented; Salesforce Agentforce is the current intake surface for the live demo. SMART-on-FHIR install package itself is on the build plan, not shipped.",
-    status: "designed",
+      "JupyterHealth FHIR R5 substrate is wired; the MuleSoft Process API is deployed on CloudHub 2.0 today, fronting the Phase-2 contract DataWeave with the same shape every fabric consumer (UI, agent, MCP) reads; Salesforce Agentforce is the current intake surface for the live demo. SMART-on-FHIR install package itself is on the build plan, not shipped.",
+    status: "prototype",
     link: { href: "/proposal/integration", label: "JupyterHealth integration brief →" }
   },
   {
@@ -54,7 +54,7 @@ const pillars: Array<{
     intent:
       "PRO and wearable data are collected via a mobile experience the patient already uses (HealthKit / Health Connect bridge), then surfaced as a structured 'pre-read' inside the EHR — not a separate inbox.",
     today:
-      "DBDP Phase 1 (FLIRT-backed RMSSD) is shipped with closed-form correctness tests. JupyterHealth FHIR observations land in the federated grounding payload. The native HealthKit / Health Connect bridge itself is Phase 2 work.",
+      "DBDP Phase 1 (FLIRT-backed RMSSD) is shipped with closed-form correctness tests. Salesforce Data Cloud Calculated Insights (Pause_HRV_RMSSD_30d, Pause_Vasomotor_Burden_30d, Pause_Sleep_Disruption_7d) are LIVE on the trailsignup tenant, surfaced in every Care Router grounding payload alongside the Phase-1 SOQL signals. JupyterHealth FHIR observations land in the federated grounding payload. The native HealthKit / Health Connect bridge + real-wearable JHE/DBDP math behind the CIs (Phase 2-bis) are still ahead.",
     status: "prototype",
     link: { href: "/proposal/dbdp", label: "DBDP feature engineering brief →" }
   },
@@ -80,8 +80,8 @@ const pillars: Array<{
     intent:
       "The de-identified outcomes registry is published, contributing to the menopause evidence base, and circling back to product as the strongest competitive moat we have.",
     today:
-      "Data 360 segments + cohort comparison are the prototype substrate. Registry-as-product (de-identified outcomes feed back to advisory + community) is gated on the first ~12 months of customer deployment, not yet earned.",
-    status: "designed",
+      "Data 360 segments + cohort comparison are the prototype substrate; Phase 2 Data Cloud Calculated Insights (HRV z-score, vasomotor burden, sleep disruption) are LIVE on the trailsignup tenant and grounding every routing call today. Registry-as-product (de-identified outcomes feed back to advisory + community) is gated on the first ~12 months of customer deployment, not yet earned.",
+    status: "prototype",
     link: { href: "/proposal/data-360", label: "Data 360 architecture brief →" }
   }
 ];
@@ -162,8 +162,18 @@ const moats: Array<{
     intent:
       "A curated, structured, retrievable corpus of menopause guidelines maintained as evidence evolves. The work of building and maintaining it is more durable than the AI models themselves.",
     today:
-      "Guideline-grounded prompts are scaffolded in the Care Router. Curated corpus + retrieval pipeline are Phase 2.",
-    status: "designed"
+      "Live in the prototype: NAMS / Menopause Society + ACOG + IMS + AACE position statements are wired into the federated grounding store, and every Care Router decision cites the corpus (verifiable on /demo/intake and /demo/agent-fabric). Continuous-update pipeline as evidence evolves is Phase 2 work.",
+    status: "prototype",
+    link: { href: "/proposal/data", label: "Data inventory brief →" }
+  },
+  {
+    moat: "Sanction-filtered, menopause-scored provider graph",
+    intent:
+      "Vendor provider graphs (Definitive Healthcare, IQVIA OneKey, etc.) are excellent for general healthcare but don't score for menopause and don't run a build-time sanction filter against state license registries. Pause's directory unions CMS NPPES + The Menopause Society MSCP overlay + multi-state license-sanction overlays + Census ZCTA centroids for distance ranking. Each refresh recompounds the moat without requiring a paid feed.",
+    today:
+      "Live today (see /provider). 2,015 menopause-relevant providers across all 50 states + DC / 930 ZIP-3 prefixes (a coverage-aware selection spreads the non-certified budget across prefixes; non-US/garbage postals are gated out). Three state license-sanction overlays at build time (CA Medi-Cal, NY OPMC, TX TMB) — 1,720 sanctioned candidates dropped in the June 2026 build, verifiable per response under provenance.dataset.sanctionedFilteredBySource. The Care Router consumes the same query function the agent and /provider use, so triage and the directory stay in lockstep. National coverage via a paid multi-state license-status feed (Verisys, ProviderTrust) is the Phase-3 hardening path.",
+    status: "prototype",
+    link: { href: "/proposal/provider-graph", label: "Provider graph brief →" }
   },
   {
     moat: "Brand and category leadership",
@@ -286,7 +296,7 @@ export default function StrategyPage() {
 
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Competitive moats</p>
-        <h2 className="proposal-section-title">Five moats — each compounding over deployment time</h2>
+        <h2 className="proposal-section-title">Six moats — each compounding over deployment time</h2>
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {moats.map((m) => (
             <article key={m.moat} className="card">
