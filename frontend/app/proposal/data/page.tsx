@@ -74,7 +74,7 @@ const inventory: Array<{
     source: "Provider directory (NPPES-derived)",
     type: "Public-domain · NPPES + Census + state sanction overlays",
     volume:
-      "2,015 menopause-relevant providers across 55 states and 532 ZIP-3 prefixes (15 MSCP-certified, 2,000 menopause-relevant non-certified). Refreshed by the provider_ingest pipeline against the monthly CMS NPPES bulk file (~9.6M rows) in ~1m50s.",
+      "2,015 menopause-relevant providers across all 50 states + DC and 1,055 ZIP-3 prefixes (15 MSCP-certified, 2,000 menopause-relevant non-certified). A coverage-aware selection round-robins the non-certified budget across ZIP-3 prefixes, so the same 2,000 rows give far more ZIPs a local result. Refreshed by the provider_ingest pipeline against the monthly CMS NPPES bulk file (~9.6M rows) in ~1m50s.",
     examples: "Distance from patient ZIP, MSCP/NCMP credential, six NPPES board-cert / multi-specialty signals, telehealth + accepting-new-patients flags, license disposition (CA Medi-Cal + NY OPMC + TX TMB checked at build), insurance acceptance",
     why_it_matters:
       "Sanctioned providers (1,720 dropped in the June 2026 build) cannot surface in any agent recommendation, /api/mulesoft/providers response, or the /provider UI — the patient-safety filter is verifiable per response under provenance.dataset.sanctionedFilteredBySource. The Care Router consumes the same query function the agent and /provider use, so triage and the directory stay in lockstep."
