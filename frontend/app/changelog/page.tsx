@@ -29,9 +29,9 @@ type ChangelogWeek = {
 const weeks: ChangelogWeek[] = [
   {
     range: "Week of June 13, 2026",
-    headline: "Data 360 Phase 2 is LIVE: Data Cloud Calculated Insights grounding in production",
+    headline: "Phase 2 across the stack: provider-graph + Data 360 + MuleSoft contract update",
     intro:
-      "The Data Cloud wearable/EHR insights flipped from designed-on-paper to live in production. On the trailsignup org, Data Cloud was already provisioned; three Calculated Insights (Pause_HRV_RMSSD_30d, Pause_Vasomotor_Burden_30d, Pause_Sleep_Disruption_7d) were authored over ssot__Individual__dlm and activated, SF_DC_TENANT_URL was wired into Vercel, and the grounding endpoint now returns \"Phase 2: SOQL (Health Cloud) + Data Cloud Calculated Insights\". The path there surfaced five things the original runbook got wrong — most importantly that a core Salesforce token is not valid against the c360a tenant and must be exchanged at /services/a360/token first. All five are documented in docs/PHASE_2_ACTIVATION_CHECKLIST.md so re-running on a customer org is a checklist, not an archaeology dig.",
+      "Two big streams landed and a third caught up. Provider-graph Phase 2 shipped end-to-end: distance ranking from Census 2020 ZCTA centroids, six NPPES board-cert + multi-specialty signals, three state license-sanction overlays dropping 1,720 sanctioned candidates at build, real-shaped synthetic insurance, /provider browseable index + /provider/[npi] profile pages, and a contract-shape vitest pinning live ⇄ mock parity. Data 360 Phase 2 went live on trailsignup — three Calculated Insights (HRV / vasomotor burden / sleep disruption) authored over ssot__Individual__dlm, with SF_DC_TENANT_URL wired into Vercel and the grounding endpoint now returning \"Phase 2: SOQL (Health Cloud) + Data Cloud Calculated Insights\"; PHASE_2_ACTIVATION_CHECKLIST.md captures the five things the original runbook got wrong (notably that a core Salesforce token is not valid against the c360a tenant and must be exchanged at /services/a360/token first). The MuleSoft live worker's DataWeave was rewritten to match the same Phase-2 contract — deploy is the maintainer's manual step (the ngrok tunnel is currently dormant; production degrades cleanly to the mock-fallback path so no patient-visible regression). The Care Router and the agent's MCP tool consume both streams: an MSCP-pathway routing decision now attaches a distance-ranked, plan-narrowed, modality-aware recommended-provider list backed by the same queryProviderDirectory the /provider UI reads.",
     entries: [
       {
         title: "Investor brief: /proposal/provider-graph rewritten for the Phase 2 shipped state",
@@ -601,7 +601,7 @@ export default function ChangelogPage() {
               fontWeight: 600
             }}
           >
-            63 total commits since May 24, 2026
+            175 total commits since May 24, 2026
           </span>
           <a
             href={GITHUB_REPO + "/commits/main"}
@@ -614,6 +614,69 @@ export default function ChangelogPage() {
           </a>
         </div>
       </header>
+
+      {/* Current-state banner.
+          The marquee weeks below preserve history (and read like a plan
+          if you start at the bottom), but a fresh reader needs to see
+          what's actually live right now first. Update this block when
+          a major phase lands — the entries list it summarizes stays
+          immutable. */}
+      <section
+        className="card"
+        style={{
+          marginBottom: "2rem",
+          background:
+            "linear-gradient(180deg, rgba(255, 93, 168, 0.10) 0%, transparent 100%)",
+          borderColor: "rgba(255, 93, 168, 0.35)"
+        }}
+        aria-label="Current state summary"
+      >
+        <p className="eyebrow" style={{ marginBottom: "0.4rem" }}>
+          Where we are right now
+        </p>
+        <h2 style={{ marginTop: 0, fontSize: "clamp(1.2rem, 2.4vw, 1.6rem)" }}>
+          Provider-graph Phase 2 + Data 360 Phase 2 are both shipped.
+        </h2>
+        <p style={{ color: "var(--muted)", lineHeight: 1.55, marginBottom: "0.8rem" }}>
+          The provider directory carries 2,015 NPPES-derived rows behind the
+          frozen Experience API contract. Distance ranking from Census 2020
+          ZCTA centroids, six NPPES board-cert + multi-specialty signals, three
+          state license-sanction filters dropping 1,720 sanctioned candidates
+          at build (CA Medi-Cal + NY OPMC + TX TMB), real-shaped synthetic
+          insurance, and a /provider browseable UI all ship today. Data Cloud
+          Calculated Insights grounding is live in production on the
+          trailsignup org (HRV / vasomotor burden / sleep disruption). The
+          Care Router consumes both, so an MSCP-pathway routing decision now
+          attaches a distance-ranked, plan-narrowed, modality-aware
+          recommended-provider list to its output. Closed-loop outcomes
+          scoring (Phase 3) activates with referral volume.
+        </p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+          <a
+            href="/proposal/provider-graph"
+            className="btn btn-primary"
+            style={{ fontSize: "0.85rem", padding: "0.5rem 0.85rem" }}
+          >
+            Read the provider-graph brief →
+          </a>
+          <a
+            href="/provider?zip=92614&menopause=true"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.85rem", padding: "0.5rem 0.85rem" }}
+          >
+            Browse the directory →
+          </a>
+          <a
+            href="/api/mulesoft/providers?zip=92614&menopause=true"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.85rem", padding: "0.5rem 0.85rem" }}
+          >
+            Curl the contract →
+          </a>
+        </div>
+      </section>
 
       {weeks.map((week) => (
         <section
