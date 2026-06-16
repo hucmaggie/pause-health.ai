@@ -23,7 +23,7 @@ import csv
 from collections.abc import Iterator
 from pathlib import Path
 
-from .centroids import LatLng, default_centroids
+from .centroids import LatLng
 from .insurance import derive_insurance_accepted
 from .mscp import MscpOverlay
 from .records import ProviderRecord

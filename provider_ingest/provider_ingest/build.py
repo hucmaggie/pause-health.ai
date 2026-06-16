@@ -60,6 +60,7 @@ def build_directory(
     *,
     limit: int | None = None,
     keep_all_certified: bool = False,
+    coverage: bool = False,
     centroids: dict[str, LatLng] | None = None,
     sanctions: SanctionOverlay | None = None,
     sanctions_by_source: dict[str, SanctionOverlay] | None = None,
@@ -89,6 +90,7 @@ def build_directory(
         overlay,
         limit=limit,
         keep_all_certified=keep_all_certified,
+        coverage=coverage,
         centroids=centroids,
         sanctions=sanctions,
         sanctions_by_source=sanctions_by_source,
@@ -102,6 +104,7 @@ def build_directory_with_stats(
     *,
     limit: int | None = None,
     keep_all_certified: bool = False,
+    coverage: bool = False,
     centroids: dict[str, LatLng] | None = None,
     sanctions: SanctionOverlay | None = None,
     sanctions_by_source: dict[str, SanctionOverlay] | None = None,
@@ -123,10 +126,58 @@ def build_directory_with_stats(
         overlay,
         limit=limit,
         keep_all_certified=keep_all_certified,
+        coverage=coverage,
         centroids=centroids,
         sanctions=sanctions,
         sanctions_by_source=sanctions_by_source,
     )
+
+
+def _round_robin_by_zip3(
+    rows: list[ProviderRecord], limit: int
+) -> list[ProviderRecord]:
+    """Pick up to `limit` rows maximizing distinct ZIP-3 coverage.
+
+    `rows` must already be sorted by graphScore desc. Buckets them by ZIP-3
+    prefix and takes one from each bucket per round (buckets ordered by their
+    best provider's score), so every prefix that has any provider contributes
+    its strongest candidate before any prefix contributes a second. The result
+    spreads the non-certified budget across the country instead of piling into a
+    few dense metros, while still preferring higher-scoring providers within and
+    across prefixes. Deterministic.
+    """
+    if limit <= 0 or len(rows) <= limit:
+        return rows[:limit] if limit > 0 else []
+
+    buckets: dict[str, list[ProviderRecord]] = {}
+    order: list[str] = []
+    for r in rows:
+        key = r.zip[:3] if r.zip else ""
+        bucket = buckets.get(key)
+        if bucket is None:
+            buckets[key] = [r]
+            order.append(key)
+        else:
+            bucket.append(r)
+    # Order prefixes by their strongest provider (rows are score-sorted, so the
+    # first row in each bucket is its best), tie-break on the prefix for stability.
+    order.sort(key=lambda k: (-buckets[k][0].graphScore, k))
+
+    selected: list[ProviderRecord] = []
+    round_idx = 0
+    while len(selected) < limit:
+        progressed = False
+        for key in order:
+            bucket = buckets[key]
+            if round_idx < len(bucket):
+                selected.append(bucket[round_idx])
+                progressed = True
+                if len(selected) >= limit:
+                    break
+        if not progressed:
+            break
+        round_idx += 1
+    return selected
 
 
 def _build_with_stats(
@@ -135,6 +186,7 @@ def _build_with_stats(
     *,
     limit: int | None,
     keep_all_certified: bool,
+    coverage: bool = False,
     centroids: dict[str, LatLng] | None,
     sanctions: SanctionOverlay | None,
     sanctions_by_source: dict[str, SanctionOverlay] | None = None,
@@ -198,8 +250,16 @@ def _build_with_stats(
             # The agent queries menopause=true (certified-only), so never drop a
             # certified provider — the limit caps only the non-certified breadth.
             certified = [r for r in records if r.menopauseCertified]
-            non_certified = [r for r in records if not r.menopauseCertified][:limit]
+            non_certified_pool = [r for r in records if not r.menopauseCertified]
+            non_certified = (
+                _round_robin_by_zip3(non_certified_pool, limit)
+                if coverage
+                else non_certified_pool[:limit]
+            )
             records = certified + non_certified
+            records.sort(key=lambda r: (-r.graphScore, r.npi))
+        elif coverage:
+            records = _round_robin_by_zip3(records, limit)
             records.sort(key=lambda r: (-r.graphScore, r.npi))
         else:
             records = records[:limit]
@@ -222,6 +282,7 @@ def build_metadata(
     mscp_path: str | Path | None,
     limit: int | None,
     keep_all_certified: bool,
+    coverage: bool = False,
     source_date: str | None = None,
     sanctions_paths: dict[str, str | Path | None] | None = None,
     sanction_drops: int = 0,
@@ -254,6 +315,7 @@ def build_metadata(
         "sanctionsOverlays": sanctions_overlay_paths,
         "limit": limit,
         "keepAllCertified": keep_all_certified,
+        "coverage": coverage,
         "providers": {
             "total": len(records),
             "certified": certified,
@@ -337,6 +399,16 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--coverage",
+        action="store_true",
+        help=(
+            "Spend the non-certified --limit budget to maximize distinct ZIP-3 "
+            "coverage (round-robin across prefixes) instead of taking the global "
+            "top-N by graphScore. Gives far more ZIPs a local result for general "
+            "browsing / the relevant-local fallback; recommended for national runs."
+        ),
+    )
+    parser.add_argument(
         "--meta",
         default=None,
         help=(
@@ -410,6 +482,7 @@ def main(argv: list[str] | None = None) -> int:
         overlay,
         limit=args.limit,
         keep_all_certified=args.keep_all_certified,
+        coverage=args.coverage,
         sanctions=sanctions,
         sanctions_by_source=sources_by_key,
     )
@@ -433,6 +506,7 @@ def main(argv: list[str] | None = None) -> int:
         mscp_path=args.mscp,
         limit=args.limit,
         keep_all_certified=args.keep_all_certified,
+        coverage=args.coverage,
         source_date=source_date,
         sanctions_paths={
             "ca": args.sanctions,

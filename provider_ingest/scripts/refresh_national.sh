@@ -24,6 +24,11 @@
 #                (data.texas.gov tm3v-pfq9). Default: latest
 #                tx_tmb*licenses*.csv under the same dir as NPPES_ZIP.
 #                Set to empty string to skip.
+#   COVERAGE     "1" (default) spends the non-certified NPPES_LIMIT budget to
+#                maximize distinct ZIP-3 coverage (round-robin across prefixes)
+#                instead of taking the global top-N by graphScore — so far more
+#                ZIPs get a local result for general browsing / the
+#                relevant-local fallback. Set COVERAGE=0 for the old top-N.
 #
 # Flags:
 #   --dry-run    Print what would happen without invoking the build.
@@ -88,6 +93,7 @@ fi
 
 NPPES_OUT="${NPPES_OUT:-frontend/lib/provider-directory.generated.json}"
 NPPES_LIMIT="${NPPES_LIMIT:-2000}"
+COVERAGE="${COVERAGE:-1}"
 FIFO=".scratch/npi_refresh.fifo"
 
 # Sanctions overlays. Auto-discover the latest CSVs beside the NPPES zip;
@@ -120,7 +126,11 @@ echo "→ NPPES zip:    $NPPES_ZIP"
 echo "→ NPPES member: $MEMBER"
 echo "→ Source date:  $SOURCE_DATE"
 echo "→ Output:       $NPPES_OUT"
-echo "→ Limit:        $NPPES_LIMIT (--keep-all-certified)"
+if [[ "$COVERAGE" == "1" ]]; then
+  echo "→ Limit:        $NPPES_LIMIT (--keep-all-certified --coverage)"
+else
+  echo "→ Limit:        $NPPES_LIMIT (--keep-all-certified, top-N by graphScore)"
+fi
 if [[ -n "$SANCTIONS" ]]; then
   echo "→ Sanctions CA: $SANCTIONS"
 else
@@ -165,6 +175,11 @@ if [[ -n "$SANCTIONS_TX" ]]; then
   SANCTIONS_FLAG+=(--sanctions-tx "$SANCTIONS_TX")
 fi
 
+COVERAGE_FLAG=()
+if [[ "$COVERAGE" == "1" ]]; then
+  COVERAGE_FLAG+=(--coverage)
+fi
+
 time ./provider_ingest/.venv/bin/pause-provider-build \
   --nppes "$FIFO" \
   --nppes provider_ingest/examples/fixtures/nppes_sample.csv \
@@ -173,7 +188,8 @@ time ./provider_ingest/.venv/bin/pause-provider-build \
   --keep-all-certified \
   --limit "$NPPES_LIMIT" \
   --source-date "$SOURCE_DATE" \
-  "${SANCTIONS_FLAG[@]}"
+  "${SANCTIONS_FLAG[@]}" \
+  "${COVERAGE_FLAG[@]}"
 
 wait "$UNZIP_PID" 2>/dev/null || true
 echo "DONE: refreshed $NPPES_OUT (and ${NPPES_OUT%.json}.meta.json)."

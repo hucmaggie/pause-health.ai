@@ -4,6 +4,7 @@ from pathlib import Path
 
 from provider_ingest.build import (
     _largest_input_mtime_iso,
+    _round_robin_by_zip3,
     build_directory,
     build_metadata,
     write_directory,
@@ -11,6 +12,22 @@ from provider_ingest.build import (
 )
 from provider_ingest.mscp import MscpOverlay
 from provider_ingest.records import ProviderRecord
+
+
+def _rec(npi: str, zip_: str, score: float, certified: bool = False) -> ProviderRecord:
+    return ProviderRecord(
+        npi=npi,
+        name=f"Dr. {npi}",
+        credentials=["MD"],
+        specialty="Obstetrics & Gynecology",
+        menopauseCertified=certified,
+        city="Town",
+        state="CA",
+        zip=zip_,
+        acceptingNewPatients=True,
+        telehealth=True,
+        graphScore=score,
+    )
 
 FIXTURES = Path(__file__).resolve().parent.parent / "examples" / "fixtures"
 NPPES = FIXTURES / "nppes_sample.csv"
@@ -42,6 +59,54 @@ def test_certified_count_matches_overlay():
     # 7 NPIs in the MSCP list; all 7 survive the taxonomy filter.
     assert len(certified) == 7
     assert all("MSCP" in r.credentials for r in certified)
+
+
+def test_round_robin_maximizes_zip3_coverage():
+    # 900-prefix has the three strongest providers; 800 and 700 have one each.
+    rows = [
+        _rec("a1", "90001", 0.99),
+        _rec("a2", "90002", 0.98),
+        _rec("a3", "90003", 0.97),
+        _rec("b1", "80001", 0.50),
+        _rec("c1", "70001", 0.40),
+    ]
+    # Global top-3 would take all three 900s (zero coverage of 800/700).
+    picked = _round_robin_by_zip3(rows, 3)
+    assert {r.zip[:3] for r in picked} == {"900", "800", "700"}
+    # The strongest 900 provider is the one that represents 900.
+    assert next(r for r in picked if r.zip[:3] == "900").npi == "a1"
+
+
+def test_round_robin_then_deepens_by_score():
+    rows = [
+        _rec("a1", "90001", 0.99),
+        _rec("a2", "90002", 0.98),
+        _rec("a3", "90003", 0.97),
+        _rec("b1", "80001", 0.50),
+    ]
+    # limit=3 (< 4 rows): cover both prefixes first (a1, b1), then deepen the
+    # strongest prefix with its next provider (a2).
+    picked = _round_robin_by_zip3(rows, 3)
+    assert [r.npi for r in picked] == ["a1", "b1", "a2"]
+
+
+def test_round_robin_noop_when_within_limit():
+    rows = [_rec("a1", "90001", 0.9), _rec("b1", "80001", 0.8)]
+    assert _round_robin_by_zip3(rows, 5) == rows
+
+
+def test_coverage_flag_does_not_narrow_zip3_in_build():
+    overlay = MscpOverlay.from_file(MSCP)
+    base = build_directory(NPPES, overlay, limit=2, keep_all_certified=True)
+    cov = build_directory(NPPES, overlay, limit=2, keep_all_certified=True, coverage=True)
+
+    def noncert_zip3(recs: list[ProviderRecord]) -> set[str]:
+        return {r.zip[:3] for r in recs if not r.menopauseCertified}
+
+    # Coverage mode never covers fewer prefixes than global top-N for the same
+    # budget, and certified rows are still all retained either way.
+    assert len(noncert_zip3(cov)) >= len(noncert_zip3(base))
+    assert sum(r.menopauseCertified for r in cov) == sum(r.menopauseCertified for r in base)
 
 
 def test_record_shape_matches_contract():

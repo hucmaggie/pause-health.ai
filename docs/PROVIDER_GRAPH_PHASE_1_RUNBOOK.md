@@ -29,8 +29,17 @@ loads). The frozen contract is `ProviderRecord` in
   practitioner — a NP — Gerontology — was surfaced when the curated taxonomy
   set was broadened in Phase 2; she had been filtered out before despite
   carrying MSCP because her primary NUCC code wasn't in the curated set.)
-  The remaining 2,000 are real menopause-relevant providers across 55 states /
-  532 ZIP-3 prefixes for general (`menopause=false`) directory breadth.
+  The remaining 2,000 are real menopause-relevant providers spread across
+  **1,055 ZIP-3 prefixes** for general (`menopause=false`) directory breadth.
+  That spread comes from the **`--coverage`** selection (default-on in the
+  refresh script): the non-certified `--limit` budget is round-robined across
+  ZIP-3 prefixes — one provider per prefix before any prefix gets a second —
+  instead of taking the global top-N by `graphScore`. Same 2,000-row budget,
+  but distinct-prefix coverage nearly doubled (532 → 1,055), so far more ZIPs
+  get a local result for browsing / the relevant-local fallback. Certified rows
+  are always kept regardless (`--keep-all-certified`), so the agent's
+  `menopause=true` coverage is unchanged. Set `COVERAGE=0` to fall back to the
+  old global top-N.
 - `provenance.sources` on every response reports
   `"CMS NPPES (taxonomy-filtered via provider_ingest)"` +
   `"Self-reported MSCP/NCMP credentials + curated overlay"`.
@@ -249,6 +258,7 @@ pause-provider-build \
   --mscp  examples/fixtures/mscp_npis.json \
   --out   ../frontend/lib/provider-directory.generated.json \
   --keep-all-certified \
+  --coverage \
   --limit 2000 \
   --source-date 2026-06-15T00:00:00+00:00
 rm -f "$FIFO"
@@ -268,7 +278,15 @@ to the file's mtime.
   `menopause=true`, so a plain `--limit` (top-N by `graphScore`) could crowd
   certified providers out behind higher-scoring non-certified ones. With this flag
   every certified provider is kept and `--limit` caps only the non-certified
-  breadth. The committed run is `--limit 2000` → 2,014 rows, **654 KB**.
+  breadth. The committed run is `--limit 2000` → 2,015 rows, **~1.1 MB**
+  (imported server-side by the API route, not shipped to the browser).
+- **`--coverage` spreads the non-certified budget geographically.** Without it,
+  the 2,000 non-certified slots go to the global top-N by `graphScore`, which
+  piles into a handful of dense metros (532 ZIP-3 prefixes). With it, the budget
+  is round-robined across ZIP-3 buckets — one provider per prefix before any
+  prefix gets a second — so the same 2,000 rows cover **1,055 prefixes**. The
+  refresh script passes it by default (`COVERAGE=0` to opt out). It only touches
+  non-certified selection; certified rows are always kept.
 - The reader streams row-by-row (constant memory) and parses only the ~40 columns
   it needs, so the full 9.6M-row file runs in **~1m50s** (not the ~30 min a naive
   `DictReader` over all ~330 columns would take).
@@ -278,7 +296,8 @@ to the file's mtime.
 
 It prints e.g. `Wrote 2015 providers (15 MSCP-certified) from … → …`. The
 June 2026 run yielded exactly that: 15 certified (7 demo + 8 real self-reported)
-and 2,000 real non-certified rows across 55 states.
+and 2,000 real non-certified rows spread (via `--coverage`) across 1,055 ZIP-3
+prefixes.
 
 ---
 
