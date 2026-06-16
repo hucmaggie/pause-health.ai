@@ -1,6 +1,15 @@
 # MuleSoft Anypoint Integration — Next-Session Runbook
 
-**Status:** Investigation complete, implementation deferred to a dedicated session.
+**Status:** ✅ EXECUTED / SUPERSEDED. This was the pre-implementation
+investigation snapshot (2026-06-02). The runbook has since been carried out:
+the `pause-mulesoft-health-v1` worker is **deployed to CloudHub 2.0** serving
+`/health` + `/providers` behind Flex Gateway (JWT Validation + rate limiting),
+and the Next.js routes proxy to it (live-or-mock). For the current state see
+[`mulesoft-integration.md`](mulesoft-integration.md) § "Phased plan",
+[`MULESOFT_PHASE_1_HANDOFF.md`](MULESOFT_PHASE_1_HANDOFF.md), and
+[`MULESOFT_API_MANAGER_RUNBOOK.md`](MULESOFT_API_MANAGER_RUNBOOK.md). The text
+below is preserved as the historical investigation record — statements like "no
+live Mule app deployed" describe the 2026-06-02 starting point, not today.
 **Last updated:** 2026-06-02 (end of investigate-only session)
 **Companion docs:** [`mulesoft-integration.md`](mulesoft-integration.md) (design),
 [`PHASE_3_RUNBOOK.md`](PHASE_3_RUNBOOK.md) (parallel pattern, Agentforce)

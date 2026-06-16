@@ -1,8 +1,10 @@
 # MuleSoft Integration Design
 
-**Status:** Draft v0.1
+**Status:** Phase 1 live — the `/health` + `/providers` Experience APIs run on
+CloudHub 2.0 behind Flex Gateway (JWT Validation + rate limiting). Remaining
+System/Process APIs are still reference-grade. See "Phased plan" below.
 **Owner:** Pause-Health.ai engineering
-**Last updated:** 2026-05-25
+**Last updated:** 2026-06-16
 
 ## TL;DR
 
@@ -130,20 +132,29 @@ so a customer's Mule developer can drop them into Anypoint Studio, set
 their own Anypoint Platform credentials, and have a working starting
 point.
 
-## Live mock
+## Live-or-mock Experience API
 
-The Next.js frontend exposes a mock Experience API at
-`/api/mulesoft/health`. It returns a realistic FHIR Bundle with:
+The Next.js frontend exposes the Experience-tier endpoints at
+`/api/mulesoft/health` and `/api/mulesoft/providers`. Each one **proxies to the
+live MuleSoft worker on CloudHub 2.0 when its base-URL env var is set**
+(`MULESOFT_HEALTH_BASE_URL` / `MULESOFT_PROVIDERS_BASE_URL`), authenticating
+with an Auth0 M2M Bearer-JWT, and **degrades transparently to a deterministic
+mock** on any non-2xx / timeout / bad-shape response. The served bundle's
+provenance is visible in `meta._source` (`live-mulesoft` / `mock` /
+`mock-fallback`). As of 2026-06 both endpoints are live in production.
+
+The `/health` bundle (served identically by the live worker and the mock) is:
 
 - One `Patient` resource (synthetic identifier, no PHI)
-- Three raw wearable `Observation` resources (heart rate, sleep duration,
-  HRV)
+- Three raw wearable `Observation` resources (heart rate, sleep duration, and
+  the raw RR-interval window)
 - One DBDP-derived computed-feature `Observation` (sliding-window RMSSD)
   with a `derivedFrom` reference pointing back to the raw HRV input
 
-This lets prospects, partners, and reviewers `curl` the URL and see the
-exact shape the production Experience API would return. The bundle is
-served by Next.js — there is no live MuleSoft runtime behind it.
+This lets prospects, partners, and reviewers `curl` either URL and see the exact
+shape the production Experience API returns — whether it came from the live Mule
+runtime or the mock fallback. See `docs/MULESOFT_PHASE_1_HANDOFF.md` (deploy) and
+`docs/MULESOFT_API_MANAGER_RUNBOOK.md` (Flex Gateway / JWT policy).
 
 ## Deployment options
 

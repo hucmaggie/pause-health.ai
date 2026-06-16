@@ -1,6 +1,12 @@
 # Flex Gateway Runbook (Iteration 3)
 
-**Status:** Not yet started  
+**Status:** ✅ DONE — Flex Gateway is live in front of the CloudHub 2.0 worker,
+now enforcing a **JWT Validation** policy (Auth0 RS256/JWKS) + Rate Limiting.
+Note: the JWT Validation policy *replaced* the Client ID Enforcement policy this
+runbook's prerequisite refers to (see the change log in
+[MULESOFT_API_MANAGER_RUNBOOK.md](./MULESOFT_API_MANAGER_RUNBOOK.md), entry
+2026-06-09) — that runbook is the current source of truth for the live policy
+posture. The steps below are preserved as the gateway stand-up record.
 **Estimated time:** 2–2.5 hours  
 **Prerequisite:** Iteration 2 complete — CloudHub 1.0.2 live, API Manager instance `20954842` configured with Client ID Enforcement + Rate Limiting SLA policies, `pause-prototype-client` approved on Demo tier.
 

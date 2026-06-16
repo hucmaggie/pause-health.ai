@@ -1,11 +1,19 @@
 # MuleSoft reference artifacts (Pause-Health.ai)
 
-This directory holds **reference** MuleSoft artifacts illustrating how
-Pause-Health.ai integrates with [JupyterHealth
-Exchange](https://github.com/jupyterhealth/jupyterhealth-exchange),
-the [Digital Biomarker Discovery
-Pipeline](https://www.dbdp.org/code-repository) (via our `pause_ingest`
-Python worker), and consumer wearables. They are **not deployable as-is**.
+This directory holds the Pause-Health.ai MuleSoft artifacts. They fall into two
+groups:
+
+- **Live, deployable** — `pause-mulesoft-health-v1/` is a real Mule 4 app that
+  is **deployed to CloudHub 2.0** and serves the `GET /health` + `GET /providers`
+  Experience APIs behind Flex Gateway (JWT Validation + rate limiting). The
+  published OAS lives in `pause-provider-experience-api.oas3.yaml`.
+- **Reference-grade** — the `flows/` and `transforms/` `.example` files
+  illustrate the not-yet-built ingestion Process API (`pause-ingest-process-api`)
+  that wires [JupyterHealth
+  Exchange](https://github.com/jupyterhealth/jupyterhealth-exchange), the
+  [Digital Biomarker Discovery
+  Pipeline](https://www.dbdp.org/code-repository) (via our `pause_ingest` Python
+  worker), and consumer wearables. These are **not deployable as-is**.
 
 For the full architecture, see
 [`docs/mulesoft-integration.md`](../docs/mulesoft-integration.md). For the
@@ -32,15 +40,21 @@ mulesoft/
     └── src/main/mule/health-flow.xml           <- GET /health + GET /providers
 ```
 
-### `pause-mulesoft-health-v1/` (Phase 1, deployable)
+### `pause-mulesoft-health-v1/` (Phase 1, deployable — LIVE)
 
-Unlike the `.example.xml` reference, this is a real Mule 4 project
-that builds and deploys to CloudHub 2.0. It serves a single Pause
-Experience-API surface — `GET /health` returning a static FHIR R5
-Bundle — and is shape-compatible with the Next.js mock at
-`/api/mulesoft/health`. The Phase 1 handoff doc walks through the
-Code Builder import and deploy click-by-click:
-[`docs/MULESOFT_PHASE_1_HANDOFF.md`](../docs/MULESOFT_PHASE_1_HANDOFF.md).
+Unlike the `.example.xml` reference, this is a real Mule 4 project that builds
+and is **deployed to CloudHub 2.0**. It serves two Pause Experience-API
+surfaces — `GET /health` (a FHIR R5 Bundle including the raw RR-interval window
+and the DBDP-derived RMSSD feature with `derivedFrom` lineage) and
+`GET /providers` (the menopause provider directory) — both shape-compatible with
+the Next.js mocks at `/api/mulesoft/health` and `/api/mulesoft/providers`. The
+worker runs behind Flex Gateway with a JWT Validation policy (Auth0 RS256/JWKS)
+and rate limiting; the Next.js proxy authenticates with an Auth0 M2M Bearer-JWT
+and degrades to the mock on any failure. The Phase 1 handoff doc walks through
+the Code Builder import and deploy click-by-click
+([`docs/MULESOFT_PHASE_1_HANDOFF.md`](../docs/MULESOFT_PHASE_1_HANDOFF.md)); the
+gateway/policy setup is in
+[`docs/MULESOFT_API_MANAGER_RUNBOOK.md`](../docs/MULESOFT_API_MANAGER_RUNBOOK.md).
 
 ### `flows/pause-process-api.example.xml`
 
@@ -66,10 +80,15 @@ This is the canonical transform we propose as a shared Anypoint Exchange
 asset so customer-specific Process APIs can call it directly instead of
 re-implementing the OMH↔FHIR mapping.
 
-## Why these aren't a real Mule project (yet)
+## Why the `flows/` + `transforms/` references aren't a real Mule project (yet)
 
-A real Mule project has additional moving parts that are environment- and
-customer-specific:
+The Experience worker (`pause-mulesoft-health-v1/`) already IS a real, deployed
+Mule project — it has the `pom.xml`, `mule-artifact.json`, and a published OAS,
+and runs on CloudHub 2.0. This section is about the **ingestion** reference
+artifacts (`flows/pause-process-api.example.xml`,
+`transforms/omh-to-fhir.example.dwl`), which model the not-yet-built
+`pause-ingest-process-api` and still need the customer- and environment-specific
+moving parts a deployable project requires:
 
 - `pom.xml` with Mule Maven plugin and per-environment deployment goals.
 - `mule-artifact.json` with the deployed runtime version and resource
@@ -79,10 +98,11 @@ customer-specific:
 - Customer-managed secret references (Anypoint Secrets Manager, Vault, or
   the customer's existing platform).
 
-We will materialize all of the above during **Phase 1** of the MuleSoft
-integration plan (see `docs/mulesoft-integration.md` § "Phased plan"),
-once we are working against a Pause-managed Anypoint trial org. The
-artifacts in this directory are the templates that work will start from.
+These are materialized in **Phase 1c** of the integration plan (see
+`docs/mulesoft-integration.md` § "Phased plan"), once the System APIs are wired
+to live JupyterHealth Exchange + `pause_ingest` instances. The artifacts here are
+the templates that work starts from — the same path the Experience worker
+already took.
 
 ## How to upgrade to a real Mule project
 
@@ -102,15 +122,19 @@ When you're ready:
 6. Wire CI/CD via Anypoint Code Builder → GitHub. CD targets the
    customer's CloudHub 2.0 or Runtime Fabric environment via env vars.
 
-## Mocked Experience API
+## Live-or-mock Experience API
 
-While the Mule project doesn't exist yet, the Next.js frontend exposes a
-mocked Experience-tier endpoint at `/api/mulesoft/health`. It returns a
-realistic FHIR Bundle (Patient + raw wearable Observations + a
-DBDP-derived computed-feature Observation with proper `derivedFrom`
-provenance) so prospects can `curl` the URL and see the exact response
-shape the production Experience API would produce. The bundle is served
-by Next.js — there is no live MuleSoft runtime behind it.
+The Next.js frontend exposes the Experience-tier endpoints at
+`/api/mulesoft/health` and `/api/mulesoft/providers`. When the matching base-URL
+env var is set (`MULESOFT_HEALTH_BASE_URL` / `MULESOFT_PROVIDERS_BASE_URL`) the
+route **proxies to the live CloudHub worker above** (Auth0 M2M Bearer-JWT) and
+reports `meta._source: "live-mulesoft"`; otherwise — or on any upstream failure
+— it serves a deterministic mock and reports `mock` / `mock-fallback`. Either
+way the response is a realistic, shape-identical payload (the `/health` bundle
+carries the Patient + raw wearable Observations + the DBDP-derived RMSSD feature
+with `derivedFrom` provenance) so prospects can `curl` the URL and see exactly
+what the production Experience API returns. As of 2026-06 both endpoints are live
+in production; the mock is the zero-credential default for previews and CI.
 
 ## Related Pause-Health.ai docs
 
