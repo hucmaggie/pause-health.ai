@@ -12,7 +12,7 @@
  */
 
 import { queryProviderDirectory } from "../mulesoft-mocks";
-import { getMulesoftBearerToken } from "./auth";
+import { buildMulesoftAuthHeaders } from "./auth";
 
 export type ProviderDirectoryResult = ReturnType<typeof queryProviderDirectory>;
 
@@ -79,22 +79,15 @@ export async function fetchLiveProviders(
 
   try {
     const fetchFn = opts.fetchImpl ?? fetch;
-    const jwtToken = await getMulesoftBearerToken();
+    const authHeaders = await buildMulesoftAuthHeaders();
     const res = await fetchFn(url, {
       signal: controller.signal,
       headers: {
         Accept: "application/json",
-        ...(jwtToken
-          ? { Authorization: `Bearer ${jwtToken}` }
-          : process.env.MULESOFT_CLIENT_ID
-          ? {
-              Authorization: "Basic " + Buffer.from(
-                `${process.env.MULESOFT_CLIENT_ID}:${process.env.MULESOFT_CLIENT_SECRET ?? ""}`
-              ).toString("base64"),
-              "client_id": process.env.MULESOFT_CLIENT_ID,
-              "client_secret": process.env.MULESOFT_CLIENT_SECRET ?? "",
-            }
-          : {})
+        // Parity with the /health client so Mule can distinguish prototype
+        // traffic in both Experience-API flows.
+        "X-Pause-Source": "pause-health.ai/prototype",
+        ...authHeaders
       },
       cache: "no-store"
     });

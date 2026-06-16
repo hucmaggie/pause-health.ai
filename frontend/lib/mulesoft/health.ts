@@ -29,7 +29,7 @@
  */
 
 import { buildPatientTimelineBundle } from "../mulesoft-mocks";
-import { getMulesoftBearerToken } from "./auth";
+import { buildMulesoftAuthHeaders } from "./auth";
 
 /**
  * Subset of the bundle generator's output we type-guard on. The
@@ -110,23 +110,13 @@ export async function fetchLiveHealthBundle(
   );
 
   try {
-    const jwtToken = await getMulesoftBearerToken();
+    const authHeaders = await buildMulesoftAuthHeaders();
     const res = await fetchImpl(url, {
       method: "GET",
       headers: {
         Accept: "application/json",
         "X-Pause-Source": "pause-health.ai/prototype",
-        ...(jwtToken
-          ? { Authorization: `Bearer ${jwtToken}` }
-          : process.env.MULESOFT_CLIENT_ID
-          ? {
-              Authorization: "Basic " + Buffer.from(
-                `${process.env.MULESOFT_CLIENT_ID}:${process.env.MULESOFT_CLIENT_SECRET ?? ""}`
-              ).toString("base64"),
-              "client_id": process.env.MULESOFT_CLIENT_ID,
-              "client_secret": process.env.MULESOFT_CLIENT_SECRET ?? "",
-            }
-          : {})
+        ...authHeaders
       },
       signal: controller.signal
     });
