@@ -254,7 +254,7 @@ const phases: Array<{
     status: "prototype",
     duration: "Shipped",
     detail:
-      "provider_ingest streams the 9.6M-row CMS NPPES bulk file in ~1m50s, filters to the curated menopause NUCC taxonomies (OB/GYN, urogynecology, gyn-onc, repro endo, NP — Women's Health / Gerontology / Adult Health, CNM, FM, IM, etc.), unions an MSCP overlay (synthetic + self-reported), computes a graphScore, and emits a 2,015-row generated JSON. The committed national run captures 15 menopause-certified providers + 2,000 menopause-relevant non-certified providers spanning all 50 states + DC across 1,055 ZIP-3 prefixes — a coverage-aware selection round-robins the non-certified budget across prefixes so far more ZIPs get a local result."
+      "provider_ingest streams the 9.6M-row CMS NPPES bulk file in ~1m50s, filters to the curated menopause NUCC taxonomies (OB/GYN, urogynecology, gyn-onc, repro endo, NP — Women's Health / Gerontology / Adult Health, CNM, FM, IM, etc.), unions an MSCP overlay (synthetic + self-reported), computes a graphScore, and emits a 2,015-row generated JSON. The committed national run captures 15 menopause-certified providers + 2,000 menopause-relevant non-certified providers spanning all 50 states + DC across 930 ZIP-3 prefixes — a coverage-aware selection round-robins the non-certified budget across prefixes (and the pipeline drops non-US/garbage postals), so far more ZIPs get a placeable local result."
   },
   {
     name: "Phase 2 — Distance, signals, sanctions, insurance, UI",
@@ -354,7 +354,7 @@ export default function ProviderGraphPage() {
             <strong style={{ fontWeight: 500 }}>
               <StatusPill status="prototype" style={inlinePillStyle} />
               <strong>2,015</strong> providers across all 50 states + DC /
-              1,055 ZIP-3 prefixes; 15 menopause-certified, 2,000 menopause-
+              930 ZIP-3 prefixes; 15 menopause-certified, 2,000 menopause-
               relevant non-certified.
             </strong>
           </li>
