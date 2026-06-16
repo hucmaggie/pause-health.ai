@@ -1,6 +1,6 @@
 {
   "name": "@pause-health/mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Model Context Protocol (MCP) server that exposes the Pause-Health.ai MuleSoft Experience APIs as tools for AI agents (Claude Desktop, Cursor, Agentforce, and any MCP-compliant client).",
   "license": "Apache-2.0",
   "private": true,

@@ -8,11 +8,27 @@
  * Transport: stdio (standard for local MCP clients like Claude Desktop,
  * Cursor, and the Agentforce Service Agent's local connector).
  *
- * Today the server fronts the mocked Experience APIs in this repo
- * (https://pause-health.ai/api/mulesoft/...). When a customer's MuleSoft
- * runtime is deployed, point PAUSE_MCP_BASE_URL at their Anypoint
- * Experience-tier base URL and these same tools transparently call
- * production -- no client changes required.
+ * The server fronts the same Experience API contract the Pause web app
+ * and the live MuleSoft CloudHub 2.0 worker honor:
+ *
+ *   /api/mulesoft/health     FHIR R5 patient timeline (raw + DBDP-derived)
+ *   /api/mulesoft/patient    Structured intake record produced by Agentforce
+ *   /api/mulesoft/providers  NPPES-derived provider directory, Phase-2 shape
+ *
+ * The provider directory backing /providers is real (provider_ingest
+ * over the CMS NPPES bulk file): 2,015 rows, distance ranking from
+ * Census 2020 ZCTA centroids, six NPPES board-cert + multi-specialty
+ * signals, three state license-sanction filters dropping 1,720
+ * sanctioned candidates at build (CA Medi-Cal + NY OPMC + TX TMB),
+ * synthetic-but-real-shaped insurance acceptance. Survivors carry
+ * licenseStatus: "active" — the safety filter ran at build time, so
+ * the agent doesn't need to add disclaimers about sanctions.
+ *
+ * The `find_menopause_providers` tool surfaces all of this. Read the
+ * tool's description carefully; it tells you which fields to surface
+ * to the patient and which to mention provisionally (e.g. insurance
+ * is synthetic today, so phrase as "appears to accept Aetna" rather
+ * than "accepts Aetna").
  *
  * Environment variables:
  *   PAUSE_MCP_BASE_URL  Base URL for the Experience APIs. Default:
@@ -30,7 +46,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 
 const SERVER_NAME = "pause-health-mcp";
-const SERVER_VERSION = "0.1.0";
+const SERVER_VERSION = "0.2.0";
 
 const BASE_URL = (process.env.PAUSE_MCP_BASE_URL ?? "https://pause-health.ai").replace(
   /\/+$/,
@@ -148,7 +164,7 @@ server.registerTool(
   {
     title: "Find menopause-experienced providers",
     description:
-      "Search Pause's provider directory (a defensible synthesis of CMS NPPES, self-reported MSCP/NCMP credentials, and a curated overlay). Supports filtering by ZIP prefix, a menopause-certified-only flag, and an insurance plan. Results are ranked by distance from the patient ZIP when its Census ZCTA centroid is known (each provider carries `distanceMiles`); otherwise by Pause's internal graph score. Read the response `sort` field to see which ranking applied, and prefer reporting distance (e.g. \"about 4 miles away\") to the patient when present. Each provider also carries `serviceSignals` — public-registry tokens (facog, faafp, whnp, cnm, multi-taxonomy) that strengthen the case for a NON-certified provider — and `insuranceAccepted` (medicare, medicaid, aetna, bcbs, uhc, cigna, humana, kaiser). NOTE: insuranceAccepted is synthetically derived per-NPI today (no public payer feed exists); when the patient asks about insurance, mention provisionally rather than as ground truth. When matchType=relevant-local, mention the strongest service signal in plain English (e.g. \"board-certified OB/GYN\" for facog) instead of the raw token. When a certified search finds nobody in the patient's ZIP area, results gracefully fall back — to nearby menopause-relevant (non-certified) clinicians, or to telehealth-capable certified specialists nationally. ALWAYS read the response `matchType` and present accordingly: 'certified-local' = certified & local; 'relevant-local' = nearby but NOT menopause-certified (say so, then surface serviceSignals); 'certified-remote' = certified specialists elsewhere offering telehealth (no local match); 'none' = no match.",
+      "Search Pause's provider directory: 2,015 NPPES-derived providers, ranked by distance from the patient's ZIP when its Census ZCTA centroid is known. Filterable by ZIP prefix, a menopause-certified-only flag, and an insurance plan. Returned providers are GUARANTEED currently-licensed: licenseStatus is always 'active' on the response, because sanctioned providers (CA Medi-Cal + NY OPMC + TX TMB; 1,720 dropped this build) were filtered out at build time — the agent does NOT need to add safety disclaimers about license status. ALWAYS read `matchType` and present accordingly: 'certified-local' = MSCP-certified & local (the happy path); 'relevant-local' = nearby clinicians who are NOT menopause-certified — say so explicitly, then surface their strongest serviceSignals in plain English so the patient understands why they're being recommended; 'certified-remote' = certified specialists elsewhere offering telehealth (no local certified match — frame as a telehealth option); 'certified-national' = certified, no ZIP filter; 'none' = no match. Read `sort`: 'distance' means rows are sorted distanceMiles ascending (prefer reporting distance, e.g. 'about 4 miles away'); 'score' means graphScore-only ranking (the live worker can't always compute distance — that's honest, not a bug). Each provider carries `serviceSignals` (public-registry tokens like facog = board-certified OB/GYN, faafp = board-certified family medicine, whnp = Women's Health NP, cnm = Certified Nurse-Midwife, multi-taxonomy = practice spans ≥2 menopause-relevant specialties) and `insuranceAccepted` (canonical tokens: medicare, medicaid, aetna, bcbs, uhc, cigna, humana, kaiser). IMPORTANT: insuranceAccepted is synthetically derived per-NPI today (no public payer feed exists; calibrated to plausible real-world participation rates). Phrase as 'appears to accept Aetna' rather than 'accepts Aetna', and recommend the patient confirm in-network status before booking. Worked example for relevant-local: 'No MSCP-certified provider was available within your ZIP-3 area. Dr. Helen Okafor is about 4.2 miles from you — she's not menopause-certified but is board-certified in obstetrics & gynecology (FACOG), which is a strong signal she handles menopause care. Profile: https://pause-health.ai/provider/<NPI>?from=<patient_zip>'. The profile URL is a real page — include it when surfacing a recommendation so the patient can read the full chip set (distance, plans, signals, license, provenance) without leaving the conversation.",
     inputSchema: {
       zip: z
         .string()
@@ -188,6 +204,8 @@ server.registerTool(
       const returned = (data as { returned?: number }).returned ?? 0;
       const matchType = (data as { matchType?: string }).matchType ?? "certified-local";
       const sort = (data as { sort?: string }).sort ?? "score";
+      const providers =
+        (data as { providers?: Array<{ npi?: string; name?: string }> }).providers ?? [];
       const matchNote: Record<string, string> = {
         "certified-local": "menopause-certified and local",
         "relevant-local": "nearby but NOT menopause-certified — present them as menopause-experienced, not certified",
@@ -195,9 +213,16 @@ server.registerTool(
         "certified-national": "menopause-certified (no ZIP filter applied)",
         none: "no matching providers"
       };
+      // Surface a profile-URL hint for the top result so the agent can
+      // include it in the conversation without rebuilding the URL. Falls
+      // back to the directory home if there's no top hit.
+      const topNpi = providers[0]?.npi;
+      const profileHint = topNpi
+        ? `Profile URL for top result: ${BASE_URL}/provider/${topNpi}${zip ? `?from=${zip}` : ""}`
+        : `Browse the directory: ${BASE_URL}/provider${zip ? `?zip=${zip}` : ""}`;
       return ok(
         data,
-        `Pause provider directory: returned ${returned} of ${total} providers (zip=${zip ?? "any"}, menopauseOnly=${menopauseOnly}). sort=${sort}${sort === "distance" ? " (distanceMiles ascending)" : " (graphScore descending)"}. matchType=${matchType} — ${matchNote[matchType] ?? matchType}.`
+        `Pause provider directory: returned ${returned} of ${total} providers (zip=${zip ?? "any"}, menopauseOnly=${menopauseOnly}). sort=${sort}${sort === "distance" ? " (distanceMiles ascending)" : " (graphScore descending)"}. matchType=${matchType} — ${matchNote[matchType] ?? matchType}. licenseStatus on every returned provider is 'active' (sanctioned providers were filtered at build). ${profileHint}.`
       );
     } catch (e) {
       return err((e as Error).message);
