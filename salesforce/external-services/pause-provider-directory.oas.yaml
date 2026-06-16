@@ -158,3 +158,13 @@ paths:
                             today — present as a soft signal, not a guarantee).
                           items:
                             type: string
+                        credentialSource:
+                          type: string
+                          description: >
+                            Why this provider is menopause-certified, present
+                            only when menopauseCertified is true. "curated-overlay"
+                            = on the curated Menopause Society roster
+                            (authoritative). "self-reported" = self-reported an
+                            MSCP/NCMP credential in their NPPES record — say so
+                            when a patient asks how the certification was
+                            verified; it's honest but not verified by us.

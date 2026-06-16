@@ -55,7 +55,8 @@ const PER_ROW_AGENT_FIELDS = [
 
 // Optional supporting evidence — declared in the slice and produced for some
 // (not all) providers, so we assert "appears on at least one row".
-const OPTIONAL_AGENT_FIELDS = ["serviceSignals"] as const;
+// (serviceSignals: some providers; credentialSource: certified providers only.)
+const OPTIONAL_AGENT_FIELDS = ["serviceSignals", "credentialSource"] as const;
 
 const AGENT_QUERY_PARAMS = [
   "zip",
@@ -138,5 +139,17 @@ describe("Agentforce provider OAS slice · matches the live directory output", (
       (p) => (p.serviceSignals ?? []).length > 0
     );
     expect(withSignals.length).toBeGreaterThan(0);
+
+    // credentialSource is stamped on every certified row; a certified-national
+    // run must produce it (and only the two honest values).
+    const certified = queryProviderDirectory({
+      menopauseOnly: true,
+      fallback: true,
+      limit: 9999
+    });
+    expect(certified.providers.length).toBeGreaterThan(0);
+    for (const p of certified.providers) {
+      expect(["curated-overlay", "self-reported"]).toContain(p.credentialSource);
+    }
   });
 });

@@ -218,10 +218,20 @@ def normalize_row(
     credentials = _parse_credentials(row.get(COL_CREDENTIAL, ""), taxonomy.default_credential)
     # Certified if on the licensed MSCP overlay OR self-reported (MSCP/NCMP) in
     # the NPPES credential field. Both are honest; neither is invented.
-    certified = overlay.is_certified(npi) or _has_menopause_credential(credentials)
+    on_overlay = overlay.is_certified(npi)
+    self_reported = _has_menopause_credential(credentials)
+    certified = on_overlay or self_reported
+    # Record the provenance of the flag. The overlay roster is authoritative, so
+    # it wins when a provider is both on the roster AND self-reports — this also
+    # matches the frontend's overlay-based reconstruction for older artifacts.
+    credential_source: str | None = (
+        "curated-overlay" if on_overlay else ("self-reported" if self_reported else None)
+    )
     # Surface the canonical MSCP badge for overlay-certified providers who don't
     # already carry a menopause credential token (self-reporters keep their own).
-    if certified and not _has_menopause_credential(credentials):
+    # Compute provenance BEFORE this so the appended badge can't be mistaken for
+    # a self-report.
+    if certified and not self_reported:
         credentials.append("MSCP")
 
     zip_code = (row.get(COL_POSTAL) or "").strip()[:5]
@@ -277,4 +287,5 @@ def normalize_row(
         longitude=lng,
         serviceSignals=service_signals,
         insuranceAccepted=insurance_accepted,
+        credentialSource=credential_source,
     )

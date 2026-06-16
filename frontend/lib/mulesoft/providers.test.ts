@@ -409,6 +409,7 @@ describe("provider directory · live ⇄ mock contract-shape parity", () => {
           serviceSignals: ["facog"],
           licenseStatus: "active",
           insuranceAccepted: ["medicare", "medicaid", "aetna", "cigna"],
+          credentialSource: "curated-overlay",
           distanceMiles: null
         }
       ],

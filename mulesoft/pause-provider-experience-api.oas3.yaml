@@ -224,6 +224,7 @@ paths:
                     serviceSignals: [facog]
                     licenseStatus: active
                     insuranceAccepted: [medicare, medicaid, aetna, cigna]
+                    credentialSource: curated-overlay
                     distanceMiles: null
                 provenance:
                   sources:
@@ -440,6 +441,17 @@ components:
             type: string
             example: aetna
           example: [medicare, aetna, bcbs]
+        credentialSource:
+          type: string
+          enum: [curated-overlay, self-reported]
+          description: >
+            How the `menopauseCertified` flag was earned — present only on
+            certified providers. `curated-overlay`: on the curated MSCP roster
+            (authoritative; today the synthetic overlay, tomorrow the licensed
+            Menopause Society feed). `self-reported`: a self-reported MSCP/NCMP
+            token in the provider's own NPPES credential text — honest but not
+            independently verified. Lets the patient/agent weigh the signal.
+          example: curated-overlay
 
     ProviderDirectoryResponse:
       type: object

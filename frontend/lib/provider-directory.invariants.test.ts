@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ProviderRecord } from "./mulesoft-mocks";
+import { MSCP_OVERLAY_NPIS } from "./mscp-overlay";
 import generated from "./provider-directory.generated.json";
 import generatedMeta from "./provider-directory.generated.meta.json";
 
@@ -66,6 +67,17 @@ describe("provider directory · committed-artifact invariants", () => {
     expect(certified.length).toBeGreaterThanOrEqual(7);
     // Certified rows are placeable too (the gate runs before keep-all-certified).
     expect(certified.every((r) => /^\d{5}$/.test(r.zip))).toBe(true);
+  });
+
+  it("keeps a self-reported certified cohort (national NPPES detection contributed)", () => {
+    // The committed artifact is overlay (7 demo NPIs) + self-reported MSCP/NCMP
+    // providers found in the national run. If a refresh dropped every
+    // self-reporter, the overlay personas alone would keep the >= 7 floor green
+    // and hide the regression — so assert the non-overlay certified cohort is
+    // non-empty directly on the shipped data.
+    const certified = DIRECTORY.filter((r) => r.menopauseCertified);
+    const selfReported = certified.filter((r) => !MSCP_OVERLAY_NPIS.has(r.npi));
+    expect(selfReported.length).toBeGreaterThan(0);
   });
 
   it("sidecar metadata mirrors the array (no drift)", () => {

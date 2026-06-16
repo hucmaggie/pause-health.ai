@@ -150,6 +150,29 @@ export default async function ProviderProfilePage({
             License: {licenseStatus}
           </span>
         </div>
+        {provider.menopauseCertified ? (
+          <p
+            style={{
+              color: "var(--muted)",
+              fontSize: "0.82rem",
+              margin: "0.2rem 0 0",
+              maxWidth: "62ch"
+            }}
+          >
+            {provider.credentialSource === "self-reported" ? (
+              <>
+                <strong>Certification source:</strong> self-reported MSCP/NCMP
+                credential in this provider&rsquo;s NPPES record — honest, but
+                not independently verified by Pause.
+              </>
+            ) : (
+              <>
+                <strong>Certification source:</strong> The Menopause Society
+                certified-practitioner roster (curated overlay).
+              </>
+            )}
+          </p>
+        ) : null}
       </section>
 
       {signals.length > 0 ? (

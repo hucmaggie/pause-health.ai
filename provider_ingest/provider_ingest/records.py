@@ -50,6 +50,16 @@ class ProviderRecord:
     # downstream changes. Always non-empty (Medicare is the conservative
     # floor).
     insuranceAccepted: list[str] = field(default_factory=list)
+    # How `menopauseCertified` was earned — set only when certified, else None:
+    #   "curated-overlay": on the curated MSCP roster (authoritative; the
+    #     synthetic overlay today, a licensed Menopause Society feed later).
+    #   "self-reported": a self-reported MSCP/NCMP token in the provider's own
+    #     NPPES credential text — honest, but not independently verified.
+    # Overlay membership wins when both are true (the roster is authoritative),
+    # which also keeps this in lockstep with the frontend's overlay-based
+    # `deriveCredentialSource` for artifacts built before this field existed.
+    # Mirrors `credentialSource` on the TS ProviderRecord + the OAS schema.
+    credentialSource: str | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)

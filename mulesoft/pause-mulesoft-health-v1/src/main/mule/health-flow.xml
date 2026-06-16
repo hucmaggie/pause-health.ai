@@ -472,7 +472,22 @@ var tier = if (!menopause) (
 // fallback in this case; the route handler runs the centroid resolution on
 // the way out when callers want distance. Each row still carries
 // `distanceMiles: null` so the response shape is field-complete.
-var sortedRows = (tier.rows orderBy -$.graphScore) map ((r) -> r ++ { distanceMiles: null })
+// Curated MSCP overlay NPIs — single-sourced with the ingest fixture
+// (provider_ingest/examples/fixtures/mscp_npis.json) and the frontend
+// (frontend/lib/mscp-overlay.ts). A certified provider on this list earned the
+// flag from the curated roster; any other certified provider self-reported it
+// in NPPES. Derived here so the live worker's `credentialSource` matches the
+// mock's deriveCredentialSource() exactly.
+var overlayNpis = [
+  "1730155570", "1457390021", "1306188891", "1922450088",
+  "1134567890", "1356789012", "1467890123"
+]
+var sortedRows = (tier.rows orderBy -$.graphScore) map ((r) -> r ++ {
+  distanceMiles: null,
+  (credentialSource:
+    if (overlayNpis contains r.npi) "curated-overlay" else "self-reported"
+  ) if (r.menopauseCertified == true)
+})
 var totalRows  = sizeOf(sortedRows)
 var clamped    = if (totalRows < limitN) totalRows else limitN
 var resultRows = if (clamped == 0) [] else sortedRows[0 to (clamped - 1)]

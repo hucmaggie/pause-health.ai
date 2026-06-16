@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPatientTimelineBundle,
+  deriveCredentialSource,
   findProviderByNpi,
   normalizeInsurancePlan,
   queryProviderDirectory,
   sortByCentroidForTest
 } from "./mulesoft-mocks";
+import { MSCP_OVERLAY_NPIS } from "./mscp-overlay";
 import generated from "./provider-directory.generated.json";
 
 /**
@@ -449,6 +451,69 @@ describe("queryProviderDirectory · telehealth filter", () => {
       expect(p.telehealth).toBe(true);
       expect(p.insuranceAccepted ?? []).toContain("medicare");
     }
+  });
+});
+
+describe("queryProviderDirectory · credentialSource provenance", () => {
+  // Pull every certified provider (certified-national tier, no cap).
+  const certified = queryProviderDirectory({
+    menopauseOnly: true,
+    fallback: true,
+    limit: 9999
+  }).providers;
+
+  it("stamps every certified provider with one of the two honest sources", () => {
+    expect(certified.length).toBeGreaterThan(0);
+    for (const p of certified) {
+      expect(["curated-overlay", "self-reported"]).toContain(p.credentialSource);
+    }
+  });
+
+  it("curated-overlay ⇔ on the overlay roster; self-reported ⇔ not", () => {
+    for (const p of certified) {
+      const expected = MSCP_OVERLAY_NPIS.has(p.npi)
+        ? "curated-overlay"
+        : "self-reported";
+      expect(p.credentialSource, `wrong source for ${p.npi}`).toBe(expected);
+    }
+  });
+
+  it("both sources are present nationally — self-report detection contributed", () => {
+    // Guards the silent-refresh-regression: if a monthly NPPES refresh dropped
+    // every self-reported NPI, the directory would still have the 7 overlay
+    // personas and most suites would stay green. This fails loudly instead.
+    const curated = certified.filter((p) => p.credentialSource === "curated-overlay");
+    const self = certified.filter((p) => p.credentialSource === "self-reported");
+    expect(curated.length).toBeGreaterThan(0);
+    expect(self.length).toBeGreaterThan(0);
+  });
+
+  it("non-certified providers carry no credentialSource", () => {
+    const browse = queryProviderDirectory({ menopauseOnly: false, limit: 200 });
+    for (const p of browse.providers.filter((r) => !r.menopauseCertified)) {
+      expect(p.credentialSource).toBeUndefined();
+    }
+  });
+
+  it("deriveCredentialSource prefers a value the record already carries", () => {
+    // Forward-compat: once the pipeline writes credentialSource, the frontend
+    // must NOT override it from overlay membership.
+    const overlayNpi = [...MSCP_OVERLAY_NPIS][0];
+    const record = {
+      npi: overlayNpi,
+      name: "x",
+      credentials: ["MSCP"],
+      specialty: "x",
+      menopauseCertified: true,
+      city: "x",
+      state: "CA",
+      zip: "90001",
+      acceptingNewPatients: true,
+      telehealth: false,
+      graphScore: 1,
+      credentialSource: "self-reported" as const
+    };
+    expect(deriveCredentialSource(record)).toBe("self-reported");
   });
 });
 

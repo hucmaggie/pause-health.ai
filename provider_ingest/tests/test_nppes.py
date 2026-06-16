@@ -69,6 +69,8 @@ def test_uncertified_provider_has_no_mscp():
     assert rec is not None
     assert rec.menopauseCertified is False
     assert "MSCP" not in rec.credentials
+    # No certification → no provenance.
+    assert rec.credentialSource is None
 
 
 def test_primary_taxonomy_preferred_over_secondary():
@@ -94,6 +96,7 @@ def test_self_reported_mscp_credential_is_certified():
     assert "MSCP" in rec.credentials
     # Not double-appended.
     assert rec.credentials.count("MSCP") == 1
+    assert rec.credentialSource == "self-reported"
 
 
 def test_self_reported_ncmp_credential_is_certified():
@@ -104,6 +107,7 @@ def test_self_reported_ncmp_credential_is_certified():
     assert "NCMP" in rec.credentials
     # Self-reporters keep their own token; we don't tack on a duplicate MSCP.
     assert "MSCP" not in rec.credentials
+    assert rec.credentialSource == "self-reported"
 
 
 def test_credential_detection_is_case_insensitive():
@@ -117,6 +121,18 @@ def test_overlay_certified_without_self_reported_gets_mscp_badge():
     assert rec is not None
     assert rec.menopauseCertified is True
     assert "MSCP" in rec.credentials
+    assert rec.credentialSource == "curated-overlay"
+
+
+def test_overlay_membership_wins_over_self_report_for_provenance():
+    # On the roster AND self-reports MSCP — the curated roster is authoritative,
+    # so provenance is curated-overlay (matches the frontend's reconstruction).
+    rec = normalize_row(
+        _row(**{"Provider Credential Text": "MD, MSCP"}), MscpOverlay({"1730155570"})
+    )
+    assert rec is not None
+    assert rec.menopauseCertified is True
+    assert rec.credentialSource == "curated-overlay"
 
 
 def test_parse_credentials_cleans_and_dedupes():

@@ -11,6 +11,7 @@
 
 import generatedProviderDirectory from "./provider-directory.generated.json";
 import generatedProviderDirectoryMeta from "./provider-directory.generated.meta.json";
+import { MSCP_OVERLAY_NPIS } from "./mscp-overlay";
 
 export const DEMO_PATIENT_ID = "pause-demo-patient-001";
 const RAW_HRV_ID = "obs-hrv-raw-001";
@@ -337,7 +338,22 @@ export type ProviderRecord = {
    * consumers can render without sorting.
    */
   insuranceAccepted?: string[];
+  /**
+   * How we learned this provider is menopause-certified — present only when
+   * `menopauseCertified` is true:
+   *   - "curated-overlay": on the curated MSCP roster (today the synthetic
+   *     overlay; tomorrow the licensed Menopause Society feed). Authoritative.
+   *   - "self-reported": earned the flag from a self-reported MSCP/NCMP token
+   *     in their own NPPES credential text. Honest, but unverified by us.
+   * The ingest pipeline records this directly; for committed artifacts built
+   * before the field existed, `deriveCredentialSource` reconstructs it from
+   * overlay membership. Surfaced so the patient/agent can weigh the signal.
+   */
+  credentialSource?: ProviderCredentialSource;
 };
+
+/** Provenance of the `menopauseCertified` flag. See ProviderRecord.credentialSource. */
+export type ProviderCredentialSource = "curated-overlay" | "self-reported";
 
 /** Returned by queryProviderDirectory when the patient's ZIP centroid is known. */
 export type ProviderRecordRanked = ProviderRecord & {
@@ -430,10 +446,35 @@ const FALLBACK_DIRECTORY: ProviderRecord[] = [
  * sparse (the Menopause Society feed remains the path to dense coverage); the
  * non-certified rows give the directory national breadth for general browsing.
  */
-const PROVIDER_DIRECTORY: ProviderRecord[] =
+/**
+ * Reconstruct a certified provider's `credentialSource`. Prefers a value the
+ * ingest pipeline already wrote; otherwise derives it from overlay membership
+ * (the pipeline appends an "MSCP" badge to overlay providers, erasing the
+ * curated-vs-self-report distinction in `credentials`, so NPI membership is
+ * the only honest reconstruction). Non-certified providers have no source.
+ */
+export function deriveCredentialSource(
+  r: ProviderRecord
+): ProviderCredentialSource | undefined {
+  if (!r.menopauseCertified) return undefined;
+  if (r.credentialSource === "curated-overlay" || r.credentialSource === "self-reported") {
+    return r.credentialSource;
+  }
+  return MSCP_OVERLAY_NPIS.has(r.npi) ? "curated-overlay" : "self-reported";
+}
+
+const RAW_PROVIDER_DIRECTORY: ProviderRecord[] =
   (generatedProviderDirectory as ProviderRecord[]).length > 0
     ? (generatedProviderDirectory as ProviderRecord[])
     : FALLBACK_DIRECTORY;
+
+// Stamp `credentialSource` on every certified row that lacks one, so the field
+// is consistently present whether the committed artifact predates the pipeline
+// field or not. Non-certified rows pass through untouched.
+const PROVIDER_DIRECTORY: ProviderRecord[] = RAW_PROVIDER_DIRECTORY.map((r) => {
+  if (!r.menopauseCertified || r.credentialSource) return r;
+  return { ...r, credentialSource: deriveCredentialSource(r) };
+});
 
 const USING_GENERATED_DIRECTORY =
   (generatedProviderDirectory as ProviderRecord[]).length > 0;
