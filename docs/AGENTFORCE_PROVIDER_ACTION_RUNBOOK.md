@@ -88,8 +88,13 @@ Setup → **External Services** → New → **From API Specification**.
 - Service Schema: **Upload from local** →
   `salesforce/external-services/pause-provider-directory.oas.yaml`
 - Save. Salesforce parses the spec and generates one invocable operation:
-  **`findMenopauseProviders`** with inputs `zip` / `menopause` / `limit` and a
-  structured output (`total`, `returned`, `providers[]`).
+  **`findMenopauseProviders`** with inputs `zip` / `menopause` / `limit` /
+  `insurance` / `fallback` and a structured output (`total`, `returned`,
+  `matchType`, `providers[]` — each provider carrying `distanceMiles`,
+  `serviceSignals`, and `insuranceAccepted` alongside name/specialty/location).
+  `matchType` is what the topic instructions read to frame results honestly, so
+  re-register the External Service after updating this spec or that field won't
+  be mapped into the action output.
 
 If the parser complains, it's almost always an unsupported OpenAPI feature —
 the spec is deliberately lean (OpenAPI 3.0, primitive types, no `$ref`,
@@ -126,10 +131,13 @@ builder. (Deactivate first if the builder requires it — see Step 5.)
    > When the patient asks to find or be referred to a provider, first ask for
    > their 5-digit ZIP code if you don't already have it, then call
    > findMenopauseProviders with that zip and menopause=true. Present up to
-   > three providers by name, specialty, city/state, and whether they offer
-   > telehealth or are accepting new patients. Never invent providers — only
-   > return what the action gives you. Read the response `matchType` and frame
-   > the results honestly:
+   > three providers by name, specialty, and city/state, then note whether they
+   > offer telehealth or are accepting new patients. When a provider has a
+   > `distanceMiles` value, mention the approximate distance (e.g. "about 4 miles
+   > away"); when the patient gave their insurance and the provider lists it in
+   > `insuranceAccepted`, mention that they accept it (a soft signal, not a
+   > guarantee). Never invent providers — only return what the action gives you.
+   > Read the response `matchType` and frame the results honestly:
    > • `certified-local` — menopause-certified specialists near the patient.
    > • `relevant-local` — say there are no menopause-CERTIFIED providers in their
    >   area, and offer these nearby clinicians as menopause-EXPERIENCED (not
@@ -235,13 +243,20 @@ provider directory via the findMenopauseProviders action. Do not give generic
    are top menopause specialists nationally.
 3. Present up to three results. For each provider, state the name, specialty,
    and city/state, then note whether they offer telehealth and whether they are
-   accepting new patients — for example: "Dr. Priya Nair, MD, MSCP —
-   Obstetrics & Gynecology in Irvine, CA. Offers telehealth and is accepting
-   new patients."
-4. Only return providers the action gives you. Never invent or guess a provider,
+   accepting new patients. When the provider has a distanceMiles value, add the
+   approximate distance; when the patient gave their insurance and the provider
+   lists it, note that they accept it — for example: "Dr. Priya Nair, MD, MSCP —
+   Obstetrics & Gynecology in Irvine, CA, about 4 miles away. Offers telehealth,
+   accepting new patients, and takes Aetna."
+4. Read the matchType field and frame results honestly: certified-local =
+   certified specialists near them; relevant-local = no local CERTIFIED provider,
+   so these are nearby menopause-EXPERIENCED (not certified) clinicians — say so;
+   certified-remote = no local match, so certified specialists elsewhere who
+   offer telehealth; certified-national = top specialists nationally (no ZIP).
+5. Only return providers the action gives you. Never invent or guess a provider,
    NPI, or contact detail.
-5. If the action returns no providers, say you couldn't find a local match and
-   point the patient to The Menopause Society provider directory at
+6. If the action returns no providers (matchType none), say you couldn't find a
+   match and point the patient to The Menopause Society provider directory at
    menopause.org.
 ```
 

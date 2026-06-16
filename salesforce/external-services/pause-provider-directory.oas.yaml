@@ -50,6 +50,29 @@ paths:
           description: Maximum number of providers to return (1-50).
           schema:
             type: integer
+        - name: insurance
+          in: query
+          required: false
+          description: >
+            Insurance plan to narrow to in-network providers (e.g. aetna, bcbs,
+            medicare). Accepts common synonyms ("Blue Cross" maps to bcbs).
+            Omit to return providers regardless of accepted plans. The
+            in-network signal is synthetically derived today (no public payer
+            feed), so present it to the patient as a soft filter, not a
+            guarantee.
+          schema:
+            type: string
+        - name: fallback
+          in: query
+          required: false
+          description: >
+            When true (the default) and menopause=true, a search with no
+            certified provider in the ZIP area gracefully broadens to nearby
+            menopause-relevant providers, then to telehealth-capable certified
+            providers nationally. The tier that answered is reported in
+            matchType. Pass false to force strict certified-only results.
+          schema:
+            type: boolean
       responses:
         "200":
           description: Provider directory results
@@ -64,6 +87,19 @@ paths:
                   returned:
                     type: integer
                     description: Number of providers in this response.
+                  matchType:
+                    type: string
+                    description: >
+                      Which search tier answered — read this and frame the
+                      results honestly to the patient. One of:
+                      certified-local (menopause-certified specialists in the
+                      patient's ZIP area); relevant-local (no local CERTIFIED
+                      provider, so nearby menopause-EXPERIENCED but non-certified
+                      clinicians — say so); certified-remote (no local match, so
+                      telehealth-capable certified specialists elsewhere);
+                      certified-national (certified, no ZIP given); local / all
+                      (general non-menopause browse); none (no match — point the
+                      patient to The Menopause Society directory).
                   providers:
                     type: array
                     items:
@@ -91,3 +127,25 @@ paths:
                           type: boolean
                         graphScore:
                           type: number
+                        distanceMiles:
+                          type: number
+                          description: >
+                            Great-circle miles from the patient's ZIP centroid
+                            when a ZIP was supplied and resolved; absent
+                            otherwise. Say e.g. "about 4 miles away" when present.
+                        serviceSignals:
+                          type: array
+                          description: >
+                            Public-registry service-line signal tokens (e.g.
+                            facog = board-certified OB/GYN, whnp = Women's Health
+                            NP, multi-taxonomy = multi-specialty). Optional
+                            supporting evidence for non-certified providers.
+                          items:
+                            type: string
+                        insuranceAccepted:
+                          type: array
+                          description: >
+                            Plans this provider accepts (synthetically derived
+                            today — present as a soft signal, not a guarantee).
+                          items:
+                            type: string
