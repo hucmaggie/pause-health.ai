@@ -7,6 +7,7 @@ import {
   type ProviderRecord
 } from "../../../lib/mulesoft-mocks";
 import { lookupZipCentroid } from "../../../lib/zip-centroids";
+import { planLabel, signalLabelVerbose } from "../../../lib/provider-labels";
 
 /**
  * Per-provider profile page.
@@ -52,29 +53,6 @@ export async function generateMetadata({
     path: `/provider/${npi}`
   });
 }
-
-// Plain-English labels for the public-registry signal tokens. Same fallback
-// as the dashboard card: unknown tokens render as their raw lowercase value.
-const SIGNAL_LABELS: Record<string, string> = {
-  facog: "Board-certified OB/GYN",
-  faafp: "Board-certified family medicine",
-  face: "Board-certified endocrinology",
-  facp: "Board-certified internal medicine",
-  whnp: "Women's Health Nurse Practitioner",
-  cnm: "Certified Nurse-Midwife",
-  "multi-taxonomy": "Multi-specialty practice"
-};
-
-const PLAN_LABELS: Record<string, string> = {
-  medicare: "Medicare",
-  medicaid: "Medicaid",
-  aetna: "Aetna",
-  bcbs: "BCBS",
-  uhc: "UHC",
-  cigna: "Cigna",
-  humana: "Humana",
-  kaiser: "Kaiser"
-};
 
 function haversineMiles(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3958.7613;
@@ -195,7 +173,7 @@ export default async function ProviderProfilePage({
           >
             {signals.map((s) => (
               <li key={s} className="profile-chip profile-chip-strong">
-                {SIGNAL_LABELS[s] ?? s}
+                {signalLabelVerbose(s)}
               </li>
             ))}
           </ul>
@@ -224,7 +202,7 @@ export default async function ProviderProfilePage({
           >
             {plans.map((p) => (
               <li key={p} className="profile-chip">
-                {PLAN_LABELS[p] ?? p}
+                {planLabel(p)}
               </li>
             ))}
           </ul>

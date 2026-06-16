@@ -7,6 +7,7 @@ import {
   type ProviderRecordRanked
 } from "../../lib/mulesoft-mocks";
 import { lookupZipCentroid } from "../../lib/zip-centroids";
+import { PLAN_OPTIONS, planLabel, signalLabel } from "../../lib/provider-labels";
 
 /**
  * /provider — browseable directory index.
@@ -45,28 +46,6 @@ export const metadata = pageMetadata({
   ogImageAlt:
     "Find a menopause-certified provider — Pause-Health.ai directory."
 });
-
-const SIGNAL_LABELS: Record<string, string> = {
-  facog: "Board-cert OB/GYN",
-  faafp: "Board-cert family med",
-  face: "Board-cert endocrinology",
-  facp: "Board-cert internal med",
-  whnp: "Women's Health NP",
-  cnm: "Certified Nurse-Midwife",
-  "multi-taxonomy": "Multi-specialty"
-};
-
-const PLAN_LABELS: Record<string, string> = {
-  medicare: "Medicare",
-  medicaid: "Medicaid",
-  aetna: "Aetna",
-  bcbs: "BCBS",
-  uhc: "UHC",
-  cigna: "Cigna",
-  humana: "Humana",
-  kaiser: "Kaiser"
-};
-const PLAN_OPTIONS = Object.entries(PLAN_LABELS);
 
 /**
  * Human-facing, ZIP-aware framing for each search tier — the same honest
@@ -210,10 +189,8 @@ function renderProviderCard(
 
       {(signals.length > 0 || plans.length > 0) && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginTop: "0.4rem" }}>
-          {signals.map((s) =>
-            chip(SIGNAL_LABELS[s] ?? s, "strong")
-          )}
-          {planChipsShown.map((pl) => chip(PLAN_LABELS[pl] ?? pl, null))}
+          {signals.map((s) => chip(signalLabel(s), "strong"))}
+          {planChipsShown.map((pl) => chip(planLabel(pl), null))}
           {planOverflow > 0 ? (
             <span style={{ fontSize: "0.78rem", color: "var(--muted)", alignSelf: "center" }}>
               +{planOverflow} more

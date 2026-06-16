@@ -8,6 +8,8 @@
  * so the /provider/<npi> page can show the distance-from-your-ZIP chip.
  */
 
+import { planLabel, signalLabel } from "../lib/provider-labels";
+
 export type RecommendedProviderEntry = {
   npi?: string;
   name: string;
@@ -18,33 +20,6 @@ export type RecommendedProviderEntry = {
   distanceMiles?: number | null;
   serviceSignals?: string[];
   insuranceAccepted?: string[];
-};
-
-// Plain-English labels for the public-registry signal tokens. Anything not in
-// this map renders as the raw token in lowercase — fine, since the agent and
-// the UI both prefer the human label when one exists.
-const SIGNAL_LABELS: Record<string, string> = {
-  facog: "Board-cert OB/GYN",
-  faafp: "Board-cert family med",
-  face: "Board-cert endocrinology",
-  facp: "Board-cert internal med",
-  whnp: "Women's Health NP",
-  cnm: "Certified Nurse-Midwife",
-  "multi-taxonomy": "Multi-specialty"
-};
-
-// Plain-English labels for the canonical insurance tokens. Same fallback rule
-// as SIGNAL_LABELS: unknown plans render as their raw lowercase token, which
-// is the honest answer for a real-but-unrecognized payer.
-const PLAN_LABELS: Record<string, string> = {
-  medicare: "Medicare",
-  medicaid: "Medicaid",
-  aetna: "Aetna",
-  bcbs: "BCBS",
-  uhc: "UHC",
-  cigna: "Cigna",
-  humana: "Humana",
-  kaiser: "Kaiser"
 };
 
 function sourceLabel(source: string | null | undefined): string {
@@ -89,12 +64,12 @@ export function recommendedPlanChips(
 
 /** Human label for a service-line signal token (raw token if unknown). */
 export function recommendedSignalLabel(token: string): string {
-  return SIGNAL_LABELS[token] ?? token;
+  return signalLabel(token);
 }
 
 /** Human label for an insurance-plan token (raw token if unknown). */
 export function recommendedPlanLabel(token: string): string {
-  return PLAN_LABELS[token] ?? token;
+  return planLabel(token);
 }
 
 export function RecommendedProviders({
