@@ -25,6 +25,7 @@ import { lookupZipCentroid } from "../../lib/zip-centroids";
  *   ?fallback=    — "true" opens the relevant-local / certified-remote
  *                   fallback ladder when the strict tier is empty.
  *   ?plan=        — insurance plan token (medicare/aetna/bcbs/etc.).
+ *   ?telehealth=  — "true" narrows to telehealth-capable providers.
  *   ?limit=       — page size; default 20, capped at 50 to keep the
  *                   server response under a few hundred KB.
  *
@@ -243,6 +244,7 @@ export default async function ProviderIndexPage({
 
   const menopauseOnly = param(sp, "menopause") === "true";
   const fallback = param(sp, "fallback") !== "false"; // default ON for browse
+  const telehealthOnly = param(sp, "telehealth") === "true";
   const plan = param(sp, "plan")?.trim() || undefined;
 
   const limitRaw = Number(param(sp, "limit") ?? "");
@@ -255,6 +257,7 @@ export default async function ProviderIndexPage({
     menopauseOnly,
     fallback,
     insurance: plan,
+    telehealth: telehealthOnly,
     zipCentroid,
     limit
   });
@@ -322,12 +325,18 @@ export default async function ProviderIndexPage({
                 Include nearby/relevant providers if no certified-local match
               </span>
             </label>
+            <label style={{ flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
+              <input type="checkbox" name="telehealth" value="true" defaultChecked={telehealthOnly} />
+              <span style={{ fontSize: "0.85rem" }}>
+                Telehealth only
+              </span>
+            </label>
           </div>
           <div className="contact-form-actions">
             <button type="submit" className="btn btn-primary">
               Apply filters
             </button>
-            {(zip || plan || menopauseOnly) && (
+            {(zip || plan || menopauseOnly || telehealthOnly) && (
               <a className="btn btn-secondary" href="/provider">
                 Reset
               </a>

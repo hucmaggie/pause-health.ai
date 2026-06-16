@@ -264,9 +264,15 @@ export default async function ProviderProfilePage({
         </ul>
       </section>
 
-      <p style={{ marginTop: "1.5rem" }}>
+      <p style={{ marginTop: "1.5rem", display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
+        <a
+          href={fromZip ? `/provider?zip=${encodeURIComponent(fromZip)}` : "/provider"}
+          className="btn btn-secondary"
+        >
+          ← Back to directory
+        </a>
         <a href="/demo/intake" className="btn btn-secondary">
-          ← Back to demo intake
+          Back to demo intake
         </a>
       </p>
     </main>

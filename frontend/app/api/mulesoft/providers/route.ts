@@ -68,7 +68,19 @@ export async function GET(req: Request) {
   // pass through (lowercased) and yield an honest zero match. null when absent.
   const insurance = normalizeInsurancePlan(searchParams.get("insurance"));
 
-  const query = { zip, menopauseOnly, limit, fallback, zipCentroid, insurance };
+  // Narrow to telehealth-capable providers. Opt-in (?telehealth=true); applied
+  // before the tier ladder so every tier honors it.
+  const telehealth = searchParams.get("telehealth") === "true";
+
+  const query = {
+    zip,
+    menopauseOnly,
+    limit,
+    fallback,
+    zipCentroid,
+    insurance,
+    telehealth
+  };
 
   if (!isMulesoftProvidersLive()) {
     const result = queryProviderDirectory(query);

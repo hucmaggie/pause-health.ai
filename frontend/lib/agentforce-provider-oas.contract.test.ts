@@ -57,7 +57,14 @@ const PER_ROW_AGENT_FIELDS = [
 // (not all) providers, so we assert "appears on at least one row".
 const OPTIONAL_AGENT_FIELDS = ["serviceSignals"] as const;
 
-const AGENT_QUERY_PARAMS = ["zip", "menopause", "limit", "insurance", "fallback"] as const;
+const AGENT_QUERY_PARAMS = [
+  "zip",
+  "menopause",
+  "limit",
+  "insurance",
+  "fallback",
+  "telehealth"
+] as const;
 
 // The honest-framing tiers the topic instructions branch on. Each must be named
 // in the matchType description so a maintainer re-registering the action sees

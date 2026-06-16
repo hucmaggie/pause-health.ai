@@ -62,6 +62,15 @@ paths:
             guarantee.
           schema:
             type: string
+        - name: telehealth
+          in: query
+          required: false
+          description: >
+            When true, narrow to providers that offer telehealth (useful when
+            the patient asks specifically for a virtual/telehealth visit).
+            Applied before the tier ladder. Omit to include in-person providers.
+          schema:
+            type: boolean
         - name: fallback
           in: query
           required: false

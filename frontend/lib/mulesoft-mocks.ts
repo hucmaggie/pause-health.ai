@@ -547,19 +547,32 @@ export function queryProviderDirectory(opts: {
    * it consistently. Omit (or null) to skip the filter.
    */
   insurance?: string | null;
+  /**
+   * When true, narrow to providers that offer telehealth. Like the insurance
+   * filter, it's applied BEFORE the tier ladder so every tier (including the
+   * certified-remote fallback, which already prefers telehealth) honors the
+   * patient's intent. Omit (or false) to include in-person-only providers.
+   */
+  telehealth?: boolean;
 }) {
-  const { zip, menopauseOnly, limit, fallback, zipCentroid, insurance } = opts;
+  const { zip, menopauseOnly, limit, fallback, zipCentroid, insurance, telehealth } =
+    opts;
   const prefix = zip && zip.length >= 3 ? zip.slice(0, 3) : undefined;
   const inArea = (r: ProviderRecord) => !prefix || r.zip.startsWith(prefix);
 
-  // Insurance filter narrows the candidate pool BEFORE the tier ladder so
-  // every tier honors it (a "relevant-local Aetna provider" stays relevant-
-  // local; we never silently broaden insurance just because the strict tier
-  // is empty — that would defeat the patient's filter intent).
+  // Insurance + telehealth filters narrow the candidate pool BEFORE the tier
+  // ladder so every tier honors them (a "relevant-local Aetna provider" stays
+  // relevant-local; we never silently broaden a filter just because the strict
+  // tier is empty — that would defeat the patient's filter intent).
   const planQuery = normalizeInsurancePlan(insurance ?? null);
   const acceptsPlan = (r: ProviderRecord) =>
     !planQuery || (r.insuranceAccepted ?? []).includes(planQuery);
-  const POOL = PROVIDER_DIRECTORY.filter(acceptsPlan);
+  const telehealthOnly = telehealth === true;
+  const offersTelehealth = (r: ProviderRecord) =>
+    !telehealthOnly || r.telehealth === true;
+  const POOL = PROVIDER_DIRECTORY.filter(
+    (r) => acceptsPlan(r) && offersTelehealth(r)
+  );
 
   let rows: ProviderRecord[];
   let matchType: ProviderMatchType;
@@ -621,7 +634,8 @@ export function queryProviderDirectory(opts: {
       menopauseOnly: !!menopauseOnly,
       limit: limit ?? null,
       fallback: !!fallback,
-      insurance: planQuery ?? null
+      insurance: planQuery ?? null,
+      telehealth: telehealthOnly
     },
     matchType,
     sort,

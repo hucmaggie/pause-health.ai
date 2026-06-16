@@ -394,6 +394,64 @@ describe("queryProviderDirectory · insurance filter", () => {
   });
 });
 
+describe("queryProviderDirectory · telehealth filter", () => {
+  it("off by default, and the filter strictly narrows the matched total", () => {
+    const all = queryProviderDirectory({ menopauseOnly: false, limit: 1 });
+    const tele = queryProviderDirectory({
+      menopauseOnly: false,
+      telehealth: true,
+      limit: 1
+    });
+    expect(all.query.telehealth).toBe(false);
+    // The directory carries in-person-only providers, so filtering to
+    // telehealth must drop the matched total (proving the filter excludes some
+    // without depending on the top-N ranking, which happens to be telehealth).
+    expect(tele.total).toBeLessThan(all.total);
+    expect(tele.total).toBeGreaterThan(0);
+  });
+
+  it("telehealth=true narrows to telehealth-capable providers only", () => {
+    const out = queryProviderDirectory({
+      menopauseOnly: false,
+      telehealth: true,
+      limit: 100
+    });
+    expect(out.query.telehealth).toBe(true);
+    expect(out.providers.length).toBeGreaterThan(0);
+    for (const p of out.providers) {
+      expect(p.telehealth).toBe(true);
+    }
+  });
+
+  it("applies BEFORE the tier ladder so each tier honors it", () => {
+    // certified-national tier (no ZIP, menopauseOnly) must also be telehealth-
+    // only — we don't broaden past the filter just because the strict tier
+    // is empty.
+    const out = queryProviderDirectory({
+      menopauseOnly: true,
+      telehealth: true,
+      fallback: true
+    });
+    for (const p of out.providers) {
+      expect(p.menopauseCertified).toBe(true);
+      expect(p.telehealth).toBe(true);
+    }
+  });
+
+  it("composes with the insurance filter (both narrow the same pool)", () => {
+    const out = queryProviderDirectory({
+      menopauseOnly: false,
+      telehealth: true,
+      insurance: "medicare",
+      limit: 100
+    });
+    for (const p of out.providers) {
+      expect(p.telehealth).toBe(true);
+      expect(p.insuranceAccepted ?? []).toContain("medicare");
+    }
+  });
+});
+
 /**
  * findProviderByNpi — single-record lookup by NPI for the
  * /provider/[npi] page. Reads the same directory queryProviderDirectory

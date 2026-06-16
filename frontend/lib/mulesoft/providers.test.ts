@@ -384,7 +384,8 @@ describe("provider directory · live ⇄ mock contract-shape parity", () => {
         menopauseOnly: true,
         limit: 10,
         fallback: false,
-        insurance: null
+        insurance: null,
+        telehealth: false
       },
       matchType: "certified-local",
       sort: "score",

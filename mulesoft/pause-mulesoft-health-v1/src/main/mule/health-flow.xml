@@ -184,7 +184,7 @@ output application/json
 
     <!--
       Provider directory Experience API.
-      GET /providers?zip=&menopause=&limit=&fallback=&insurance=
+      GET /providers?zip=&menopause=&limit=&fallback=&insurance=&telehealth=
 
       Returns a ranked list of menopause-relevant providers, shape-identical
       to the response served by `frontend/lib/mulesoft-mocks.ts`'s
@@ -221,6 +221,8 @@ output application/json
           when the strict certified-local tier is empty.
         - `?insurance=<plan>` filters by the canonical plan token before
           the tier ladder runs (so all tiers honor the filter).
+        - `?telehealth=true` narrows to telehealth-capable providers, also
+          before the tier ladder.
         - `matchType` reports which tier answered; `sort` reports which
           ranking applied.
 
@@ -263,6 +265,9 @@ var fallbackEnabled = (attributes.queryParams.fallback   default "false") == "tr
 // or whatever lowercase string the caller passed and does an exact-match
 // containment check against insuranceAccepted.
 var insuranceQ      = lower(attributes.queryParams.insurance default "")
+// Telehealth filter (opt-in). Narrows the pool before the tier ladder, same as
+// the insurance filter, so every tier honors it.
+var telehealthOnly  = (attributes.queryParams.telehealth default "false") == "true"
 
 // ---------- Static directory slice ----------
 // Curated rows pulled from the committed
@@ -406,9 +411,12 @@ fun inArea(p, q) = sizeOf(q) < 3 or p.zip[0 to 2] == q[0 to 2]
 // Insurance filter — exact-match containment. When the query is empty
 // every row passes (the filter is opt-in).
 fun acceptsPlan(p, q) = sizeOf(q) == 0 or (p.insuranceAccepted contains q)
+// Telehealth predicate — passes everything when the filter is off.
+fun offersTelehealth(p) = (not telehealthOnly) or (p.telehealth == true)
 
-// Insurance filter applied BEFORE the tier ladder so all tiers honor it.
-var pool = allProviders filter acceptsPlan($, insuranceQ)
+// Insurance + telehealth filters applied BEFORE the tier ladder so all tiers
+// honor them.
+var pool = allProviders filter (acceptsPlan($, insuranceQ) and offersTelehealth($))
 
 // ---------- Tier ladder ----------
 // certified-local → certified-national (no zip given) →
@@ -476,7 +484,8 @@ var finalMatchType = if (totalRows == 0) "none" else tier.matchType
     menopauseOnly: menopause,
     limit:         limitN,
     fallback:      fallbackEnabled,
-    insurance:     if (sizeOf(insuranceQ) > 0) insuranceQ else null
+    insurance:     if (sizeOf(insuranceQ) > 0) insuranceQ else null,
+    telehealth:    telehealthOnly
   },
   matchType: finalMatchType,
   sort: "score",

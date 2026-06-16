@@ -51,6 +51,8 @@ type ProvidersQuery = {
    * which is honest degradation.
    */
   insurance?: string | null;
+  /** When true, forward ?telehealth=true so the worker narrows to telehealth. */
+  telehealth?: boolean;
 };
 
 export async function fetchLiveProviders(
@@ -72,6 +74,7 @@ export async function fetchLiveProviders(
   if (query.limit != null) params.set("limit", String(query.limit));
   if (query.fallback) params.set("fallback", "true");
   if (query.insurance) params.set("insurance", query.insurance);
+  if (query.telehealth) params.set("telehealth", "true");
 
   const url = `${baseUrl.replace(/\/$/, "")}/providers?${params}`;
   const controller = new AbortController();

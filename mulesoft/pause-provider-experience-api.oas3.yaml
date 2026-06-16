@@ -172,6 +172,16 @@ paths:
           schema:
             type: string
             example: aetna
+        - name: telehealth
+          in: query
+          description: >
+            When `true`, narrow to providers that offer telehealth. Applied
+            BEFORE the tier ladder so all tiers honor it. Defaults to `false`
+            (in-person and telehealth providers both included).
+          required: false
+          schema:
+            type: boolean
+            default: false
       responses:
         "200":
           description: Provider directory results

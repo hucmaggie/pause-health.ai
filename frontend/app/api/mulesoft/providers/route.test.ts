@@ -101,6 +101,15 @@ describe("GET /api/mulesoft/providers · mock mode (env unset)", () => {
     expect(res.headers.get("cache-control")).toMatch(/s-maxage=300/);
   });
 
+  it("narrows to telehealth in mock mode (?telehealth=true)", async () => {
+    const res = await GET(req("?telehealth=true&limit=50"));
+    const json = await res.json();
+    expect(json.query.telehealth).toBe(true);
+    for (const p of json.providers) {
+      expect(p.telehealth).toBe(true);
+    }
+  });
+
   it("normalizes insurance synonyms in mock mode (United → uhc)", async () => {
     const res = await GET(req("?insurance=United&limit=50"));
     const json = await res.json();
@@ -150,6 +159,24 @@ describe("GET /api/mulesoft/providers · live mode", () => {
     await GET(req("?menopause=true"));
     const url = new URL(calls[0]);
     expect(url.searchParams.has("insurance")).toBe(false);
+  });
+
+  it("forwards ?telehealth=true to the live worker", async () => {
+    process.env[ENV_KEY] = LIVE_URL;
+    const calls = stubLiveFetchCapturing(liveResultShape);
+
+    await GET(req("?telehealth=true&menopause=true"));
+    const url = new URL(calls[0]);
+    expect(url.searchParams.get("telehealth")).toBe("true");
+  });
+
+  it("omits the telehealth param when not requested", async () => {
+    process.env[ENV_KEY] = LIVE_URL;
+    const calls = stubLiveFetchCapturing(liveResultShape);
+
+    await GET(req("?menopause=true"));
+    const url = new URL(calls[0]);
+    expect(url.searchParams.has("telehealth")).toBe(false);
   });
 
   it("returns meta._source='live-mulesoft' and the live body on success", async () => {
