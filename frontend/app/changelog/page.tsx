@@ -38,7 +38,7 @@ const weeks: ChangelogWeek[] = [
         summary:
           "The drift fixed in the previous entry (matchType referenced by the agent instructions but undeclared in the External Services slice, so it never reached the action output) was silent for a while because nothing tied the lean Agentforce spec to the live /api/mulesoft/providers contract. Added frontend/lib/agentforce-provider-oas.contract.test.ts (7 tests) to pin both ends: it reads the YAML slice as raw text (no YAML dependency in the package) and asserts every agent-facing query param (zip/menopause/limit/insurance/fallback), top-level matchType with all five honest-framing tiers named in its description, and every per-row provider field the runbook tells the agent to present (name, specialty, location, telehealth, accepting, distanceMiles, insuranceAccepted, serviceSignals) are DECLARED — then cross-checks against a real queryProviderDirectory result that those same fields are actually PRODUCED, plus a guard that the slice never re-adds the parser-hostile constructs ($ref/oneOf/nullable) the External Services parser rejects. If the slice and the live route ever disagree on an agent-relevant field again, this test fails instead of the live agent silently dropping it. Full suite green: 298 tests.",
         commits: [
-          { sha: "6c0bae4", label: "agentforce: guard the External Services slice ↔ live provider contract" }
+          { sha: "92afa7e", label: "agentforce: guard the External Services slice ↔ live provider contract" }
         ],
         status: "shipped"
       },
