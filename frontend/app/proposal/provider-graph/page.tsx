@@ -454,12 +454,18 @@ export default function ProviderGraphPage() {
           }}
         >
           <a
+            href="/provider?zip=92614&menopause=true"
+            className="btn btn-primary"
+          >
+            Browse the directory (UI) →
+          </a>
+          <a
             href="/api/mulesoft/providers?zip=92614&menopause=true"
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn-primary"
+            className="btn btn-secondary"
           >
-            Experience API: provider directory →
+            Experience API (raw JSON) →
           </a>
           <a
             href="/proposal/mcp"

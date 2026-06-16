@@ -2311,3 +2311,35 @@ th {
   color: #ff5679;
   border-color: rgba(255, 86, 121, 0.55);
 }
+
+/* Provider index page (/provider). The filter form reuses
+   .contact-form for inputs but adds a select-styling rule the contact
+   form doesn't need, plus a per-row spacing tweak so checkbox rows
+   don't bunch with text-input rows. */
+.provider-filter-form select {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.provider-filter-form select:focus {
+  outline: none;
+  border-color: var(--brand);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.provider-card a {
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.provider-card a:hover {
+  color: var(--brand);
+  border-bottom-color: rgba(255, 93, 168, 0.4);
+}
