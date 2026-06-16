@@ -54,6 +54,49 @@ function sourceLabel(source: string | null | undefined): string {
     : " (NPPES-derived directory)";
 }
 
+/** Profile link, carrying `?from=<zip>` so the profile shows the distance chip. */
+export function recommendedProfileHref(
+  npi: string,
+  fromZip?: string | null
+): string {
+  return fromZip
+    ? `/provider/${encodeURIComponent(npi)}?from=${encodeURIComponent(fromZip)}`
+    : `/provider/${encodeURIComponent(npi)}`;
+}
+
+/** Inline "(city, ST · N mi away · telehealth)" parts, omitting absent fields. */
+export function recommendedMetaParts(p: RecommendedProviderEntry): string[] {
+  const meta: string[] = [];
+  if (p.city && p.state) meta.push(`${p.city}, ${p.state}`);
+  if (typeof p.distanceMiles === "number") {
+    // Source is already 0.1-mi precision; a single decimal reads cleaner inline.
+    const miles = Math.round(p.distanceMiles * 10) / 10;
+    meta.push(`${miles} mi away`);
+  }
+  if (p.telehealth) meta.push("telehealth");
+  return meta;
+}
+
+/** Cap plan chips so a row can't run away; the remainder becomes "+N more". */
+export function recommendedPlanChips(
+  plans: string[] | undefined,
+  max = 4
+): { shown: string[]; overflow: number } {
+  const list = plans ?? [];
+  const shown = list.slice(0, max);
+  return { shown, overflow: Math.max(0, list.length - shown.length) };
+}
+
+/** Human label for a service-line signal token (raw token if unknown). */
+export function recommendedSignalLabel(token: string): string {
+  return SIGNAL_LABELS[token] ?? token;
+}
+
+/** Human label for an insurance-plan token (raw token if unknown). */
+export function recommendedPlanLabel(token: string): string {
+  return PLAN_LABELS[token] ?? token;
+}
+
 export function RecommendedProviders({
   providers,
   source,
@@ -66,11 +109,6 @@ export function RecommendedProviders({
   heading?: string;
 }) {
   if (providers.length === 0) return null;
-
-  const profileHref = (npi: string) =>
-    fromZip
-      ? `/provider/${encodeURIComponent(npi)}?from=${encodeURIComponent(fromZip)}`
-      : `/provider/${encodeURIComponent(npi)}`;
 
   return (
     <div
@@ -93,19 +131,10 @@ export function RecommendedProviders({
       </p>
       <ul style={{ margin: 0, paddingLeft: "1.1rem", fontSize: "0.85rem" }}>
         {providers.map((p) => {
-          const meta: string[] = [];
-          if (p.city && p.state) meta.push(`${p.city}, ${p.state}`);
-          if (typeof p.distanceMiles === "number") {
-            const miles = Math.round(p.distanceMiles * 10) / 10;
-            meta.push(`${miles} mi away`);
-          }
-          if (p.telehealth) meta.push("telehealth");
+          const meta = recommendedMetaParts(p);
           const signals = p.serviceSignals ?? [];
-          const plans = p.insuranceAccepted ?? [];
-          // Cap plan chips at 4 so a row doesn't run away with chips when a
-          // provider accepts every plan; "+N more" tells the truth.
-          const planChipsShown = plans.slice(0, 4);
-          const planOverflow = Math.max(0, plans.length - planChipsShown.length);
+          const { shown: planChipsShown, overflow: planOverflow } =
+            recommendedPlanChips(p.insuranceAccepted);
           const nameLabel = p.specialty ? `${p.name} · ${p.specialty}` : p.name;
           return (
             <li
@@ -113,7 +142,7 @@ export function RecommendedProviders({
               style={{ marginBottom: "0.25rem" }}
             >
               {p.npi ? (
-                <a href={profileHref(p.npi)}>{nameLabel}</a>
+                <a href={recommendedProfileHref(p.npi, fromZip)}>{nameLabel}</a>
               ) : (
                 nameLabel
               )}
@@ -143,12 +172,12 @@ export function RecommendedProviders({
                         border: "1px solid rgba(0, 122, 158, 0.2)"
                       }}
                     >
-                      {SIGNAL_LABELS[s] ?? s}
+                      {recommendedSignalLabel(s)}
                     </span>
                   ))}
                 </span>
               ) : null}
-              {plans.length > 0 ? (
+              {planChipsShown.length > 0 ? (
                 <span
                   style={{
                     marginLeft: "0.4rem",
@@ -169,7 +198,7 @@ export function RecommendedProviders({
                         border: "1px solid rgba(120, 120, 120, 0.2)"
                       }}
                     >
-                      {PLAN_LABELS[plan] ?? plan}
+                      {recommendedPlanLabel(plan)}
                     </span>
                   ))}
                   {planOverflow > 0 ? (
