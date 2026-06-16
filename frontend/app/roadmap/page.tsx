@@ -55,9 +55,16 @@ const horizons: RoadmapHorizon[] = [
         source: { href: "/changelog", label: "Changelog" }
       },
       {
-        title: "MuleSoft Flex Gateway — persistent hosting (iteration 8)",
+        title: "MuleSoft iteration 8 — Phase-2 contract DataWeave (deploy pending)",
         detail:
-          "The Flex Gateway currently runs as Docker + ngrok on a local machine. When the machine sleeps or restarts the ngrok tunnel drops, the live badge goes dark, and pause-health.ai silently falls back to mock data. Iteration 8: move the gateway container to a persistent VM (DigitalOcean droplet or EC2 t4g.nano) so the MuleSoft live surface is always on. No Anypoint or Next.js changes needed — just a new host + updated MULESOFT_*_BASE_URL in Vercel.",
+          "providers-flow's DataWeave was rewritten to match the Phase-2 contract — a curated 9-row slice with lat/lng + serviceSignals + licenseStatus + insuranceAccepted + matchType tier ladder + ?insurance= filter. Source committed (cf4a42d); deploy to CloudHub 2.0 is the maintainer's manual step. Production currently degrades cleanly to the mock-fallback path so there's no patient-visible regression. A frontend contract-shape vitest pins live ⇄ mock parity so deploy-time drift catches at CI. Post-deploy verification checklist + JWT-curl probe in docs/MULESOFT_API_MANAGER_RUNBOOK.md (iteration 8).",
+        status: "planned",
+        source: { href: "/proposal/mulesoft", label: "/proposal/mulesoft" }
+      },
+      {
+        title: "MuleSoft iteration 9 — Flex Gateway persistent hosting",
+        detail:
+          "The Flex Gateway runs Docker + ngrok on a local machine; when the machine sleeps or restarts the tunnel drops and pause-health.ai silently falls back to mock data (verified today: TLS handshake gets 'Connection reset by peer'). Iteration 9: move the gateway container to a persistent VM (DigitalOcean droplet or EC2 t4g.nano) so the MuleSoft live surface is always on. No Anypoint or Next.js changes needed — just a new host + updated MULESOFT_*_BASE_URL in Vercel. Sequenced after iteration 8 deploy so the new VM serves the Phase-2 contract from day one.",
         status: "planned",
         source: { href: "/proposal/mulesoft", label: "/proposal/mulesoft" }
       }
@@ -68,7 +75,7 @@ const horizons: RoadmapHorizon[] = [
     eyebrow: "Next · 30–90 days",
     title: "After the next decision point",
     intro:
-      "Items gated on the next external event — usually 'first design partner conversation' or 'first credentialed customer org'. The code paths are designed or partially wired; the activation step is a customer-or-cohort gate, not an engineering gate.",
+      "Items gated on the next external event — usually 'first design partner conversation' or 'first credentialed customer org'. The code paths are designed or partially wired; the activation step is a customer-or-cohort gate, not an engineering gate. A few entries here are marked shipped — those are recent platform-layer milestones (Data 360 Phase 2, MuleSoft iterations 1–7, provider-graph Phase 1+2) kept in this horizon as context for the partnership-gated next steps that build on them.",
     items: [
       {
         title: "First design-partner provider organization onboarded",
@@ -94,7 +101,7 @@ const horizons: RoadmapHorizon[] = [
       {
         title: "MuleSoft Anypoint — iterations 1–7 complete",
         detail:
-          "Seven iterations shipped: CloudHub 2.0 worker live (iterations 1–2), Flex Gateway runtime enforcement (iteration 3), Rate Limiting SLA (iteration 4), OAS 3.0 spec published to Exchange (iteration 5), stable ngrok domain pinned (iteration 6), JWT Validation via Auth0 RS256/JWKS replacing Client ID Enforcement + plain Rate Limiting (iteration 7). Current policy stack: JWT Validation + Rate Limiting (10 req/min global). Next: iteration 8 — persistent VM so the gateway doesn't depend on a local machine.",
+          "Seven iterations shipped: CloudHub 2.0 worker live (iterations 1–2), Flex Gateway runtime enforcement (iteration 3), Rate Limiting SLA (iteration 4), OAS 3.0 spec published to Exchange (iteration 5), stable ngrok domain pinned (iteration 6), JWT Validation via Auth0 RS256/JWKS replacing Client ID Enforcement + plain Rate Limiting (iteration 7). Current policy stack: JWT Validation + Rate Limiting (10 req/min global). Iteration 8 (Phase-2 contract DataWeave) is committed and awaiting deploy; iteration 9 (persistent VM hosting for the Flex Gateway) is sequenced after that — both tracked in the Now horizon above.",
         status: "shipped",
         source: { href: "/proposal/mulesoft", label: "/proposal/mulesoft" }
       },
@@ -106,10 +113,17 @@ const horizons: RoadmapHorizon[] = [
         source: { href: "/proposal/data-360", label: "/proposal/data-360" }
       },
       {
-        title: "Provider graph Phase 1 — NPPES + taxonomy filter",
+        title: "Provider graph Phase 1 + Phase 2 — shipped end-to-end",
         detail:
-          "Wired in prototype: the provider_ingest pipeline streams the CMS NPPES bulk schema, filters on the real menopause NUCC taxonomy codes (OB/GYN, endocrinology, NP women's health, CNM, PA, CNS), overlays the MSCP credential list, and computes a graphScore — emitting frontend/lib/provider-directory.generated.json behind the unchanged /api/mulesoft/providers contract. The committed dataset is the pipeline over a synthetic NPPES-format fixture; the national npidata_pfile produces the full slice with no contract change. Run + verify steps in docs/PROVIDER_GRAPH_PHASE_1_RUNBOOK.md. Phase 2 (state license + clinic-site service detection) follows in 4–6 weeks.",
-        status: "prototype",
+          "Phase 1 (NPPES bulk schema → menopause NUCC taxonomy filter → MSCP overlay → graphScore) and Phase 2 (Census 2020 ZCTA distance ranking, six NPPES service-line signals, three state license-sanction overlays dropping 1,720 sanctioned candidates at build, real-shaped synthetic insurance, /provider browseable UI + /provider/[npi] profile pages) are both wired and verifiable. The committed national run carries 2,015 providers behind the frozen /api/mulesoft/providers contract. See /changelog for the per-commit history and /proposal/provider-graph for the full architecture.",
+        status: "shipped",
+        source: { href: "/proposal/provider-graph", label: "/proposal/provider-graph" }
+      },
+      {
+        title: "Provider graph Phase 2-bis — partnership + commercial-feed unlocks",
+        detail:
+          "Two pieces wait on external dependencies, not engineering effort. (1) Licensed Menopause Society MSCP feed replaces the synthetic + self-reported overlay (the Society's terms-of-use prohibits scraping; gated on a partnership conversation). (2) Paid in-network insurance feed (Ribbon Health, Turquoise) replaces the synthetic SHA-256 derivation behind the same insuranceAccepted field. Both swap in behind the existing contract without consumer changes — the agent + Care Router + UI keep working unchanged. The synthetic shapes are calibrated to plausible real-world rates and clearly labeled in every API response.",
+        status: "planned",
         source: { href: "/proposal/provider-graph", label: "/proposal/provider-graph" }
       }
     ]
