@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AGENTFORCE_COPY } from "../lib/agentforce";
+import {
+  RecommendedProviders,
+  type RecommendedProviderEntry
+} from "./recommended-providers";
 
 type RoutingArtifact = {
   pathway: string;
@@ -12,6 +16,16 @@ type RoutingArtifact = {
   redFlagsTriggered: string[];
   recommendedTargetResponse: string;
   modelProvenance: { provider: string; model: string; via: string };
+  /**
+   * MSCP provider recommendations attached by the Care Router for the
+   * mscp-virtual-visit / mscp-in-person pathways (certified-only, strict —
+   * no fallback tiers on this path). Absent for non-MSCP pathways or when the
+   * provider graph found no certified clinician near the patient.
+   */
+  recommendedProviders?: {
+    source: "live" | "mock";
+    providers: RecommendedProviderEntry[];
+  };
 };
 
 /**
@@ -470,6 +484,18 @@ export function AgentforceFallback() {
                       Decided by {routing.modelProvenance.provider} /{" "}
                       <code>{routing.modelProvenance.model}</code> ({routing.modelProvenance.via})
                     </p>
+                    {routing.recommendedProviders && (
+                      <RecommendedProviders
+                        providers={routing.recommendedProviders.providers}
+                        source={routing.recommendedProviders.source}
+                        fromZip={captured.patientZip?.trim() || undefined}
+                        heading={
+                          captured.patientZip?.trim()
+                            ? `MSCP-certified specialists near ${captured.patientZip.trim()}`
+                            : "MSCP-certified specialists (nationwide)"
+                        }
+                      />
+                    )}
                     {traceTaskId && (
                       <p style={{ marginTop: "0.5rem" }}>
                         <a
