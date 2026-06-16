@@ -39,6 +39,26 @@ def test_org_entity_is_filtered():
     assert normalize_row(_row(**{"Entity Type Code": "2"}), MscpOverlay.empty()) is None
 
 
+def test_foreign_zip_is_filtered():
+    # Canadian postal code (alphanumeric) → not a placeable US ZIP → dropped.
+    postal = "Provider Business Practice Location Address Postal Code"
+    assert normalize_row(_row(**{postal: "A1B 2C3"}), MscpOverlay.empty()) is None
+
+
+def test_truncated_zip_is_filtered():
+    # Garbage / truncated postal value (fewer than 5 digits) → dropped.
+    postal = "Provider Business Practice Location Address Postal Code"
+    assert normalize_row(_row(**{postal: "44"}), MscpOverlay.empty()) is None
+
+
+def test_zip_plus_four_is_kept_and_truncated():
+    # A valid US ZIP+4 is kept, truncated to its 5-digit prefix.
+    postal = "Provider Business Practice Location Address Postal Code"
+    rec = normalize_row(_row(**{postal: "92614-2201"}), MscpOverlay.empty())
+    assert rec is not None
+    assert rec.zip == "92614"
+
+
 def test_irrelevant_taxonomy_is_filtered():
     row = _row(**{"Healthcare Provider Taxonomy Code_1": "207X00000X"})
     assert normalize_row(row, MscpOverlay.empty()) is None

@@ -224,9 +224,20 @@ def normalize_row(
     if certified and not _has_menopause_credential(credentials):
         credentials.append("MSCP")
 
+    zip_code = (row.get(COL_POSTAL) or "").strip()[:5]
+    # US directory: require a usable 5-digit US ZIP. NPPES carries some providers
+    # with foreign practice addresses (Canadian "A1B…", UK "EC…"/"EH1…"), APO/FPO
+    # military codes, and truncated/garbage postal values. None of these can ever
+    # be "local" to a US patient ZIP; they only pad the directory and inflate the
+    # ZIP-3 coverage metric (there are only ~930 real US ZIP-3s, but ungated the
+    # June 2026 run reported 1,055 "prefixes", 125 of them foreign/garbage). Drop
+    # them so every record is a placeable US provider. All curated/certified demo
+    # rows carry real 5-digit ZIPs, so none are affected.
+    if not (len(zip_code) == 5 and zip_code.isdigit()):
+        return None
+
     city = (row.get(COL_CITY) or "").strip().title()
     state = (row.get(COL_STATE) or "").strip().upper()
-    zip_code = (row.get(COL_POSTAL) or "").strip()[:5]
     has_location = bool(city and state and zip_code)
 
     accepting, telehealth = _derive_access(npi)

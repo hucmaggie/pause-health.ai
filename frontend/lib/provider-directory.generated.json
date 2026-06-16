@@ -4083,6 +4083,30 @@
     ]
   },
   {
+    "npi": "1003861022",
+    "name": "Dr. Viktoriya Bakcheva, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Brooklyn",
+    "state": "NY",
+    "zip": "11204",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.618777,
+    "longitude": -73.984831,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "bcbs"
+    ]
+  },
+  {
     "npi": "1003862715",
     "name": "Ms. Jacqueline Davis-Herr, MD",
     "credentials": [
@@ -5995,6 +6019,31 @@
     ]
   },
   {
+    "npi": "1013013564",
+    "name": "Dr. Joseph Cioffi, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Mineola",
+    "state": "NY",
+    "zip": "11501",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.746286,
+    "longitude": -73.638905,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc"
+    ]
+  },
+  {
     "npi": "1013017524",
     "name": "Dr. Kenneth Ahdoot, MD",
     "credentials": [
@@ -6195,6 +6244,29 @@
       "medicare",
       "aetna",
       "bcbs"
+    ]
+  },
+  {
+    "npi": "1013054360",
+    "name": "Dr. Parveen Sondhi, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "New York",
+    "state": "NY",
+    "zip": "10011",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.742011,
+    "longitude": -74.000606,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna"
     ]
   },
   {
@@ -6441,6 +6513,34 @@
     "insuranceAccepted": [
       "medicaid",
       "bcbs"
+    ]
+  },
+  {
+    "npi": "1013089390",
+    "name": "Dr. Sara Elias, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Rye",
+    "state": "NY",
+    "zip": "10580",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.979049,
+    "longitude": -73.693202,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "cigna",
+      "kaiser"
     ]
   },
   {
@@ -7861,6 +7961,35 @@
     "insuranceAccepted": [
       "medicare",
       "medicaid"
+    ]
+  },
+  {
+    "npi": "1013444637",
+    "name": "Dr. Peggy Estime Margetson, DNP, WHNP-BC",
+    "credentials": [
+      "DNP",
+      "WHNP-BC"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Deer Park",
+    "state": "NY",
+    "zip": "11729",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.761136,
+    "longitude": -73.32526,
+    "serviceSignals": [
+      "whnp",
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "kaiser"
     ]
   },
   {
@@ -9438,6 +9567,29 @@
     "licenseStatus": "active",
     "insuranceAccepted": [
       "medicaid",
+      "humana"
+    ]
+  },
+  {
+    "npi": "1013971795",
+    "name": "Dr. Sirona Pruna, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Newmarket",
+    "state": "NH",
+    "zip": "03857",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.070913,
+    "longitude": -70.946939,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "uhc",
       "humana"
     ]
   },
@@ -11332,6 +11484,30 @@
       "medicare",
       "aetna",
       "humana"
+    ]
+  },
+  {
+    "npi": "1023108248",
+    "name": "Dr. Pierre Lespinasse, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "East Orange",
+    "state": "NJ",
+    "zip": "07017",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.772111,
+    "longitude": -74.207065,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "humana",
+      "kaiser"
     ]
   },
   {
@@ -13661,6 +13837,33 @@
     ]
   },
   {
+    "npi": "1033159124",
+    "name": "Dr. Katherine Obrien, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Paramus",
+    "state": "NJ",
+    "zip": "07652",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.947299,
+    "longitude": -74.070169,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc",
+      "cigna"
+    ]
+  },
+  {
     "npi": "1033159363",
     "name": "Dr. Christopher Jones, MD",
     "credentials": [
@@ -13980,6 +14183,31 @@
       "bcbs",
       "uhc",
       "cigna"
+    ]
+  },
+  {
+    "npi": "1033176045",
+    "name": "Dr. Derek Tenhoopen, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Rochester",
+    "state": "NY",
+    "zip": "14626",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.213733,
+    "longitude": -77.712294,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "uhc",
+      "kaiser"
     ]
   },
   {
@@ -14892,6 +15120,31 @@
     ]
   },
   {
+    "npi": "1033447578",
+    "name": "Dr. Amr Abdel Kader, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Cranston",
+    "state": "RI",
+    "zip": "02920",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.767344,
+    "longitude": -71.465508,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "aetna",
+      "uhc",
+      "cigna"
+    ]
+  },
+  {
     "npi": "1033453600",
     "name": "Dr. Michael Beninati, MD",
     "credentials": [
@@ -15147,6 +15400,30 @@
       "medicaid",
       "aetna",
       "uhc"
+    ]
+  },
+  {
+    "npi": "1033565775",
+    "name": "Dr. Martina Burn, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "New Haven",
+    "state": "CT",
+    "zip": "06519",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.293934,
+    "longitude": -72.932028,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "bcbs",
+      "cigna"
     ]
   },
   {
@@ -15973,6 +16250,32 @@
     ]
   },
   {
+    "npi": "1043257462",
+    "name": "Dr. Marsilia Cloud, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Amherst",
+    "state": "NY",
+    "zip": "14226",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.971014,
+    "longitude": -78.796455,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc",
+      "cigna"
+    ]
+  },
+  {
     "npi": "1043268873",
     "name": "Dr. Joseph Mitro, MD",
     "credentials": [
@@ -16225,6 +16528,83 @@
       "aetna",
       "bcbs",
       "uhc",
+      "humana"
+    ]
+  },
+  {
+    "npi": "1043286297",
+    "name": "Dr. Julio Caban, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Newark",
+    "state": "NJ",
+    "zip": "07112",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.709409,
+    "longitude": -74.20955,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "humana",
+      "kaiser"
+    ]
+  },
+  {
+    "npi": "1043289705",
+    "name": "Dr. Carol Vaughan, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Portland",
+    "state": "ME",
+    "zip": "04101",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.662607,
+    "longitude": -70.257949,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc"
+    ]
+  },
+  {
+    "npi": "1043293624",
+    "name": "Dr. Eugene Gamburg, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Lawrenceville",
+    "state": "NJ",
+    "zip": "08648",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.28449,
+    "longitude": -74.717487,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "uhc",
+      "cigna",
       "humana"
     ]
   },
@@ -16934,6 +17314,32 @@
     ]
   },
   {
+    "npi": "1043449820",
+    "name": "Dr. Amanda Sample, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Pittsburgh",
+    "state": "PA",
+    "zip": "15213",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.44404,
+    "longitude": -79.955247,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "humana"
+    ]
+  },
+  {
     "npi": "1043453517",
     "name": "Dr. Melissa Jones, MD",
     "credentials": [
@@ -17007,6 +17413,29 @@
       "bcbs",
       "cigna",
       "humana"
+    ]
+  },
+  {
+    "npi": "1043470024",
+    "name": "Dr. Mohamed Ghafar, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Elmhurst",
+    "state": "NY",
+    "zip": "11373",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.738843,
+    "longitude": -73.878539,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "bcbs"
     ]
   },
   {
@@ -17142,6 +17571,33 @@
     ]
   },
   {
+    "npi": "1043506603",
+    "name": "Dr. Ashley Hammer, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Willingboro",
+    "state": "NJ",
+    "zip": "08046",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.02795,
+    "longitude": -74.886984,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc",
+      "cigna",
+      "kaiser"
+    ]
+  },
+  {
     "npi": "1043506801",
     "name": "Dr. Megan Rooney Thompson, MD",
     "credentials": [
@@ -17217,6 +17673,36 @@
     "insuranceAccepted": [
       "medicare",
       "medicaid"
+    ]
+  },
+  {
+    "npi": "1043549512",
+    "name": "Dr. Emre Kayaalp, MD, PHD",
+    "credentials": [
+      "MD",
+      "PHD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Summit",
+    "state": "NJ",
+    "zip": "07901",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.714923,
+    "longitude": -74.366372,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "uhc",
+      "humana",
+      "kaiser"
     ]
   },
   {
@@ -17451,6 +17937,29 @@
     ]
   },
   {
+    "npi": "1043659519",
+    "name": "Dr. Jyotika Agochiya, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Pomona",
+    "state": "NY",
+    "zip": "10970",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.180265,
+    "longitude": -74.102057,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "cigna"
+    ]
+  },
+  {
     "npi": "1043659907",
     "name": "Dr. Angela Catarinicchia, MD",
     "credentials": [
@@ -17530,6 +18039,32 @@
       "medicaid",
       "aetna",
       "uhc",
+      "cigna"
+    ]
+  },
+  {
+    "npi": "1043669955",
+    "name": "Dr. Elana Peck, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Old Greenwich",
+    "state": "CT",
+    "zip": "06870",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.024446,
+    "longitude": -73.57115,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
       "cigna"
     ]
   },
@@ -18155,6 +18690,30 @@
       "uhc",
       "cigna",
       "humana"
+    ]
+  },
+  {
+    "npi": "1053330563",
+    "name": "Dr. Gordon Heiss, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Ogdensburg",
+    "state": "NY",
+    "zip": "13669",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 44.668123,
+    "longitude": -75.483114,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "aetna",
+      "bcbs"
     ]
   },
   {
@@ -19437,6 +19996,29 @@
     ]
   },
   {
+    "npi": "1053751271",
+    "name": "Dr. Robert O' Sullivan, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Bridgeport",
+    "state": "CT",
+    "zip": "06610",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.209221,
+    "longitude": -73.164656,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "uhc"
+    ]
+  },
+  {
     "npi": "1053765164",
     "name": "Dr. Amethyst Smith, MD",
     "credentials": [
@@ -19917,6 +20499,32 @@
     ]
   },
   {
+    "npi": "1063426195",
+    "name": "Dr. Kimberly Heller, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Poughkeepsie",
+    "state": "NY",
+    "zip": "12601",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.701921,
+    "longitude": -73.911519,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "aetna",
+      "uhc"
+    ]
+  },
+  {
     "npi": "1063429421",
     "name": "Dr. Megan Temp, MD",
     "credentials": [
@@ -19938,6 +20546,34 @@
       "medicare",
       "bcbs",
       "uhc"
+    ]
+  },
+  {
+    "npi": "1063435188",
+    "name": "Dr. Gary Lewis, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Hummelstown",
+    "state": "PA",
+    "zip": "17036",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.268235,
+    "longitude": -76.712106,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc",
+      "humana",
+      "kaiser"
     ]
   },
   {
@@ -20189,6 +20825,32 @@
       "medicaid",
       "bcbs",
       "uhc"
+    ]
+  },
+  {
+    "npi": "1063478220",
+    "name": "Dr. Margaret Lee, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Fall River",
+    "state": "MA",
+    "zip": "02720",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.723023,
+    "longitude": -71.121527,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "bcbs",
+      "cigna",
+      "humana"
     ]
   },
   {
@@ -20526,6 +21188,30 @@
     ]
   },
   {
+    "npi": "1063524643",
+    "name": "Dr. Yair Rahmani, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Jamaica",
+    "state": "NY",
+    "zip": "11432",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.715359,
+    "longitude": -73.793072,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "uhc",
+      "kaiser"
+    ]
+  },
+  {
     "npi": "1063525194",
     "name": "Dr. Peggy Scurry, MD",
     "credentials": [
@@ -20808,6 +21494,34 @@
     ]
   },
   {
+    "npi": "1063679983",
+    "name": "Dr. Anita Saha, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Plainsboro",
+    "state": "NJ",
+    "zip": "08536",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.332267,
+    "longitude": -74.581026,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc",
+      "cigna"
+    ]
+  },
+  {
     "npi": "1063681419",
     "name": "Dr. Brent Speak, DO",
     "credentials": [
@@ -20906,6 +21620,31 @@
     ]
   },
   {
+    "npi": "1063770568",
+    "name": "Dr. Kristen Lore, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Asbury Park",
+    "state": "NJ",
+    "zip": "07712",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.249708,
+    "longitude": -74.053706,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "uhc",
+      "humana"
+    ]
+  },
+  {
     "npi": "1063787059",
     "name": "Dr. Tiffany Thompson, DO",
     "credentials": [
@@ -20928,6 +21667,29 @@
       "medicaid",
       "bcbs",
       "humana"
+    ]
+  },
+  {
+    "npi": "1063809077",
+    "name": "Dr. Kristina Daly, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Sewickley",
+    "state": "PA",
+    "zip": "15143",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.568138,
+    "longitude": -80.146807,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "uhc",
+      "kaiser"
     ]
   },
   {
@@ -21058,6 +21820,31 @@
     ]
   },
   {
+    "npi": "1063947372",
+    "name": "Dr. Rachel Bernstein, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Shelton",
+    "state": "CT",
+    "zip": "06484",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.304577,
+    "longitude": -73.139215,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "uhc"
+    ]
+  },
+  {
     "npi": "1063951481",
     "name": "Dr. Morgan Boswell, DO",
     "credentials": [
@@ -21150,6 +21937,84 @@
     "insuranceAccepted": [
       "medicare",
       "cigna"
+    ]
+  },
+  {
+    "npi": "1073140919",
+    "name": "Dr. Elizabeth Maxwell, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Bedford",
+    "state": "NH",
+    "zip": "03110",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.935584,
+    "longitude": -71.536871,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc",
+      "cigna"
+    ]
+  },
+  {
+    "npi": "1073255162",
+    "name": "Dr. Arkadiy Kusayev, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Staten Island",
+    "state": "NY",
+    "zip": "10305",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.596549,
+    "longitude": -74.075779,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "humana"
+    ]
+  },
+  {
+    "npi": "1073288833",
+    "name": "Dr. Cecelia Brelsford, APRN",
+    "credentials": [
+      "APRN"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Lebanon",
+    "state": "NH",
+    "zip": "03756",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": null,
+    "longitude": null,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "bcbs",
+      "humana",
+      "kaiser"
     ]
   },
   {
@@ -21541,6 +22406,61 @@
     ]
   },
   {
+    "npi": "1073541926",
+    "name": "Dr. Reid Gentile, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Windber",
+    "state": "PA",
+    "zip": "15963",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.227773,
+    "longitude": -78.759251,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc"
+    ]
+  },
+  {
+    "npi": "1073544748",
+    "name": "Dr. Rozafa Pali, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Bronx",
+    "state": "NY",
+    "zip": "10467",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.869953,
+    "longitude": -73.865765,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "uhc",
+      "cigna",
+      "humana",
+      "kaiser"
+    ]
+  },
+  {
     "npi": "1073549622",
     "name": "Dr. Samantha Durland, MD",
     "credentials": [
@@ -21818,6 +22738,31 @@
     ]
   },
   {
+    "npi": "1073587242",
+    "name": "Dr. Alfred Parchment, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Brick",
+    "state": "NJ",
+    "zip": "08723",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.038584,
+    "longitude": -74.1116,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "humana"
+    ]
+  },
+  {
     "npi": "1073587713",
     "name": "Dr. Kenneth Hamai, MD",
     "credentials": [
@@ -21865,6 +22810,33 @@
       "medicaid",
       "aetna",
       "humana"
+    ]
+  },
+  {
+    "npi": "1073608691",
+    "name": "Dr. Robert Stern, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Fishkill",
+    "state": "NY",
+    "zip": "12524",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.528811,
+    "longitude": -73.888068,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "uhc",
+      "cigna",
+      "kaiser"
     ]
   },
   {
@@ -22021,6 +22993,32 @@
       "uhc",
       "cigna",
       "humana"
+    ]
+  },
+  {
+    "npi": "1073661559",
+    "name": "Dr. Hilma Yu, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Great Neck",
+    "state": "NY",
+    "zip": "11021",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.784319,
+    "longitude": -73.731488,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc",
+      "cigna"
     ]
   },
   {
@@ -22325,6 +23323,32 @@
       "medicare",
       "medicaid",
       "bcbs"
+    ]
+  },
+  {
+    "npi": "1073893459",
+    "name": "Dr. Anna Natenzon, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Hartford",
+    "state": "CT",
+    "zip": "06105",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.774706,
+    "longitude": -72.705037,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc",
+      "kaiser"
     ]
   },
   {
@@ -22783,6 +23807,30 @@
     ]
   },
   {
+    "npi": "1083633242",
+    "name": "Dr. Carroll Medeiros, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Pawtucket",
+    "state": "RI",
+    "zip": "02860",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.870562,
+    "longitude": -71.388681,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "uhc"
+    ]
+  },
+  {
     "npi": "1083633580",
     "name": "Dr. Michael Iannessa, MD",
     "credentials": [
@@ -22856,6 +23904,35 @@
     "insuranceAccepted": [
       "aetna",
       "uhc"
+    ]
+  },
+  {
+    "npi": "1083644132",
+    "name": "Mr. Dimitrios Mastrogiannis, MD, PHD, FACOG",
+    "credentials": [
+      "MD",
+      "PHD",
+      "FACOG"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Syracuse",
+    "state": "NY",
+    "zip": "13202",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.043782,
+    "longitude": -76.150638,
+    "serviceSignals": [
+      "facog",
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "bcbs",
+      "kaiser"
     ]
   },
   {
@@ -22936,6 +24013,32 @@
       "aetna",
       "bcbs",
       "uhc"
+    ]
+  },
+  {
+    "npi": "1083656953",
+    "name": "Dr. Ira Abramowitz, MD, MS",
+    "credentials": [
+      "MD",
+      "MS"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Farrell",
+    "state": "PA",
+    "zip": "16121",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.211094,
+    "longitude": -80.497338,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "bcbs",
+      "humana"
     ]
   },
   {
@@ -23450,6 +24553,34 @@
       "uhc",
       "cigna",
       "kaiser"
+    ]
+  },
+  {
+    "npi": "1083872063",
+    "name": "Dr. Chito Nwana, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Farmington",
+    "state": "CT",
+    "zip": "06030",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": null,
+    "longitude": null,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc"
     ]
   },
   {
@@ -24543,6 +25674,55 @@
     ]
   },
   {
+    "npi": "1093886475",
+    "name": "Dr. Lillian Berdichevsky, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Yonkers",
+    "state": "NY",
+    "zip": "10701",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.945468,
+    "longitude": -73.880497,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "humana"
+    ]
+  },
+  {
+    "npi": "1093895427",
+    "name": "Dr. Sarah Kim, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Stamford",
+    "state": "CT",
+    "zip": "06902",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.059347,
+    "longitude": -73.544384,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "cigna"
+    ]
+  },
+  {
     "npi": "1093899379",
     "name": "Mr. Jose Alvarez, MD",
     "credentials": [
@@ -24643,6 +25823,31 @@
     "insuranceAccepted": [
       "medicare",
       "uhc",
+      "humana"
+    ]
+  },
+  {
+    "npi": "1093971558",
+    "name": "Dr. Ani Stull, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "York",
+    "state": "PA",
+    "zip": "17403",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 39.923228,
+    "longitude": -76.712794,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "cigna",
       "humana"
     ]
   },
@@ -24798,6 +26003,30 @@
       "aetna",
       "bcbs",
       "kaiser"
+    ]
+  },
+  {
+    "npi": "1104020908",
+    "name": "Dr. Jeannette Andrews, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Norway",
+    "state": "ME",
+    "zip": "04268",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 44.225867,
+    "longitude": -70.610021,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "uhc"
     ]
   },
   {
@@ -25132,6 +26361,30 @@
       "medicare",
       "medicaid",
       "bcbs",
+      "uhc"
+    ]
+  },
+  {
+    "npi": "1104354380",
+    "name": "Dr. Brittany Jackson, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Gettysburg",
+    "state": "PA",
+    "zip": "17325",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 39.826258,
+    "longitude": -77.227606,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
       "uhc"
     ]
   },
@@ -25535,6 +26788,30 @@
     ]
   },
   {
+    "npi": "1104851369",
+    "name": "Dr. Sohael Raschid, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Chambersburg",
+    "state": "PA",
+    "zip": "17201",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 39.961052,
+    "longitude": -77.656175,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "uhc"
+    ]
+  },
+  {
     "npi": "1104853803",
     "name": "Dr. Julie Harper, MD",
     "credentials": [
@@ -25915,6 +27192,32 @@
     ]
   },
   {
+    "npi": "1114016631",
+    "name": "Dr. Douglas Moss, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "New York",
+    "state": "NY",
+    "zip": "10128",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.781428,
+    "longitude": -73.95001,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "cigna",
+      "kaiser"
+    ]
+  },
+  {
     "npi": "1114020005",
     "name": "Dr. Andrew Allen, MD",
     "credentials": [
@@ -26272,6 +27575,33 @@
     ]
   },
   {
+    "npi": "1114480993",
+    "name": "Dr. Navin Maredia Ebrahimi, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Burlington",
+    "state": "VT",
+    "zip": "05401",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 44.476621,
+    "longitude": -73.209998,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "uhc",
+      "cigna",
+      "humana"
+    ]
+  },
+  {
     "npi": "1114506524",
     "name": "Dr. Macy Hudson, MD",
     "credentials": [
@@ -26470,6 +27800,32 @@
       "medicare",
       "medicaid",
       "humana"
+    ]
+  },
+  {
+    "npi": "1114912672",
+    "name": "Dr. Margaret Hawn, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Harrisburg",
+    "state": "PA",
+    "zip": "17111",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.267831,
+    "longitude": -76.78737,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "cigna",
+      "kaiser"
     ]
   },
   {
@@ -27345,6 +28701,35 @@
     ]
   },
   {
+    "npi": "1124339353",
+    "name": "Dr. Melissa Camiolo, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Flemington",
+    "state": "NJ",
+    "zip": "08822",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.52481,
+    "longitude": -74.865212,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc",
+      "cigna",
+      "humana",
+      "kaiser"
+    ]
+  },
+  {
     "npi": "1124356084",
     "name": "Dr. John Burney, MD",
     "credentials": [
@@ -27946,6 +29331,29 @@
     ]
   },
   {
+    "npi": "1134327026",
+    "name": "Dr. Jennifer Hummel, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Camden",
+    "state": "NJ",
+    "zip": "08103",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 39.935834,
+    "longitude": -75.113921,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "bcbs"
+    ]
+  },
+  {
     "npi": "1134381536",
     "name": "Dr. Elie Hobeika, MD",
     "credentials": [
@@ -28015,6 +29423,31 @@
     "insuranceAccepted": [
       "medicare",
       "aetna"
+    ]
+  },
+  {
+    "npi": "1134409048",
+    "name": "Dr. Melissa Poot, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Clairton",
+    "state": "PA",
+    "zip": "15025",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.297811,
+    "longitude": -79.923298,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "uhc"
     ]
   },
   {
@@ -28164,6 +29597,30 @@
       "bcbs",
       "uhc",
       "cigna"
+    ]
+  },
+  {
+    "npi": "1134756885",
+    "name": "Dr. Gabriella Mangino, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Glens Falls",
+    "state": "NY",
+    "zip": "12801",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.31116,
+    "longitude": -73.645286,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna"
     ]
   },
   {
@@ -28663,6 +30120,34 @@
       "medicare",
       "medicaid",
       "cigna"
+    ]
+  },
+  {
+    "npi": "1144612094",
+    "name": "Mr. Joshua Lupton, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Hyannis",
+    "state": "MA",
+    "zip": "02601",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.656038,
+    "longitude": -70.296764,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "uhc",
+      "cigna",
+      "humana"
     ]
   },
   {
@@ -29215,6 +30700,54 @@
     ]
   },
   {
+    "npi": "1154412542",
+    "name": "Dr. Neil Campbell, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Hackettstown",
+    "state": "NJ",
+    "zip": "07840",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.854177,
+    "longitude": -74.835349,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "uhc"
+    ]
+  },
+  {
+    "npi": "1154413029",
+    "name": "Dr. Kwaku Boamah, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Jersey City",
+    "state": "NJ",
+    "zip": "07305",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.698149,
+    "longitude": -74.080976,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "aetna",
+      "uhc",
+      "kaiser"
+    ]
+  },
+  {
     "npi": "1154437432",
     "name": "Dr. Arzou Ahsan, MD",
     "credentials": [
@@ -29393,6 +30926,32 @@
     ]
   },
   {
+    "npi": "1154576072",
+    "name": "Dr. Romeo Lucas, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Freeport",
+    "state": "ME",
+    "zip": "04032",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.844826,
+    "longitude": -70.089953,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc"
+    ]
+  },
+  {
     "npi": "1154628113",
     "name": "Dr. Beth Hites, DO",
     "credentials": [
@@ -29526,6 +31085,32 @@
     ]
   },
   {
+    "npi": "1154945350",
+    "name": "Dr. Bahman Sadeghi, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Norwich",
+    "state": "NY",
+    "zip": "13815",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.547866,
+    "longitude": -75.530855,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "bcbs",
+      "cigna",
+      "humana",
+      "kaiser"
+    ]
+  },
+  {
     "npi": "1154984268",
     "name": "Dr. Jenna Adams, MD",
     "credentials": [
@@ -29599,6 +31184,32 @@
       "medicaid",
       "uhc",
       "cigna"
+    ]
+  },
+  {
+    "npi": "1164416798",
+    "name": "Dr. Suzanne Silverstein Mesidor, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Albany",
+    "state": "NY",
+    "zip": "12208",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.653031,
+    "longitude": -73.809978,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc"
     ]
   },
   {
@@ -29848,6 +31459,35 @@
     "insuranceAccepted": [
       "medicare",
       "uhc",
+      "kaiser"
+    ]
+  },
+  {
+    "npi": "1164577516",
+    "name": "Dr. Sharifa Fazili, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Clarence",
+    "state": "NY",
+    "zip": "14031",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.983128,
+    "longitude": -78.614258,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc",
+      "cigna",
+      "humana",
       "kaiser"
     ]
   },
@@ -31328,6 +32968,56 @@
     ]
   },
   {
+    "npi": "1194170019",
+    "name": "Dr. Ainsley Mcfadgen, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Jamestown",
+    "state": "NY",
+    "zip": "14701",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.08016,
+    "longitude": -79.25671,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "bcbs",
+      "cigna"
+    ]
+  },
+  {
+    "npi": "1194216945",
+    "name": "Dr. Dirk Strasser, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Ephrata",
+    "state": "PA",
+    "zip": "17522",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.173688,
+    "longitude": -76.170494,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs"
+    ]
+  },
+  {
     "npi": "1194222562",
     "name": "Dr. Erin Kalla, MD",
     "credentials": [
@@ -31529,6 +33219,32 @@
       "aetna",
       "bcbs",
       "uhc"
+    ]
+  },
+  {
+    "npi": "1194798413",
+    "name": "Dr. Amy Shannon, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Cranberry Township",
+    "state": "PA",
+    "zip": "16066",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.709967,
+    "longitude": -80.105642,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "cigna",
+      "humana"
     ]
   },
   {
@@ -31859,6 +33575,32 @@
     ]
   },
   {
+    "npi": "1205396603",
+    "name": "Dr. Seth Sigler, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Rutland",
+    "state": "VT",
+    "zip": "05701",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.624578,
+    "longitude": -72.910205,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "uhc"
+    ]
+  },
+  {
     "npi": "1205399391",
     "name": "Dr. Bruce Lee, MD",
     "credentials": [
@@ -31986,6 +33728,32 @@
     ]
   },
   {
+    "npi": "1205853199",
+    "name": "Dr. David Deifik, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Nashua",
+    "state": "NH",
+    "zip": "03060",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.741087,
+    "longitude": -71.458266,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc"
+    ]
+  },
+  {
     "npi": "1205864238",
     "name": "Dr. Larry Holder, MD",
     "credentials": [
@@ -32005,6 +33773,32 @@
     "licenseStatus": "active",
     "insuranceAccepted": [
       "medicare",
+      "bcbs",
+      "cigna",
+      "kaiser"
+    ]
+  },
+  {
+    "npi": "1205876612",
+    "name": "Dr. Arthur Suffin, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Wayne",
+    "state": "NJ",
+    "zip": "07470",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.945855,
+    "longitude": -74.245077,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
       "bcbs",
       "cigna",
       "kaiser"
@@ -32310,6 +34104,56 @@
     ]
   },
   {
+    "npi": "1215907647",
+    "name": "Dr. Harold Bodin, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Norwich",
+    "state": "CT",
+    "zip": "06360",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.548006,
+    "longitude": -72.089454,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "cigna"
+    ]
+  },
+  {
+    "npi": "1215909015",
+    "name": "Dr. Karin Dickinson, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Penfield",
+    "state": "NY",
+    "zip": "14526",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.151464,
+    "longitude": -77.444396,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "humana"
+    ]
+  },
+  {
     "npi": "1215920145",
     "name": "Dr. Joanne Finn, MD",
     "credentials": [
@@ -32356,6 +34200,33 @@
       "medicare",
       "aetna",
       "kaiser"
+    ]
+  },
+  {
+    "npi": "1215936679",
+    "name": "Dr. Rajnikant Popat, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Uniontown",
+    "state": "PA",
+    "zip": "15401",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 39.899897,
+    "longitude": -79.745673,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc",
+      "cigna",
+      "humana"
     ]
   },
   {
@@ -32453,6 +34324,31 @@
       "aetna",
       "bcbs",
       "uhc"
+    ]
+  },
+  {
+    "npi": "1215993183",
+    "name": "Dr. Andrew Nataloni, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Riverhead",
+    "state": "NY",
+    "zip": "11901",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.925812,
+    "longitude": -72.64617,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "bcbs",
+      "cigna"
     ]
   },
   {
@@ -32642,6 +34538,33 @@
     ]
   },
   {
+    "npi": "1225045784",
+    "name": "Dr. Marc Hochler, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Waterbury",
+    "state": "CT",
+    "zip": "06706",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.532209,
+    "longitude": -73.025052,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "kaiser"
+    ]
+  },
+  {
     "npi": "1225051576",
     "name": "Mr. John Stafford, MD",
     "credentials": [
@@ -32743,6 +34666,31 @@
     ]
   },
   {
+    "npi": "1225121569",
+    "name": "Dr. Joseph Bied, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Voorheesville",
+    "state": "NY",
+    "zip": "12186",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.633112,
+    "longitude": -73.977172,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "bcbs",
+      "uhc",
+      "cigna",
+      "kaiser"
+    ]
+  },
+  {
     "npi": "1225255466",
     "name": "Dr. Melissa Hieb, DO",
     "credentials": [
@@ -32766,6 +34714,54 @@
       "bcbs",
       "uhc",
       "cigna"
+    ]
+  },
+  {
+    "npi": "1225383367",
+    "name": "Dr. Kuhali Kundu, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Astoria",
+    "state": "NY",
+    "zip": "11102",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.772884,
+    "longitude": -73.926295,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "cigna"
+    ]
+  },
+  {
+    "npi": "1225473622",
+    "name": "Dr. Haylea Sweat, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "New Brunswick",
+    "state": "NJ",
+    "zip": "08901",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.483638,
+    "longitude": -74.44246,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "uhc"
     ]
   },
   {
@@ -32848,6 +34844,31 @@
     ]
   },
   {
+    "npi": "1235102898",
+    "name": "Dr. Robert Scott, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Canandaigua",
+    "state": "NY",
+    "zip": "14424",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.856357,
+    "longitude": -77.303497,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc"
+    ]
+  },
+  {
     "npi": "1235115221",
     "name": "Dr. Michele Jacobson, DO",
     "credentials": [
@@ -32869,6 +34890,30 @@
       "medicare",
       "bcbs",
       "humana"
+    ]
+  },
+  {
+    "npi": "1235136896",
+    "name": "Dr. Robin Leight, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Morrisville",
+    "state": "VT",
+    "zip": "05661",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 44.532336,
+    "longitude": -72.620258,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "cigna",
+      "kaiser"
     ]
   },
   {
@@ -33015,6 +35060,30 @@
     "insuranceAccepted": [
       "medicare",
       "medicaid"
+    ]
+  },
+  {
+    "npi": "1235230095",
+    "name": "Dr. Alexander Vigh, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Wellsville",
+    "state": "NY",
+    "zip": "14895",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.08144,
+    "longitude": -77.940922,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "bcbs",
+      "cigna"
     ]
   },
   {
@@ -33267,6 +35336,32 @@
     ]
   },
   {
+    "npi": "1245201243",
+    "name": "Dr. Sarah Kelley, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Greensburg",
+    "state": "PA",
+    "zip": "15601",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.314981,
+    "longitude": -79.534803,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "cigna"
+    ]
+  },
+  {
     "npi": "1245205202",
     "name": "Dr. Erik Schulte, DO",
     "credentials": [
@@ -33343,6 +35438,29 @@
     ]
   },
   {
+    "npi": "1245243112",
+    "name": "Dr. Ellamarie Russo-Demara, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Plattsburgh",
+    "state": "NY",
+    "zip": "12901",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 44.703651,
+    "longitude": -73.472669,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "cigna"
+    ]
+  },
+  {
     "npi": "1245255934",
     "name": "Dr. Maureen Boyle-Manganaro, MD",
     "credentials": [
@@ -33365,6 +35483,31 @@
     "insuranceAccepted": [
       "medicare",
       "medicaid",
+      "cigna",
+      "humana"
+    ]
+  },
+  {
+    "npi": "1245269091",
+    "name": "Dr. Romelle Maloney, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "New Rochelle",
+    "state": "NY",
+    "zip": "10801",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.91757,
+    "longitude": -73.784858,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "uhc",
       "cigna",
       "humana"
     ]
@@ -34065,6 +36208,32 @@
     ]
   },
   {
+    "npi": "1265057814",
+    "name": "Dr. Lisa Levine, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Erie",
+    "state": "PA",
+    "zip": "16502",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.110687,
+    "longitude": -80.10148,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc",
+      "cigna"
+    ]
+  },
+  {
     "npi": "1265404776",
     "name": "Dr. Gary Baldwin, MD",
     "credentials": [
@@ -34542,6 +36711,30 @@
     ]
   },
   {
+    "npi": "1275586711",
+    "name": "Dr. Cameron Darvish, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Paterson",
+    "state": "NJ",
+    "zip": "07503",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.897548,
+    "longitude": -74.154121,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "aetna",
+      "kaiser"
+    ]
+  },
+  {
     "npi": "1275679938",
     "name": "Dr. Deborah Eisenberg, MD",
     "credentials": [
@@ -34590,6 +36783,54 @@
     "insuranceAccepted": [
       "medicare",
       "aetna",
+      "uhc"
+    ]
+  },
+  {
+    "npi": "1275952327",
+    "name": "Dr. Andrew Handlos, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Punxsutawney",
+    "state": "PA",
+    "zip": "15767",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.962153,
+    "longitude": -78.968171,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "uhc"
+    ]
+  },
+  {
+    "npi": "1275982225",
+    "name": "Dr. Allen Beals, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "White Plains",
+    "state": "NY",
+    "zip": "10601",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.032947,
+    "longitude": -73.765058,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
       "uhc"
     ]
   },
@@ -34666,6 +36907,31 @@
     "insuranceAccepted": [
       "medicare",
       "medicaid"
+    ]
+  },
+  {
+    "npi": "1285666537",
+    "name": "Dr. Bruce Noll, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Cape May Court House",
+    "state": "NJ",
+    "zip": "08210",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 39.121561,
+    "longitude": -74.834399,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "aetna",
+      "uhc",
+      "cigna",
+      "kaiser"
     ]
   },
   {
@@ -35463,6 +37729,33 @@
     ]
   },
   {
+    "npi": "1306926704",
+    "name": "Mr. Glen Mackenzie, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Manchester Center",
+    "state": "VT",
+    "zip": "05255",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.137886,
+    "longitude": -73.023631,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "humana"
+    ]
+  },
+  {
     "npi": "1316054869",
     "name": "Dr. Megan Landauer, MD",
     "credentials": [
@@ -35637,6 +37930,34 @@
     ]
   },
   {
+    "npi": "1316442080",
+    "name": "Dr. Courtney Knill, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Concord",
+    "state": "NH",
+    "zip": "03301",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.238596,
+    "longitude": -71.556261,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc"
+    ]
+  },
+  {
     "npi": "1316917131",
     "name": "Mr. John Rashidian, MD",
     "credentials": [
@@ -35790,6 +38111,32 @@
     ]
   },
   {
+    "npi": "1326068453",
+    "name": "Dr. William Tovell, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Laconia",
+    "state": "NH",
+    "zip": "03246",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.576535,
+    "longitude": -71.482263,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "humana"
+    ]
+  },
+  {
     "npi": "1326078999",
     "name": "Dr. Ralph Wells, MD",
     "credentials": [
@@ -35888,6 +38235,34 @@
       "bcbs",
       "uhc",
       "cigna"
+    ]
+  },
+  {
+    "npi": "1326150467",
+    "name": "Dr. Paul Mcbreairty, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Fort Kent",
+    "state": "ME",
+    "zip": "04743",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 47.200266,
+    "longitude": -68.614333,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc"
     ]
   },
   {
@@ -36057,6 +38432,33 @@
     "insuranceAccepted": [
       "medicare",
       "cigna"
+    ]
+  },
+  {
+    "npi": "1336240795",
+    "name": "Dr. Augustus Bentsi-Barnes, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Kingston",
+    "state": "NY",
+    "zip": "12401",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.987541,
+    "longitude": -74.010273,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc",
+      "cigna",
+      "humana"
     ]
   },
   {
@@ -36455,6 +38857,31 @@
     "insuranceAccepted": [
       "medicare",
       "bcbs"
+    ]
+  },
+  {
+    "npi": "1356387302",
+    "name": "Dr. Robert Tripp, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Wareham",
+    "state": "MA",
+    "zip": "02571",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.761187,
+    "longitude": -70.695991,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "humana"
     ]
   },
   {
@@ -36975,6 +39402,57 @@
     ]
   },
   {
+    "npi": "1366659435",
+    "name": "Dr. Kelly Snyder, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Philipsburg",
+    "state": "PA",
+    "zip": "16866",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.829693,
+    "longitude": -78.18148,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "bcbs",
+      "humana"
+    ]
+  },
+  {
+    "npi": "1366977878",
+    "name": "Dr. Jeffrey Amos, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Belfast",
+    "state": "ME",
+    "zip": "04915",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 44.463502,
+    "longitude": -69.037571,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs"
+    ]
+  },
+  {
     "npi": "1376034207",
     "name": "Dr. Kristen Heye, MD",
     "credentials": [
@@ -36997,6 +39475,30 @@
       "aetna",
       "bcbs",
       "humana"
+    ]
+  },
+  {
+    "npi": "1376170134",
+    "name": "Dr. Julianne Capozzi Ryan, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Mc Murray",
+    "state": "PA",
+    "zip": "15317",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.276322,
+    "longitude": -80.171662,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "kaiser"
     ]
   },
   {
@@ -37146,6 +39648,33 @@
     "insuranceAccepted": [
       "medicare",
       "medicaid"
+    ]
+  },
+  {
+    "npi": "1376793968",
+    "name": "Dr. Jaya Nemani, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "E Syracuse",
+    "state": "NY",
+    "zip": "13057",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.101955,
+    "longitude": -76.037845,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc",
+      "cigna"
     ]
   },
   {
@@ -37370,6 +39899,56 @@
     ]
   },
   {
+    "npi": "1386844702",
+    "name": "Dr. Garrick Slate, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Bangor",
+    "state": "ME",
+    "zip": "04401",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 44.848517,
+    "longitude": -68.850405,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "aetna"
+    ]
+  },
+  {
+    "npi": "1386896025",
+    "name": "Mr. Nikolaus Feier, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Cooperstown",
+    "state": "NY",
+    "zip": "13326",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.722511,
+    "longitude": -74.895371,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "cigna",
+      "humana"
+    ]
+  },
+  {
     "npi": "1396036950",
     "name": "Dr. Lindsey Borgia, MD, FACOG",
     "credentials": [
@@ -37444,6 +40023,31 @@
       "medicare",
       "aetna",
       "bcbs"
+    ]
+  },
+  {
+    "npi": "1396729851",
+    "name": "Dr. Jacqueline Brown, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Damariscotta",
+    "state": "ME",
+    "zip": "04543",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 44.022351,
+    "longitude": -69.490756,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna"
     ]
   },
   {
@@ -37602,6 +40206,32 @@
     ]
   },
   {
+    "npi": "1407016892",
+    "name": "Dr. Jennifer Schwab, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Utica",
+    "state": "NY",
+    "zip": "13502",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.141264,
+    "longitude": -75.154707,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "cigna",
+      "humana"
+    ]
+  },
+  {
     "npi": "1407021447",
     "name": "Dr. Jodie Posey-Bucks, MD",
     "credentials": [
@@ -37645,6 +40275,29 @@
     "licenseStatus": "active",
     "insuranceAccepted": [
       "medicare"
+    ]
+  },
+  {
+    "npi": "1407249733",
+    "name": "Dr. Jennifer Wetherald, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "St Johnsbury",
+    "state": "VT",
+    "zip": "05819",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 44.404723,
+    "longitude": -71.983074,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid"
     ]
   },
   {
@@ -37749,6 +40402,32 @@
       "bcbs",
       "uhc",
       "cigna"
+    ]
+  },
+  {
+    "npi": "1407951908",
+    "name": "Dr. Rosita Ulep, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Arverne",
+    "state": "NY",
+    "zip": "11692",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.594154,
+    "longitude": -73.791986,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc",
+      "kaiser"
     ]
   },
   {
@@ -38263,6 +40942,32 @@
     ]
   },
   {
+    "npi": "1437200565",
+    "name": "Dr. Stephen Kull, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Berlin",
+    "state": "NH",
+    "zip": "03570",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 44.504596,
+    "longitude": -71.155466,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "cigna",
+      "humana"
+    ]
+  },
+  {
     "npi": "1437300084",
     "name": "Dr. Eileen Hernandez, MD",
     "credentials": [
@@ -38700,6 +41405,33 @@
     ]
   },
   {
+    "npi": "1467430553",
+    "name": "Dr. Glenn Gianini, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Augusta",
+    "state": "ME",
+    "zip": "04330",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 44.35191,
+    "longitude": -69.747615,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc",
+      "cigna",
+      "kaiser"
+    ]
+  },
+  {
     "npi": "1467446997",
     "name": "Dr. Raymundo Teheng, MD",
     "credentials": [
@@ -38845,6 +41577,31 @@
       "medicare",
       "bcbs",
       "uhc"
+    ]
+  },
+  {
+    "npi": "1477554145",
+    "name": "Dr. Ryan Zlupko, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Altoona",
+    "state": "PA",
+    "zip": "16601",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.555262,
+    "longitude": -78.370417,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "uhc",
+      "humana"
     ]
   },
   {
@@ -39242,6 +41999,31 @@
     ]
   },
   {
+    "npi": "1497706089",
+    "name": "Dr. Michael Geria, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Elmer",
+    "state": "NJ",
+    "zip": "08318",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 39.557653,
+    "longitude": -75.177717,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs"
+    ]
+  },
+  {
     "npi": "1497786024",
     "name": "Dr. Patricia Miller, DO",
     "credentials": [
@@ -39363,6 +42145,34 @@
     ]
   },
   {
+    "npi": "1508113259",
+    "name": "Dr. Hacer Kural, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Johnson City",
+    "state": "NY",
+    "zip": "13790",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.165361,
+    "longitude": -76.001942,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "uhc",
+      "cigna"
+    ]
+  },
+  {
     "npi": "1508810821",
     "name": "Dr. Daniel Burns, MD",
     "credentials": [
@@ -39431,31 +42241,6 @@
       "medicaid",
       "aetna",
       "bcbs"
-    ]
-  },
-  {
-    "npi": "1508899162",
-    "name": "Dr. Brenda Mclaughlin, M D",
-    "credentials": [
-      "M D"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Al Ain",
-    "state": "ABU DHABI",
-    "zip": "PO101",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs",
-      "cigna"
     ]
   },
   {
@@ -39687,6 +42472,33 @@
     ]
   },
   {
+    "npi": "1528026564",
+    "name": "Dr. John Dewey, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Schenectady",
+    "state": "NY",
+    "zip": "12307",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.804981,
+    "longitude": -73.932822,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc",
+      "cigna",
+      "humana"
+    ]
+  },
+  {
     "npi": "1528094497",
     "name": "Dr. James Jones, MD",
     "credentials": [
@@ -39885,6 +42697,31 @@
     "insuranceAccepted": [
       "medicaid",
       "bcbs"
+    ]
+  },
+  {
+    "npi": "1538270269",
+    "name": "Dr. Leonard Ferreira, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Titusville",
+    "state": "PA",
+    "zip": "16354",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.613714,
+    "longitude": -79.70647,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "humana",
+      "kaiser"
     ]
   },
   {
@@ -40371,6 +43208,34 @@
     ]
   },
   {
+    "npi": "1598056202",
+    "name": "Dr. Alexander Filipski, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Oswego",
+    "state": "NY",
+    "zip": "13126",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.438798,
+    "longitude": -76.457454,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "bcbs",
+      "cigna",
+      "humana"
+    ]
+  },
+  {
     "npi": "1598274052",
     "name": "Dr. Jennifer Larson, CNM",
     "credentials": [
@@ -40745,6 +43610,30 @@
     ]
   },
   {
+    "npi": "1629171715",
+    "name": "Dr. Lesley Gumbs, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Mansfield",
+    "state": "CT",
+    "zip": "06250",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.772955,
+    "longitude": -72.198446,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicaid",
+      "aetna",
+      "humana"
+    ]
+  },
+  {
     "npi": "1639134422",
     "name": "Dr. John Cuellar, MD",
     "credentials": [
@@ -41018,6 +43907,31 @@
     ]
   },
   {
+    "npi": "1659374023",
+    "name": "Dr. Julie Szumigala, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Orchard Park",
+    "state": "NY",
+    "zip": "14127",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.752803,
+    "longitude": -78.739697,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "humana"
+    ]
+  },
+  {
     "npi": "1669409629",
     "name": "Dr. Ramana Puppala, MD",
     "credentials": [
@@ -41070,6 +43984,32 @@
       "medicaid",
       "bcbs",
       "cigna",
+      "kaiser"
+    ]
+  },
+  {
+    "npi": "1669836391",
+    "name": "Dr. Miriam Bernstein, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Oneida",
+    "state": "NY",
+    "zip": "13421",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 43.061915,
+    "longitude": -75.660092,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc",
       "kaiser"
     ]
   },
@@ -41348,6 +44288,34 @@
     "licenseStatus": "active",
     "insuranceAccepted": [
       "medicare",
+      "kaiser"
+    ]
+  },
+  {
+    "npi": "1699772624",
+    "name": "Dr. William Anyaegbunam, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Clifton Park",
+    "state": "NY",
+    "zip": "12065",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.852284,
+    "longitude": -73.785597,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "cigna",
       "kaiser"
     ]
   },
@@ -41784,29 +44752,76 @@
     ]
   },
   {
-    "npi": "1770029399",
-    "name": "Dr. Angela Mallozzi, MD",
+    "npi": "1760689590",
+    "name": "Dr. Melissa Kubenik, MD",
     "credentials": [
       "MD"
     ],
     "specialty": "Obstetrics & Gynecology",
     "menopauseCertified": false,
-    "city": "Monteal",
-    "state": "QUEBEC",
-    "zip": "H4A 3",
+    "city": "Rock Hill",
+    "state": "NY",
+    "zip": "12775",
     "acceptingNewPatients": true,
     "telehealth": true,
     "graphScore": 1.0,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
+    "latitude": 41.613973,
+    "longitude": -74.59336,
+    "serviceSignals": [],
     "licenseStatus": "active",
     "insuranceAccepted": [
       "medicare",
       "medicaid",
+      "bcbs",
+      "uhc"
+    ]
+  },
+  {
+    "npi": "1760776355",
+    "name": "Ms. Roseanne Gichuru, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Everett",
+    "state": "PA",
+    "zip": "15537",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.000385,
+    "longitude": -78.366843,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
       "aetna",
+      "humana"
+    ]
+  },
+  {
+    "npi": "1770559288",
+    "name": "Dr. Bart Matson, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Clarion",
+    "state": "PA",
+    "zip": "16214",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.203544,
+    "longitude": -79.360488,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "bcbs",
+      "uhc",
       "cigna",
       "humana"
     ]
@@ -41835,6 +44850,33 @@
       "medicare",
       "aetna",
       "bcbs"
+    ]
+  },
+  {
+    "npi": "1770698227",
+    "name": "Dr. Eugenia Kolkas, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Ellsworth",
+    "state": "ME",
+    "zip": "04605",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 44.677962,
+    "longitude": -68.375224,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "uhc"
     ]
   },
   {
@@ -41961,6 +45003,55 @@
     ]
   },
   {
+    "npi": "1801022595",
+    "name": "Dr. Diane Caranta, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Apo",
+    "state": "AE",
+    "zip": "09461",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": null,
+    "longitude": null,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare"
+    ]
+  },
+  {
+    "npi": "1801846597",
+    "name": "Dr. Labib Riachi, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Elizabeth",
+    "state": "NJ",
+    "zip": "07202",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 40.652464,
+    "longitude": -74.216853,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "uhc",
+      "cigna",
+      "kaiser"
+    ]
+  },
+  {
     "npi": "1801976584",
     "name": "Dr. Maria Molina, MD",
     "credentials": [
@@ -42011,32 +45102,6 @@
     ]
   },
   {
-    "npi": "1831351048",
-    "name": "Dr. Astrid Christoffersen-Deb, MDCM",
-    "credentials": [
-      "MDCM"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Toronton",
-    "state": "ON",
-    "zip": "M5G1L",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "cigna"
-    ]
-  },
-  {
     "npi": "1841420627",
     "name": "Dr. Erica Bourdeau, NP",
     "credentials": [
@@ -42062,27 +45127,28 @@
     ]
   },
   {
-    "npi": "1841575495",
-    "name": "Dr. Nash Uebelhart, MD",
+    "npi": "1841426376",
+    "name": "Dr. Mary Adcock, MD",
     "credentials": [
       "MD"
     ],
     "specialty": "Obstetrics & Gynecology",
     "menopauseCertified": false,
-    "city": "Picard",
-    "state": "FOREIGN PROVINCE",
-    "zip": "NA",
+    "city": "Apo",
+    "state": "AE",
+    "zip": "09180",
     "acceptingNewPatients": true,
     "telehealth": true,
     "graphScore": 1.0,
     "latitude": null,
     "longitude": null,
-    "serviceSignals": [],
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
     "licenseStatus": "active",
     "insuranceAccepted": [
-      "medicare",
       "aetna",
-      "humana",
+      "uhc",
       "kaiser"
     ]
   },
@@ -42313,32 +45379,6 @@
     ]
   },
   {
-    "npi": "1891302212",
-    "name": "Dr. Laurel Smith, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Drumheller",
-    "state": "AKBERTA",
-    "zip": "T0J 0",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 1.0,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "uhc",
-      "cigna"
-    ]
-  },
-  {
     "npi": "1891790572",
     "name": "Dr. Susan Angelisanti, MD",
     "credentials": [
@@ -42489,6 +45529,31 @@
     ]
   },
   {
+    "npi": "1932171865",
+    "name": "Dr. Sherice Young, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Kane",
+    "state": "PA",
+    "zip": "16735",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.636099,
+    "longitude": -78.813409,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "bcbs",
+      "cigna"
+    ]
+  },
+  {
     "npi": "1942252077",
     "name": "Dr. Dennis Knudsen, MD",
     "credentials": [
@@ -42535,6 +45600,32 @@
     "insuranceAccepted": [
       "uhc",
       "humana"
+    ]
+  },
+  {
+    "npi": "1952198996",
+    "name": "Mrs. Kara Gustin, WHNP-BC",
+    "credentials": [
+      "WHNP-BC"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Coudersport",
+    "state": "PA",
+    "zip": "16915",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 41.775448,
+    "longitude": -77.970918,
+    "serviceSignals": [
+      "whnp"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "bcbs",
+      "uhc"
     ]
   },
   {
@@ -42772,6 +45863,34 @@
     ]
   },
   {
+    "npi": "1992755425",
+    "name": "Dr. Karen Bradley, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Obstetrics & Gynecology",
+    "menopauseCertified": false,
+    "city": "Keene",
+    "state": "NH",
+    "zip": "03431",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 1.0,
+    "latitude": 42.965044,
+    "longitude": -72.294803,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "bcbs",
+      "uhc",
+      "cigna"
+    ]
+  },
+  {
     "npi": "1497181507",
     "name": "Dr. Lindsey Mehran-Rezaii, DNP, RN, CNP, MSCP",
     "credentials": [
@@ -42797,31 +45916,6 @@
     "insuranceAccepted": [
       "medicare",
       "bcbs",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1063470607",
-    "name": "Dr. Harold Henning, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Gynecology",
-    "menopauseCertified": false,
-    "city": "Mississauga",
-    "state": "ON",
-    "zip": "M9C 0",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.989,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
       "uhc"
     ]
   },
@@ -43122,29 +46216,6 @@
       "medicare",
       "medicaid",
       "bcbs"
-    ]
-  },
-  {
-    "npi": "1770159949",
-    "name": "Dr. Justin Tan, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Reproductive Endocrinology & Infertility",
-    "menopauseCertified": false,
-    "city": "Montreal",
-    "state": "QUEBEC",
-    "zip": "H4A 3",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.9725,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "aetna",
-      "kaiser"
     ]
   },
   {
@@ -43465,36 +46536,6 @@
     ]
   },
   {
-    "npi": "1659328235",
-    "name": "Dr. Christopher Kovacs, MD, FRCPC, FACP",
-    "credentials": [
-      "MD",
-      "FRCPC",
-      "FACP"
-    ],
-    "specialty": "Endocrinology, Diabetes & Metabolism",
-    "menopauseCertified": false,
-    "city": "St. John'S",
-    "state": "NL",
-    "zip": "A1B3V",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.9639,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "facp"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "uhc",
-      "cigna",
-      "kaiser"
-    ]
-  },
-  {
     "npi": "1740244425",
     "name": "Dr. Anthony Steele, MD",
     "credentials": [
@@ -43549,6 +46590,32 @@
     ]
   },
   {
+    "npi": "1912915554",
+    "name": "Dr. Sarvesh Rajan, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Endocrinology, Diabetes & Metabolism",
+    "menopauseCertified": false,
+    "city": "Du Bois",
+    "state": "PA",
+    "zip": "15801",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 0.9639,
+    "latitude": 41.129961,
+    "longitude": -78.728348,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "uhc"
+    ]
+  },
+  {
     "npi": "1033458203",
     "name": "Ms. Maria Heidenreich, NP",
     "credentials": [
@@ -43572,6 +46639,35 @@
       "medicare",
       "medicaid",
       "bcbs"
+    ]
+  },
+  {
+    "npi": "1063943173",
+    "name": "Dr. Tiffany Chance, NP",
+    "credentials": [
+      "NP"
+    ],
+    "specialty": "Nurse Practitioner \u2014 Women's Health",
+    "menopauseCertified": false,
+    "city": "Apo",
+    "state": "AE",
+    "zip": "09604",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 0.9527,
+    "latitude": null,
+    "longitude": null,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "uhc",
+      "cigna"
     ]
   },
   {
@@ -43682,6 +46778,31 @@
       "uhc",
       "cigna",
       "kaiser"
+    ]
+  },
+  {
+    "npi": "1356646970",
+    "name": "Dr. Rachel Picone, CNP",
+    "credentials": [
+      "CNP"
+    ],
+    "specialty": "Nurse Practitioner \u2014 Women's Health",
+    "menopauseCertified": false,
+    "city": "Rockport",
+    "state": "ME",
+    "zip": "04856",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 0.9527,
+    "latitude": 44.180604,
+    "longitude": -69.122109,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid"
     ]
   },
   {
@@ -43996,29 +47117,30 @@
     ]
   },
   {
-    "npi": "1356544498",
-    "name": "Dr. Marshall Tulloch-Reid, MD, PHD",
+    "npi": "1407080559",
+    "name": "Dr. Bridget Akel, DO",
     "credentials": [
-      "MD",
-      "PHD"
+      "DO"
     ],
     "specialty": "Endocrinology, Diabetes & Metabolism",
     "menopauseCertified": false,
-    "city": "Mona",
-    "state": "KINGSTON",
-    "zip": "7",
+    "city": "Binghamton",
+    "state": "NY",
+    "zip": "13905",
     "acceptingNewPatients": true,
     "telehealth": true,
     "graphScore": 0.945,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 42.170436,
+    "longitude": -75.943434,
     "serviceSignals": [],
     "licenseStatus": "active",
     "insuranceAccepted": [
       "medicare",
       "medicaid",
-      "cigna",
-      "kaiser"
+      "aetna",
+      "bcbs",
+      "uhc",
+      "humana"
     ]
   },
   {
@@ -44071,6 +47193,33 @@
     ]
   },
   {
+    "npi": "1689778110",
+    "name": "Dr. Andrew Bauman, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Endocrinology, Diabetes & Metabolism",
+    "menopauseCertified": false,
+    "city": "White River Junction",
+    "state": "VT",
+    "zip": "05009",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 0.945,
+    "latitude": null,
+    "longitude": null,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna",
+      "bcbs",
+      "cigna",
+      "kaiser"
+    ]
+  },
+  {
     "npi": "1932108438",
     "name": "Dr. Rogelio Uy, MD",
     "credentials": [
@@ -44093,6 +47242,30 @@
       "medicaid",
       "aetna",
       "kaiser"
+    ]
+  },
+  {
+    "npi": "1982018933",
+    "name": "Dr. Christopher Barnes, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Endocrinology, Diabetes & Metabolism",
+    "menopauseCertified": false,
+    "city": "Elmira",
+    "state": "NY",
+    "zip": "14905",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 0.945,
+    "latitude": 42.087725,
+    "longitude": -76.843282,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "cigna"
     ]
   },
   {
@@ -44243,6 +47416,30 @@
       "aetna",
       "bcbs",
       "cigna"
+    ]
+  },
+  {
+    "npi": "1285848390",
+    "name": "Ms. Barbara Evans, NP",
+    "credentials": [
+      "NP"
+    ],
+    "specialty": "Nurse Practitioner \u2014 Women's Health",
+    "menopauseCertified": false,
+    "city": "Brattleboro",
+    "state": "VT",
+    "zip": "05301",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 0.934,
+    "latitude": 42.838685,
+    "longitude": -72.659985,
+    "serviceSignals": [],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "medicaid",
+      "aetna"
     ]
   },
   {
@@ -44479,6 +47676,32 @@
     ]
   },
   {
+    "npi": "1669452025",
+    "name": "Dr. Peter Konchak, DO",
+    "credentials": [
+      "DO"
+    ],
+    "specialty": "Gynecologic Oncology",
+    "menopauseCertified": false,
+    "city": "Atlantic City",
+    "state": "NJ",
+    "zip": "08401",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 0.8966,
+    "latitude": 39.384353,
+    "longitude": -74.454277,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "aetna",
+      "cigna"
+    ]
+  },
+  {
     "npi": "1194726976",
     "name": "Dr. Tamara Kessel, CNM",
     "credentials": [
@@ -44665,6 +47888,32 @@
       "medicare",
       "uhc",
       "cigna"
+    ]
+  },
+  {
+    "npi": "1023304623",
+    "name": "Dr. Donna Gasparro, MD",
+    "credentials": [
+      "MD"
+    ],
+    "specialty": "Family Medicine",
+    "menopauseCertified": false,
+    "city": "Niagara Falls",
+    "state": "NY",
+    "zip": "14304",
+    "acceptingNewPatients": true,
+    "telehealth": true,
+    "graphScore": 0.8798,
+    "latitude": 43.099407,
+    "longitude": -78.951983,
+    "serviceSignals": [
+      "multi-taxonomy"
+    ],
+    "licenseStatus": "active",
+    "insuranceAccepted": [
+      "medicare",
+      "bcbs",
+      "humana"
     ]
   },
   {
@@ -45206,31 +48455,6 @@
     ]
   },
   {
-    "npi": "1184936817",
-    "name": "Dr. Mark Boutros, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M5X1C",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8798,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "uhc"
-    ]
-  },
-  {
     "npi": "1245798701",
     "name": "Dr. Natasha Frei, PA",
     "credentials": [
@@ -45301,33 +48525,6 @@
     "licenseStatus": "active",
     "insuranceAccepted": [
       "medicare"
-    ]
-  },
-  {
-    "npi": "1275322232",
-    "name": "Dr. Brianna Quenneville, APRN",
-    "credentials": [
-      "APRN"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Amherstburg",
-    "state": "ONTARIO",
-    "zip": "N9V 3",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8798,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "uhc"
     ]
   },
   {
@@ -45414,33 +48611,6 @@
     ]
   },
   {
-    "npi": "1427031384",
-    "name": "Dr. Catherine Bard, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Apo",
-    "state": "AP",
-    "zip": "AP",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8798,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "uhc",
-      "humana"
-    ]
-  },
-  {
     "npi": "1467443879",
     "name": "Dr. Cory Ryan, MD",
     "credentials": [
@@ -45464,33 +48634,6 @@
       "medicaid",
       "bcbs",
       "humana"
-    ]
-  },
-  {
-    "npi": "1467711754",
-    "name": "Dr. Jack Richman, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Oakville",
-    "state": "ONTARIO",
-    "zip": "L6J 4",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8798,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs",
-      "kaiser"
     ]
   },
   {
@@ -45851,36 +48994,6 @@
     ]
   },
   {
-    "npi": "1699230102",
-    "name": "Dr. Allyson Koffman, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M3H5Y",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8798,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "uhc",
-      "cigna",
-      "humana"
-    ]
-  },
-  {
     "npi": "1700013661",
     "name": "Dr. Eric Swensen, DO",
     "credentials": [
@@ -46043,33 +49156,6 @@
     ]
   },
   {
-    "npi": "1912730110",
-    "name": "Mr. Victor Youssef, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Oakville",
-    "state": "ONTARIO",
-    "zip": "L6M 0",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8798,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "uhc",
-      "humana"
-    ]
-  },
-  {
     "npi": "1932580917",
     "name": "Dr. Emily Boden, MD",
     "credentials": [
@@ -46177,33 +49263,6 @@
       "aetna",
       "bcbs",
       "cigna"
-    ]
-  },
-  {
-    "npi": "1710540497",
-    "name": "Dr. Mark Carey, MD, FRCS",
-    "credentials": [
-      "MD",
-      "FRCS"
-    ],
-    "specialty": "Gynecologic Oncology",
-    "menopauseCertified": false,
-    "city": "Vancouver",
-    "state": "BRITISH COLUMBIA",
-    "zip": "V5Z 1",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.879,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "uhc"
     ]
   },
   {
@@ -46638,32 +49697,6 @@
     ]
   },
   {
-    "npi": "1871110015",
-    "name": "Dr. Abbas Chehab, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Leamington",
-    "state": "ON",
-    "zip": "N8H 1",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8629,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "bcbs"
-    ]
-  },
-  {
     "npi": "1902860877",
     "name": "Mr. Mahesh Patel, MD",
     "credentials": [
@@ -46688,87 +49721,6 @@
       "uhc",
       "humana",
       "kaiser"
-    ]
-  },
-  {
-    "npi": "1003557489",
-    "name": "Dr. Arthur Mestas, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Osan Air Base",
-    "state": "GYEONGGI",
-    "zip": "APO A",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "uhc",
-      "humana",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1013393685",
-    "name": "Dr. David Edwards, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Vernon",
-    "state": "BC",
-    "zip": "V1T9H",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "uhc",
-      "cigna",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1013584994",
-    "name": "Dr. Mohsin Dhalla, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Hamilton",
-    "state": "ONTARIO",
-    "zip": "L8W 3",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "uhc",
-      "humana"
     ]
   },
   {
@@ -46823,16 +49775,16 @@
     ]
   },
   {
-    "npi": "1063973329",
-    "name": "Dr. James Salzman, MD",
+    "npi": "1053976654",
+    "name": "Dr. Cheng Zeng, DO",
     "credentials": [
-      "MD"
+      "DO"
     ],
     "specialty": "Family Medicine",
     "menopauseCertified": false,
-    "city": "Vancouver",
-    "state": "BRITISH COLUMBIA",
-    "zip": "V6R 1",
+    "city": "Apo",
+    "state": "AE",
+    "zip": "09094",
     "acceptingNewPatients": true,
     "telehealth": true,
     "graphScore": 0.8625,
@@ -46841,9 +49793,9 @@
     "serviceSignals": [],
     "licenseStatus": "active",
     "insuranceAccepted": [
-      "aetna",
-      "uhc",
-      "humana"
+      "medicare",
+      "medicaid",
+      "aetna"
     ]
   },
   {
@@ -46897,31 +49849,6 @@
     ]
   },
   {
-    "npi": "1124751714",
-    "name": "Mr. Ziad Azzi, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Winnipeg",
-    "state": "MANITOBA",
-    "zip": "R3C3N",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "uhc",
-      "cigna"
-    ]
-  },
-  {
     "npi": "1134539885",
     "name": "Dr. Ashley Ireland, MD",
     "credentials": [
@@ -46947,29 +49874,6 @@
     ]
   },
   {
-    "npi": "1154774933",
-    "name": "Dr. Iman Guirgis, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M4C 3",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "cigna"
-    ]
-  },
-  {
     "npi": "1225021389",
     "name": "Dr. Fernando Lugo, MD",
     "credentials": [
@@ -46989,31 +49893,6 @@
     "licenseStatus": "active",
     "insuranceAccepted": [
       "bcbs"
-    ]
-  },
-  {
-    "npi": "1225064553",
-    "name": "Dr. Jacob Veenstra, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Brampton",
-    "state": "ONTARIO",
-    "zip": "L6R 1",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "uhc"
     ]
   },
   {
@@ -47037,30 +49916,6 @@
     "insuranceAccepted": [
       "medicaid",
       "uhc"
-    ]
-  },
-  {
-    "npi": "1235427261",
-    "name": "Dr. Kevin Mcguire, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Kingston",
-    "state": "NOVA SCOTIA",
-    "zip": "B0P 1",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "aetna",
-      "cigna"
     ]
   },
   {
@@ -47142,30 +49997,6 @@
     ]
   },
   {
-    "npi": "1326143694",
-    "name": "Dr. Frances Alborg, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Woodstock",
-    "state": "NEW BRUNSWICK",
-    "zip": "E7M 1",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "uhc",
-      "humana"
-    ]
-  },
-  {
     "npi": "1326788761",
     "name": "Dr. Thomas Baxter, DO",
     "credentials": [
@@ -47188,30 +50019,6 @@
       "medicaid",
       "bcbs",
       "humana"
-    ]
-  },
-  {
-    "npi": "1346565108",
-    "name": "Dr. Elena Aandstad, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Oslo",
-    "state": "AKERSHUS",
-    "zip": "NO010",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "cigna"
     ]
   },
   {
@@ -47289,31 +50096,6 @@
     ]
   },
   {
-    "npi": "1396078770",
-    "name": "Dr. Erol Dilli, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Vancouver",
-    "state": "BC",
-    "zip": "V5Z 1",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "uhc",
-      "kaiser"
-    ]
-  },
-  {
     "npi": "1407995202",
     "name": "Dr. Eugene Tutko, MD",
     "credentials": [
@@ -47340,51 +50122,28 @@
     ]
   },
   {
-    "npi": "1427855345",
-    "name": "Dr. Howard Rudner, MD",
+    "npi": "1447224928",
+    "name": "Dr. Matthew Peake, MD",
     "credentials": [
       "MD"
     ],
     "specialty": "Family Medicine",
     "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M4P 3",
+    "city": "Bellows Falls",
+    "state": "VT",
+    "zip": "05101",
     "acceptingNewPatients": true,
     "telehealth": true,
     "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "aetna",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1437705951",
-    "name": "Dr. John Fernandes, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Calgary",
-    "state": "ALBERTA",
-    "zip": "T3A5A",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
+    "latitude": 43.182144,
+    "longitude": -72.493221,
     "serviceSignals": [],
     "licenseStatus": "active",
     "insuranceAccepted": [
       "medicare",
+      "medicaid",
       "aetna",
-      "uhc"
+      "bcbs"
     ]
   },
   {
@@ -47434,80 +50193,6 @@
       "medicaid",
       "uhc",
       "cigna"
-    ]
-  },
-  {
-    "npi": "1508249731",
-    "name": "Dr. David Degrace, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Quinte West",
-    "state": "ON",
-    "zip": "K8V 6",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "cigna",
-      "humana"
-    ]
-  },
-  {
-    "npi": "1558588525",
-    "name": "Dr. Johannes Geers, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Coaldale",
-    "state": "ALBERTA",
-    "zip": "T1M1N",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1588169775",
-    "name": "Dr. Anarkali Morrill, DO",
-    "credentials": [
-      "DO"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Lakenheath",
-    "state": "APO",
-    "zip": "AE 09",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "aetna",
-      "bcbs"
     ]
   },
   {
@@ -47581,29 +50266,6 @@
     ]
   },
   {
-    "npi": "1659959526",
-    "name": "Dr. Abel Marten, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Guantanamo Bay",
-    "state": "GUANTANAMO BAY",
-    "zip": "FPO A",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "humana"
-    ]
-  },
-  {
     "npi": "1679514491",
     "name": "Dr. Kurt Frantz, MD",
     "credentials": [
@@ -47623,228 +50285,6 @@
     "licenseStatus": "active",
     "insuranceAccepted": [
       "medicare"
-    ]
-  },
-  {
-    "npi": "1710622329",
-    "name": "Dr. Eva Stoops, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Mississauga",
-    "state": "ONTARIO",
-    "zip": "L4Y4C",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "humana",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1720604283",
-    "name": "Dr. Geerthana Jeyakumar, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M1K2Y",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs"
-    ]
-  },
-  {
-    "npi": "1730993940",
-    "name": "Dr. Lucy Shum Sin, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Sioux Lookout",
-    "state": "ONTARIO",
-    "zip": "P8T1B",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "bcbs",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1740088137",
-    "name": "Dr. Emily Bulanski, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Cambridge",
-    "state": "ONTARIO",
-    "zip": "N1R 3",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "bcbs",
-      "uhc",
-      "cigna",
-      "humana"
-    ]
-  },
-  {
-    "npi": "1760369474",
-    "name": "Dr. Darroch Aylward, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Grande Prairie",
-    "state": "AB",
-    "zip": "T8V7X",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs"
-    ]
-  },
-  {
-    "npi": "1770031072",
-    "name": "Dr. Mike Minodin, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Dartmouth",
-    "state": "NOVA SCOTIA",
-    "zip": "B2W 6",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "uhc",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1770720963",
-    "name": "Dr. Shia Wolgelernter, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M1K2B",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs"
-    ]
-  },
-  {
-    "npi": "1811131170",
-    "name": "Dr. Umar Muhammad, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M1P 1",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid"
-    ]
-  },
-  {
-    "npi": "1861465296",
-    "name": "Dr. Sarita Singh, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Thunder Bay",
-    "state": "ONTARIO",
-    "zip": "P7J1H",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs",
-      "uhc",
-      "humana"
     ]
   },
   {
@@ -47875,31 +50315,6 @@
     ]
   },
   {
-    "npi": "1891671772",
-    "name": "Dr. Daniel Pannozzo, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Vancouver",
-    "state": "BRITISH COLUMBIA",
-    "zip": "V6M 2",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs",
-      "humana"
-    ]
-  },
-  {
     "npi": "1902474166",
     "name": "Dr. Dominique Baker, DO",
     "credentials": [
@@ -47922,105 +50337,6 @@
       "medicaid",
       "aetna",
       "bcbs"
-    ]
-  },
-  {
-    "npi": "1932549128",
-    "name": "Dr. Matthew Kereliuk, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Woodbridge",
-    "state": "ONTARIO",
-    "zip": "L4L 5",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "humana"
-    ]
-  },
-  {
-    "npi": "1982996112",
-    "name": "Dr. Laura Chalfin, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Hornby Island",
-    "state": "BRITISH COLUMBIA",
-    "zip": "V0R1Z",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid"
-    ]
-  },
-  {
-    "npi": "1992291496",
-    "name": "Dr. Christine Sheeler, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Stratford",
-    "state": "ONTARIO",
-    "zip": "N5A0E",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.8625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "bcbs",
-      "humana"
-    ]
-  },
-  {
-    "npi": "1063303196",
-    "name": "Mrs. Shani Deshield, FNP-C, FNP-BC",
-    "credentials": [
-      "FNP-C",
-      "FNP-BC"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Sherwood Park",
-    "state": "AB",
-    "zip": "T8H 0",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.857,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs",
-      "uhc",
-      "cigna"
     ]
   },
   {
@@ -48047,156 +50363,6 @@
       "medicare",
       "aetna",
       "cigna"
-    ]
-  },
-  {
-    "npi": "1194997544",
-    "name": "Dr. Miguel Deleon, RN, NP-C",
-    "credentials": [
-      "RN",
-      "NP-C"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Apo",
-    "state": "KOREA",
-    "zip": "AP",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.857,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "bcbs",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1235520636",
-    "name": "Dr. Kari Van Camp, APRN-RX, CPNP-PC, FNP",
-    "credentials": [
-      "APRN-RX",
-      "CPNP-PC",
-      "FNP"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Mississauga",
-    "state": "ONTARIO",
-    "zip": "L5G4V",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.857,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna"
-    ]
-  },
-  {
-    "npi": "1447714548",
-    "name": "Dr. Rachel Card, MSN, APRN, FNP-C",
-    "credentials": [
-      "MSN",
-      "APRN",
-      "FNP-C"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Hamilton",
-    "state": "HAMILTON",
-    "zip": "HM 17",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.857,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid"
-    ]
-  },
-  {
-    "npi": "1467932848",
-    "name": "Ms. April Steele, NP",
-    "credentials": [
-      "NP"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Wabasca",
-    "state": "ALBERTA",
-    "zip": "T0G2K",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.857,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "bcbs",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1487591855",
-    "name": "Mr. Olamide Salami, FNP-C",
-    "credentials": [
-      "FNP-C"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Nepean",
-    "state": "ONTARIO",
-    "zip": "K2G5Z",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.857,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "humana",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1598635740",
-    "name": "Dr. Omoyemwen Ugiagbe, NP",
-    "credentials": [
-      "NP"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Oshawa",
-    "state": "ON",
-    "zip": "L1H 7",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.857,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs"
     ]
   },
   {
@@ -48274,210 +50440,6 @@
     ]
   },
   {
-    "npi": "1871109777",
-    "name": "Dr. Sheryl Tigchelaar, NP",
-    "credentials": [
-      "NP"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Kitchener",
-    "state": "ONTARIO",
-    "zip": "N2P2A",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.857,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs"
-    ]
-  },
-  {
-    "npi": "1982184883",
-    "name": "Dr. Michelle Ambrose, NP-F",
-    "credentials": [
-      "NP-F"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Chilliwack",
-    "state": "BRITISH COLUMBIA",
-    "zip": "V2R0P",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.857,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "bcbs",
-      "cigna",
-      "humana"
-    ]
-  },
-  {
-    "npi": "1871057679",
-    "name": "Dr. Wendy Woods, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Paget",
-    "state": "PAGET",
-    "zip": "DV 03",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.85,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "bcbs",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1053714881",
-    "name": "Dr. Mikael Tulloch-Reid, MBBS",
-    "credentials": [
-      "MBBS"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Kingston",
-    "state": "KINGSTON",
-    "zip": "KINGS",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.846,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs",
-      "uhc",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1093991853",
-    "name": "Mrs. Eva Kreye, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Cambridge",
-    "state": "CAMBRIDGESHIRE",
-    "zip": "CB1 7",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.846,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1205219433",
-    "name": "Dr. Yo-Liang Teng, MD FRCPC",
-    "credentials": [
-      "MD FRCPC"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Fort St John",
-    "state": "BC",
-    "zip": "V1J 2",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.846,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "uhc",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1205279585",
-    "name": "Dr. Marla Mcknight, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Vancouver",
-    "state": "BRITISH COLUMBIA",
-    "zip": "V6Z1Y",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.846,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs",
-      "humana"
-    ]
-  },
-  {
-    "npi": "1245577675",
-    "name": "Dr. John Staples, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Vancouver",
-    "state": "BC",
-    "zip": "V6Z1Y",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.846,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "bcbs",
-      "uhc",
-      "cigna",
-      "humana"
-    ]
-  },
-  {
     "npi": "1407194194",
     "name": "Dr. Georgios Christodoulidis, MD",
     "credentials": [
@@ -48500,32 +50462,6 @@
       "medicaid",
       "aetna",
       "bcbs"
-    ]
-  },
-  {
-    "npi": "1427213883",
-    "name": "Dr. Pablo De La Cerda Perez, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Quito",
-    "state": "PICHINCHA",
-    "zip": "EC 17",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.846,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "cigna",
-      "humana"
     ]
   },
   {
@@ -48604,31 +50540,6 @@
     ]
   },
   {
-    "npi": "1720210016",
-    "name": "Dr. Sameerah Siddiqui, MD, MBBS",
-    "credentials": [
-      "MD",
-      "MBBS"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Saint Catharines",
-    "state": "ONTARIO",
-    "zip": "L2R 2",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.846,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "humana",
-      "kaiser"
-    ]
-  },
-  {
     "npi": "1770970642",
     "name": "Dr. Denise Nicole Teh, DO",
     "credentials": [
@@ -48651,60 +50562,6 @@
       "medicaid",
       "bcbs",
       "cigna",
-      "humana"
-    ]
-  },
-  {
-    "npi": "1972945285",
-    "name": "Dr. Hina Trivedi, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Leicester",
-    "state": "ENGLAND",
-    "zip": "44",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.846,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1750049185",
-    "name": "Dr. Rahi Victory, MD, FACOG",
-    "credentials": [
-      "MD",
-      "FACOG"
-    ],
-    "specialty": "Reproductive Endocrinology & Infertility",
-    "menopauseCertified": false,
-    "city": "Windsor",
-    "state": "ONTARIO",
-    "zip": "N8N 5",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.8389,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "facog"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "bcbs",
-      "uhc",
       "humana"
     ]
   },
@@ -48760,55 +50617,6 @@
     ]
   },
   {
-    "npi": "1659837896",
-    "name": "Dr. Jeff Pollard, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Maternal & Fetal Medicine",
-    "menopauseCertified": false,
-    "city": "Calgary",
-    "state": "ALBERTA",
-    "zip": "T3Z3P",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.835,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "uhc",
-      "humana"
-    ]
-  },
-  {
-    "npi": "1023089935",
-    "name": "Dr. Jose Cruz, PA",
-    "credentials": [
-      "PA"
-    ],
-    "specialty": "Physician Assistant \u2014 Medical",
-    "menopauseCertified": false,
-    "city": "Guantanamo Bay",
-    "state": "CUBA",
-    "zip": "APO A",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.824,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna"
-    ]
-  },
-  {
     "npi": "1265486898",
     "name": "Dr. Danie Montano, PA",
     "credentials": [
@@ -48854,60 +50662,6 @@
     "insuranceAccepted": [
       "medicare",
       "humana"
-    ]
-  },
-  {
-    "npi": "1689644619",
-    "name": "Mr. Eusebio Flores, PA-C, MPAS, M ED",
-    "credentials": [
-      "PA-C",
-      "MPAS",
-      "M ED"
-    ],
-    "specialty": "Physician Assistant \u2014 Medical",
-    "menopauseCertified": false,
-    "city": "Atsugi",
-    "state": "JAPAN",
-    "zip": "FPO A",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.824,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna"
-    ]
-  },
-  {
-    "npi": "1689870172",
-    "name": "Mr. Jeffrey Straw, PA-C",
-    "credentials": [
-      "PA-C"
-    ],
-    "specialty": "Physician Assistant \u2014 Medical",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ON",
-    "zip": "M5G1X",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.824,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "uhc",
-      "cigna",
-      "humana",
-      "kaiser"
     ]
   },
   {
@@ -48960,30 +50714,6 @@
     ]
   },
   {
-    "npi": "1326915646",
-    "name": "Dr. Yemisi Idim, NP",
-    "credentials": [
-      "NP"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Adult Health",
-    "menopauseCertified": false,
-    "city": "Tottenham",
-    "state": "ONTARIO",
-    "zip": "L0G 1",
-    "acceptingNewPatients": true,
-    "telehealth": true,
-    "graphScore": 0.813,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "aetna",
-      "bcbs",
-      "cigna"
-    ]
-  },
-  {
     "npi": "1467890123",
     "name": "Dr. Lucia Garcia, CNS, RN, MSCP",
     "credentials": [
@@ -49008,58 +50738,6 @@
       "medicaid",
       "bcbs",
       "uhc",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1023574159",
-    "name": "Dr. Marie-Soleil Wagner, MD, MS",
-    "credentials": [
-      "MD",
-      "MS"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Montreal",
-    "state": "QC",
-    "zip": "H3T 1",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.8,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "humana",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1164751129",
-    "name": "Dr. Pramod Verma, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "Edmonton",
-    "state": "ALBERTA",
-    "zip": "T6K4C",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.8,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "aetna",
-      "humana",
       "kaiser"
     ]
   },
@@ -49122,31 +50800,6 @@
     ]
   },
   {
-    "npi": "1255643482",
-    "name": "Dr. Saquib Ansari, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Welland",
-    "state": "ONTARIO",
-    "zip": "L3B 5",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7268,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "aetna"
-    ]
-  },
-  {
     "npi": "1487390126",
     "name": "Dr. Lily Mckoy Drake, DO, MPH",
     "credentials": [
@@ -49176,249 +50829,6 @@
     ]
   },
   {
-    "npi": "1043299381",
-    "name": "Dr. Cathy Kamens, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M4K 2",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs"
-    ]
-  },
-  {
-    "npi": "1104443555",
-    "name": "Dr. Tanya Sagherian, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Newmarket",
-    "state": "ONTARIO",
-    "zip": "L3Y 0",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1265757116",
-    "name": "Dr. Tristan Sumabat, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Shelburne",
-    "state": "ONTARIO",
-    "zip": "L9V 3",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "uhc",
-      "cigna",
-      "humana"
-    ]
-  },
-  {
-    "npi": "1285203000",
-    "name": "Dr. Laurence Batmazian, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Brantford",
-    "state": "ONTARIO",
-    "zip": "N3R1G",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs"
-    ]
-  },
-  {
-    "npi": "1326094673",
-    "name": "Dr. Victoria Manfredi, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Ottawa",
-    "state": "ON",
-    "zip": "K2B7Z",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1326243957",
-    "name": "Dr. Allen George, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Abancay",
-    "state": "APURIMAC",
-    "zip": "0",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1326278706",
-    "name": "Dr. Huy Nguyen, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "New Westminster",
-    "state": "BRITISH COLUMBIA",
-    "zip": "V3L 3",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "aetna"
-    ]
-  },
-  {
-    "npi": "1346586179",
-    "name": "Dr. Marjorie Dure, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Thurso",
-    "state": "QUEBEC",
-    "zip": "J8V3B",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1427582345",
-    "name": "Mr. Richard Kretschmann, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Edmonton",
-    "state": "ALBERTA",
-    "zip": "T6E4B",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid"
-    ]
-  },
-  {
-    "npi": "1437106127",
-    "name": "Dr. Michele Maclean, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Kennetcook",
-    "state": "NS",
-    "zip": "B0W1P",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "cigna"
-    ]
-  },
-  {
     "npi": "1457533192",
     "name": "Dr. Alan Frueh, MD",
     "credentials": [
@@ -49441,84 +50851,6 @@
       "medicaid",
       "bcbs",
       "cigna"
-    ]
-  },
-  {
-    "npi": "1477938470",
-    "name": "Dr. Samantha Engels, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Petrolia",
-    "state": "ONTARIO",
-    "zip": "N0N 1",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "uhc",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1508177452",
-    "name": "Dr. Aila Dela Cruz, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Shelburne",
-    "state": "ON",
-    "zip": "L9V3R",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "uhc",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1891958054",
-    "name": "Dr. Maher Jerudi, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Edmonton",
-    "state": "ALBERTA",
-    "zip": "T5A 3",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.7099,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "uhc"
     ]
   },
   {
@@ -49547,32 +50879,6 @@
     ]
   },
   {
-    "npi": "1245798131",
-    "name": "Dr. Cristina Cortes Ortiz, NP",
-    "credentials": [
-      "NP"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M5V1B",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.707,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "cigna",
-      "humana"
-    ]
-  },
-  {
     "npi": "1477284594",
     "name": "Mrs. Bridget Latimer, FNP",
     "credentials": [
@@ -49596,31 +50902,6 @@
     ]
   },
   {
-    "npi": "1538808035",
-    "name": "Dr. Nikita Gandhi, NP",
-    "credentials": [
-      "NP"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Windsor",
-    "state": "ONTARIO",
-    "zip": "N8R 2",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.707,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "humana"
-    ]
-  },
-  {
     "npi": "1659156917",
     "name": "Dr. Meg Olson, RN",
     "credentials": [
@@ -49640,150 +50921,6 @@
     "licenseStatus": "active",
     "insuranceAccepted": [
       "medicare"
-    ]
-  },
-  {
-    "npi": "1871425355",
-    "name": "Dr. Rostum Flores, FNP",
-    "credentials": [
-      "FNP"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Niagara Falls",
-    "state": "ONTARIO",
-    "zip": "L2G1K",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.707,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid"
-    ]
-  },
-  {
-    "npi": "1013076553",
-    "name": "Dr. Rahat Mirza, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Sherwood Park",
-    "state": "AB",
-    "zip": "T8B1C",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.696,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1235322157",
-    "name": "Dr. Palaniswamy Krishnan, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Newport",
-    "state": "UK",
-    "zip": "NP20 ",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.696,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "bcbs",
-      "cigna",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1427671544",
-    "name": "Dr. Zadoo Bendega, MBBS, MRCP",
-    "credentials": [
-      "MBBS",
-      "MRCP"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Derby",
-    "state": "DERBY",
-    "zip": "DE1 2",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.696,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1730531740",
-    "name": "Dr. Marc Monachese, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M4Y 2",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.696,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "aetna",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1780989863",
-    "name": "Dr. Mahadevan Rajaram, MBBS, FACC",
-    "credentials": [
-      "MBBS",
-      "FACC"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Sarnia",
-    "state": "ONTARIO",
-    "zip": "N7V4J",
-    "acceptingNewPatients": true,
-    "telehealth": false,
-    "graphScore": 0.696,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "bcbs",
-      "uhc",
-      "kaiser"
     ]
   },
   {
@@ -49840,104 +50977,6 @@
     ]
   },
   {
-    "npi": "1679057129",
-    "name": "Dr. Steven Lipari, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ON",
-    "zip": "M2J 1",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.6625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs"
-    ]
-  },
-  {
-    "npi": "1831574748",
-    "name": "Dr. Uzma Syeda, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M1C 1",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.6625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "uhc",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1871620757",
-    "name": "Dr. Robert Wittes, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Thornhill",
-    "state": "ON",
-    "zip": "L4J7Z",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.6625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid"
-    ]
-  },
-  {
-    "npi": "1811203615",
-    "name": "Dr. Fayad Hamideh, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Sarnia",
-    "state": "ONTARIO",
-    "zip": "N7T 6",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.6589,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare"
-    ]
-  },
-  {
     "npi": "1235683442",
     "name": "Dr. Shalandria Sims, NP-C",
     "credentials": [
@@ -49961,32 +51000,6 @@
       "aetna",
       "uhc",
       "kaiser"
-    ]
-  },
-  {
-    "npi": "1275651424",
-    "name": "Ms. Amy Newby, FNP, MSN",
-    "credentials": [
-      "FNP",
-      "MSN"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Baku",
-    "state": "BAKU",
-    "zip": "AZ100",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.657,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "uhc",
-      "cigna"
     ]
   },
   {
@@ -50014,107 +51027,6 @@
     ]
   },
   {
-    "npi": "1619354180",
-    "name": "Dr. Ghulam Sarwar, NP",
-    "credentials": [
-      "NP"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Saskatoon",
-    "state": "SASKATCHEWAN",
-    "zip": "S7V 1",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.657,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "bcbs",
-      "humana",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1659136745",
-    "name": "Dr. Chiragkumar Shah, NP",
-    "credentials": [
-      "NP"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "St Catharines",
-    "state": "ON",
-    "zip": "L2M 6",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.657,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs"
-    ]
-  },
-  {
-    "npi": "1770216210",
-    "name": "Dr. Ravneet Girn, NP",
-    "credentials": [
-      "NP"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Niagara Falls",
-    "state": "ONTARIO",
-    "zip": "L2H0K",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.657,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "bcbs",
-      "uhc",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1831646421",
-    "name": "Dr. Vashisht Persad, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Obstetrics & Gynecology",
-    "menopauseCertified": false,
-    "city": "St. Augustine",
-    "state": "N/A",
-    "zip": "TT000",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.65,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "uhc",
-      "kaiser"
-    ]
-  },
-  {
     "npi": "1912345678",
     "name": "Dr. Avery Cooper, MD",
     "credentials": [
@@ -50135,131 +51047,6 @@
     "insuranceAccepted": [
       "medicare",
       "medicaid"
-    ]
-  },
-  {
-    "npi": "1033449608",
-    "name": "Dr. Betty Chan, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M5S3A",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.646,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "uhc",
-      "cigna",
-      "humana"
-    ]
-  },
-  {
-    "npi": "1164293056",
-    "name": "Dr. Khalil Sivjee, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M5J2T",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.646,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs",
-      "uhc",
-      "cigna",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1255689980",
-    "name": "Dr. David Lobo, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Oshawa",
-    "state": "ONTARIO",
-    "zip": "L1G2B",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.646,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1457694911",
-    "name": "Dr. Bairbre Ni Mhaille, MB BCH BAO",
-    "credentials": [
-      "MB BCH BAO"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Galway",
-    "state": "CONNAUGHT",
-    "zip": "NA",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.646,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1902033251",
-    "name": "Dr. Iyad Ksseiry, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Endocrinology, Diabetes & Metabolism",
-    "menopauseCertified": false,
-    "city": "Dubai",
-    "state": "DUBAI",
-    "zip": "NONE",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.595,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "humana"
     ]
   },
   {
@@ -50292,558 +51079,6 @@
     ]
   },
   {
-    "npi": "1306373501",
-    "name": "Dr. Solomon Yeung, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Kowloon",
-    "state": "HONG KONG",
-    "zip": "",
-    "acceptingNewPatients": false,
-    "telehealth": true,
-    "graphScore": 0.5625,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs",
-      "uhc",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1184988222",
-    "name": "Dr. Andrew Juren, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "100 Mile House",
-    "state": "BRITISH COLUMBIA",
-    "zip": "V0K 2",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5228,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1376063784",
-    "name": "Dr. Teresa Colelli, DO",
-    "credentials": [
-      "DO"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Thornhill",
-    "state": "ONTARIO",
-    "zip": "L4J7Y",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5228,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "bcbs",
-      "uhc",
-      "humana"
-    ]
-  },
-  {
-    "npi": "1700448669",
-    "name": "Dr. Sagana Mahendiran, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Peterborough",
-    "state": "ONTARIO",
-    "zip": "K9J 7",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5228,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1780090191",
-    "name": "Dr. Kamran Manek, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Aurora",
-    "state": "ON",
-    "zip": "L4G 1",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5228,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [
-      "multi-taxonomy"
-    ],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna"
-    ]
-  },
-  {
-    "npi": "1023582087",
-    "name": "Dr. Dina Ozols, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Windsor",
-    "state": "ONTARIO",
-    "zip": "N8W 5",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1083189989",
-    "name": "Dr. Barret Neville, NP",
-    "credentials": [
-      "NP"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "North York",
-    "state": "ON",
-    "zip": "M2N2N",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "bcbs",
-      "uhc",
-      "humana",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1093452435",
-    "name": "Dr. Dallin Low, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Cardston",
-    "state": "ALBERTA",
-    "zip": "T0K 0",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1134737018",
-    "name": "Dr. Vivian Vu, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M4N 3",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "bcbs",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1174018634",
-    "name": "Dr. Laraib Mehdi, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Windsor",
-    "state": "ON",
-    "zip": "N9G2W",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "bcbs",
-      "uhc",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1225894140",
-    "name": "Dr. Pushpak Gupta, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Poole",
-    "state": "DORSET",
-    "zip": "BH148",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "bcbs",
-      "uhc",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1235414673",
-    "name": "Dr. Yuliya Baryla, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Toronto",
-    "state": "ONTARIO",
-    "zip": "M4G4E",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "humana"
-    ]
-  },
-  {
-    "npi": "1285629733",
-    "name": "Dr. Lee Janson, PHD, MD",
-    "credentials": [
-      "PHD",
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Edinburgh",
-    "state": "SCOTLAND",
-    "zip": "EH1 1",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "bcbs",
-      "cigna"
-    ]
-  },
-  {
-    "npi": "1497069298",
-    "name": "Dr. Deyzi Owens, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Tecumseh",
-    "state": "ON",
-    "zip": "N8N3T",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna"
-    ]
-  },
-  {
-    "npi": "1669167334",
-    "name": "Dr. Stewart Edgell, MBBS MRCGP FRACGP",
-    "credentials": [
-      "MBBS MRCGP FRACGP"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Hume",
-    "state": "AUSTRALIAN CAPITAL TERRITORY",
-    "zip": "ACT 2",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1679208391",
-    "name": "Dr. Amy Baker, MBBS",
-    "credentials": [
-      "MBBS"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Blackstock",
-    "state": "ONTARIO",
-    "zip": "L0B1B",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "uhc"
-    ]
-  },
-  {
-    "npi": "1689830010",
-    "name": "Dr. Kamran Mir, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Mississauga",
-    "state": "ONTARIO",
-    "zip": "L5M 6",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "uhc",
-      "cigna",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1700534286",
-    "name": "Dr. Ogugua Iloabachie, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "Kitchener",
-    "state": "ON",
-    "zip": "N2B 2",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1902131550",
-    "name": "Dr. Suresh Panjwani, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Family Medicine",
-    "menopauseCertified": false,
-    "city": "London",
-    "state": "GB",
-    "zip": "N97HD",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.5125,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "bcbs"
-    ]
-  },
-  {
-    "npi": "1497757348",
-    "name": "Mr. James Fraley, ARNP",
-    "credentials": [
-      "ARNP"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Keflavik",
-    "state": "ICELAND",
-    "zip": "AE",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.507,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "bcbs",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1548886682",
-    "name": "Dr. Madalina Manolache, NP",
-    "credentials": [
-      "NP"
-    ],
-    "specialty": "Nurse Practitioner \u2014 Family",
-    "menopauseCertified": false,
-    "city": "Lasalle",
-    "state": "ONTARIO",
-    "zip": "N9J3E",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.507,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "humana",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1083120794",
-    "name": "Dr. Norman Lafrance, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Hudson",
-    "state": "QUEBEC",
-    "zip": "J0P1H",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.496,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid"
-    ]
-  },
-  {
     "npi": "1104020882",
     "name": "Dr. Alyssa Finlay, MD",
     "credentials": [
@@ -50866,152 +51101,6 @@
       "medicaid",
       "aetna",
       "bcbs",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1194946137",
-    "name": "Dr. Erin Young, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Vientiane",
-    "state": "VIENTIANE CAPITOL",
-    "zip": "H1000",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.496,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicaid",
-      "bcbs",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1245448711",
-    "name": "Dr. Ayesha Peets, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Smith'S Parish",
-    "state": "BERMUDA",
-    "zip": "FL02",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.496,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "humana",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1376956755",
-    "name": "Dr. Ola Adams, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Harare",
-    "state": "HARARE",
-    "zip": "HARAR",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.496,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "uhc",
-      "humana"
-    ]
-  },
-  {
-    "npi": "1447207055",
-    "name": "Dr. Rosalyn Juergens, MD PHD",
-    "credentials": [
-      "MD PHD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Hamilton",
-    "state": "ONTARIO",
-    "zip": "L0R 1",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.496,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "kaiser"
-    ]
-  },
-  {
-    "npi": "1578607263",
-    "name": "Dr. Giorgio Scappini, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Oldham",
-    "state": "GB",
-    "zip": "OL8 1",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.496,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare"
-    ]
-  },
-  {
-    "npi": "1720570005",
-    "name": "Dr. Atputhanathan Jeyaranjan, MD",
-    "credentials": [
-      "MD"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Scarborough",
-    "state": "ONTARIO",
-    "zip": "M1B2W",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.496,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "aetna",
-      "bcbs",
-      "humana",
       "kaiser"
     ]
   },
@@ -51039,32 +51128,6 @@
       "aetna",
       "uhc",
       "humana"
-    ]
-  },
-  {
-    "npi": "1942360417",
-    "name": "Dr. Eileen Szabo, MD BSC FRCPC",
-    "credentials": [
-      "MD BSC FRCPC"
-    ],
-    "specialty": "Internal Medicine",
-    "menopauseCertified": false,
-    "city": "Saskatoon",
-    "state": "SASK",
-    "zip": "S7K5Z",
-    "acceptingNewPatients": false,
-    "telehealth": false,
-    "graphScore": 0.496,
-    "latitude": null,
-    "longitude": null,
-    "serviceSignals": [],
-    "licenseStatus": "active",
-    "insuranceAccepted": [
-      "medicare",
-      "medicaid",
-      "aetna",
-      "uhc",
-      "kaiser"
     ]
   },
   {

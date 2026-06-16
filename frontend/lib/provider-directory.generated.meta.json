@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-16T12:25:16+00:00",
+  "generatedAt": "2026-06-16T12:38:46+00:00",
   "sourceDate": "2026-06-15T00:48:52+00:00",
   "nppesInputs": [
     ".scratch/npi_refresh.fifo",
@@ -17,8 +17,8 @@
   "providers": {
     "total": 2015,
     "certified": 15,
-    "states": 117,
-    "zip3Prefixes": 1055,
+    "states": 70,
+    "zip3Prefixes": 930,
     "sanctionedFiltered": 1720,
     "sanctionedFilteredBySource": {
       "ca": 588,

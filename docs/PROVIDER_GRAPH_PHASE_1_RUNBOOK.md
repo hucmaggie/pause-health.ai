@@ -30,16 +30,19 @@ loads). The frozen contract is `ProviderRecord` in
   set was broadened in Phase 2; she had been filtered out before despite
   carrying MSCP because her primary NUCC code wasn't in the curated set.)
   The remaining 2,000 are real menopause-relevant providers spread across
-  **1,055 ZIP-3 prefixes** for general (`menopause=false`) directory breadth.
-  That spread comes from the **`--coverage`** selection (default-on in the
-  refresh script): the non-certified `--limit` budget is round-robined across
-  ZIP-3 prefixes — one provider per prefix before any prefix gets a second —
-  instead of taking the global top-N by `graphScore`. Same 2,000-row budget,
-  but distinct-prefix coverage nearly doubled (532 → 1,055), so far more ZIPs
-  get a local result for browsing / the relevant-local fallback. Certified rows
-  are always kept regardless (`--keep-all-certified`), so the agent's
-  `menopause=true` coverage is unchanged. Set `COVERAGE=0` to fall back to the
-  old global top-N.
+  **930 ZIP-3 prefixes** (all 50 states + DC) for general (`menopause=false`)
+  directory breadth. That spread comes from the **`--coverage`** selection
+  (default-on in the refresh script): the non-certified `--limit` budget is
+  round-robined across ZIP-3 prefixes — one provider per prefix before any prefix
+  gets a second — instead of taking the global top-N by `graphScore`. Same
+  2,000-row budget, but distinct-prefix coverage nearly doubled (532 → 930), so
+  far more ZIPs get a local result for browsing / the relevant-local fallback.
+  Certified rows are always kept regardless (`--keep-all-certified`), so the
+  agent's `menopause=true` coverage is unchanged. Set `COVERAGE=0` to fall back
+  to the old global top-N. (930 is the honest US count: `normalize_row` drops
+  providers without a usable 5-digit US ZIP — foreign practice addresses,
+  APO/FPO, truncated/garbage postals — which otherwise inflated the raw prefix
+  count to 1,055 with non-placeable rows.)
 - `provenance.sources` on every response reports
   `"CMS NPPES (taxonomy-filtered via provider_ingest)"` +
   `"Self-reported MSCP/NCMP credentials + curated overlay"`.
@@ -284,9 +287,15 @@ to the file's mtime.
   the 2,000 non-certified slots go to the global top-N by `graphScore`, which
   piles into a handful of dense metros (532 ZIP-3 prefixes). With it, the budget
   is round-robined across ZIP-3 buckets — one provider per prefix before any
-  prefix gets a second — so the same 2,000 rows cover **1,055 prefixes**. The
-  refresh script passes it by default (`COVERAGE=0` to opt out). It only touches
-  non-certified selection; certified rows are always kept.
+  prefix gets a second — so the same 2,000 rows cover **930 prefixes** (all 50
+  states + DC). The refresh script passes it by default (`COVERAGE=0` to opt
+  out). It only touches non-certified selection; certified rows are always kept.
+- **US-ZIP gate.** `normalize_row` keeps only providers with a usable 5-digit US
+  ZIP. NPPES carries foreign practice addresses (Canadian/UK postals), APO/FPO
+  military codes, and truncated/garbage postals that can never be local to a US
+  patient ZIP; dropping them keeps the directory placeable and the ZIP-3 metric
+  honest (without the gate the June 2026 run reported 1,055 "prefixes", 125 of
+  them foreign/garbage; 930 is the real US count).
 - The reader streams row-by-row (constant memory) and parses only the ~40 columns
   it needs, so the full 9.6M-row file runs in **~1m50s** (not the ~30 min a naive
   `DictReader` over all ~330 columns would take).
@@ -296,8 +305,8 @@ to the file's mtime.
 
 It prints e.g. `Wrote 2015 providers (15 MSCP-certified) from … → …`. The
 June 2026 run yielded exactly that: 15 certified (7 demo + 8 real self-reported)
-and 2,000 real non-certified rows spread (via `--coverage`) across 1,055 ZIP-3
-prefixes.
+and 2,000 real non-certified rows spread (via `--coverage`) across 930 ZIP-3
+prefixes (all 50 states + DC).
 
 ---
 
