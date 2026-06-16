@@ -279,6 +279,7 @@ function buildGroundingContext(args: {
   const calculatedInsights: CalculatedInsight[] = [
     {
       id: "insight.active-care-program",
+      kind: "care-program-enrollment",
       name: "Active care program enrollment",
       description: enrollee
         ? `Patient is actively enrolled in CareProgram ${enrollee.CareProgramId} (Enrollee ${enrollee.Id}, status ${enrollee.Status}).`
@@ -290,6 +291,7 @@ function buildGroundingContext(args: {
     },
     {
       id: "insight.days-since-last-clinical-contact",
+      kind: "days-since-clinical-contact",
       name: "Days since last clinical contact",
       description:
         "Days since the most recent Salesforce Health Cloud Case linked to this patient was last modified.",
@@ -301,6 +303,7 @@ function buildGroundingContext(args: {
     },
     {
       id: "insight.active-care-plan-status",
+      kind: "care-plan-status",
       name: "Active care plan status",
       description: carePlan
         ? `Latest CarePlan "${carePlan.Name}" status: ${carePlan.Status}.`
@@ -313,6 +316,7 @@ function buildGroundingContext(args: {
     // Vasomotor burden: real Data Cloud CI when available, else intake baseline.
     wearable?.vasomotor ?? {
       id: "insight.vasomotor-burden-30d",
+      kind: "vasomotor-burden",
       name: "Vasomotor symptom burden (30-day, baseline)",
       description:
         "Baseline composite from intake hint scores. Set SF_DC_TENANT_URL to enable the Data Cloud Calculated Insight that fuses wearable thermoregulation, sleep disruption, and intake reports.",
@@ -325,6 +329,7 @@ function buildGroundingContext(args: {
     // Sleep disruption: real Data Cloud CI when available, else intake baseline.
     wearable?.sleep ?? {
       id: "insight.sleep-disruption-7d",
+      kind: "sleep-disruption",
       name: "Sleep disruption index (7-day, baseline)",
       description:
         "Baseline from intake hint. Set SF_DC_TENANT_URL to enable Data Cloud federated wearable data.",

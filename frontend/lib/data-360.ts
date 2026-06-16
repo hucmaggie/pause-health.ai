@@ -47,6 +47,23 @@ export type FederatedSource =
   | "epic-health-cloud"
   | "mocked-payer-claims";
 
+/**
+ * Stable, source-independent classifier for a Calculated Insight. The `id`
+ * carries provenance detail and DIFFERS between the mock and the live Data
+ * Cloud path (e.g. the HRV insight is `insight.hrv-zscore-30d` in the mock but
+ * `insight.hrv-rmssd-30d` live; last-contact is `…-mscp-contact` mock vs
+ * `…-last-clinical-contact` live). Anything that branches on an insight — the
+ * Care Router rationale especially — MUST key on `kind`, never the `id`, or it
+ * silently stops firing the moment the org flips from mock to live.
+ */
+export type InsightKind =
+  | "hrv-variability"
+  | "vasomotor-burden"
+  | "sleep-disruption"
+  | "days-since-clinical-contact"
+  | "care-program-enrollment"
+  | "care-plan-status";
+
 export type CalculatedInsight = {
   id: string;
   name: string;
@@ -57,6 +74,13 @@ export type CalculatedInsight = {
   sourceWindow: string;
   /** Which federated sources contributed. */
   federatedFrom: FederatedSource[];
+  /**
+   * Source-independent classifier — see InsightKind. Optional only so older
+   * callers/fixtures still type-check; the mock and the live builder both set
+   * it, and the Care Router matches on it (falling back to id-aliases for
+   * fixtures that predate the field).
+   */
+  kind?: InsightKind;
 };
 
 export type LongitudinalObservation = {
@@ -190,6 +214,7 @@ export function getGroundingContext(args: {
   const insights: CalculatedInsight[] = [
     {
       id: "insight.hrv-zscore-30d",
+      kind: "hrv-variability",
       name: "30-day HRV variability z-score",
       description:
         "Patient's HRV variability relative to her own 90-day baseline, recomputed nightly from DBDP-derived RMSSD windows.",
@@ -201,6 +226,7 @@ export function getGroundingContext(args: {
     },
     {
       id: "insight.vasomotor-burden-30d",
+      kind: "vasomotor-burden",
       name: "Vasomotor symptom burden (30-day)",
       description:
         "Composite of intake reports, wearable thermoregulation signals, and sleep disruption. Scored 0-100.",
@@ -216,6 +242,7 @@ export function getGroundingContext(args: {
     },
     {
       id: "insight.sleep-disruption-7d",
+      kind: "sleep-disruption",
       name: "Sleep disruption index (7-day)",
       description:
         "Fraction of nights with disrupted sleep (>2 awakenings >5 min, sleep efficiency <80%).",
@@ -227,6 +254,7 @@ export function getGroundingContext(args: {
     },
     {
       id: "insight.days-since-mscp-contact",
+      kind: "days-since-clinical-contact",
       name: "Days since last MSCP-credentialed clinician contact",
       description:
         "Time since the patient last had a documented encounter with an MSCP-credentialed clinician (across all federated EHR sources).",

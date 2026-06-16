@@ -9,6 +9,7 @@ import {
   type ProviderLookup
 } from "./care-router";
 import type { ProviderRecord } from "./mulesoft-mocks";
+import { getGroundingContext } from "./data-360";
 
 /**
  * Tests for lib/care-router.ts.
@@ -220,6 +221,80 @@ describe("scriptedRoute · Data 360 grounding", () => {
       lowBurden
     );
     expect(out.groundingUsed?.insightsCited ?? []).toEqual([]);
+  });
+
+  it("fires the SAME rationale on the LIVE insight ids (the silent-drift regression)", () => {
+    // Live Data Cloud / Health Cloud emit different ids than the mock:
+    // HRV is hrv-rmssd-30d (not hrv-zscore-30d) and last-contact is
+    // days-since-last-clinical-contact (not days-since-mscp-contact). Before
+    // the `kind` fix the router keyed on the mock ids, so these silently
+    // stopped firing the moment an org went live. Here we feed the LIVE ids
+    // with NO kind (the pre-kind shape) and require all three to still fire,
+    // citing the live ids.
+    const live: Data360GroundingHint = {
+      unifiedPatientId: "data360-anika",
+      calculatedInsights: [
+        { id: "insight.hrv-rmssd-30d", name: "HRV RMSSD 30d", value: 1.4 },
+        { id: "insight.vasomotor-burden-30d", name: "Vasomotor 30d", value: 62 },
+        {
+          id: "insight.days-since-last-clinical-contact",
+          name: "Days since clinical contact",
+          value: 720
+        }
+      ]
+    };
+    const out = scriptedRoute({ ...baseIntake, severity: "moderate" }, live);
+    const all = out.rationale.join(" ");
+    expect(all).toMatch(/HRV.*1\.40/);
+    expect(all).toMatch(/vasomotor burden.*62/i);
+    expect(all).toMatch(/720 days/i);
+    expect(out.groundingUsed?.insightsCited).toEqual(
+      expect.arrayContaining([
+        "insight.hrv-rmssd-30d",
+        "insight.vasomotor-burden-30d",
+        "insight.days-since-last-clinical-contact"
+      ])
+    );
+  });
+
+  it("matches by `kind` even when the insight id is unrecognized", () => {
+    // Future-proofing: a renamed id with the right kind must still be cited
+    // (and under its own id), so the router never depends on a literal id.
+    const renamed: Data360GroundingHint = {
+      calculatedInsights: [
+        { id: "insight.hrv-v3-experimental", kind: "hrv-variability", name: "HRV", value: 1.4 },
+        { id: "insight.vmb-v2", kind: "vasomotor-burden", name: "VMB", value: 62 },
+        {
+          id: "insight.contact-recency-v2",
+          kind: "days-since-clinical-contact",
+          name: "Contact",
+          value: 720
+        }
+      ]
+    };
+    const out = scriptedRoute({ ...baseIntake, severity: "moderate" }, renamed);
+    expect(out.groundingUsed?.insightsCited).toEqual(
+      expect.arrayContaining([
+        "insight.hrv-v3-experimental",
+        "insight.vmb-v2",
+        "insight.contact-recency-v2"
+      ])
+    );
+  });
+
+  it("the mock grounding's kinds line up with what the router branches on", () => {
+    // Integration guard: feed the real mock GroundingContext (not a hand-built
+    // literal) and require all three grounded rationales to fire. If a future
+    // edit drops/renames a `kind` on the mock, this fails.
+    const mock = getGroundingContext({
+      patientId: "pause-demo-patient-001",
+      hint: { ageBand: "45-49", primarySymptom: "vasomotor" }
+    });
+    const out = scriptedRoute({ ...baseIntake, severity: "moderate" }, mock);
+    const cited = out.groundingUsed?.insightsCited ?? [];
+    expect(cited).toContain("insight.hrv-zscore-30d");
+    expect(cited).toContain("insight.vasomotor-burden-30d");
+    expect(cited).toContain("insight.days-since-mscp-contact");
   });
 
   it("promotes moderate -> mscp-in-person when vasomotor burden >= 60", () => {

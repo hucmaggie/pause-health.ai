@@ -77,6 +77,13 @@ export type Data360GroundingHint = {
     name: string;
     value: number | string;
     unit?: string;
+    /**
+     * Source-independent classifier (see InsightKind in lib/data-360.ts). The
+     * router matches on this so live vs mock insight-id differences can't
+     * silently drop a rationale; typed as a loose string to avoid a cross-lib
+     * cycle. May be absent on legacy fixtures — id-aliases cover those.
+     */
+    kind?: string;
   }>;
   longitudinalObservations?: Array<{
     display: string;
@@ -311,14 +318,45 @@ export async function attachRecommendedProviders(
   }
 }
 
-function numericInsight(
+type InsightMatch = { kind: string; idAliases: string[] };
+
+/**
+ * The insights the router branches on, identified the drift-proof way: by
+ * `kind` first, with the known mock + live `id`s as a fallback for fixtures
+ * that predate the `kind` field. The HRV and last-contact concepts each carry
+ * BOTH the mock id and the (different) live id — the exact pair that used to
+ * silently drop the rationale the moment an org went live.
+ */
+const HRV_INSIGHT: InsightMatch = {
+  kind: "hrv-variability",
+  idAliases: ["insight.hrv-zscore-30d", "insight.hrv-rmssd-30d"]
+};
+const VASOMOTOR_INSIGHT: InsightMatch = {
+  kind: "vasomotor-burden",
+  idAliases: ["insight.vasomotor-burden-30d"]
+};
+const CLINICAL_CONTACT_INSIGHT: InsightMatch = {
+  kind: "days-since-clinical-contact",
+  idAliases: [
+    "insight.days-since-mscp-contact",
+    "insight.days-since-last-clinical-contact"
+  ]
+};
+
+/** Find an insight by kind, falling back to its known id-aliases. */
+function findInsight(
   grounding: Data360GroundingHint | undefined,
-  id: string
-): number | undefined {
-  if (!grounding?.calculatedInsights) return undefined;
-  const hit = grounding.calculatedInsights.find((i) => i.id === id);
+  match: InsightMatch
+): { id: string; value: number } | undefined {
+  const insights = grounding?.calculatedInsights;
+  if (!insights) return undefined;
+  const hit = insights.find(
+    (i) => i.kind === match.kind || match.idAliases.includes(i.id)
+  );
   if (!hit) return undefined;
-  return typeof hit.value === "number" ? hit.value : Number(hit.value) || undefined;
+  const value = typeof hit.value === "number" ? hit.value : Number(hit.value);
+  if (!Number.isFinite(value)) return undefined;
+  return { id: hit.id, value };
 }
 
 function groundingRationale(
@@ -328,28 +366,28 @@ function groundingRationale(
   const out: string[] = [];
   const cited: string[] = [];
 
-  const hrvZ = numericInsight(grounding, "insight.hrv-zscore-30d");
-  if (typeof hrvZ === "number" && hrvZ >= 1.0) {
+  const hrv = findInsight(grounding, HRV_INSIGHT);
+  if (hrv && hrv.value >= 1.0) {
     out.push(
-      `Data 360 grounding: 30-day HRV variability z-score is ${hrvZ.toFixed(2)} (above 1.0 reference); biomarker drift consistent with active menopause transition.`
+      `Data 360 grounding: 30-day HRV variability z-score is ${hrv.value.toFixed(2)} (above 1.0 reference); biomarker drift consistent with active menopause transition.`
     );
-    cited.push("insight.hrv-zscore-30d");
+    cited.push(hrv.id);
   }
 
-  const vasoBurden = numericInsight(grounding, "insight.vasomotor-burden-30d");
-  if (typeof vasoBurden === "number" && vasoBurden >= 50) {
+  const vaso = findInsight(grounding, VASOMOTOR_INSIGHT);
+  if (vaso && vaso.value >= 50) {
     out.push(
-      `Data 360 grounding: vasomotor burden index is ${vasoBurden} (>=50 indicates clinically significant burden over the last 30 days).`
+      `Data 360 grounding: vasomotor burden index is ${vaso.value} (>=50 indicates clinically significant burden over the last 30 days).`
     );
-    cited.push("insight.vasomotor-burden-30d");
+    cited.push(vaso.id);
   }
 
-  const daysSinceMscp = numericInsight(grounding, "insight.days-since-mscp-contact");
-  if (typeof daysSinceMscp === "number" && daysSinceMscp >= 365) {
+  const contact = findInsight(grounding, CLINICAL_CONTACT_INSIGHT);
+  if (contact && contact.value >= 365) {
     out.push(
-      `Data 360 grounding: no MSCP-credentialed clinician contact in ${daysSinceMscp} days. Pathway should favor an MSCP touchpoint when symptoms warrant.`
+      `Data 360 grounding: no documented clinician contact in ${contact.value} days. Pathway should favor an MSCP touchpoint when symptoms warrant.`
     );
-    cited.push("insight.days-since-mscp-contact");
+    cited.push(contact.id);
   }
 
   if (grounding.cohortComparison) {
@@ -483,7 +521,7 @@ export function scriptedRoute(
   // in-person visit when longitudinal biomarkers + cohort percentile
   // suggest the patient is at the higher-burden end of her cohort.
   const groundingExtras = groundingRationale(grounding);
-  const vasoBurden = numericInsight(grounding, "insight.vasomotor-burden-30d");
+  const vasoBurden = findInsight(grounding, VASOMOTOR_INSIGHT)?.value;
   const cohortPctile = grounding?.cohortComparison?.patientPercentile;
   if (
     pathway === "mscp-virtual-visit" &&

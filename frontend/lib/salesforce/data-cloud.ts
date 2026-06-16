@@ -329,6 +329,7 @@ export async function getWearableInsights(unifiedPatientId: string): Promise<{
     const hrv: CalculatedInsight | null = hrvRows[0]
       ? {
           id: "insight.hrv-rmssd-30d",
+          kind: "hrv-variability",
           name: "HRV RMSSD variability (30-day)",
           description: `RMSSD ${hrvRows[0].hrv_rmssd_ms__c} ms · z-score ${hrvRows[0].z_score__c} vs menopause cohort. Source: Oura/DBDP via Data Cloud.`,
           value: Number(hrvRows[0].z_score__c ?? 0),
@@ -342,6 +343,7 @@ export async function getWearableInsights(unifiedPatientId: string): Promise<{
     const vasomotor: CalculatedInsight | null = vasomotorRows[0]
       ? {
           id: "insight.vasomotor-burden-30d",
+          kind: "vasomotor-burden",
           name: "Vasomotor symptom burden (30-day)",
           description: `Burden score ${vasomotorRows[0].burden_score_0_100__c}/100 · ${vasomotorRows[0].flash_count_30d__c} events in 30d. Source: wearable thermoregulation + intake via Data Cloud.`,
           value: Number(vasomotorRows[0].burden_score_0_100__c ?? 0),
@@ -355,6 +357,7 @@ export async function getWearableInsights(unifiedPatientId: string): Promise<{
     const sleep: CalculatedInsight | null = sleepRows[0]
       ? {
           id: "insight.sleep-disruption-7d",
+          kind: "sleep-disruption",
           name: "Sleep disruption index (7-day)",
           description: `Disruption index ${sleepRows[0].disruption_index_0_1__c} · ${sleepRows[0].disrupted_nights__c} disrupted nights. Source: Oura sleep staging via Data Cloud.`,
           value: Number(sleepRows[0].disruption_index_0_1__c ?? 0),
