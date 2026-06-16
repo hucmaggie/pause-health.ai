@@ -219,6 +219,101 @@ export default function HomePage() {
       </section>
 
       <section
+        aria-label="Today's reality — verifiable counts"
+        className="card"
+        style={{
+          marginTop: "1.5rem",
+          background:
+            "linear-gradient(180deg, rgba(255, 93, 168, 0.08) 0%, transparent 100%)",
+          borderColor: "rgba(255, 93, 168, 0.32)"
+        }}
+      >
+        <p className="eyebrow">Today's reality</p>
+        <h2 style={{ margin: "0.1rem 0 0.5rem", fontSize: "1.4rem" }}>
+          Numbers that survive a curl
+        </h2>
+        <p
+          style={{
+            margin: "0 0 0.8rem",
+            color: "var(--muted)",
+            fontSize: "0.92rem",
+            maxWidth: "62ch",
+            lineHeight: 1.55
+          }}
+        >
+          Provider-graph Phase 2 shipped. Five counts below ride on the
+          response of every <code>/api/mulesoft/providers</code> call under{" "}
+          <code>provenance.dataset</code> — a reader can verify them in
+          one shell command. Insurance acceptance is synthetically
+          derived per-NPI today (the chips are a soft filter, not a
+          guarantee); MSCP coverage waits on a Menopause Society
+          partnership. Closed-loop outcomes scoring activates with
+          referral volume.
+        </p>
+        <ul
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(11rem, 1fr))",
+            gap: "0.6rem",
+            margin: "0 0 0.9rem",
+            padding: 0,
+            listStyle: "none"
+          }}
+        >
+          <li className="card" style={{ padding: "0.7rem 0.85rem" }}>
+            <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>Directory size</span>
+            <strong style={{ display: "block", fontSize: "1.5rem", color: "var(--brand)" }}>2,015</strong>
+            <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>NPPES-derived; 15 MSCP-certified</span>
+          </li>
+          <li className="card" style={{ padding: "0.7rem 0.85rem" }}>
+            <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>Sanctioned filtered at build</span>
+            <strong style={{ display: "block", fontSize: "1.5rem", color: "var(--brand)" }}>1,720</strong>
+            <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>588 CA + 849 NY + 283 TX</span>
+          </li>
+          <li className="card" style={{ padding: "0.7rem 0.85rem" }}>
+            <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>Carry a Census ZCTA centroid</span>
+            <strong style={{ display: "block", fontSize: "1.5rem", color: "var(--brand)" }}>96%</strong>
+            <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>Powers the &quot;X mi away&quot; chip</span>
+          </li>
+          <li className="card" style={{ padding: "0.7rem 0.85rem" }}>
+            <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>Carry ≥1 service-line signal</span>
+            <strong style={{ display: "block", fontSize: "1.5rem", color: "var(--brand)" }}>22%</strong>
+            <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>FACOG / WHNP / multi-taxonomy / etc.</span>
+          </li>
+          <li className="card" style={{ padding: "0.7rem 0.85rem" }}>
+            <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>Closed-loop outcomes</span>
+            <strong style={{ display: "block", fontSize: "1.05rem", color: "var(--text)" }}>Phase 3</strong>
+            <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>Activates after ~1,000 referrals</span>
+          </li>
+        </ul>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+          <a
+            href="/proposal/provider-graph"
+            className="btn btn-primary"
+            style={{ fontSize: "0.85rem", padding: "0.5rem 0.85rem" }}
+          >
+            Read the provider-graph brief →
+          </a>
+          <a
+            href="/provider?zip=92614&menopause=true"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.85rem", padding: "0.5rem 0.85rem" }}
+          >
+            Browse the directory →
+          </a>
+          <a
+            href="/api/mulesoft/providers?zip=92614&menopause=true"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+            style={{ fontSize: "0.85rem", padding: "0.5rem 0.85rem" }}
+          >
+            Curl the contract →
+          </a>
+        </div>
+      </section>
+
+      <section
         aria-label="What's live in the prototype today"
         style={{ marginTop: "1.5rem" }}
       >
@@ -316,7 +411,7 @@ export default function HomePage() {
         }}
       >
         <p style={{ margin: 0, fontSize: "0.92rem", color: "var(--muted)" }}>
-          Built in the open — 63 commits since May 24, 2026.
+          Built in the open — 175 commits since May 24, 2026.
         </p>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           <a
