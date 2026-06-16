@@ -5,7 +5,7 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Data Inventory & Strategy",
   description:
-    "Available menopause datasets, our data strategy, and the proprietary data moats Pause-Health.ai will accrue over time. Each row labels whether the data is wired in prototype or a planned integration.",
+    "Available menopause datasets, our data strategy, and the proprietary data moats Pause-Health.ai is accruing. Each row labels whether the data is wired in prototype, partially live (shape live, values still synthetic / partner-feed-shape), or planned for design-partner-stage integration. Includes the 2,015-row NPPES-derived provider directory with three-state license-sanction filtering live today.",
   path: "/proposal/data",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Data inventory and strategy — Pause-Health.ai investor brief."
@@ -60,14 +60,24 @@ const inventory: Array<{
       "Quantifies avoidable utilization and the economic case for the payer-side product. Required for the PMPM contracting motion on /proposal/customers."
   },
   {
-    status: "planned",
+    status: "partial",
     source: "Patient-generated wearables",
     type: "HealthKit / Health Connect, Oura, Whoop, Garmin",
     volume:
-      "Continuous HRV, sleep, heart rate, skin temperature, cycle data — surfaced today as mocked Data 360 signals in the prototype dossier.",
+      "Continuous HRV, sleep, heart rate, skin temperature, cycle data — exposed today through Salesforce Data Cloud Calculated Insights (HRV z-score, vasomotor burden, sleep disruption) on the trailsignup tenant; demo-cohort values are seeded CIs until first-party ingestion lands.",
     examples: "Sleep fragmentation, resting HR drift, nocturnal heat events, HRV decline patterns",
     why_it_matters:
-      "Earliest and most sensitive signal for perimenopause onset — usually invisible to clinicians. Today the Pre-Brief Panel shows these as mocked signals; first-party ingestion is roadmap (see /demo/intake)."
+      "Earliest and most sensitive signal for perimenopause onset — usually invisible to clinicians. Phase 2 grounding is LIVE: the endpoint reports 'Phase 2: SOQL (Health Cloud) + Data Cloud Calculated Insights' on every call, and each insight falls back to its intake baseline independently if a DC call fails. Phase 2-bis swaps the demo-cohort seeded CIs for real JHE/DBDP wearable math via the same client + token flow (see PHASE_2_ACTIVATION_CHECKLIST.md)."
+  },
+  {
+    status: "prototype",
+    source: "Provider directory (NPPES-derived)",
+    type: "Public-domain · NPPES + Census + state sanction overlays",
+    volume:
+      "2,015 menopause-relevant providers across 55 states and 532 ZIP-3 prefixes (15 MSCP-certified, 2,000 menopause-relevant non-certified). Refreshed by the provider_ingest pipeline against the monthly CMS NPPES bulk file (~9.6M rows) in ~1m50s.",
+    examples: "Distance from patient ZIP, MSCP/NCMP credential, six NPPES board-cert / multi-specialty signals, telehealth + accepting-new-patients flags, license disposition (CA Medi-Cal + NY OPMC + TX TMB checked at build), insurance acceptance",
+    why_it_matters:
+      "Sanctioned providers (1,720 dropped in the June 2026 build) cannot surface in any agent recommendation, /api/mulesoft/providers response, or the /provider UI — the patient-safety filter is verifiable per response under provenance.dataset.sanctionedFilteredBySource. The Care Router consumes the same query function the agent and /provider use, so triage and the directory stay in lockstep."
   },
   {
     status: "planned",
@@ -148,6 +158,11 @@ const moats = [
     moat: "Provider relationships and EHR install base",
     detail:
       "Each Epic / Cerner deployment takes time and trust. The N-th install is dramatically faster than the first, while remaining a meaningful barrier for newcomers."
+  },
+  {
+    moat: "Sanction-filtered, menopause-scored provider graph",
+    detail:
+      "Vendor provider graphs (Definitive Healthcare, IQVIA OneKey, etc.) are excellent for general healthcare but don't score for menopause and don't run a build-time sanction filter against state license registries. Pause's directory unions CMS NPPES + The Menopause Society MSCP overlay (synthetic + self-reported NPPES today; licensed feed once partnership lands) + three state license-sanction overlays (CA Medi-Cal, NY OPMC, TX TMB — 1,720 sanctioned candidates dropped in the June 2026 build) + Census ZCTA centroids for distance ranking + six NPPES service-line signals. Live today (see /provider). Each refresh recompounds the moat without requiring a paid feed."
   }
 ];
 
@@ -171,6 +186,8 @@ export default function DataPage() {
           Pills:{" "}
           <StatusPill status="prototype" style={inlinePillStyle} /> in-hand or
           wired in the prototype today ·{" "}
+          <StatusPill status="partial" style={inlinePillStyle} /> shape live,
+          values still synthetic / partner-feed-shape ·{" "}
           <StatusPill status="planned" style={inlinePillStyle} /> integration
           unlocks at design-partner stage.
         </p>
