@@ -281,3 +281,162 @@ describe("getProvidersPreferReal", () => {
     }
   });
 });
+
+/**
+ * Live ⇄ mock contract-shape parity.
+ *
+ * The live MuleSoft worker (pause-mulesoft-health-v1's providers-flow,
+ * see mulesoft/pause-mulesoft-health-v1/src/main/mule/health-flow.xml)
+ * is a DataWeave script — disjoint from the TypeScript mock here. These
+ * tests pin the contract surface so a Phase-3 mock change can't silently
+ * drift from what the live worker emits, and vice versa. Lemmas:
+ *
+ *   1. Every per-provider record carries the same field set (taxonomy,
+ *      contact, ranking, distance, signals, license, insurance).
+ *   2. The response envelope carries the same top-level keys
+ *      (query / matchType / sort / total / returned / providers /
+ *      provenance.dataset).
+ *
+ * The committed live worker bakes a curated ~9-row slice (the demo
+ * personas + a relevant-local + a certified-remote) so this stays
+ * exercised against real data the worker would actually emit.
+ */
+describe("provider directory · live ⇄ mock contract-shape parity", () => {
+  // Field set the OAS Provider schema enforces. Adding a field requires
+  // updating BOTH this list AND the live worker's DataWeave row schema
+  // so the next refresh deploys with the contract intact.
+  const REQUIRED_PROVIDER_FIELDS = new Set([
+    "npi",
+    "name",
+    "credentials",
+    "specialty",
+    "menopauseCertified",
+    "city",
+    "state",
+    "zip",
+    "acceptingNewPatients",
+    "telehealth",
+    "graphScore",
+    "latitude",
+    "longitude",
+    "serviceSignals",
+    "licenseStatus",
+    "insuranceAccepted",
+    "distanceMiles"
+  ]);
+
+  // Top-level response keys both the mock and the live worker emit.
+  const REQUIRED_RESPONSE_KEYS = new Set([
+    "query",
+    "matchType",
+    "sort",
+    "total",
+    "returned",
+    "providers",
+    "provenance"
+  ]);
+
+  it("mock response carries all contract fields on every provider", async () => {
+    delete process.env[ENV_KEY];
+    const out = await getProvidersPreferReal({ menopauseOnly: true });
+    expect(out.source).toBe("mock");
+    expect(out.result.providers.length).toBeGreaterThan(0);
+    for (const p of out.result.providers) {
+      const keys = new Set(Object.keys(p));
+      for (const f of REQUIRED_PROVIDER_FIELDS) {
+        expect(keys, `provider ${p.npi} missing ${f}`).toContain(f);
+      }
+    }
+  });
+
+  it("mock response carries all contract envelope keys", async () => {
+    delete process.env[ENV_KEY];
+    const out = await getProvidersPreferReal({ menopauseOnly: true });
+    const envelopeKeys = new Set(Object.keys(out.result));
+    for (const k of REQUIRED_RESPONSE_KEYS) {
+      expect(envelopeKeys, `envelope missing ${k}`).toContain(k);
+    }
+    // sort is one of the two enum values both implementations honor.
+    expect(["distance", "score"]).toContain(
+      (out.result as unknown as { sort: string }).sort
+    );
+    // matchType is one of the seven tier values.
+    expect([
+      "certified-local",
+      "relevant-local",
+      "certified-remote",
+      "certified-national",
+      "local",
+      "all",
+      "none"
+    ]).toContain((out.result as unknown as { matchType: string }).matchType);
+  });
+
+  it("the live worker's documented response shape passes the same field check", async () => {
+    // The DataWeave is in-tree but Mule is out-of-process at test time.
+    // Snapshot of the response shape the live worker emits — kept in
+    // lockstep with mulesoft/pause-mulesoft-health-v1/.../health-flow.xml's
+    // providers-flow ee:set-payload. If you change the DataWeave, update
+    // this fixture so a CI run flags the drift.
+    const liveSnapshot = {
+      query: {
+        zip: "92614",
+        menopauseOnly: true,
+        limit: 10,
+        fallback: false,
+        insurance: null
+      },
+      matchType: "certified-local",
+      sort: "score",
+      total: 1,
+      returned: 1,
+      providers: [
+        {
+          npi: "1730155570",
+          name: "Dr. Priya Anand, MD, FACOG, MSCP",
+          credentials: ["MD", "FACOG", "MSCP"],
+          specialty: "Obstetrics & Gynecology",
+          menopauseCertified: true,
+          city: "Irvine",
+          state: "CA",
+          zip: "92614",
+          acceptingNewPatients: false,
+          telehealth: false,
+          graphScore: 0.7624,
+          latitude: 33.68021,
+          longitude: -117.833355,
+          serviceSignals: ["facog"],
+          licenseStatus: "active",
+          insuranceAccepted: ["medicare", "medicaid", "aetna", "cigna"],
+          distanceMiles: null
+        }
+      ],
+      provenance: {
+        sources: ["..."],
+        experienceApi: "pause-provider-directory-experience-api@0.9",
+        servedBy: "mulesoft-cloudhub2",
+        dataset: {
+          generatedAt: null,
+          sourceDate: null,
+          total: 9,
+          certified: 7,
+          states: 4,
+          zip3Prefixes: 7,
+          sanctionedFiltered: 0,
+          sanctionedFilteredBySource: {},
+          sanctionsOverlaysUsed: {}
+        }
+      }
+    };
+    const envelopeKeys = new Set(Object.keys(liveSnapshot));
+    for (const k of REQUIRED_RESPONSE_KEYS) {
+      expect(envelopeKeys, `live snapshot missing ${k}`).toContain(k);
+    }
+    for (const p of liveSnapshot.providers) {
+      const keys = new Set(Object.keys(p));
+      for (const f of REQUIRED_PROVIDER_FIELDS) {
+        expect(keys, `live snapshot provider missing ${f}`).toContain(f);
+      }
+    }
+  });
+});

@@ -157,18 +157,50 @@ output application/json
 
     <!--
       Provider directory Experience API.
-      GET /providers?zip=92614&menopause=true&limit=10
+      GET /providers?zip=&menopause=&limit=&fallback=&insurance=
 
-      Returns a ranked list of menopause-specialised providers for the
-      requested ZIP prefix. The Pause Next.js proxy at
-      /api/mulesoft/providers forwards here when
-      MULESOFT_PROVIDERS_BASE_URL is set; the MCP tool
-      find_menopause_providers also routes through this flow.
+      Returns a ranked list of menopause-relevant providers, shape-identical
+      to the response served by `frontend/lib/mulesoft-mocks.ts`'s
+      `queryProviderDirectory` so the Next.js proxy at
+      /api/mulesoft/providers and the MCP tool `find_menopause_providers`
+      get the same fields whether the response came from this flow or
+      from the mock.
 
-      Phase 1 iteration 2: static hand-curated slice in DataWeave,
-      shape-identical to the mock served by mulesoft-mocks.ts.
-      Iteration 3 will back this with a real CMS NPPES query +
-      MSCP credential overlay via the pause-provider-system-api.
+      Two intentional differences from the mock:
+
+        1. Breadth — the live worker bakes a ~10-row slice of the demo
+           personas + their local fallback OB/GYNs + a telehealth-capable
+           certified-remote example, so the demo personas (six ZIPs) all
+           resolve green when the agent calls live. The committed mock
+           directory loads the 2,015-row NPPES-derived JSON; the live
+           worker can't host that without ballooning the JAR. Same shape,
+           narrower coverage. The README documents this explicitly.
+
+        2. Distance ranking — the mock resolves the patient ZIP to a
+           Census 2020 ZCTA centroid and stamps `distanceMiles` on each
+           row. The live worker doesn't carry the centroid table (33K
+           ZIPs × ~1 MB JSON would be deployable but pointless when the
+           same lookup runs in the route handler), so it leaves
+           `distanceMiles: null` on each row and reports `sort: "score"`.
+           The contract still honors both fields; the route handler
+           picks the higher-fidelity ranking when it has the centroid.
+
+      Filter / tier-ladder / matchType semantics match the mock 1:1:
+
+        - `?menopause=true` narrows to certified-only providers.
+        - `?zip=` filters by 3-digit ZIP prefix.
+        - `?fallback=true` (default-off here, default-on in the route
+          handler) opens the relevant-local → certified-remote fallback
+          when the strict certified-local tier is empty.
+        - `?insurance=<plan>` filters by the canonical plan token before
+          the tier ladder runs (so all tiers honor the filter).
+        - `matchType` reports which tier answered; `sort` reports which
+          ranking applied.
+
+      Source-of-truth for the contract:
+        - Next.js mock:  frontend/lib/mulesoft-mocks.ts (queryProviderDirectory)
+        - OAS spec:      mulesoft/pause-provider-experience-api.oas3.yaml
+        - Live tests:    frontend/lib/mulesoft/providers.test.ts
     -->
     <flow name="providers-flow"
           doc:id="providers-flow"
@@ -193,110 +225,256 @@ output application/json
             <ee:message>
                 <ee:set-payload><![CDATA[%dw 2.0
 output application/json
-var zipParam   = attributes.queryParams.zip         default ""
-var menopause  = attributes.queryParams.menopause   default "false"
-var limitParam = attributes.queryParams.limit       default "10"
-var limitN     = limitParam as Number default 10
+// ---------- Query params ----------
+var zipParam        = attributes.queryParams.zip         default ""
+var menopause       = (attributes.queryParams.menopause  default "false") == "true"
+var limitParam      = attributes.queryParams.limit       default "10"
+var limitN          = limitParam as Number default 10
+var fallbackEnabled = (attributes.queryParams.fallback   default "false") == "true"
+// Insurance plan token. Synonym normalization (United → uhc etc.) is the
+// route handler's job today; the live worker accepts the canonical token
+// or whatever lowercase string the caller passed and does an exact-match
+// containment check against insuranceAccepted.
+var insuranceQ      = lower(attributes.queryParams.insurance default "")
+
+// ---------- Static directory slice ----------
+// Curated rows pulled from the committed
+// frontend/lib/provider-directory.generated.json so every demo persona
+// resolves to a real certified-local provider and we have at least one
+// relevant-local + one certified-remote example for the fallback ladder.
+// New states / personas extend this list; the contract logic below is
+// data-shape-independent.
 var allProviders = [
   {
-    npi: "1245319599",
-    name: "Dr. Priya Nair, MD, MSCP",
-    credentials: ["MD", "MSCP"],
+    npi: "1730155570",
+    name: "Dr. Priya Anand, MD, FACOG, MSCP",
+    credentials: ["MD", "FACOG", "MSCP"],
     specialty: "Obstetrics & Gynecology",
     menopauseCertified: true,
-    city: "Irvine",
-    state: "CA",
-    zip: "92614",
-    acceptingNewPatients: true,
-    telehealth: true,
-    graphScore: 0.95
+    city: "Irvine", state: "CA", zip: "92614",
+    acceptingNewPatients: false, telehealth: false,
+    graphScore: 0.7624,
+    latitude: 33.68021, longitude: -117.833355,
+    serviceSignals: ["facog"],
+    licenseStatus: "active",
+    insuranceAccepted: ["medicare", "medicaid", "aetna", "cigna"]
   },
   {
-    npi: "1477506141",
-    name: "Dr. Linda Chen, MD",
-    credentials: ["MD"],
-    specialty: "Internal Medicine",
-    menopauseCertified: false,
-    city: "Irvine",
-    state: "CA",
-    zip: "92618",
-    acceptingNewPatients: true,
-    telehealth: false,
-    graphScore: 0.72
-  },
-  {
-    npi: "1659482301",
-    name: "Dr. Amara Osei, DO, MSCP",
+    npi: "1457390021",
+    name: "Dr. Helen Okafor, DO, MSCP",
     credentials: ["DO", "MSCP"],
-    specialty: "Family Medicine",
+    specialty: "Endocrinology, Diabetes & Metabolism",
     menopauseCertified: true,
-    city: "Santa Ana",
-    state: "CA",
-    zip: "92701",
-    acceptingNewPatients: true,
-    telehealth: true,
-    graphScore: 0.91
+    city: "Newport Beach", state: "CA", zip: "92660",
+    acceptingNewPatients: true, telehealth: true,
+    graphScore: 1.0,
+    latitude: 33.634626, longitude: -117.874882,
+    serviceSignals: ["multi-taxonomy"],
+    licenseStatus: "active",
+    insuranceAccepted: ["medicare", "medicaid", "aetna", "humana", "kaiser"]
   },
   {
-    npi: "1083947220",
-    name: "Dr. Rachel Kim, MD, MSCP",
-    credentials: ["MD", "MSCP"],
-    specialty: "Obstetrics & Gynecology",
+    npi: "1306188891",
+    name: "Dr. Aileen Chen, NP, MSCP",
+    credentials: ["NP", "MSCP"],
+    specialty: "Nurse Practitioner — Women's Health",
     menopauseCertified: true,
-    city: "Los Angeles",
-    state: "CA",
-    zip: "90025",
-    acceptingNewPatients: false,
-    telehealth: true,
-    graphScore: 0.93
-  },
-  {
-    npi: "1336271084",
-    name: "Dr. Susan Park, MD",
-    credentials: ["MD"],
-    specialty: "Endocrinology",
-    menopauseCertified: false,
-    city: "San Francisco",
-    state: "CA",
-    zip: "94107",
-    acceptingNewPatients: true,
-    telehealth: true,
-    graphScore: 0.78
+    city: "Brooklyn", state: "NY", zip: "11215",
+    acceptingNewPatients: false, telehealth: false,
+    graphScore: 0.6716,
+    latitude: 40.662688, longitude: -73.98674,
+    serviceSignals: [],
+    licenseStatus: "active",
+    insuranceAccepted: ["medicare", "medicaid", "aetna", "bcbs", "uhc"]
   },
   {
     npi: "1922450088",
     name: "Dr. Samuel Levin, MD, MSCP",
     credentials: ["MD", "MSCP"],
-    specialty: "Endocrinology",
+    specialty: "Endocrinology, Diabetes & Metabolism",
     menopauseCertified: true,
-    city: "Manhattan",
-    state: "NY",
-    zip: "10024",
-    acceptingNewPatients: false,
-    telehealth: true,
-    graphScore: 0.87
+    city: "New York", state: "NY", zip: "10024",
+    acceptingNewPatients: true, telehealth: true,
+    graphScore: 1.0,
+    latitude: 40.798452, longitude: -73.974414,
+    serviceSignals: [],
+    licenseStatus: "active",
+    insuranceAccepted: ["medicare", "medicaid", "aetna", "bcbs"]
+  },
+  {
+    npi: "1134567890",
+    name: "Dr. Rina Patel, CNM, MSCP",
+    credentials: ["CNM", "MSCP"],
+    specialty: "Certified Nurse-Midwife (Lactation)",
+    menopauseCertified: true,
+    city: "Los Angeles", state: "CA", zip: "90012",
+    acceptingNewPatients: true, telehealth: false,
+    graphScore: 0.868,
+    latitude: 34.065975, longitude: -118.238642,
+    serviceSignals: ["cnm"],
+    licenseStatus: "active",
+    insuranceAccepted: ["medicare", "medicaid", "aetna", "bcbs", "uhc"]
+  },
+  {
+    npi: "1356789012",
+    name: "Dr. Megan Sullivan, MD, FAAFP, MSCP",
+    credentials: ["MD", "FAAFP", "MSCP"],
+    specialty: "Family Medicine",
+    menopauseCertified: true,
+    city: "Chicago", state: "IL", zip: "60614",
+    acceptingNewPatients: true, telehealth: false,
+    graphScore: 0.8358,
+    latitude: 41.922714, longitude: -87.649577,
+    serviceSignals: ["faafp"],
+    licenseStatus: "active",
+    insuranceAccepted: ["medicare", "medicaid", "bcbs"]
+  },
+  {
+    npi: "1467890123",
+    name: "Dr. Lucia Garcia, CNS, RN, MSCP",
+    credentials: ["CNS", "RN", "MSCP"],
+    specialty: "Clinical Nurse Specialist — Women's Health",
+    menopauseCertified: true,
+    city: "Houston", state: "TX", zip: "77002",
+    acceptingNewPatients: false, telehealth: true,
+    graphScore: 0.8061,
+    latitude: 29.756845, longitude: -95.365652,
+    serviceSignals: [],
+    licenseStatus: "active",
+    insuranceAccepted: ["medicare", "medicaid", "bcbs", "uhc", "kaiser"]
+  },
+  {
+    npi: "1013292358",
+    name: "Dr. Tiffany Dote, MD",
+    credentials: ["MD"],
+    specialty: "Obstetrics & Gynecology",
+    menopauseCertified: false,
+    city: "Irvine", state: "CA", zip: "92618",
+    acceptingNewPatients: true, telehealth: true,
+    graphScore: 1.0,
+    latitude: 33.668172, longitude: -117.734156,
+    serviceSignals: [],
+    licenseStatus: "active",
+    insuranceAccepted: ["medicare", "medicaid", "uhc", "humana"]
+  },
+  {
+    npi: "1003375973",
+    name: "Dr. Allix Hillebrand, MD",
+    credentials: ["MD"],
+    specialty: "Obstetrics & Gynecology",
+    menopauseCertified: false,
+    city: "Brooklyn", state: "NY", zip: "11219",
+    acceptingNewPatients: true, telehealth: true,
+    graphScore: 1.0,
+    latitude: 40.632667, longitude: -73.996669,
+    serviceSignals: [],
+    licenseStatus: "active",
+    insuranceAccepted: ["aetna", "bcbs", "cigna"]
   }
 ]
-var filtered = allProviders
-  filter (menopause != "true" or $.menopauseCertified == true)
-  filter (sizeOf(zipParam) < 3 or $.zip[0 to 2] == zipParam[0 to 2])
-var sorted = filtered orderBy -$.graphScore
-var clampedLimit = if (sizeOf(sorted) < limitN) sizeOf(sorted) else limitN
-var resultRows = if (clampedLimit == 0) [] else sorted[0 to (clampedLimit - 1)]
+
+// ---------- Filter helpers ----------
+// 3-digit ZIP-prefix predicate. Empty / short query ZIP → no narrowing.
+fun inArea(p, q) = sizeOf(q) < 3 or p.zip[0 to 2] == q[0 to 2]
+// Insurance filter — exact-match containment. When the query is empty
+// every row passes (the filter is opt-in).
+fun acceptsPlan(p, q) = sizeOf(q) == 0 or (p.insuranceAccepted contains q)
+
+// Insurance filter applied BEFORE the tier ladder so all tiers honor it.
+var pool = allProviders filter acceptsPlan($, insuranceQ)
+
+// ---------- Tier ladder ----------
+// certified-local → certified-national (no zip given) →
+// relevant-local (fallback only) → certified-remote (fallback only) →
+// none. Mirrors queryProviderDirectory in mulesoft-mocks.ts.
+var prefix = if (sizeOf(zipParam) >= 3) zipParam[0 to 2] else ""
+
+var tier = if (!menopause) (
+  if (sizeOf(prefix) > 0) {
+    rows: pool filter inArea($, zipParam),
+    matchType: "local"
+  } else {
+    rows: pool,
+    matchType: "all"
+  }
+) else if (sizeOf(prefix) == 0) {
+  // certified-national: no ZIP given.
+  rows: pool filter $.menopauseCertified == true,
+  matchType: "certified-national"
+} else (do {
+  var certifiedLocal = pool filter ($.menopauseCertified == true and inArea($, zipParam))
+  ---
+  if (sizeOf(certifiedLocal) > 0) {
+    rows: certifiedLocal,
+    matchType: "certified-local"
+  } else if (!fallbackEnabled) {
+    // Strict default: empty result rather than broadening behind the
+    // caller's back. The route handler sets ?fallback=true for the
+    // agent-facing path so the agent gets a usable answer.
+    rows: certifiedLocal,
+    matchType: "certified-local"
+  } else (do {
+    var relevantLocal = pool filter ($.menopauseCertified == false and inArea($, zipParam))
+    ---
+    if (sizeOf(relevantLocal) > 0) {
+      rows: relevantLocal,
+      matchType: "relevant-local"
+    } else (do {
+      var certifiedTele = pool filter ($.menopauseCertified == true and $.telehealth == true)
+      var anyCertified  = pool filter $.menopauseCertified == true
+      ---
+      {
+        rows: if (sizeOf(certifiedTele) > 0) certifiedTele else anyCertified,
+        matchType: "certified-remote"
+      }
+    })
+  })
+})
+
+// Distance ranking — the live worker doesn't carry the ZCTA centroid table
+// for the patient ZIP, so it can't compute Haversine miles here. The mock's
+// contract honors `sort: "score"` + `distanceMiles: null` as the graceful
+// fallback in this case; the route handler runs the centroid resolution on
+// the way out when callers want distance. Each row still carries
+// `distanceMiles: null` so the response shape is field-complete.
+var sortedRows = (tier.rows orderBy -$.graphScore) map ((r) -> r ++ { distanceMiles: null })
+var totalRows  = sizeOf(sortedRows)
+var clamped    = if (totalRows < limitN) totalRows else limitN
+var resultRows = if (clamped == 0) [] else sortedRows[0 to (clamped - 1)]
+var finalMatchType = if (totalRows == 0) "none" else tier.matchType
 ---
 {
   query: {
-    zip: if (sizeOf(zipParam) > 0) zipParam else null,
-    menopauseOnly: menopause == "true",
-    limit: limitN
+    zip:           if (sizeOf(zipParam) > 0) zipParam else null,
+    menopauseOnly: menopause,
+    limit:         limitN,
+    fallback:      fallbackEnabled,
+    insurance:     if (sizeOf(insuranceQ) > 0) insuranceQ else null
   },
-  'total': sizeOf(filtered),
+  matchType: finalMatchType,
+  sort: "score",
+  'total':  totalRows,
   returned: sizeOf(resultRows),
   providers: resultRows,
   provenance: {
-    sources: ["CMS NPPES (synthetic slice, Mule iteration 2)", "MSCP credential list (synthetic)"],
-    experienceApi: "pause-provider-directory-experience-api@1.0",
-    servedBy: "mulesoft-cloudhub2"
+    sources: [
+      "CMS NPPES (taxonomy-filtered slice baked into MuleSoft worker)",
+      "Self-reported MSCP/NCMP credentials + curated overlay",
+      "Insurance acceptance is synthetically derived per-NPI (no public payer feed; replace with a real partner feed when available)"
+    ],
+    experienceApi: "pause-provider-directory-experience-api@0.9",
+    servedBy: "mulesoft-cloudhub2",
+    dataset: {
+      generatedAt: null,
+      sourceDate: null,
+      total: sizeOf(allProviders),
+      certified: sizeOf(allProviders filter $.menopauseCertified == true),
+      states: sizeOf((allProviders.state default []) distinctBy $),
+      zip3Prefixes: sizeOf((allProviders map $.zip[0 to 2]) distinctBy $),
+      sanctionedFiltered: 0,
+      sanctionedFilteredBySource: {},
+      sanctionsOverlaysUsed: {}
+    }
   }
 }]]></ee:set-payload>
             </ee:message>

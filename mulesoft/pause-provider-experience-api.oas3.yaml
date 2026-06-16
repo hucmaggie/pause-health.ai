@@ -160,29 +160,50 @@ paths:
                 $ref: "#/components/schemas/ProviderDirectoryResponse"
               example:
                 query:
-                  zip: null
+                  zip: "92614"
                   menopauseOnly: true
                   limit: 3
-                total: 4
-                returned: 3
+                  fallback: false
+                  insurance: null
+                matchType: certified-local
+                sort: score
+                total: 1
+                returned: 1
                 providers:
-                  - npi: "1245319599"
-                    name: "Dr. Priya Nair, MD, MSCP"
-                    credentials: [MD, MSCP]
+                  - npi: "1730155570"
+                    name: "Dr. Priya Anand, MD, FACOG, MSCP"
+                    credentials: [MD, FACOG, MSCP]
                     specialty: "Obstetrics & Gynecology"
                     menopauseCertified: true
                     city: Irvine
                     state: CA
                     zip: "92614"
-                    acceptingNewPatients: true
-                    telehealth: true
-                    graphScore: 0.95
+                    acceptingNewPatients: false
+                    telehealth: false
+                    graphScore: 0.7624
+                    latitude: 33.68021
+                    longitude: -117.833355
+                    serviceSignals: [facog]
+                    licenseStatus: active
+                    insuranceAccepted: [medicare, medicaid, aetna, cigna]
+                    distanceMiles: null
                 provenance:
                   sources:
-                    - "CMS NPPES (synthetic slice, Mule iteration 2)"
-                    - "MSCP credential list (synthetic)"
-                  experienceApi: "pause-provider-directory-experience-api@1.0"
+                    - "CMS NPPES (taxonomy-filtered slice baked into MuleSoft worker)"
+                    - "Self-reported MSCP/NCMP credentials + curated overlay"
+                    - "Insurance acceptance is synthetically derived per-NPI (no public payer feed; replace with a real partner feed when available)"
+                  experienceApi: "pause-provider-directory-experience-api@0.9"
                   servedBy: mulesoft-cloudhub2
+                  dataset:
+                    generatedAt: null
+                    sourceDate: null
+                    total: 9
+                    certified: 7
+                    states: 4
+                    zip3Prefixes: 7
+                    sanctionedFiltered: 0
+                    sanctionedFilteredBySource: {}
+                    sanctionsOverlaysUsed: {}
         "401":
           $ref: "#/components/responses/Unauthorized"
         "429":

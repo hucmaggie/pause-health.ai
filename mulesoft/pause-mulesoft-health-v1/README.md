@@ -7,18 +7,37 @@ Mule 4 project that builds, tests, and deploys to CloudHub 2.0.
 
 ## What it does
 
-One flow. One endpoint.
+Two flows.
 
 - `GET /health` → static FHIR R5 Bundle (Patient + 2 raw Observations
   + 1 DBDP-derived feature Observation with `derivedFrom` provenance).
+- `GET /providers?zip=&menopause=&limit=&fallback=&insurance=` →
+  ranked menopause-relevant provider directory, full Phase-2 contract
+  shape (matchType tier ladder, serviceSignals, licenseStatus,
+  insuranceAccepted, dataset provenance).
 
-The returned shape is **byte-compatible** with the bundle generated
-by `frontend/lib/mulesoft-mocks.ts`, so the Next.js proxy at
-`/api/mulesoft/health` can swap mock → live by setting one env var
-(`MULESOFT_HEALTH_BASE_URL`) without any consumer code change. The
-swap is verified by the test suite at
-`frontend/lib/mulesoft/health.test.ts` and
-`frontend/app/api/mulesoft/health/route.test.ts`.
+The returned shapes are **field-compatible** with the responses generated
+by `frontend/lib/mulesoft-mocks.ts`, so the Next.js proxies at
+`/api/mulesoft/health` and `/api/mulesoft/providers` swap mock → live by
+setting `MULESOFT_HEALTH_BASE_URL` / `MULESOFT_PROVIDERS_BASE_URL`
+without any consumer code change. The swap is verified by the test suite
+under `frontend/lib/mulesoft/`.
+
+### Two intentional differences between live and mock for `/providers`
+
+1. **Breadth.** The live worker bakes a curated 9-row slice (the 6 demo
+   personas' local certified providers + 2 relevant-local OB/GYNs + a
+   telehealth-capable certified-remote example) so every demo persona
+   resolves green when the agent calls live. The committed mock loads
+   the 2,015-row NPPES-derived JSON. Same shape, narrower coverage.
+   Hosting the full directory inside the JAR would balloon the
+   deployable; loading it from blob storage on cold start would add
+   latency without helping the demo. The contract is what matters.
+2. **Distance ranking.** The live worker doesn't carry the Census 2020
+   ZCTA centroid table, so it leaves `distanceMiles: null` on each row
+   and reports `sort: "score"`. The mock resolves the patient ZIP →
+   centroid and stamps Haversine miles when it can. Both honor the
+   contract; the route handler picks the higher-fidelity ranking.
 
 ## What it does NOT do (Phase 1 scope)
 
