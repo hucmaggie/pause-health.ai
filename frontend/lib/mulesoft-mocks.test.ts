@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildPatientTimelineBundle,
   findProviderByNpi,
   normalizeInsurancePlan,
   queryProviderDirectory,
@@ -401,6 +402,65 @@ describe("queryProviderDirectory · insurance filter", () => {
  * directory + a representative demo persona (Anand, NPI 1730155570) and
  * the contract on bad input.
  */
+/**
+ * Patient timeline bundle — DBDP feature lineage.
+ *
+ * This bundle is the source of truth that BOTH /api/mulesoft/health (mock mode)
+ * and the live CloudHub worker (mulesoft/pause-mulesoft-health-v1, which mirrors
+ * it 1:1) serve. The /proposal/mulesoft page advertises that "every DBDP-computed
+ * feature Observation carries a derivedFrom reference back to the raw window it
+ * was derived from" — these tests pin exactly that so the claim (and the live
+ * worker's shape-compatibility) can't silently regress on a future edit.
+ */
+type BundleResource = {
+  resourceType: string;
+  id?: string;
+  code?: { coding?: { system?: string; code?: string }[] };
+  derivedFrom?: { reference?: string }[];
+};
+
+describe("buildPatientTimelineBundle · DBDP feature lineage", () => {
+  const bundle = buildPatientTimelineBundle();
+  const resources = bundle.entry.map((e) => e.resource as BundleResource);
+  const isDbdpFeature = (r: BundleResource) =>
+    (r.code?.coding ?? []).some(
+      (c) => c.system === "urn:pause-health:code:dbdp-features"
+    );
+
+  it("is a searchset bundle anchored by exactly one Patient", () => {
+    expect(bundle.resourceType).toBe("Bundle");
+    expect(bundle.type).toBe("searchset");
+    expect(resources.filter((r) => r.resourceType === "Patient")).toHaveLength(1);
+  });
+
+  it("contains at least one DBDP-computed feature Observation", () => {
+    expect(resources.filter(isDbdpFeature).length).toBeGreaterThan(0);
+  });
+
+  it("every DBDP feature Observation carries a non-empty derivedFrom", () => {
+    for (const r of resources.filter(isDbdpFeature)) {
+      expect(r.derivedFrom, r.id).toBeTruthy();
+      expect((r.derivedFrom ?? []).length, r.id).toBeGreaterThan(0);
+    }
+  });
+
+  it("every derivedFrom reference resolves to an Observation in the same bundle", () => {
+    const observationIds = new Set(
+      resources
+        .filter((r) => r.resourceType === "Observation" && r.id)
+        .map((r) => r.id as string)
+    );
+    for (const r of resources.filter(isDbdpFeature)) {
+      for (const ref of r.derivedFrom ?? []) {
+        // References are "Observation/<id>" — the raw window must exist so the
+        // lineage isn't a dangling pointer.
+        const id = (ref.reference ?? "").replace(/^Observation\//, "");
+        expect(observationIds.has(id), ref.reference).toBe(true);
+      }
+    }
+  });
+});
+
 describe("findProviderByNpi", () => {
   it("resolves a known NPI from the committed directory", () => {
     const r = findProviderByNpi("1730155570");

@@ -69,6 +69,34 @@ paths:
                       valueQuantity:
                         value: 72
                         unit: /min
+                  # Raw HRV window (the source signal) ...
+                  - fullUrl: "urn:uuid:obs-hrv-raw-001"
+                    resource:
+                      resourceType: Observation
+                      id: obs-hrv-raw-001
+                      status: final
+                      code:
+                        coding:
+                          - system: "http://loinc.org"
+                            code: "80404-7"
+                            display: "R-R interval by EKG"
+                  # ... and the DBDP-derived feature that points back to it
+                  # via derivedFrom (the lineage the proposal page advertises).
+                  - fullUrl: "urn:uuid:obs-feature-rmssd-001"
+                    resource:
+                      resourceType: Observation
+                      id: obs-feature-rmssd-001
+                      status: final
+                      code:
+                        coding:
+                          - system: "urn:pause-health:code:dbdp-features"
+                            code: "hrv_rmssd_sliding_180s"
+                            display: "HRV RMSSD (sliding 180s window, DBDP/FLIRT)"
+                      valueQuantity:
+                        value: 18.4
+                        unit: ms
+                      derivedFrom:
+                        - reference: "Observation/obs-hrv-raw-001"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "429":

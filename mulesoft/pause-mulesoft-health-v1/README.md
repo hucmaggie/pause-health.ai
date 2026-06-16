@@ -9,8 +9,11 @@ Mule 4 project that builds, tests, and deploys to CloudHub 2.0.
 
 Two flows.
 
-- `GET /health` → static FHIR R5 Bundle (Patient + 2 raw Observations
-  + 1 DBDP-derived feature Observation with `derivedFrom` provenance).
+- `GET /health` → static FHIR R5 Bundle (Patient + 3 raw Observations —
+  heart rate, sleep duration, and the raw RR-interval window — + 1
+  DBDP-derived RMSSD feature Observation whose `derivedFrom` references
+  the raw window). Shape-identical to `buildPatientTimelineBundle()` in
+  `frontend/lib/mulesoft-mocks.ts`.
 - `GET /providers?zip=&menopause=&limit=&fallback=&insurance=` →
   ranked menopause-relevant provider directory, full Phase-2 contract
   shape (matchType tier ladder, serviceSignals, licenseStatus,
