@@ -89,6 +89,41 @@ export function isAgentforceConfigured(): boolean {
 }
 
 /**
+ * Defensive normalization for hidden prechat fields before they reach the
+ * Salesforce Embedded Messaging SDK.
+ *
+ * Trims keys and values, drops empty / whitespace-only entries, and returns
+ * null when nothing usable remains so the caller can skip the
+ * setHiddenPrechatFields call entirely. This matters because the V2 SDK now
+ * transmits valid registered fields to SCRT2 (the empty-Proxy bug is fixed),
+ * so an empty string handed for a REGISTERED field (e.g. Patient_Zip) would
+ * land on MessagingSession and overwrite real context with blank — worse than
+ * never sending it. Keeping this pure makes the contract unit-testable away
+ * from the SDK side effects.
+ */
+export function sanitizePrechatFields(
+  fields: Record<string, string> | null | undefined
+): Record<string, string> | null {
+  if (!fields) return null;
+  const cleaned: Record<string, string> = {};
+  for (const [key, raw] of Object.entries(fields)) {
+    const k = typeof key === "string" ? key.trim() : "";
+    const v = typeof raw === "string" ? raw.trim() : "";
+    if (k && v) cleaned[k] = v;
+  }
+  return Object.keys(cleaned).length > 0 ? cleaned : null;
+}
+
+/**
+ * How long to wait after init() before warning the user that the launcher
+ * hasn't appeared. The most common production cause is a deployment that
+ * hasn't been Published, or a host domain missing from the Embedded Service
+ * allow-list — both leave init() succeeding but onEmbeddedMessagingReady
+ * never firing. We surface an actionable hint rather than spinning forever.
+ */
+export const AGENTFORCE_READY_TIMEOUT_MS = 12_000;
+
+/**
  * Human-readable copy paired with the Agentforce UI. Centralized so the
  * embed, the fallback, and the investor page stay consistent.
  */

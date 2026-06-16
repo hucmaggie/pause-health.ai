@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { AGENTFORCE_COPY, type AgentforceConfig } from "../lib/agentforce";
+import {
+  AGENTFORCE_COPY,
+  AGENTFORCE_READY_TIMEOUT_MS,
+  sanitizePrechatFields,
+  type AgentforceConfig
+} from "../lib/agentforce";
 
 /**
  * Salesforce Embedded Messaging for Web — floating-launcher mount.
@@ -101,13 +106,33 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
   const [prechatStatus, setPrechatStatus] = useState<
     "idle" | "applied" | "skipped-no-api" | "error"
   >("idle");
+  // True once the launcher has taken longer than AGENTFORCE_READY_TIMEOUT_MS to
+  // appear without erroring — almost always an unpublished deployment or a host
+  // domain missing from the Embedded Service allow-list. Surfaced as an
+  // actionable hint instead of an indefinite "Connecting…" spinner.
+  const [slowToReady, setSlowToReady] = useState(false);
+  const readyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (initializedRef.current) return;
 
+    const clearReadyTimer = () => {
+      if (readyTimerRef.current !== null) {
+        clearTimeout(readyTimerRef.current);
+        readyTimerRef.current = null;
+      }
+    };
+    const startReadyTimer = () => {
+      if (readyTimerRef.current !== null) return;
+      readyTimerRef.current = setTimeout(() => {
+        setSlowToReady(true);
+      }, AGENTFORCE_READY_TIMEOUT_MS);
+    };
+
     const applyPrechatFields = () => {
       if (prechatAppliedRef.current) return;
-      if (!prechatFields || Object.keys(prechatFields).length === 0) return;
+      const clean = sanitizePrechatFields(prechatFields);
+      if (!clean) return;
       const api = window.embeddedservice_bootstrap?.prechatAPI;
       if (!api || typeof api.setHiddenPrechatFields !== "function") {
         // SDK version doesn't expose prechatAPI. The agent still works;
@@ -116,7 +141,7 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
         return;
       }
       try {
-        api.setHiddenPrechatFields(prechatFields);
+        api.setHiddenPrechatFields(clean);
         prechatAppliedRef.current = true;
         setPrechatStatus("applied");
       } catch (err) {
@@ -129,10 +154,13 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
     };
 
     const onReady = () => {
+      clearReadyTimer();
+      setSlowToReady(false);
       applyPrechatFields();
       setStatus("ready");
     };
     const onInitError = (event: Event) => {
+      clearReadyTimer();
       const detail = (event as CustomEvent<{ message?: string }>).detail;
       const msg =
         (detail && typeof detail.message === "string" && detail.message) ||
@@ -163,8 +191,12 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
 
         initializedRef.current = true;
         setStatus("initializing");
+        // init() resolved synchronously; the launcher appears only once the
+        // SDK fires onEmbeddedMessagingReady. Start the watchdog now.
+        startReadyTimer();
         return true;
       } catch (err) {
+        clearReadyTimer();
         setStatus("error");
         setErrorMessage(err instanceof Error ? err.message : String(err));
         return true;
@@ -172,6 +204,7 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
     };
 
     const cleanup = () => {
+      clearReadyTimer();
       window.removeEventListener("onEmbeddedMessagingReady", onReady);
       window.removeEventListener(
         "onEmbeddedMessagingInitError",
@@ -212,8 +245,9 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
     return cleanup;
   }, [config, prechatFields]);
 
-  const prechatFieldCount = prechatFields
-    ? Object.keys(prechatFields).length
+  const sanitizedPrechat = sanitizePrechatFields(prechatFields);
+  const prechatFieldCount = sanitizedPrechat
+    ? Object.keys(sanitizedPrechat).length
     : 0;
 
   return (
@@ -237,9 +271,18 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
             Loading the live Pause Intake agent…
           </p>
         )}
-        {status === "initializing" && (
+        {status === "initializing" && !slowToReady && (
           <p style={{ color: "var(--muted)", margin: 0 }}>
             Connecting to Salesforce Agentforce Service Cloud…
+          </p>
+        )}
+        {status === "initializing" && slowToReady && (
+          <p role="status" style={{ color: "var(--muted)", margin: 0 }}>
+            Still connecting to Salesforce Agentforce… the chat launcher
+            hasn&apos;t appeared yet. If this persists, confirm the Embedded
+            Service deployment{" "}
+            <strong>{config.deploymentApiName}</strong> is Published and that
+            this site&apos;s domain is on its allow-list — then refresh.
           </p>
         )}
         {status === "ready" && (
