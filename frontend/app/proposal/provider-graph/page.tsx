@@ -5,7 +5,7 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Provider Graph",
   description:
-    "How Pause-Health.ai builds a defensible menopause provider graph from CMS NPPES, state board data, and clinic-site signal. Phase 1 is shipped: the provider_ingest pipeline filters NPPES on the real menopause NUCC taxonomies, overlays the MSCP credential list, and computes a graphScore behind the Experience API contract. State boards + clinic-site detection are Phase 2.",
+    "How Pause-Health.ai builds a defensible menopause provider graph. Phase 2 shipped: 2,015 NPPES-derived providers, distance-aware ranking from Census ZCTA centroids, board-certification signals, three-state license-sanction filters (CA/NY/TX, 1,720 dropped at build), synthetic-but-real-shaped insurance acceptance, and a /provider browseable UI. Closed-loop outcomes scoring (Phase 3) activates with referral volume.",
   path: "/proposal/provider-graph",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Provider graph strategy — Pause-Health.ai investor brief."
@@ -14,47 +14,59 @@ export const metadata = pageMetadata({
 /**
  * Provider graph brief.
  *
- * Phase 1 is shipped: the provider directory behind the Experience API
- * contract is no longer hand-curated. The provider_ingest pipeline
- * (provider_ingest/ at the repo root) streams the CMS NPPES bulk schema,
- * filters on the real menopause NUCC taxonomy codes, overlays the MSCP
- * credential list, computes a graphScore, and emits
- * frontend/lib/provider-directory.generated.json — which queryProviderDirectory
- * loads. Exposed through:
+ * Phase 2 is now shipped end-to-end. The provider directory is
+ * NPPES-derived at scale (2,015-row national run), distance-aware
+ * (Census 2020 ZCTA centroids → Haversine), and gated by three
+ * state license-sanction overlays (CA Medi-Cal S&I, NY OPMC, TX TMB)
+ * that drop 1,720 candidates at build time before they can ever be
+ * recommended. Service-line signals from the public NPPES record
+ * (FACOG, FAAFP, WHNP, multi-taxonomy) honestly sub-rank the
+ * relevant-local tier when no certified-local provider is in range.
+ * Insurance acceptance ships as a real-shaped synthetic overlay so
+ * the contract, filter UX, and agent framing are all wired up
+ * end-to-end; replacing the synthesis with a partner feed is a
+ * one-module swap.
  *
- *   - GET /api/mulesoft/providers (Experience API; NPPES-derived data)
- *   - MCP tool: find_menopause_providers
+ * Surfaces:
  *
- * The committed dataset is the pipeline run over a synthetic NPPES-format
- * fixture (real schema + real codes); the national npidata_pfile produces the
- * full slice behind the same unchanged contract (zip filter, menopauseOnly,
- * limit, provenance block). State boards + clinic-site detection are Phase 2.
+ *   - GET /api/mulesoft/providers (Experience API contract;
+ *     queryProviderDirectory backs the mock, the live MuleSoft
+ *     CloudHub 2.0 worker serves the same shape from a curated
+ *     in-flow slice via DataWeave).
+ *   - /provider — browseable UI with filters (zip, plan, MSCP-only,
+ *     fallback) wired through the same query function.
+ *   - /provider/<npi> — per-provider profile page surfacing the full
+ *     Phase-2 surface (chips, signals, plans, license, distance,
+ *     provenance).
+ *   - MCP tool: find_menopause_providers — wraps the same Experience
+ *     API for LLM clients.
+ *   - Care Router: when triage routes a patient to an MSCP visit,
+ *     the directory feeds a modality-ranked + insurance-narrowed
+ *     recommendation list onto the routing decision.
  *
- * Four moves:
+ * What stays designed: a licensed Menopause Society MSCP feed
+ * (synthetic overlay today, ~14 self-reported MSCP/NCMP physicians
+ * in the public NPPES record act as the floor); a clinic-site
+ * service-detection scraper (not built); a paid in-network insurance
+ * feed (synthetic per-NPI today); broader sanction coverage beyond
+ * CA/NY/TX (FL is auth-gated, NJ is PDF-only — see the runbook for
+ * the full landscape survey). Closed-loop outcomes scoring (Phase 3)
+ * activates after the first ~1,000 referrals.
  *
- *   1. Subtitle rewritten to lead with the prototype reality
- *      (Experience API contract live with synthetic data) and the
- *      planned ingestion pipeline (NPPES / state boards / clinic-
- *      site detection).
+ * Page anatomy:
  *
- *   2. NEW "Today's reality" card at the top of the page so the
- *      reader anchors on the prototype state before the rest of the
- *      page reads as a plan.
- *
- *   3. Per-card StatusPill on sources (6 cards) and considerations
- *      (4 cards). Every source is `designed` today (NPPES not
- *      ingested, state boards not wired, clinic-site detector not
- *      built). Outcomes signal stays `future`.
- *
- *   4. Per-row StatusPill on scoring table and per-card pills on
- *      phases. Scoring is entirely designed (today's mock only has
- *      a boolean menopauseCertified flag). Phase 0 is `prototype`
- *      because the Experience API contract + MCP integration are
- *      shipped.
- *
- * Plus: "Touch the architecture" CTA panel with the live mocked
- * endpoint + MCP tool name. Normalized Read-deeper footer with
- * pills.
+ *   1. Header lead with "Phase 2 shipped" — what's wired vs. still
+ *      synthetic vs. future, with concrete counts.
+ *   2. Today's Reality card — the contract numbers (2,015 / 1,720
+ *      / 96% / 22%) with their per-build provenance.
+ *   3. Sources cards — NPPES + Census ZCTA + sanctions overlays
+ *      live, MSCP feed + clinic-site detector + commercial insurance
+ *      partner designed, outcomes future.
+ *   4. Scoring model table — credential / signals / license-standing
+ *      / geographic / insurance / outcomes, with status pills.
+ *   5. Phased plan — Phase 0 prototype, Phase 1 prototype, Phase 2
+ *      prototype (now shipped, with what landed), Phase 3 future.
+ *   6. Touch-the-architecture CTA — UI, raw API, MCP, source links.
  */
 
 const inlinePillStyle: React.CSSProperties = {
@@ -72,54 +84,72 @@ const sources: Array<{
   {
     name: "CMS NPPES (NPI Registry)",
     status: "prototype",
-    type: "Public domain · bulk download + REST API",
+    type: "Public domain · bulk download (~9.6M rows) + REST API",
     detail:
-      "All US healthcare providers with an NPI. Includes taxonomy codes, primary practice address, license state, and authoritative provider identity. ~8.5M records, refreshed monthly. The provider_ingest pipeline now streams the NPPES bulk schema, filters to the menopause taxonomies, and emits the directory the contract serves — committed today as the pipeline run over a synthetic NPPES-format fixture; point it at the national npidata_pfile to produce the full slice.",
+      "All US healthcare providers with an NPI. Includes taxonomy codes, primary practice address, state license number + state code (×15 slots — used for the sanctions cross-walk), and authoritative provider identity. The provider_ingest pipeline streams the bulk schema, filters to the curated menopause NUCC taxonomies, overlays the MSCP credential list (synthetic + self-reported), computes a graphScore, stamps lat/lng from the Census ZCTA gazetteer, and emits the 2,015-row directory the contract serves. Refresh runs in ~1m50s end-to-end via the tracked refresh_national.sh harness.",
     purpose:
       "Authoritative provider identity. The NPI is the join key that everything else hangs off."
   },
   {
-    name: "State medical board licensure",
-    status: "designed",
-    type: "Public records · API where available (CA, TX, NY, FL), bulk for the rest",
+    name: "Census 2020 ZCTA Gazetteer",
+    status: "prototype",
+    type: "Public domain · ~33K ZIP centroids",
     detail:
-      "Active license status, license history, disciplinary actions. Variable schema per state; we plan to normalize into a single internal model. No state board source is wired today.",
+      "Bundled in both the Python pipeline (provider_ingest/centroids.py) and the Next.js server runtime (lib/zip-centroids.ts) so build-time stamping (every NPPES row → lat/lng) and request-time resolution (patient ZIP → centroid) draw from one source. The directory ranks by Haversine distance whenever the patient ZIP centroid is known and at least one in-tier provider has its own; otherwise it gracefully falls back to graphScore-only ranking and reports sort: \"score\".",
     purpose:
-      "Filter to currently-licensed providers. Surface disciplinary actions as a downweight in our trust score."
+      "Real distance ranking, not a 3-digit-prefix proxy. Powers the \"4.2 mi away\" chip on every recommendation."
   },
   {
-    name: "NPPES taxonomy filter",
+    name: "State license-sanction overlays",
     status: "prototype",
-    type: "Derived · provider_ingest",
+    type: "Public domain · CA + NY + TX",
     detail:
-      "Built: narrows the NPPES population to menopause-relevant providers by filtering on the real NUCC taxonomy codes — OB/GYN (207V*), Gynecology, Reproductive Endocrinology, Endocrinology (207RE0101X), Family + Internal Medicine, Nurse Practitioner — Women's Health (363LW0102X), Certified Nurse-Midwife, Physician Assistant, and Women's-Health CNS. Each code carries a relevance weight that feeds the graphScore. Implemented in provider_ingest/taxonomy.py with unit tests.",
+      "Three live filters drop sanctioned providers at build time: CA Medi-Cal Suspended & Ineligible List (NPI-keyed CSV from CHHS), NY Professional Medical Conduct Board Actions (license-keyed via the NPPES Provider License Number cross-walk), Texas Medical Board All-Licenses (license-keyed, allowlist of explicit active-sanction dispositions — REVOKED / SUSPENDED BY BOARD / UNDER BOARD ORDER, not the noisy != NONE check). The June 2026 run filters 588 (CA) + 849 (NY) + 283 (TX) = 1,720 candidates total. FL is gated behind Azure AD B2C; NJ is PDF-only; landscape documented in the runbook.",
     purpose:
-      "Cuts the candidate set by ~100× before we spend any compute on clinic-site analysis."
+      "Patient-safety filter that's verifiable from the response (provenance.dataset.sanctionedFilteredBySource) on every API call."
+  },
+  {
+    name: "NPPES service-line signals",
+    status: "prototype",
+    type: "Derived · provider_ingest/signals.py",
+    detail:
+      "Six public-registry tokens detected from the NPPES credential text + taxonomy stack: facog (Fellow ACOG = board-certified OB/GYN), faafp (board-certified family medicine), face (board-certified endocrinology), whnp (Women's Health NP), cnm (Certified Nurse-Midwife), multi-taxonomy (≥2 menopause-relevant NUCC codes). Each contributes a +2% graphScore bump capped at +5% — bounded so a non-certified provider with all signals still falls behind a certified one at the same baseline. 22% of the directory carries at least one signal; honestly sub-ranks the relevant-local fallback tier.",
+    purpose:
+      "Strengthens the case for non-certified providers in metros where MSCP coverage is sparse, without inventing certifications."
+  },
+  {
+    name: "Insurance acceptance overlay",
+    status: "partial",
+    type: "Synthetic per-NPI today · partner feed-shaped",
+    detail:
+      "There's no public structured payer/in-network feed; a real implementation needs a paid partnership (Ribbon Health, Turquoise, etc.). Today insuranceAccepted is derived deterministically from a SHA-256 hash of the NPI, calibrated to plausible real-world participation rates (Medicare ~85%, Kaiser ~20%, ~3.8 plans per provider on average). Every Experience API response carries the synthetic caveat in provenance.sources. The shape is real (filter UX, contract, agent framing); replacing the synthesis with a real feed is a one-module swap.",
+    purpose:
+      "Wire the in-network filter end-to-end so the partner integration is a drop-in, not a rebuild."
   },
   {
     name: "Clinic-site service detection",
     status: "designed",
     type: "Derived · Pause-built",
     detail:
-      "Plan: for each candidate clinic, fetch the public clinic website and run structured-data extraction for explicit mentions of menopause, HRT, perimenopause, hormone replacement, vasomotor, and related services. Caching, rate-limiting, robots.txt-respecting. No fetcher is running today.",
+      "Phase-2-bis. NPPES-resident signals already cover board certifications and multi-specialty practice; clinic-site scraping would add explicit mentions of HRT / perimenopause / vasomotor services on the practice's own website. Caching, rate-limiting, robots.txt-respecting. No fetcher today — we don't ship a brittle scraper without an explicit need.",
     purpose:
-      "Distinguishes general OB/GYNs from clinicians actually marketing menopause services."
+      "Distinguishes general OB/GYNs who happen to see midlife patients from clinicians actually marketing menopause services."
   },
   {
-    name: "Trusted third-party verification",
+    name: "Licensed MSCP feed (Menopause Society)",
     status: "designed",
-    type: "Public-facing third-party directories",
+    type: "Partnership · The Menopause Society",
     detail:
-      "Plan: cross-check against certifiedmenopause.com and similar verified-provider sites for additional credibility signal. We never republish; we only use as a sanity check against our own scoring.",
+      "Authoritative Menopause Society Certified Practitioner roster; gated on a partnership (terms-of-use prohibits scraping/republishing). Self-reported MSCP/NCMP credentials in the public NPPES record act as the floor today (~14 physicians nationally — rare but real). The pipeline is ready to union a licensed feed via the same MscpOverlay class once an agreement lands.",
     purpose:
-      "Reduce false positives in our scoring. Catch credential-holders we might have missed."
+      "Dense certified coverage outside the demo metros. Today's directory has 15 certified providers; a real feed adds thousands."
   },
   {
     name: "Outcomes signal (closed loop)",
     status: "future",
     type: "Pause-internal · Phase 3",
     detail:
-      "Once we have referrals flowing through Pause at scale, the patient and provider outcomes from those referrals become the strongest possible scoring signal — and one no one else has. Activates after the first ~1,000 referrals.",
+      "Once Pause has referrals flowing at scale, the patient and provider outcomes from each referral become the strongest possible scoring signal. Activates after the first ~1,000 referrals.",
     purpose:
       "The actual moat. Every successful referral makes the graph better; every poor one downweights the destination."
   }
@@ -133,31 +163,38 @@ const scoring: Array<{
 }> = [
   {
     factor: "Credential signal",
-    status: "partial",
+    status: "prototype",
     weight: "Highest",
     detail:
-      "MSCP / NCMP / ABMS board certification in OB/GYN, IM, Endo, or FM. The pipeline now overlays an MSCP NPI list onto the NPPES rows and applies a certification boost in the computed graphScore (provider_ingest/score.py). The MSCP list is synthetic today; production swaps in The Menopause Society directory or a licensed feed behind the same join. License-standing verification is Phase 2."
+      "MSCP / NCMP membership applied as a multiplicative boost to the graphScore (provider_ingest/score.py — capped, so a perfect-score certified provider stays in [0, 1]). Today's overlay unions a synthetic MSCP NPI list with the providers who self-report MSCP/NCMP in the NPPES Provider Credential Text — both honest signals; neither is invented. A licensed Menopause Society feed lands cleanly behind the same MscpOverlay class once a partnership exists."
   },
   {
-    factor: "Service-mention signal",
-    status: "designed",
+    factor: "Service-line signals",
+    status: "prototype",
     weight: "High",
     detail:
-      "Clinic-site explicitly lists menopause / HRT / perimenopause services. Catches the clinicians who self-identify as menopause-serious."
+      "FACOG / FAAFP / FACE / WHNP / CNM / multi-taxonomy tokens detected directly from the NPPES credential text + taxonomy stack. Each contributes +2% capped at +5% total — a non-certified provider with all signals still falls behind a certified one. 22% of the directory has at least one signal; the relevant-local fallback tier is now sub-ranked honestly. Clinic-site scraping (Phase-2-bis) would add an additional service-mention layer."
   },
   {
     factor: "License standing",
-    status: "designed",
+    status: "prototype",
     weight: "Gating",
     detail:
-      "Active license, no current disciplinary action. Anything below this is a hard exclude, not a downweight."
+      "Three state license-sanction filters run at build time: CA Medi-Cal S&I (NPI-keyed), NY OPMC (license-keyed cross-walk via NPPES), TX TMB (license-keyed, active-disposition allowlist). Survivors carry licenseStatus: \"active\" — there is no \"recommend with caveat\" path; sanctioned providers are dropped, not surfaced with a warning. The June 2026 run dropped 1,720 candidates pre-rank. FL/NJ etc. are out of reach today (auth-gated, PDF-only); landscape documented in the runbook."
   },
   {
     factor: "Geographic coverage",
+    status: "prototype",
+    weight: "Medium",
+    detail:
+      "Census 2020 ZCTA centroids stamp every directory row with lat/lng; the patient ZIP centroid resolves at request time; Haversine distance ranks within tier when both are present. accepting-new-patients + telehealth feed graphScore (NPPES doesn't publish them so they're derived deterministically per-NPI for the demo — production can swap in real availability data). Distance is rounded to 0.1 mi (false precision past that, since centroids are area middles)."
+  },
+  {
+    factor: "Insurance match",
     status: "partial",
     weight: "Medium",
     detail:
-      "Distance to patient, accepting-new-patients flag (where available), insurance match. ZIP-prefix filter is wired today, and accepting-new-patients + telehealth now feed the computed graphScore. NPPES carries no accepting/telehealth field, so those are derived deterministically from the NPI for the demo; distance ranking + insurance match are Phase 2."
+      "insuranceAccepted on every row + ?insurance=<plan> filter on the contract + provisional rendering on the agent + UI chips on the profile page. Today the values are deterministically derived from a SHA-256 hash of the NPI (Medicare ~85%, Kaiser ~20%, ~3.8 plans per provider) — calibrated to plausible real-world rates and labeled synthetic in every API response's provenance. A paid partner feed (Ribbon Health, Turquoise) replaces the synthesis without any downstream change."
   },
   {
     factor: "Outcomes feedback",
@@ -193,9 +230,9 @@ const considerations: Array<{
   },
   {
     name: "Compliance posture",
-    status: "designed",
+    status: "partial",
     detail:
-      "Everything we plan to ingest is public information. We will respect robots.txt and rate limits. We will carry provenance for every field we surface (the mock already returns a provenance block listing source-of-truth attributions). We will expose a provider opt-out mechanism."
+      "Everything ingested today is public-domain (NPPES, Census ZCTA, CHHS Medi-Cal S&I, NY OPMC, TX TMB). We carry provenance on every API response — sources list, dataset block with generatedAt + sourceDate + per-source sanction counts, synthetic-data callouts wherever the value is derived. Sanctioned providers are filtered at build time, not surfaced with a warning. Provider opt-out mechanism is designed (when needed); the licensed Menopause Society MSCP feed waits on a partnership rather than a scrape."
   }
 ];
 
@@ -208,30 +245,37 @@ const phases: Array<{
   {
     name: "Phase 0 — Contract + mock",
     status: "prototype",
-    duration: "Today",
+    duration: "Shipped",
     detail:
-      "Experience API contract live at /api/mulesoft/providers with zip + menopauseOnly + limit filters and a provenance block. MCP `find_menopause_providers` tool exposes the same contract to LLM clients. ~4 hand-curated synthetic providers behind the contract so the shape + filtering UX are real."
+      "Experience API contract at /api/mulesoft/providers with the full filter surface (zip, menopauseOnly, limit, fallback, insurance, distance) and a provenance block. MCP find_menopause_providers wraps it for LLM clients. The mock + the live MuleSoft CloudHub 2.0 worker honor the same contract; a vitest pins shape parity so they can't drift."
   },
   {
     name: "Phase 1 — NPPES + taxonomy filter",
     status: "prototype",
-    duration: "Shipped (pipeline + fixture)",
+    duration: "Shipped",
     detail:
-      "Built: provider_ingest streams the NPPES bulk schema, normalizes, filters to menopause-relevant NUCC taxonomies, overlays the MSCP credential list, and computes a graphScore. Output swaps in behind the existing Experience API contract — MCP and frontend clients keep working unchanged. Committed dataset is the pipeline over a synthetic NPPES-format fixture; running it on the national npidata_pfile produces the full ~80K-row slice."
+      "provider_ingest streams the 9.6M-row CMS NPPES bulk file in ~1m50s, filters to the curated menopause NUCC taxonomies (OB/GYN, urogynecology, gyn-onc, repro endo, NP — Women's Health / Gerontology / Adult Health, CNM, FM, IM, etc.), unions an MSCP overlay (synthetic + self-reported), computes a graphScore, and emits a 2,015-row generated JSON. The committed national run captures 15 menopause-certified providers + 2,000 menopause-relevant non-certified providers across 55 states / 532 ZIP-3 prefixes."
   },
   {
-    name: "Phase 2 — State license + service detection",
-    status: "designed",
-    duration: "4–6 weeks",
+    name: "Phase 2 — Distance, signals, sanctions, insurance, UI",
+    status: "prototype",
+    duration: "Shipped",
     detail:
-      "Wire the top-volume state board sources. Run the clinic-site service detector against the candidate set. Score and rank. Output: a ranked menopause provider list with provenance."
+      "Five workstreams landed. Distance ranking (Census 2020 ZCTA centroids, Haversine, ranked within tier). Service-line signals (6 NPPES tokens: FACOG, FAAFP, WHNP, CNM, multi-taxonomy, etc.; 22% coverage). State sanctions (CA + NY + TX, 1,720 candidates dropped at build, license-keyed cross-walk via NPPES). Insurance overlay (synthetic-but-real-shaped, per-NPI, agent surfaces it provisionally). Patient-facing UI (/provider browseable index + /provider/<npi> profile pages with the full surface). The live MuleSoft worker DataWeave was rewritten to match the same Phase-2 contract; deploy is pending. FL / NJ sanction overlays are blocked by data access (auth-gated / PDF-only)."
+  },
+  {
+    name: "Phase 2-bis — Clinic-site detection + commercial insurance feed",
+    status: "designed",
+    duration: "Gated on need / partnership",
+    detail:
+      "Two pieces wait for an explicit need or external dependency: a clinic-website scraper for HRT / perimenopause / vasomotor service mentions (NPPES signals already cover the high-confidence cases — the scraper adds the remaining tail), and a paid in-network feed (Ribbon Health, Turquoise) that replaces the synthetic insurance derivation. Both swap in behind the existing contract without consumer changes; we don't ship the scraper today because brittle and we don't ship the partnership today because not yet purchased."
   },
   {
     name: "Phase 3 — Closed-loop scoring",
     status: "future",
-    duration: "After first 1,000 referrals",
+    duration: "After first ~1,000 referrals",
     detail:
-      "Pull patient and provider outcomes from Pause's own data. Re-weight the scoring model. From here, the graph self-improves."
+      "Pull patient and provider outcomes from Pause's own data. Re-weight the scoring model. From here, the graph self-improves and competitors can't catch up by buying any single dataset — the moat is the referral history."
   }
 ];
 
@@ -277,52 +321,69 @@ export default function ProviderGraphPage() {
   return (
     <ProposalShell
       eyebrow="Investor brief · Provider graph"
-      title="Building a defensible menopause provider graph"
-      subtitle="The Experience API contract for a menopause-aware provider directory is live behind /api/mulesoft/providers and the MCP find_menopause_providers tool, now backed by the provider_ingest pipeline: it streams the CMS NPPES bulk schema, filters on the real menopause NUCC taxonomies, overlays the MSCP credential list, and computes a graphScore (Phase 1). State boards + clinic-site service detection are Phase 2; the closed-loop outcomes layer is the long-term moat."
+      title="A defensible menopause provider graph — Phase 2 shipped"
+      subtitle="2,015 providers behind a frozen Experience API contract: NPPES-derived rows, Census-ZCTA distance ranking, six NPPES board-certification + multi-specialty signals, three state license-sanction filters that drop 1,720 sanctioned candidates at build, real-shaped synthetic insurance, and a /provider browseable UI. The agent and Care Router consume the same query function. Closed-loop outcomes scoring (Phase 3) activates with referral volume."
     >
       <section className="card" style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Today's reality</p>
         <h2 className="proposal-section-title" style={{ marginTop: 0 }}>
-          Contract first — now backed by a real NPPES pipeline
+          The numbers behind the contract — verifiable from any API call
         </h2>
         <p style={{ marginTop: "0.4rem" }}>
           The provider directory is served through a production-shaped
-          Experience API contract at <code>/api/mulesoft/providers</code> and
-          exposed to LLM clients via the MCP{" "}
-          <code>find_menopause_providers</code> tool. The rows behind it are no
-          longer hand-curated: the <code>provider_ingest</code> pipeline streams
-          the CMS NPPES bulk schema, filters on the real menopause NUCC
-          taxonomy codes, overlays the MSCP credential list, computes a{" "}
-          <code>graphScore</code>, and emits{" "}
-          <code>frontend/lib/provider-directory.generated.json</code>. The
-          committed dataset is that pipeline run over a synthetic NPPES-format
-          fixture (real schema + real codes); pointing it at the national{" "}
-          <code>npidata_pfile</code> produces the full slice behind the same
-          unchanged contract — zip-prefix filter, <code>menopauseOnly</code>,{" "}
-          <code>limit</code>, and a provenance block. The{" "}
-          <a href="/demo/routing">Care Router</a> now consumes this directory
-          directly: when it routes a patient to an MSCP visit, it attaches a
-          modality-ranked recommended-provider list (telehealth-first for
-          virtual, accepting-new-patients-first for in-person) to the routing
-          decision — so the graph feeds triage, not just the demo directory.
+          Experience API at <code>/api/mulesoft/providers</code>, a
+          browseable UI at <a href="/provider">/provider</a>, and an MCP{" "}
+          <code>find_menopause_providers</code> tool. All three read from
+          one source — <code>queryProviderDirectory</code> over the
+          generated JSON the <code>provider_ingest</code> pipeline emits.
+          The June 2026 national run produced the headline numbers below;
+          every API response carries the same counts under{" "}
+          <code>provenance.dataset</code> so you can verify them by{" "}
+          <a href="/api/mulesoft/providers" target="_blank" rel="noopener noreferrer">
+            curling the endpoint
+          </a>
+          . The <a href="/demo/routing">Care Router</a> wires this directly
+          into triage: an MSCP-pathway routing decision attaches a
+          distance-ranked, plan-narrowed, modality-aware recommended-
+          provider list to its output — agent + UI + traces all read the
+          same shape.
         </p>
         <ul className="metric-list" style={{ marginTop: "0.6rem" }}>
           <li>
-            <span>What's wired today</span>
+            <span>Directory size</span>
             <strong style={{ fontWeight: 500 }}>
               <StatusPill status="prototype" style={inlinePillStyle} />
-              Experience API contract + MCP tool + the NPPES taxonomy
-              filter, MSCP overlay, and computed graphScore behind it.
+              <strong>2,015</strong> providers across 55 states / 532
+              ZIP-3 prefixes; 15 menopause-certified, 2,000 menopause-
+              relevant non-certified.
             </strong>
           </li>
           <li>
-            <span>What's still mocked</span>
+            <span>Patient-safety filter</span>
             <strong style={{ fontWeight: 500 }}>
-              <StatusPill status="designed" style={inlinePillStyle} />
-              The MSCP credential list is synthetic, and the committed
-              dataset is the pipeline over an NPPES-format fixture rather
-              than the national file. State boards and the clinic-site
-              detector are not built.
+              <StatusPill status="prototype" style={inlinePillStyle} />
+              <strong>1,720</strong> sanctioned candidates dropped pre-
+              rank: 588 CA Medi-Cal + 849 NY OPMC + 283 TX TMB.
+              Survivors carry <code>licenseStatus: &quot;active&quot;</code>.
+            </strong>
+          </li>
+          <li>
+            <span>Distance + signal coverage</span>
+            <strong style={{ fontWeight: 500 }}>
+              <StatusPill status="prototype" style={inlinePillStyle} />
+              <strong>96%</strong> of rows carry a Census ZCTA centroid;{" "}
+              <strong>22%</strong> carry at least one service-line signal
+              (FACOG, FAAFP, WHNP, multi-taxonomy, etc.).
+            </strong>
+          </li>
+          <li>
+            <span>Still synthetic / partnership-gated</span>
+            <strong style={{ fontWeight: 500 }}>
+              <StatusPill status="partial" style={inlinePillStyle} />
+              Insurance acceptance (per-NPI SHA-256 derivation, calibrated
+              to plausible rates — labeled in every API response). MSCP
+              overlay is synthetic + 14 self-reported NPPES MSCP/NCMP
+              physicians until a Menopause Society feed lands.
             </strong>
           </li>
           <li>
@@ -357,7 +418,7 @@ export default function ProviderGraphPage() {
 
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Data sources</p>
-        <h2 className="proposal-section-title">All public-domain primary sources — NPPES live, the rest designed</h2>
+        <h2 className="proposal-section-title">Public-domain substrate — NPPES, Census, and 3 state sanction overlays live</h2>
         <p
           style={{
             color: "var(--muted)",
@@ -368,8 +429,11 @@ export default function ProviderGraphPage() {
           Pills:{" "}
           <StatusPill status="prototype" style={inlinePillStyle} />{" "}
           built and serving data today ·{" "}
+          <StatusPill status="partial" style={inlinePillStyle} />{" "}
+          shape live, value still synthetic / partnership-gated ·{" "}
           <StatusPill status="designed" style={inlinePillStyle} />{" "}
-          committed choice, activates with Phase 2 ingestion ·{" "}
+          committed choice, activates when an explicit need or partner
+          arrives ·{" "}
           <StatusPill status="future" style={inlinePillStyle} />{" "}
           activates with Phase 3 once Pause referrals are flowing.
         </p>
@@ -398,14 +462,17 @@ export default function ProviderGraphPage() {
       <section className="card" style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Scoring model · per-row status</p>
         <h2 className="proposal-section-title" style={{ marginTop: 0 }}>
-          Five factors — credential + geography computed today
+          Six factors — five live, one waiting for referral volume
         </h2>
         <p style={{ marginTop: "0.4rem", color: "var(--muted)", fontSize: "0.92rem" }}>
-          The pipeline now computes a <code>graphScore</code> from taxonomy
-          relevance, the MSCP certification boost, accepting-new-patients,
-          and telehealth, and the directory ranks on it. License-standing
-          gating and clinic-site service-mention signal are Phase 2;
-          outcomes feedback activates with Phase 3 referral data.
+          Today's <code>graphScore</code> composes taxonomy relevance,
+          MSCP certification boost, accepting-new-patients, telehealth,
+          and a capped service-line signal bonus — all in [0, 1].
+          License-standing is enforced as a <em>filter</em> at build
+          time, not a downweight. Geographic ranking uses real Haversine
+          distance from Census ZCTA centroids. Insurance match is
+          synthetic-shaped today, partner-feed-ready. Outcomes feedback
+          activates with Phase 3 referral data.
         </p>
         <div className="table-wrap" style={{ marginTop: "0.5rem" }}>
           <table>
@@ -438,12 +505,13 @@ export default function ProviderGraphPage() {
       <section className="card" style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Touch the architecture</p>
         <h2 className="proposal-section-title" style={{ marginTop: 0 }}>
-          Hit the contract that survives Phase 1
+          Hit the contract — UI, raw API, MCP, source data, sanctions feeds
         </h2>
         <p style={{ marginTop: "0.4rem" }}>
-          The provider Experience API is live with synthetic data. The
-          contract — filters, provenance block, MCP tool wrapping — is
-          stable. Phase 1 will swap real NPPES-derived data in behind it.
+          Every fact on this page is verifiable: the UI shows the
+          directory, the raw API surfaces the same shape with full
+          provenance, the source code is on GitHub, and the upstream
+          public datasets are linked below.
         </p>
         <div
           style={{
@@ -474,20 +542,52 @@ export default function ProviderGraphPage() {
             MCP tool: find_menopause_providers →
           </a>
           <a
-            href="https://github.com/hucmaggie/pause-health.ai/blob/main/frontend/lib/mulesoft-mocks.ts"
+            href="https://github.com/hucmaggie/pause-health.ai/tree/main/provider_ingest"
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-secondary"
           >
-            Synthetic slice on GitHub →
+            provider_ingest pipeline on GitHub →
           </a>
           <a
-            href="https://npiregistry.cms.hhs.gov/"
+            href="https://download.cms.gov/nppes/NPI_Files.html"
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-secondary"
           >
-            CMS NPPES (the Phase 1 source) →
+            CMS NPPES bulk file →
+          </a>
+          <a
+            href="https://www.census.gov/geographies/reference-files/time-series/geo/gazetteer-files.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+          >
+            Census 2020 ZCTA Gazetteer →
+          </a>
+          <a
+            href="https://data.chhs.ca.gov/dataset/provider-suspended-and-ineligible-list-s-i-list"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+          >
+            CA Medi-Cal S&amp;I List →
+          </a>
+          <a
+            href="https://health.data.ny.gov/Health/Professional-Medical-Conduct-Board-Actions-Beginni/ebmi-8ctw"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+          >
+            NY OPMC Board Actions →
+          </a>
+          <a
+            href="https://data.texas.gov/Government-and-Taxes/DataSet-01-All-Licenses/tm3v-pfq9"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+          >
+            Texas Medical Board All-Licenses →
           </a>
         </div>
       </section>
