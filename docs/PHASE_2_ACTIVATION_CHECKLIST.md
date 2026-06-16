@@ -79,8 +79,12 @@ var was added — env vars bake in at deploy time.
     - fatima-khan    → 003Hp00003b9bf1IAA
 - Mock CI SQL: written and committed in `data-cloud/_mock_path.sql`.
   Three queries target `ssot__Individual__dlm` (NOT `Contact_Home__dll`)
-  with MAX(constant) wrappers + GROUP BY ssot__Id__c so the DC CI
-  validator accepts them (CIs require aggregations).
+  with MAX(constant) wrappers so the DC CI validator accepts them (CIs
+  require aggregations). The GROUP BY dimension is aliased to
+  `unified_id__c` and the measure columns are `__c`-suffixed.
+  *(Corrected in session 3: the natural `ssot__Id__c` alias was rejected
+  by the validator — see Gotcha #4 above — and the committed SQL now
+  reflects the `unified_id__c` form the code actually filters on.)*
 - **Where we paused:** in the Data Cloud → Calculated Insights → New
   flow. Opened the SQL Authoring editor for CI 1 (Pause_HRV_RMSSD_30d).
   Did NOT paste the query yet. Next-session-action: paste CI 1's SQL
@@ -175,8 +179,9 @@ For **each** of the three CIs:
 - [ ] If using the Mock CI path: paste from `data-cloud/_mock_path.sql`
       (three queries, one per CI — the Developer Names stay the same)
 - [ ] Save → **Activate** → schedule refresh every 6 hours
-- [ ] Verify each CI returns rows:
-      `SELECT * FROM Pause_HRV_RMSSD_30d WHERE ssot__Id__c = '<contact-id>' LIMIT 5`
+- [ ] Verify each CI returns rows (the dimension is `unified_id__c`, the
+      alias the CIs group by — NOT `ssot__Id__c`):
+      `SELECT * FROM Pause_HRV_RMSSD_30d__cio WHERE unified_id__c = '<contact-id>' LIMIT 5`
 
 ## Step 6 — Wire the env var (1 min)
 

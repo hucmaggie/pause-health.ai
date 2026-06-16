@@ -102,9 +102,10 @@ Health Cloud Contacts as a stand-in.
 
 ### 3b — Unified Individual mapping
 
-The CIs filter by `ssot__Id__c` which must map to the UnifiedIndividual record
-for the patient. Wire your FHIR Data Stream's patient ID field to the
-UnifiedIndividual's primary key.
+The CIs group by the UnifiedIndividual key for the patient, surfaced to the
+Insight API as the `unified_id__c` dimension. Wire your FHIR Data Stream's
+patient ID field to the UnifiedIndividual's primary key so it resolves to the
+Health Cloud `Contact.Id` that Phase 1 already uses.
 
 For the prototype: map `Contact.Id` from Health Cloud (which you already have
 from Phase 1) as the identity source.
@@ -112,6 +113,16 @@ from Phase 1) as the identity source.
 ## Step 4 — Author the three Calculated Insights
 
 Each CI is authored in Data Cloud → Calculated Insights → New.
+
+> **⚠️ Use the committed SQL, not these snippets.** The canonical,
+> validator-correct, copy-paste SQL lives in `data-cloud/*.sql` (the real
+> `Pause_Wearable_Feature__dlm` path) and `data-cloud/_mock_path.sql` (the
+> activated mock). The illustrative blocks below predate two non-obvious DC
+> CI validator rules (learned in session 3): the GROUP BY dimension MUST be
+> aliased `unified_id__c` — the raw `ssot__Id__c` alias is rejected because of
+> the inner `__` — and every output column MUST end in `__c`. The frontend
+> filters on `[unified_id__c=<contact-id>]` and reads the `__c` columns, so
+> the snippets here are conceptual only.
 
 ### CI 1: `Pause_HRV_RMSSD_30d`
 
@@ -161,8 +172,8 @@ GROUP BY ssot__Id__c
 After saving each CI:
 - Click **Activate** → schedule it to refresh every 6 hours.
 - Verify: Data Cloud → Calculated Insights → `Pause_HRV_RMSSD_30d` → **Query** →
-  paste `SELECT * FROM Pause_HRV_RMSSD_30d WHERE ssot__Id__c = '<contact-id>' LIMIT 5`
-  and confirm rows appear.
+  paste `SELECT * FROM Pause_HRV_RMSSD_30d__cio WHERE unified_id__c = '<contact-id>' LIMIT 5`
+  (the dimension is `unified_id__c`, NOT `ssot__Id__c`) and confirm rows appear.
 
 ## Step 5 — Set the env var and verify
 
@@ -227,7 +238,8 @@ If you want to prove the Phase 2 code path without real wearable data:
    that insight only. Activate the CI in the Data Cloud UI and wait for
    the first scheduled run.
 
-4. **`ssot__Id__c` mismatch** — the CI filters by the Contact.Id from Phase 1,
-   but your DC UnifiedIndividual uses a different identity key. Update the
-   `filter` expression in `data-cloud.ts::getWearableInsights` to match your
-   actual CI key field.
+4. **`unified_id__c` mismatch** — the CI filters by the Contact.Id from Phase 1
+   (via the `unified_id__c` dimension), but your DC UnifiedIndividual uses a
+   different identity key, so every row comes back empty. Update the `filter`
+   expression in `data-cloud.ts::getWearableInsights` to match your actual CI
+   key field.
