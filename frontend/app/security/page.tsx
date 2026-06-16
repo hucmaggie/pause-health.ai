@@ -146,17 +146,30 @@ const controls: ControlRow[] = [
     }
   },
   {
+    control: "Provider directory safety filter",
+    today: {
+      status: "prototype",
+      detail:
+        "Three state license-sanction overlays run at directory build time: CA Medi-Cal Suspended & Ineligible (NPI-keyed), NY Professional Medical Conduct Board Actions (license-keyed cross-walk via NPPES), Texas Medical Board All-Licenses (license-keyed, active-disposition allowlist). The June 2026 build dropped 1,720 sanctioned candidates pre-rank — they cannot surface in any /api/mulesoft/providers response, the /provider UI, the agent's MCP tool, or the Care Router's recommendations. Survivors carry licenseStatus: \"active\" (verifiable per response under provenance.dataset.sanctionedFilteredBySource)."
+    },
+    designed: {
+      status: "designed",
+      detail:
+        "National coverage via a paid multi-state license-status feed (Verisys, ProviderTrust) replaces the per-state CSV cross-walk; existing CA/NY/TX overlays remain as redundant build-time sanity checks. Provider opt-out mechanism honored at the same build-time filter point. Sanctioned-provider drop counts continue to surface in the API response so the filter is verifiable by any consumer."
+    }
+  },
+  {
     control: "Vulnerability disclosure",
     today: {
       status: "prototype",
       detail: (
-        "Reports accepted at security@pause-health.ai. The /.well-known/security.txt advertises the inbox per RFC 9116. The codebase is open at github.com/hucmaggie/pause-health.ai."
+        "Reports accepted at security@pause-health.ai. The /.well-known/security.txt advertises the inbox per RFC 9116. The codebase is open at github.com/hucmaggie/pause-health.ai. GitHub Private Vulnerability Reporting is planned in the Now horizon of /roadmap (one-click toggle in repo Settings → Security; required for the 'Report a vulnerability' button to appear on the Security tab)."
       )
     },
     designed: {
       status: "planned",
       detail:
-        "Public bug-bounty program post-GA, including a safe-harbor clause for good-faith research."
+        "Public bug-bounty program post-GA, including a safe-harbor clause for good-faith research. GitHub Private Vulnerability Reporting acts as the in-tree intake until the bug-bounty program is funded."
     }
   }
 ];
