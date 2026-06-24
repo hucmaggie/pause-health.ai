@@ -2456,6 +2456,47 @@ th {
   background: rgba(255, 255, 255, 0.07);
 }
 
+/* Checkbox row in the provider filters. The previous version reused
+   `.contact-form-row` (a 2-column grid) which spread the three
+   checkboxes across half-width cells with their checkbox inputs
+   stretched to 100% width — so the checkbox sat at the far-left of
+   its cell and the text floated to the right with a big gap. This
+   container is a flex-wrap row instead, and the inputs get an
+   explicit width:auto + margin:0 to override the global
+   `.contact-form input` width:100%. Reads as: `[ ] label · [ ] label · [ ] label`. */
+.provider-filter-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  margin-top: 0.2rem;
+}
+
+.provider-filter-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0.35rem 0;
+  /* Each check takes its natural width so labels stay glued to
+     their checkbox. flex-wrap on the parent lets the third drop
+     to a new line on narrow viewports without forcing a grid. */
+}
+
+.provider-filter-check input[type="checkbox"] {
+  /* Width override: the global `.contact-form input { width: 100% }`
+     stretches the checkbox across its parent and pushes the label
+     far to the right. Fix that by overriding to a small, fixed,
+     square box that aligns with the label baseline. */
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--brand);
+}
+
 .provider-card a {
   color: var(--text);
   text-decoration: none;

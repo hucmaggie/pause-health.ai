@@ -289,24 +289,18 @@ export default async function ProviderIndexPage({
               </select>
             </label>
           </div>
-          <div className="contact-form-row">
-            <label style={{ flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
+          <div className="provider-filter-checks">
+            <label className="provider-filter-check">
               <input type="checkbox" name="menopause" value="true" defaultChecked={menopauseOnly} />
-              <span style={{ fontSize: "0.85rem" }}>
-                Only MSCP-certified providers
-              </span>
+              <span>Only MSCP-certified providers</span>
             </label>
-            <label style={{ flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
+            <label className="provider-filter-check">
               <input type="checkbox" name="fallback" value="true" defaultChecked={fallback} />
-              <span style={{ fontSize: "0.85rem" }}>
-                Include nearby/relevant providers if no certified-local match
-              </span>
+              <span>Include nearby/relevant providers if no certified-local match</span>
             </label>
-            <label style={{ flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
+            <label className="provider-filter-check">
               <input type="checkbox" name="telehealth" value="true" defaultChecked={telehealthOnly} />
-              <span style={{ fontSize: "0.85rem" }}>
-                Telehealth only
-              </span>
+              <span>Telehealth only</span>
             </label>
           </div>
           <div className="contact-form-actions">
