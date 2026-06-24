@@ -38,7 +38,7 @@ const weeks: ChangelogWeek[] = [
         summary:
           "The previous entry shipped the MCP Bridge code path (per-request MCP host inside the Care Router task handler, loopback to /api/mcp, fallback to direct-call on host failure). This entry activates it: PAUSE_MCP_HOST_ENABLED=on added to Vercel production env; triggered a new prod deploy (dpl_BkoYS1iDj4zUF1xZhr6vpJfhpdXq, aliased to pause-health.ai); verified end-to-end against production with a POST to /api/agents/care-router/tasks (patientZip=92614). The agent fabric span on the verifier task carries `mcpHostEnabled=true`, `mcpHostRemoteCount=1`, and `mcpHostAttempts=[{remoteId:'loopback',ok:true}]` — proving the production Care Router resolved its provider recommendation by calling find_menopause_providers as an MCP tool against https://pause-health.ai/api/mcp, NOT by directly calling /api/mulesoft/providers. Response shape identical to the direct-call path (same 2 MSCP providers, same distance ranks); durationMs 1731 stays in the existing latency band. Rollback is a one-liner if anything goes wrong: `vercel env rm PAUSE_MCP_HOST_ENABLED production` + redeploy; the adapter's direct-call fallback is exercised on every host error anyway, so the surface degrades cleanly even without the env removal. The external slot (PAUSE_MCP_HOST_REMOTES) is still empty — turning on production loopback first is the honest 'eat your own dogfood' move before pointing the host at a partner's MCP server.",
         commits: [
-          { sha: "PENDING", label: "changelog: turn MCP Bridge on in production (host-mode live at pause-health.ai)" }
+          { sha: "0dcc65c", label: "changelog: turn MCP Bridge on in production (host-mode live at pause-health.ai)" }
         ],
         status: "shipped"
       },
