@@ -293,6 +293,13 @@ type ReadDeeperRow = {
 
 const readDeeper: ReadDeeperRow[] = [
   {
+    href: "/proposal/headless-360",
+    label: "Headless 360 — where Data 360 fits",
+    detail:
+      "Data 360 grounding is the REST leg of Salesforce's Headless 360 architecture (TDX 2026). The audit page is the single-place mapping that classifies every Pause surface and names the missing PKCE seam for full conformance.",
+    status: "partial"
+  },
+  {
     href: "/proposal/agent-fabric",
     label: "Multi-agent control plane",
     detail:

@@ -157,6 +157,13 @@ type ReadDeeperRow = {
 
 const readDeeper: ReadDeeperRow[] = [
   {
+    href: "/proposal/headless-360",
+    label: "Headless 360 — where Voice fits",
+    detail:
+      "Voice is the next channel in the REST leg of Salesforce's Headless 360 architecture (TDX 2026). The conformance audit page maps every Pause surface — including this one — onto the three Headless 360 patterns.",
+    status: "partial"
+  },
+  {
     href: "/proposal/agentforce",
     label: "Agentforce text-chat intake",
     detail:

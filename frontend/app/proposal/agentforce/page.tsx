@@ -178,6 +178,13 @@ type ReadDeeperRow = {
 
 const readDeeper: ReadDeeperRow[] = [
   {
+    href: "/proposal/headless-360",
+    label: "Headless 360 — where Agentforce fits",
+    detail:
+      "Agentforce embedded chat is one of three patterns in Salesforce's Headless 360 architecture (TDX 2026). The audit page maps every Pause surface — REST + MCP + A2A — onto the patterns, with honest pills on every row.",
+    status: "partial"
+  },
+  {
     href: "/proposal/data-360",
     label: "Data 360 grounding",
     detail:

@@ -98,6 +98,7 @@ const STATIC_ROUTES = [
   "/proposal/agent-fabric",
   "/proposal/agentforce",
   "/proposal/agentforce-voice",
+  "/proposal/headless-360",
   "/proposal/competition",
   "/proposal/customers",
   "/proposal/data",

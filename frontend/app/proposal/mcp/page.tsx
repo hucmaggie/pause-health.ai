@@ -324,6 +324,13 @@ type ReadDeeperRow = {
 
 const readDeeper: ReadDeeperRow[] = [
   {
+    href: "/proposal/headless-360",
+    label: "Headless 360 — where MCP fits",
+    detail:
+      "MCP is one of the three Headless 360 patterns (alongside REST and A2A). The audit page is the single-place mapping that makes the prototype's full Headless 360 conformance — and its remaining PKCE gap — legible.",
+    status: "partial"
+  },
+  {
     href: "/proposal/mulesoft",
     label: "MuleSoft integration",
     detail:
