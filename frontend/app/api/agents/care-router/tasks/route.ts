@@ -16,6 +16,17 @@ import {
   evaluateGovernance,
   recordInstantSpan
 } from "../../../../../lib/agent-fabric";
+import { createMCPHostFromRequest } from "../../../../../lib/mcp/host";
+import { providerLookupViaMcpHost } from "../../../../../lib/mcp/provider-lookup";
+
+// The MCP SDK depends on Node-only APIs; pin the runtime so Vercel
+// doesn't try to ship this route to the Edge.
+export const runtime = "nodejs";
+
+function mcpHostEnabled(): boolean {
+  const raw = (process.env.PAUSE_MCP_HOST_ENABLED ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "on" || raw === "yes";
+}
 
 /**
  * Google A2A `tasks/send` endpoint for the Pause Care Router agent.
@@ -154,8 +165,34 @@ export async function POST(req: Request) {
     });
   }
 
+  // Per-request MCP host. When PAUSE_MCP_HOST_ENABLED is set, the
+  // Care Router resolves providers by calling find_menopause_providers
+  // on a registered MCP server (loopback to /api/mcp by default; plus
+  // any external slot configured via PAUSE_MCP_HOST_REMOTES) rather
+  // than calling the directory directly. The lookup adapter falls
+  // back to the legacy direct-call path on host failure, so the
+  // routing decision never regresses when an MCP remote is down.
+  const useMcpHost = mcpHostEnabled();
+  const host = useMcpHost ? createMCPHostFromRequest(req) : null;
+  const hostAttempts: Array<{
+    remoteId: string | null;
+    ok: boolean;
+    error?: string;
+  }> = [];
+  const providerLookup = host
+    ? providerLookupViaMcpHost({
+        host,
+        onAttempt: (event) => hostAttempts.push(event)
+      })
+    : undefined;
+
   const startedAt = Date.now();
-  const decision = await route(intake, grounding);
+  let decision;
+  try {
+    decision = await route(intake, grounding, { providerLookup });
+  } finally {
+    if (host) await host.close();
+  }
   const finishedAt = Date.now();
 
   const span = recordInstantSpan({
@@ -206,6 +243,14 @@ export async function POST(req: Request) {
           serviceSignals: p.serviceSignals ?? [],
           insuranceAccepted: p.insuranceAccepted ?? []
         })) ?? [],
+      // MCP host attribution. Empty `mcpHostAttempts` means the
+      // direct-call (non-host) path served the request. A non-empty
+      // array gives the trace viewer per-remote success/failure so
+      // an operator can see which MCP server the provider list came
+      // from (loopback vs. an external partner).
+      mcpHostEnabled: useMcpHost,
+      mcpHostRemoteCount: host?.listRemotes().length ?? 0,
+      mcpHostAttempts: hostAttempts,
       ...(personaId ? { personaId } : {})
     }
   });

@@ -190,6 +190,34 @@ const phase1ClaudeSnippet = `{
   }
 }`;
 
+const hostBridgeSnippet = `// Vercel env (or .env.local) on the prototype:
+PAUSE_MCP_HOST_ENABLED=on
+// Optional — add external MCP servers the Care Router can also call:
+PAUSE_MCP_HOST_REMOTES=[
+  { "id": "salesforce", "url": "https://customer-mcp.example/mcp",
+    "headers": { "Authorization": "Bearer …" } }
+]
+
+// Inside frontend/app/api/agents/care-router/tasks/route.ts:
+//   const host = createMCPHostFromRequest(req);
+//   const decision = await route(intake, grounding, {
+//     providerLookup: providerLookupViaMcpHost({ host })
+//   });
+//   await host.close();
+
+// Behavior:
+//   1. Care Router task arrives at /api/agents/care-router/tasks
+//   2. Host spins up an MCP Streamable HTTP client per registered remote
+//   3. Tool calls iterate: loopback (https://pause-health.ai/api/mcp)
+//      first, then each external slot in order. First ok() wins.
+//   4. If every remote errors, host returns the last error and the
+//      adapter falls back to the legacy direct-call ProviderLookup so
+//      the routing decision NEVER regresses on host failure.
+//   5. Trace span carries mcpHostEnabled, mcpHostRemoteCount, and a
+//      per-attempt array { remoteId, ok, error? } so /demo/agent-fabric
+//      shows which MCP server served the provider list.
+`;
+
 const agentforceSnippet = `// Salesforce Agentforce 3.0 — register the Pause MCP server with the
 // Agentforce Registry (the June 2025 release introduced a native MCP
 // client; the legacy "External Services connector" pattern is obsolete
@@ -525,6 +553,68 @@ export default function McpPage() {
         <pre style={codeBlockStyle}>
           <code>{agentforceSnippet}</code>
         </pre>
+      </section>
+
+      <section
+        className="card"
+        style={{
+          marginTop: "1.5rem",
+          borderLeft: "3px solid var(--brand)"
+        }}
+      >
+        <p className="eyebrow">Pause as an MCP host · the other direction</p>
+        <h2 className="proposal-section-title" style={{ marginTop: 0 }}>
+          Pause's Care Router agent now CALLS external MCP servers, not just exposes its own
+        </h2>
+        <div style={{ marginBottom: "0.5rem" }}>
+          <StatusPill status="prototype" style={inlinePillStyle} />
+          <span style={{ color: "var(--muted)", fontSize: "0.92rem" }}>
+            Shipped 2026-06-24. The Care Router task endpoint at{" "}
+            <code>/api/agents/care-router/tasks</code> runs an MCP client
+            per request, registers a loopback to <code>/api/mcp</code>{" "}
+            (always-on) and any external slots configured via{" "}
+            <code>PAUSE_MCP_HOST_REMOTES</code>, and resolves provider
+            recommendations through <code>find_menopause_providers</code>{" "}
+            tool calls instead of direct HTTP. End-to-end identical to
+            the legacy direct-call path; a routing decision against{" "}
+            <code>zip=92614</code> returns the same provider order +
+            distance rankings either way.
+          </span>
+        </div>
+        <p style={{ marginTop: "0.6rem", marginBottom: "0.4rem" }}>
+          Why ship both directions:
+        </p>
+        <ul style={{ marginTop: "0.2rem", color: "var(--muted)", fontSize: "0.92rem" }}>
+          <li>
+            <strong>Server-side</strong> (above) — any AI agent can use
+            Pause as a tool source via{" "}
+            <code>https://pause-health.ai/api/mcp</code>.
+          </li>
+          <li>
+            <strong>Host-side</strong> (this section) — Pause's own
+            agents can use any partner's MCP server (Salesforce
+            Agentforce, Heroku Managed MCP, custom Apex tools) as a
+            tool source without bespoke per-vendor adapters.
+          </li>
+        </ul>
+        <p style={{ marginTop: "0.8rem", marginBottom: "0.4rem" }}>
+          Configuration + flow:
+        </p>
+        <pre style={codeBlockStyle}>
+          <code>{hostBridgeSnippet}</code>
+        </pre>
+        <p style={{ marginTop: "0.6rem", color: "var(--muted)", fontSize: "0.88rem" }}>
+          The host opens a fresh MCP client per request (no module-level
+          state, no cold-start staleness) and tears it down in a{" "}
+          <code>finally</code> block when the routing decision finishes.
+          17 tests cover the host + adapter — config parsing, fallback
+          chains, JSON payload parsing, an in-process integration test
+          using <code>InMemoryTransport</code> that pins the wire
+          contract — and the existing Care Router route tests still
+          pass unchanged. See{" "}
+          <code>frontend/lib/mcp/host.ts</code> and{" "}
+          <code>frontend/lib/mcp/provider-lookup.ts</code>.
+        </p>
       </section>
 
       <section className="card" style={{ marginTop: "1.5rem" }}>
