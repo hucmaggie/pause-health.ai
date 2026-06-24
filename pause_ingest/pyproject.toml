@@ -48,3 +48,6 @@ target-version = "py312"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+  "real_jhe: opt-in test that requires a live JupyterHealth Exchange instance configured via .env. Enable with PAUSE_USE_REAL_JHE=1.",
+]

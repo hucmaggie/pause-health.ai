@@ -164,46 +164,66 @@ If you get this, the prototype is now talking to real JHE. The same
 contract test exercises is now hitting a real Django app, a real
 Postgres, and a real JHE FHIR validator.
 
-### Path B — run the contract test against real JHE
+### Path B — run the contract test against real JHE — **shipped 2026-06-23**
 
-The integration test fixture currently constructs its own
-`IngestConfig` pointed at the in-process mock. To run the same test
-suite against real JHE, you need to swap the fixture.
+The opt-in pytest marker sketched in earlier revisions of this runbook
+is now wired into the repo:
 
-The cleanest way is to add an opt-in pytest marker:
-
-```bash
-# tests/conftest.py (suggested, not yet in the repo)
-import os
-import pytest
-
-REAL_JHE = bool(os.environ.get("PAUSE_USE_REAL_JHE"))
-
-def pytest_collection_modifyitems(config, items):
-    skip_real = pytest.mark.skip(reason="set PAUSE_USE_REAL_JHE=1 to enable")
-    skip_mock = pytest.mark.skip(reason="unset PAUSE_USE_REAL_JHE to run mock tests")
-    for item in items:
-        if "real_jhe" in item.keywords and not REAL_JHE:
-            item.add_marker(skip_real)
-        elif item.module.__name__ == "tests.test_exchange_integration" and REAL_JHE:
-            # The mock-server fixture would conflict with real-JHE config
-            item.add_marker(skip_mock)
-```
-
-Then add a new `tests/test_exchange_real_jhe.py` that reads
-`IngestConfig.from_env()` (no mock fixture) and re-runs the same
-assertions. Tag every test in that file with `@pytest.mark.real_jhe`.
+- [`pause_ingest/tests/conftest.py`](../pause_ingest/tests/conftest.py)
+  registers the `real_jhe` marker and a collection hook that swaps
+  modes based on the `PAUSE_USE_REAL_JHE` env var. Default mode runs
+  the mock contract tests; `PAUSE_USE_REAL_JHE=1` runs the real-JHE
+  tests and skips the mock-only `test_exchange_integration` module.
+- [`pause_ingest/tests/test_exchange_real_jhe.py`](../pause_ingest/tests/test_exchange_real_jhe.py)
+  carries the same contract assertions as the mock suite (token
+  exchange, OMH mapped-handler write, OMH auxiliary-handler write with
+  `X-JHE-FHIR-Source-ID`, FHIR validator rejection, end-to-end
+  derivedFrom round-trip). Every test is tagged
+  `pytest.mark.real_jhe`.
+- The fixture is `IngestConfig.from_env()`, so the real-JHE run reads
+  `pause_ingest/.env` (the same file the smoke script uses). The
+  `jhe-local/bootstrap.sh` printout has the exact values to copy in.
 
 Invocation:
 
 ```bash
-PAUSE_USE_REAL_JHE=1 pytest -v tests/test_exchange_real_jhe.py
+cd pause_ingest
+# Default (mock) mode — runs in ~2s, no external dependencies:
+.venv/bin/python -m pytest -q   # 67 passed, 7 skipped (real_jhe)
+
+# Real-JHE mode — requires jhe-local stack up + .env populated:
+PAUSE_USE_REAL_JHE=1 .venv/bin/python -m pytest -q   # 66 passed, 8 skipped (mock)
 ```
 
+The two modes are mutually exclusive by design — a single pytest
+invocation either exercises the mock or the real instance, never both.
+Keeps per-mode test-log output deterministic and obvious in CI.
+
+#### Additional mock-vs-real divergences surfaced on the first green run (2026-06-23)
+
+Beyond the 3 bugs surfaced in the 2026-06-16 real-run (invalid_scope,
+Content-Type fhir+json, aux-handler header), the first green pytest
+run against real JHE surfaced 2 more wire-level surprises the mock had
+papered over. Both are documented inline in
+`test_exchange_real_jhe.py` and reflected in the mock-suite docstrings
+to avoid drift:
+
+- **POST response shape:** real JHE's `POST /fhir/r5/Observation`
+  response body does NOT include `valueAttachment` — only the
+  envelope (id, status, code, subject, etc.). The mock echoes the
+  full posted resource. The real test validates the OMH payload via
+  the read-back path instead.
+- **Unknown-patient list filter:** real JHE's
+  `GET /Observation?patient=<unknown>` does NOT return an empty
+  Bundle — it returns whatever the OAuth client is authorized to see
+  across its studies, ignoring an unknown `patient=` filter. The mock
+  filters strictly by patient_id. The real test asserts the
+  no-leakage invariant (no result is subject-referenced at the
+  unknown patient) rather than `fetched == []`.
+
 The result of this work is the line on `/proposal/integration` and
-`/roadmap` flipping from "wire-level prototype" to "verified against
-JupyterHealth Exchange v<version>". Worth the afternoon for an
-investor demo or design-partner kickoff.
+`/roadmap` claim now backed by an opt-in test suite that hits real
+JHE on every invocation, not just the periodic manual smoke run.
 
 ## Phase 4 — capture evidence
 
