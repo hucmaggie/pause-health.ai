@@ -2,6 +2,38 @@ import Image from "next/image";
 import { pageMetadata } from "../../lib/page-metadata";
 import { StatusPill, type StatusPillStatus } from "../../components/status-pill";
 
+/**
+ * Founder Person JSON-LD. Mirrors the root Organization.founder block
+ * but is emitted on /about so search engines + LinkedIn previewers can
+ * resolve the founder card to a Person identity directly from this
+ * page (without traversing the org graph at /). The `sameAs` array is
+ * the verifiable bridge: LinkedIn + the GitHub org. Keep this in sync
+ * with the founder block in app/layout.tsx — there's no shared module
+ * because the static-literal form is what Next can ship into the
+ * application/ld+json script tag.
+ */
+const FOUNDER_PERSON_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": "https://www.linkedin.com/in/hucmaggie/",
+  name: "Maggie C. Hu",
+  jobTitle: "Founder | CEO | CTO",
+  image: "https://pause-health.ai/team/maggie-c-hu.jpg",
+  url: "https://pause-health.ai/about",
+  worksFor: {
+    "@type": "Organization",
+    "@id": "https://pause-health.ai/#organization",
+    name: "Pause-Health.ai"
+  },
+  sameAs: [
+    "https://www.linkedin.com/in/hucmaggie/",
+    "https://github.com/hucmaggie"
+  ]
+} as const;
+
+const LINKEDIN_HANDLE = "hucmaggie";
+const LINKEDIN_URL = `https://www.linkedin.com/in/${LINKEDIN_HANDLE}/`;
+
 export const metadata = pageMetadata({
   title: "About",
   description:
@@ -159,6 +191,19 @@ const heroMetrics: HeroMetric[] = [
 export default function AboutPage() {
   return (
     <main className="container">
+      {/*
+        Person JSON-LD for the founder. Lets search engines and any
+        social previewer that lands on /about (instead of /) resolve
+        the founder card to her LinkedIn identity directly. See the
+        FOUNDER_PERSON_JSON_LD declaration for the schema rationale.
+      */}
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(FOUNDER_PERSON_JSON_LD)
+        }}
+      />
       <section className="hero">
         <p className="eyebrow">About Us</p>
         <h1>Building the menopause intelligence layer healthcare deserves.</h1>
@@ -248,12 +293,13 @@ export default function AboutPage() {
               precision, rigor, and empathy to menopause care that other
               transitions in modern medicine already enjoy.
             </p>
-            <p className="founder-links" style={{ marginTop: "0.75rem" }}>
+            <p className="founder-links" style={{ marginTop: "0.85rem" }}>
               <a
-                href="https://www.linkedin.com/in/hucmaggie/"
+                className="founder-cta"
+                href={LINKEDIN_URL}
                 target="_blank"
-                rel="noopener noreferrer me"
-                aria-label="Maggie C. Hu on LinkedIn (opens in a new tab)"
+                rel="noopener noreferrer me author"
+                aria-label={`Connect with Maggie C. Hu on LinkedIn (linkedin.com/in/${LINKEDIN_HANDLE} — opens in a new tab)`}
               >
                 <svg
                   className="founder-social-icon"
@@ -266,8 +312,20 @@ export default function AboutPage() {
                 >
                   <path d="M20.45 20.45h-3.55v-5.56c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.95v5.65H9.36V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.61 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45zM22.23 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.72V1.72C24 .77 23.21 0 22.23 0z" />
                 </svg>
-                <span>LinkedIn</span>
+                <span className="founder-cta-label">Connect on LinkedIn</span>
+                <span className="founder-cta-handle">
+                  linkedin.com/in/{LINKEDIN_HANDLE}
+                </span>
               </a>
+            </p>
+            <p
+              className="founder-verify"
+              style={{ marginTop: "0.45rem" }}
+            >
+              Verify it&apos;s the right profile: the LinkedIn page lists
+              Pause-Health.ai as the current company, with this site
+              (<span style={{ fontWeight: 600 }}>pause-health.ai</span>)
+              in the contact info.
             </p>
           </div>
         </article>

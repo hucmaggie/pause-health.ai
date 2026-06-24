@@ -1700,6 +1700,55 @@ th {
   flex-shrink: 0;
 }
 
+/* Founder LinkedIn CTA. Builds on .founder-links a — keeps the brand
+   color + icon spacing — but makes the affordance unmistakable:
+   labeled button shape, visible handle alongside the CTA label, hover +
+   focus states that don't rely on the underline trick used by inline
+   links. */
+.founder-cta {
+  flex-wrap: wrap;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--brand) 50%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--brand) 6%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--brand) 50%, transparent);
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.founder-cta:hover,
+.founder-cta:focus-visible {
+  background: color-mix(in srgb, var(--brand) 14%, transparent);
+  border-color: var(--brand);
+  border-bottom-color: var(--brand);
+}
+
+.founder-cta-label {
+  font-weight: 600;
+}
+
+.founder-cta-handle {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 0.85rem;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+}
+
+@media (max-width: 480px) {
+  .founder-cta-handle {
+    /* On narrow phones the handle wraps and competes with the label
+       for the patient's attention. Hide the verbose form there — the
+       CTA label is enough; the verification line right below still
+       names the URL out loud. */
+    display: none;
+  }
+}
+
+.founder-verify {
+  color: var(--muted);
+  font-size: 0.85rem;
+  max-width: 56ch;
+}
+
 /* ---------------------------------------------------------------------------
    Pre-Brief Panel — visible Data 360 dossier above the Agentforce chat.
    See components/pre-brief-panel.tsx for the why-this-replaced-hidden-prechat
