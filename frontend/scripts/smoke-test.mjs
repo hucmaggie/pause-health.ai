@@ -97,6 +97,7 @@ const STATIC_ROUTES = [
   "/proposal",
   "/proposal/agent-fabric",
   "/proposal/agentforce",
+  "/proposal/agentforce-voice",
   "/proposal/competition",
   "/proposal/customers",
   "/proposal/data",
@@ -184,6 +185,11 @@ const API_CALLS = [
     label: "GET /api/mulesoft/providers?zip=10001",
     method: "GET",
     path: "/api/mulesoft/providers?zip=10001&menopause=true&limit=5"
+  },
+  {
+    label: "GET /api/agentforce/voice/config",
+    method: "GET",
+    path: "/api/agentforce/voice/config"
   },
   {
     label: "GET /api/agents/care-router/.well-known/agent.json",

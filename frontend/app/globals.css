@@ -1750,6 +1750,80 @@ th {
 }
 
 /* ---------------------------------------------------------------------------
+   Agentforce Voice button — see components/agentforce-voice-button.tsx
+   --------------------------------------------------------------------------- */
+
+.agentforce-voice-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 60ch;
+}
+
+.agentforce-voice-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 600;
+}
+
+.agentforce-voice-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  border: 1px solid currentColor;
+  background: transparent;
+  margin-left: 0.35rem;
+}
+
+.agentforce-voice-pill-designed {
+  color: color-mix(in srgb, var(--muted) 85%, white 15%);
+  border-color: color-mix(in srgb, var(--muted) 60%, transparent);
+}
+
+.agentforce-voice-pill-prototype {
+  color: var(--brand);
+  border-color: color-mix(in srgb, var(--brand) 60%, transparent);
+}
+
+.agentforce-voice-pill-shipped {
+  color: #6effa1;
+  border-color: color-mix(in srgb, #6effa1 60%, transparent);
+}
+
+.agentforce-voice-help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.agentforce-voice-help-link {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.agentforce-voice-help-link:hover,
+.agentforce-voice-help-link:focus-visible {
+  color: var(--brand);
+}
+
+.agentforce-voice-toast {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--brand) 35%, transparent);
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--brand) 8%, transparent);
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+/* ---------------------------------------------------------------------------
    Pre-Brief Panel — visible Data 360 dossier above the Agentforce chat.
    See components/pre-brief-panel.tsx for the why-this-replaced-hidden-prechat
    rationale.
