@@ -209,7 +209,7 @@ const readDeeper: ReadDeeperRow[] = [
     href: "/proposal/mcp",
     label: "MCP server",
     detail:
-      "Provider lookup is already live: on the trailsignup org the Pause_Health_Intake_Agent has a \"Find a Provider\" subagent that calls findMenopauseProviders as a native Agentforce action via an External Service + Named Credential over /api/mulesoft/providers (verified GROUNDED in Preview — routes, calls with zip/menopause=true/limit=3, returns real NPPES-derived MSCP clinicians). The MCP server is the future consolidation: it exposes get_patient_timeline, get_patient_intake, and find_menopause_providers as one toolset, shipped in-repo (mcp/) against the Experience APIs, with npm publish + Agentforce MCP-gateway registration as the next step.",
+      "Provider lookup is already live: on the trailsignup org the Pause_Health_Intake_Agent has a \"Find a Provider\" subagent that calls findMenopauseProviders as a native Agentforce action via an External Service + Named Credential over /api/mulesoft/providers (verified GROUNDED in Preview — routes, calls with zip/menopause=true/limit=3, returns real NPPES-derived MSCP clinicians). The MCP server is the future consolidation, now wired both ways: stdio (npx @pause-health/mcp; private:true today, npm-published in Phase 1) for Claude Desktop / Cursor, AND Streamable HTTP at https://pause-health.ai/api/mcp for Agentforce 3.0 Registry intake (Setup → Agentforce Registry → New MCP server → paste the URL → allowlist the four tools → land in the Asset Library → attach to a Topic in Builder).",
     status: "prototype"
   },
   {

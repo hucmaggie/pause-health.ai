@@ -265,6 +265,7 @@ const results = {
   static: [],
   internalLinks: [],
   api: [],
+  mcp: [],
   startedAt: new Date().toISOString(),
   base: BASE,
   pass: 0,
@@ -445,6 +446,79 @@ function topLevelKeys(obj) {
   return typeof obj;
 }
 
+// MCP Streamable HTTP returns an SSE stream on POST. Read until we see
+// the first `data: { ... }` line for our request id and parse it.
+async function probeMcpInitialize() {
+  const url = BASE + "/api/mcp";
+  const start = Date.now();
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "initialize",
+    params: {
+      protocolVersion: "2025-03-26",
+      capabilities: {},
+      clientInfo: { name: "pause-smoke-test", version: "0.1.0" }
+    }
+  });
+  try {
+    const res = await fetchWithTimeout(
+      url,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream"
+        },
+        body
+      },
+      30000
+    );
+    const text = await res.text();
+    const ms = Date.now() - start;
+    const dataLine = text
+      .split(/\r?\n/)
+      .find((line) => line.startsWith("data:"));
+    let serverName = null;
+    let serverVersion = null;
+    let toolsHint = false;
+    if (dataLine) {
+      try {
+        const env = JSON.parse(dataLine.slice("data:".length).trim());
+        serverName = env?.result?.serverInfo?.name ?? null;
+        serverVersion = env?.result?.serverInfo?.version ?? null;
+        toolsHint = Boolean(env?.result?.capabilities?.tools);
+      } catch {
+        /* fall through to fail below */
+      }
+    }
+    const ok =
+      res.ok &&
+      serverName === "pause-health-mcp" &&
+      typeof serverVersion === "string" &&
+      toolsHint;
+    record("mcp", {
+      outcome: ok ? "pass" : "fail",
+      label: "POST /api/mcp (initialize)",
+      status: res.status,
+      ms,
+      bytes: text.length,
+      note: ok
+        ? `serverInfo=${serverName}@${serverVersion} tools=advertised`
+        : `status=${res.status} serverName=${serverName} version=${serverVersion} toolsHint=${toolsHint}`
+    });
+  } catch (err) {
+    record("mcp", {
+      outcome: "fail",
+      label: "POST /api/mcp (initialize)",
+      status: 0,
+      ms: Date.now() - start,
+      bytes: 0,
+      note: `error: ${err.message}`
+    });
+  }
+}
+
 async function waitForServer(maxAttempts = 30) {
   for (let i = 0; i < maxAttempts; i++) {
     try {
@@ -498,6 +572,12 @@ async function main() {
   for (const call of API_CALLS) {
     await probeApi(call);
   }
+
+  // 4. MCP Streamable HTTP endpoint — the Agentforce 3.0 Registry's
+  //    intake surface. POST initialize and assert the SSE response
+  //    contains serverInfo for pause-health-mcp.
+  console.log(`smoke [4/4]: MCP Streamable HTTP (/api/mcp)...`);
+  await probeMcpInitialize();
 
   results.finishedAt = new Date().toISOString();
   results.elapsedMs =
@@ -620,6 +700,25 @@ function buildReport(r) {
     "Shape",
     "Notes"
   ]);
+
+  const mcpRows = (r.mcp ?? []).map((e) => ({
+    "✓/✗": e.outcome === "pass" ? "✓" : e.outcome === "warn" ? "⚠" : "✗",
+    Probe: e.label,
+    Status: e.status,
+    Bytes: e.bytes,
+    ms: e.ms,
+    Notes: e.note
+  }));
+  if (mcpRows.length) {
+    section("MCP Streamable HTTP", mcpRows, [
+      "✓/✗",
+      "Probe",
+      "Status",
+      "Bytes",
+      "ms",
+      "Notes"
+    ]);
+  }
 
   return lines.join("\n") + "\n";
 }

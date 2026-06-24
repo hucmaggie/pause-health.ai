@@ -118,9 +118,10 @@ const whyMcp: Array<{
 const protoVsProd = [
   {
     aspect: "MCP server transport",
-    proto: "stdio. Launched by the MCP client as a child process via npx (after Phase 1) or `node dist/server.js` (today).",
+    proto:
+      "Both transports run today off a single tool registration: stdio (npx @pause-health/mcp; private:true today, npm-published in Phase 1) for Claude Desktop / Cursor, AND Streamable HTTP at https://pause-health.ai/api/mcp for Agentforce 3.0 Registry / any HTTP-based MCP client.",
     prod:
-      "stdio for developer tooling (Cursor, Claude Desktop) and Streamable HTTP behind the customer's identity provider for Agentforce / server-to-server."
+      "Same two transports. Streamable HTTP fronted by the customer's Anypoint API gateway and tied to their identity provider; stdio still works locally for developer tooling."
   },
   {
     aspect: "Backing Experience APIs",
@@ -189,18 +190,31 @@ const phase1ClaudeSnippet = `{
   }
 }`;
 
-const agentforceSnippet = `// In Anypoint Platform / Agentforce Studio:
-// 1. Publish the Pause MCP server behind an External Services connector
-//    OR the Agentforce MCP gateway.
-// 2. Point PAUSE_MCP_BASE_URL at the customer's Anypoint Experience-tier
-//    base URL (set in the gateway / connector configuration).
-// 3. The Agentforce Service Agent now sees four tools:
-//    - get_patient_timeline
-//    - get_patient_intake
-//    - find_menopause_providers
-//    - experience_api_health
-// 4. Tool calls flow: Agentforce -> MCP gateway -> Pause MCP server
-//    -> MuleSoft Experience API -> JupyterHealth / DBDP.
+const agentforceSnippet = `// Salesforce Agentforce 3.0 — register the Pause MCP server with the
+// Agentforce Registry (the June 2025 release introduced a native MCP
+// client; the legacy "External Services connector" pattern is obsolete
+// for MCP intake).
+//
+// 1. Setup -> Agentforce Registry -> New MCP server.
+//    Paste the Streamable HTTP URL:
+//      https://pause-health.ai/api/mcp
+//    Salesforce calls tools/list against it and auto-populates the
+//    four Pause tools.
+// 2. Allowlist the tools you want. Each one is persisted to the
+//    Agentforce Asset Library as a callable action; the tool's
+//    description becomes the agent's reasoning instructions.
+// 3. Agentforce Builder -> your agent -> Topic ->
+//    This Topic's Actions -> Add from Asset Library. Validate in
+//    Plan Canvas.
+// 4. Tool calls flow:
+//      Agentforce agent -> Agentforce Registry / Gateway ->
+//      https://pause-health.ai/api/mcp ->
+//      MuleSoft Experience API -> JupyterHealth / DBDP.
+//
+// For a customer-managed Anypoint deployment, set PAUSE_MCP_BASE_URL
+// on the Vercel deployment to the customer's Experience-tier base URL
+// and the same four tools transparently call the customer's APIs.
+// The registration URL doesn't change.
 `;
 
 const phases: Array<{
@@ -210,18 +224,18 @@ const phases: Array<{
   detail: string;
 }> = [
   {
-    name: "Phase 0 — Reference implementation",
+    name: "Phase 0 — Reference implementation + Streamable HTTP endpoint",
     status: "prototype",
     duration: "Today",
     detail:
-      "Pause MCP server committed under mcp/. Four tools backed by mocked Experience APIs. Descriptor published at /.well-known/mcp.json. Installable via git clone + local build."
+      "Pause MCP server committed under mcp/ with two transports running off a single tool registration: stdio (Claude Desktop, Cursor, local clients) via `npx @pause-health/mcp`, and Streamable HTTP at https://pause-health.ai/api/mcp (Agentforce 3.0 Registry, server-to-server) via a Next.js route handler. Four tools backed by mocked Experience APIs. A parity test pins the two transport copies of the tool definitions byte-identical so a description tweak can't ship to one path and not the other."
   },
   {
     name: "Phase 1 — Publish to the registry",
     status: "designed",
     duration: "2 weeks",
     detail:
-      "Publish @pause-health/mcp to npm (today: package is `private: true`). Submit to the public MCP server registry. Add a Streamable HTTP transport alongside stdio for server-to-server callers."
+      "Publish @pause-health/mcp to npm (today: package is `private: true`). Submit to the public MCP server registry alongside the existing https://pause-health.ai/api/mcp HTTP endpoint."
   },
   {
     name: "Phase 2 — Customer-managed gateway",
@@ -322,7 +336,7 @@ export default function McpPage() {
     <ProposalShell
       eyebrow="Investor brief · MCP server"
       title="Pause as a tool surface for every AI agent"
-      subtitle="Pause-Health.ai exposes its MuleSoft Experience APIs through a Model Context Protocol (MCP) server. Claude Desktop, Cursor, the Salesforce Agentforce Service Agent, and any MCP-compliant client can call Pause's clinical APIs as native tools. Today the server is in-repo at mcp/ and runs against mocked Experience APIs; the npm-published one-liner lands in Phase 1."
+      subtitle="Pause-Health.ai exposes its MuleSoft Experience APIs through a Model Context Protocol (MCP) server. Claude Desktop and Cursor connect over stdio; Salesforce Agentforce 3.0 Registry and any other HTTP-based MCP client connect over Streamable HTTP at https://pause-health.ai/api/mcp. Both transports run today off a single tool registration. Backing Experience APIs are mocked in the prototype; the npm-published stdio one-liner lands in Phase 1."
     >
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">The four tools</p>

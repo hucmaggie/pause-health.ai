@@ -3,9 +3,23 @@
 **Model Context Protocol (MCP) server that exposes the Pause-Health.ai
 MuleSoft Experience APIs as tools for AI agents.**
 
-Any MCP-aware client — Claude Desktop, Cursor, the Salesforce Agentforce
-Service Agent, OpenAI Responses API, or your own JSON-RPC harness — can
-register this server and call Pause's clinical APIs as native tools.
+Any MCP-aware client — Claude Desktop, Cursor, the Salesforce
+Agentforce 3.0 Registry, OpenAI Responses API, or your own JSON-RPC
+harness — can register this server and call Pause's clinical APIs as
+native tools.
+
+The Pause MCP surface ships in two transports, with the same four tools
+and the same Experience API contract behind them:
+
+| Transport       | Endpoint                                         | Best for                                                 |
+| --------------- | ------------------------------------------------ | -------------------------------------------------------- |
+| Streamable HTTP | `https://pause-health.ai/api/mcp`                | Agentforce 3.0 Registry, remote / HTTP-based MCP clients |
+| stdio           | `npx @pause-health/mcp` (this package)           | Claude Desktop, Cursor, any local MCP client             |
+
+Tool definitions are single-sourced in `mcp/src/tools.ts` and
+duplicated into `frontend/lib/mcp/tools.ts` for the Next.js route. A
+parity test (`frontend/lib/mcp/tools.parity.test.ts`) fails CI if the
+two copies drift — edit the canonical copy, then `cp` it across.
 
 Today the server fronts the **mocked** Experience APIs in this repo at
 `https://pause-health.ai/api/mulesoft/*` so investors, prospects, and
@@ -108,14 +122,44 @@ Add to `~/.cursor/mcp.json` (or your project's `.cursor/mcp.json`):
 }
 ```
 
-### Agentforce Service Agent
+### Agentforce 3.0 — register the HTTP endpoint with the Agentforce Registry
 
-In production deployments where the Agentforce Service Agent needs to
-call Pause Experience APIs, register this MCP server behind a Salesforce
-External Services connector or the Agentforce MCP gateway. The MuleSoft
-team operating the customer's Anypoint Platform points
-`PAUSE_MCP_BASE_URL` at the Experience-tier base URL exposed by their
-Mule Experience APIs. The tool surface stays identical to local dev.
+For Salesforce orgs on Agentforce 3.0 (the June-2025 release that
+introduced the native MCP client), the Pause MCP server is registered
+through the **Agentforce Registry**, not the legacy External Services
+connector. The Registry expects an HTTP-fronted server — stdio is not
+registry-callable — so use the Next.js route at
+`https://pause-health.ai/api/mcp` (or your own Vercel preview URL) as
+the registration target.
+
+Steps:
+
+1. **Setup → Agentforce Registry → New MCP server.** Paste the
+   Streamable HTTP URL (`https://pause-health.ai/api/mcp`). Salesforce
+   calls `tools/list` against it and auto-populates the four Pause
+   tools (`get_patient_timeline`, `get_patient_intake`,
+   `find_menopause_providers`, `experience_api_health`).
+2. **Allowlist the tools you want.** Each allowlisted tool is
+   persisted to the **Agentforce Asset Library** as a callable
+   action. The verbose tool descriptions are intentional — they
+   become the agent's reasoning instructions inside Builder.
+3. **Agentforce Builder → your agent → Topic → This Topic's Actions.**
+   Add the Pause tools from the Asset Library. Validate in **Plan
+   Canvas** with a representative patient prompt.
+4. **(Optional) Agentforce Gateway** — layer rate-limit / policy
+   governance over the registered server.
+
+Authentication specifics for the Registry's connection profile live in
+the gated *MCP for Agentforce* help article; we'll wire OAuth or
+Named-Credential auth when a partner needs it. The prototype endpoint
+serves the public mock APIs and runs unauthenticated by design.
+
+### Customer-Anypoint deployment
+
+When a customer's MuleSoft Anypoint Experience tier is live, set
+`PAUSE_MCP_BASE_URL` on the Vercel deployment to that base URL and the
+same four tools transparently call the customer's APIs. The Registry
+registration URL doesn't change; only the underlying base URL does.
 
 ## Smoke test
 
