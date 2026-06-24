@@ -36,7 +36,7 @@ const horizons: RoadmapHorizon[] = [
       {
         title: "End-to-end smoke test of the polished surface",
         detail:
-          "Reproducible smoke-test script at frontend/scripts/smoke-test.mjs. Hits 40 static routes + 4 persona-specific routes, follows 105 unique internal links, POSTs realistic fixtures to 17 API endpoints. Current run (2026-06-24, BASE_URL=localhost): 166 / 166 pass. Run via `npm run smoke` against a local dev server; results land in SMOKE_TEST_RESULTS.md. Re-runnable after every polish pass.",
+          "Reproducible smoke-test script at frontend/scripts/smoke-test.mjs. Hits 40 static routes + 4 persona-specific routes, follows 105 unique internal links, POSTs realistic fixtures to 18 API endpoints. Current run (2026-06-24, BASE_URL=localhost): 167 / 167 pass. Run via `npm run smoke` against a local dev server; results land in SMOKE_TEST_RESULTS.md. Re-runnable after every polish pass.",
         status: "prototype",
         source: { href: "/changelog", label: "See SMOKE_TEST_RESULTS.md" }
       },

@@ -193,6 +193,11 @@ const API_CALLS = [
     path: "/api/agentforce/voice/config"
   },
   {
+    label: "GET /api/salesforce/headless-360/config",
+    method: "GET",
+    path: "/api/salesforce/headless-360/config"
+  },
+  {
     label: "GET /api/agents/care-router/.well-known/agent.json",
     method: "GET",
     path: "/api/agents/care-router/.well-known/agent.json"

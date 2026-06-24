@@ -185,8 +185,8 @@ const missingForFullConformance: Array<{
   {
     gap: "PKCE External Client App OAuth flow",
     why: "Headless 360's trust model is OAuth 2.0 Authorization Code + PKCE via an External Client App, scopes `mcp_api` + `refresh_token`. The Pause prototype today consumes Salesforce surfaces under service-account or public-deployment identities — not under the end user's identity, which is what PKCE enables.",
-    needed: "New `lib/salesforce-headless360.ts` + `/api/salesforce/headless-360/{authorize,callback,token}` route family that implements the PKCE handshake. Same env-driven pattern as Agentforce Voice — provisioned by setting SF_HEADLESS360_CLIENT_ID + SF_HEADLESS360_AUTH_BASE_URL + the new scope claims. Trust-model post: https://www.salesforce.com/blog/headless-trust-model-agentic-architecture/",
-    pill: "designed"
+    needed: "Shipped 2026-06-24 as a dormant seam. lib/salesforce-headless360.ts + the five routes under /api/salesforce/headless-360/* (config, authorize, callback, token/refresh, me, logout) implement the PKCE handshake with HMAC-signed session cookies. 25 unit tests pin the env-var parsing, the PKCE alphabet + S256 derivation, and the signed-cookie tamper-evidence invariants. Activate by setting SF_HEADLESS360_CLIENT_ID + AUTH_BASE_URL + REDIRECT_URI + SESSION_SECRET; see docs/HEADLESS_360_RUNBOOK.md for the External Client App procurement steps.",
+    pill: "prototype"
   },
   {
     gap: "`mcp_api` scope on the Pause MCP server",
@@ -423,7 +423,7 @@ export default function HeadlessSixtyPage() {
       <section className="card" style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">The OAuth shape Headless 360 expects</p>
         <h2 className="proposal-section-title" style={{ marginTop: 0 }}>
-          PKCE + External Client App — what the next activation looks like
+          PKCE + External Client App — shipped 2026-06-24 (dormant until activated)
         </h2>
         <p style={{ color: "var(--muted)", marginBottom: "0.4rem" }}>
           Headless 360&apos;s trust model post (
@@ -439,29 +439,46 @@ export default function HeadlessSixtyPage() {
           <strong>OAuth 2.0 Authorization Code + PKCE</strong>, and the
           client uses scopes <code>mcp_api</code> and{" "}
           <code>refresh_token</code>. Client Credentials / Implicit /
-          Username-Password flows are out-of-pattern. Pause&apos;s
-          conformance gap is that today its calls go under service-user
-          tokens (Data Cloud) or public deployment metadata
+          Username-Password flows are out-of-pattern. The Pause
+          conformance gap was that today&apos;s calls go under
+          service-user tokens (Data Cloud) or public deployment metadata
           (Agentforce chat), not the user&apos;s identity through PKCE.
-          Once the seam below ships, the same Data 360 grounding query
-          will run as the signed-in clinician — and Salesforce Shield /
-          Event Monitoring will see that.
+          The seam below shipped 2026-06-24 as dormant code — six
+          routes, 25 unit tests, and HMAC-signed cookies for tamper-
+          evident sessions. Activating it requires the External Client
+          App procurement steps in{" "}
+          <a
+            href="https://github.com/hucmaggie/pause-health.ai/blob/main/docs/HEADLESS_360_RUNBOOK.md"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            docs/HEADLESS_360_RUNBOOK.md
+          </a>
+          .
         </p>
         <pre style={codeBlockStyle}>
-          <code>{`# Activation shape (designed; not yet wired in code):
-SF_HEADLESS360_CLIENT_ID=<External Client App client_id>
+          <code>{`# Activation env vars (set these, then redeploy):
+SF_HEADLESS360_CLIENT_ID=<External Client App Consumer Key>
 SF_HEADLESS360_AUTH_BASE_URL=https://<my-org>.my.salesforce.com
 SF_HEADLESS360_REDIRECT_URI=https://pause-health.ai/api/salesforce/headless-360/callback
-SF_HEADLESS360_SCOPES=mcp_api refresh_token
+SF_HEADLESS360_SESSION_SECRET=<openssl rand -hex 32>
+# Optional override; defaults to "mcp_api refresh_token":
+SF_HEADLESS360_SCOPES=mcp_api refresh_token api
+# After end-to-end verification:
+SF_HEADLESS360_VERIFIED=true
 
-# Routes that activate when those env vars are set:
-GET  /api/salesforce/headless-360/authorize     # 302 → Salesforce /authorize with PKCE
-GET  /api/salesforce/headless-360/callback      # exchanges the code, stores tokens
-POST /api/salesforce/headless-360/token/refresh # quietly refreshes when nearing expiry
-GET  /api/salesforce/headless-360/me            # returns the signed-in Salesforce user
+# Routes shipped today (all live, all 503 until env vars are set):
+GET  /api/salesforce/headless-360/config         # always 200; reports status
+GET  /api/salesforce/headless-360/authorize      # 302 → Salesforce w/ PKCE
+GET  /api/salesforce/headless-360/callback       # exchanges the code, sets session
+POST /api/salesforce/headless-360/token/refresh  # rotates the access token
+GET  /api/salesforce/headless-360/me             # signed-in Salesforce userinfo
+POST /api/salesforce/headless-360/logout         # clears session cookies
 
-# Status pill flips designed → prototype → shipped on
-# AGENTFORCE_VOICE_VERIFIED-style verification flag.`}</code>
+# Status state machine:
+#   designed  — env vars unset → /config 200, others 503
+#   prototype — env vars set   → all routes live
+#   shipped   — VERIFIED=true  → operator confirmed E2E (gap #1 closed)`}</code>
         </pre>
       </section>
 
