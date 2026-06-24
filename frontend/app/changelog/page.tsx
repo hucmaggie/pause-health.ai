@@ -38,7 +38,7 @@ const weeks: ChangelogWeek[] = [
         summary:
           "Roadmap had drifted relative to what's actually on main. Three corrections: (1) /roadmap MuleSoft iteration 8 — Phase-2 contract DataWeave was pilled 'planned' with a 'committed but undeployed' detail, but iteration 8 actually shipped 2026-06-16 as v1.0.4 on CloudHub 2.0 (commit ca2229a); flipped to 'shipped' and replaced the detail with the live verification (direct CloudHub returns the full Phase-2 field set; pause-health.ai/api/mulesoft/providers reports meta._source:'live-mulesoft') plus the two non-obvious deploy gotchas the maintainer captured (Connected App needs Runtime Manager + Exchange scopes per surface; -DmuleDeploy doesn't publish to Exchange so the deploy is two commands). (2) /roadmap pause_ingest → real JHE round-trip entry extended to mention the 2026-06-23 PAUSE_USE_REAL_JHE=1 pytest marker shipping — same 7 contract assertions now run against the live JHE Django instance, not just the periodic manual smoke; surfaced + documented 2 more mock-vs-real divergences. (3) /roadmap MuleSoft iterations 1–7 → iterations 1–8 (the same iteration-8 ship), and Now-horizon explainer trimmed accordingly. /proposal/integration Phase 0 + Phase 1 details extended in parallel so the integration brief's claim line ('verified against real JupyterHealth Exchange') is backed by the new automated contract suite rather than a manual smoke run. tsc clean; 375 vitest tests green.",
         commits: [
-          { sha: "PENDING", label: "roadmap+integration: reconcile pill states with shipped work (MuleSoft iter-8 live; PAUSE_USE_REAL_JHE marker)" }
+          { sha: "0f8bc99", label: "roadmap+integration: reconcile pill states with shipped work" }
         ],
         status: "shipped"
       },
