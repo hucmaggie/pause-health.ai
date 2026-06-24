@@ -38,7 +38,7 @@ const weeks: ChangelogWeek[] = [
         summary:
           "The founder card on /about had a small icon-link to LinkedIn — fine for discoverability but a thin signal for previewers (LinkedIn / Google) trying to resolve the page to a Person identity. The actual bio content didn't change (no LinkedIn-scraped claims; LinkedIn returns HTTP 999 to unauthenticated fetchers, and inventing career history would be the wrong call). What did change: (1) Added a standalone Person JSON-LD block to /about scoped to Maggie C. Hu — same shape as the founder block already in the root Organization JSON-LD at app/layout.tsx, with sameAs to LinkedIn + GitHub, so search engines and LinkedIn's own scraper can resolve the founder card to her LinkedIn identity directly from this page (not just from the org graph at /). (2) Promoted the icon-only LinkedIn link to a labeled CTA — 'Connect on LinkedIn' button with the visible handle 'linkedin.com/in/hucmaggie' alongside, brand-tinted background, hover + focus states, and rel='me author' microformat hints. (3) Added a short verification line right below the CTA so a visitor can confirm they're on the right profile ('the LinkedIn page lists Pause-Health.ai as the current company, with this site in the contact info'). On narrow phones the long handle text is hidden so the CTA + label stay legible; the verify line below names the URL out loud. 393/393 vitest tests still green; smoke unchanged at 161/161; tsc clean.",
         commits: [
-          { sha: "PENDING", label: "about: richer founder LinkedIn affordance + Person JSON-LD" }
+          { sha: "446a2e5", label: "about: richer founder LinkedIn affordance + Person JSON-LD on /about" }
         ],
         status: "shipped"
       },
