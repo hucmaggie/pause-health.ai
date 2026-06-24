@@ -25,6 +25,28 @@ const FOUNDER_PERSON_JSON_LD = {
     "@id": "https://pause-health.ai/#organization",
     name: "Pause-Health.ai"
   },
+  alumniOf: [
+    {
+      "@type": "EducationalOrganization",
+      name: "USC Marshall School of Business",
+      url: "https://www.marshall.usc.edu/"
+    },
+    {
+      "@type": "EducationalOrganization",
+      name: "UC Berkeley Haas School of Business",
+      url: "https://haas.berkeley.edu/"
+    },
+    {
+      "@type": "EducationalOrganization",
+      name: "Kansas State University",
+      url: "https://www.k-state.edu/"
+    },
+    {
+      "@type": "EducationalOrganization",
+      name: "University of Missouri-Kansas City",
+      url: "https://www.umkc.edu/"
+    }
+  ],
   sameAs: [
     "https://www.linkedin.com/in/hucmaggie/",
     "https://github.com/hucmaggie"
@@ -284,14 +306,28 @@ export default function AboutPage() {
             </p>
             <p style={{ marginBottom: "0.5rem" }}>
               Maggie leads product, vision, and provider partnerships at
-              Pause-Health.ai. Her background spans health-tech product
-              leadership and applied AI, with a focus on building clinical
-              software that care teams actually want to use.
+              Pause-Health.ai. She brings 25+ years across enterprise
+              software, with the last decade spent in solution-engineering
+              and enterprise-architecture roles at the platform companies
+              this prototype talks to every day &mdash; currently
+              Principal Agentforce / Data Cloud Activation Solution
+              Engineer at Salesforce (TMT vertical, Dec 2025&ndash;), with
+              earlier stints as Principal Integration Architect at First
+              American, Sr Staff Solution Engineer at VMware Tanzu,
+              Principal Platform Solution Engineer at MuleSoft, ISV
+              Technical Evangelist at Salesforce, and Specialist
+              Solutions Architect at Red Hat. Healthcare-domain context
+              from a Sr Technical Consultant tour at TriZetto on the
+              Facets / NetworX claims platform.
             </p>
             <p style={{ color: "var(--muted)" }}>
               She founded Pause-Health.ai to bring the same standard of
               precision, rigor, and empathy to menopause care that other
-              transitions in modern medicine already enjoy.
+              transitions in modern medicine already enjoy. Currently a
+              USC Marshall Executive MBA candidate (May 2027) and
+              completed UC Berkeley Haas&apos; Executive Program in AI
+              and Digital Strategy (June 2026); MS Software Engineering
+              from Kansas State, BS Computer Science from UMKC.
             </p>
             <p className="founder-links" style={{ marginTop: "0.85rem" }}>
               <a
@@ -322,10 +358,12 @@ export default function AboutPage() {
               className="founder-verify"
               style={{ marginTop: "0.45rem" }}
             >
-              Verify it&apos;s the right profile: the LinkedIn page lists
-              Pause-Health.ai as the current company, with this site
-              (<span style={{ fontWeight: 600 }}>pause-health.ai</span>)
-              in the contact info.
+              Verify it&apos;s the right profile: the LinkedIn headline
+              reads &ldquo;Executive Tech Leader | Solution Engineer /
+              Architect | AI &amp; Digital Strategy | Enterprise Architect
+              | Technical Evangelist | Ex- VMware + MuleSoft / Salesforce
+              + Red Hat | USC Marshall | UC Berkeley HaaS&rdquo; and
+              lists Irvine, California as the location.
             </p>
           </div>
         </article>
