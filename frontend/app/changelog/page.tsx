@@ -38,7 +38,7 @@ const weeks: ChangelogWeek[] = [
         summary:
           "Committed SMOKE_TEST_RESULTS.md was dated 2026-06-08 — the surface has grown 20+ commits since (provider directory pages, telehealth filter end-to-end, recommended-providers helper, JHE bootstrap docs, MuleSoft iteration 8 deploy, real-JHE pytest marker, roadmap+integration reconciliation), and none of the new routes/links/endpoints were in the smoke matrix. Re-ran against a fresh `next dev`: pass 160, warn 0, fail 0. Static pages 35→38, unique internal links 77→102, API endpoints 16→17, elapsed 15s→10s. Roadmap Now-horizon line bumped to the new counts so the 'See SMOKE_TEST_RESULTS.md' pointer stays self-consistent. No regressions surfaced. tsc clean; 375 vitest tests green.",
         commits: [
-          { sha: "PENDING", label: "smoke: refresh end-to-end smoke-test results (160/160 pass)" }
+          { sha: "ab6d6af", label: "smoke: refresh end-to-end smoke-test results (160/160 pass)" }
         ],
         status: "shipped"
       },
