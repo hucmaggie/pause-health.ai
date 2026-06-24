@@ -38,7 +38,7 @@ const weeks: ChangelogWeek[] = [
         summary:
           "The three checkbox filters on /provider — Only MSCP-certified, Include nearby/relevant fallback, Telehealth only — were rendering with the checkbox at the far-left of its column and the text floating to the right with a large gap. Root cause: the filter form reused `.contact-form-row` (a 2-column grid: `grid-template-columns: 1fr 1fr`) for the checkboxes, AND the global `.contact-form input { width: 100% }` stretched each checkbox to fill its grid cell — so the box sat at column-left while the span text aligned to the right of the same cell. Fixed: new container `.provider-filter-checks` (flex-wrap row, gap 0.4rem × 1.25rem) and new class `.provider-filter-check` (inline-flex with the checkbox `width: 1rem; height: 1rem; margin: 0; flex-shrink: 0`, overriding the global stretch). Markup simplified from three nested labels-with-inline-styles to three clean `<label class=provider-filter-check>` rows. accent-color: var(--brand) so the check itself reads in the Pause pink. Verified live: rendered HTML now shows each label tight-coupled to its checkbox in a single visual unit; tsc clean; 434/434 vitest; smoke 167/167 unchanged.",
         commits: [
-          { sha: "PENDING", label: "provider: fix filter-checkbox UI (checkbox glued to its label, no 2-col grid stretch)" }
+          { sha: "b3cc0d2", label: "provider: fix filter-checkbox UI (checkbox glued to its label, no 2-col grid stretch)" }
         ],
         status: "shipped"
       },
