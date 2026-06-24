@@ -24,10 +24,20 @@
  *
  *   BASE_URL=https://pause-health.ai node scripts/smoke-test.mjs
  *
- * Writes a Markdown report to ../SMOKE_TEST_RESULTS.md in the repo
- * root (one level up from frontend/). Exit code 0 if all checks pass,
- * 1 otherwise. The report is committable as evidence that the
- * polished surface still works end-to-end.
+ * Writes a Markdown report to the repo root. Path depends on target:
+ *
+ *   - localhost / 127.0.0.1 → ../SMOKE_TEST_RESULTS.md
+ *   - anything else (e.g. https://pause-health.ai) →
+ *     ../SMOKE_TEST_RESULTS.<slug>.md (e.g. SMOKE_TEST_RESULTS.pause-health-ai.md)
+ *   - override with REPORT_PATH=... env var
+ *
+ * The per-target split keeps the committed local-target evidence
+ * file (referenced by /roadmap) from getting clobbered by ad-hoc
+ * production runs that pass-but-with-different-counts (production
+ * may be running an older deploy). Only the local-target file is
+ * meant to be committed.
+ *
+ * Exit code 0 if all checks pass, 1 otherwise.
  */
 
 import { writeFileSync } from "node:fs";
@@ -39,7 +49,30 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const REPO_ROOT = resolve(__dirname, "..", "..");
-const REPORT_PATH = resolve(REPO_ROOT, "SMOKE_TEST_RESULTS.md");
+
+// The committed SMOKE_TEST_RESULTS.md is evidence captured against a
+// local dev server (the roadmap's "Run via npm run smoke" line points
+// at it). Smoking production should NOT overwrite that evidence — its
+// page-link counts and timings reflect the deployed surface, not the
+// current main, and clobbering causes confusing diffs. Default to a
+// per-target file when BASE_URL is anything other than localhost, and
+// allow REPORT_PATH=... to override either way.
+function defaultReportPath(base) {
+  const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(base);
+  if (isLocal) return resolve(REPO_ROOT, "SMOKE_TEST_RESULTS.md");
+  // Slugify the host for the filename: pause-health.ai → "pause-health-ai".
+  let host;
+  try {
+    host = new URL(base).host;
+  } catch {
+    host = "unknown";
+  }
+  const slug = host.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+  return resolve(REPO_ROOT, `SMOKE_TEST_RESULTS.${slug}.md`);
+}
+const REPORT_PATH = process.env.REPORT_PATH
+  ? resolve(process.env.REPORT_PATH)
+  : defaultReportPath(BASE);
 
 const PERSONA_ID = "anika-patel";
 const PATIENT_ID = "pause-demo-patient-001";

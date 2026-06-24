@@ -24,3 +24,7 @@ target/
 # Editor / tool scratch dirs
 .scratch/
 .vercel
+
+# Per-target smoke-test reports (only the localhost one is committed
+# as SMOKE_TEST_RESULTS.md — see frontend/scripts/smoke-test.mjs).
+SMOKE_TEST_RESULTS.*.md
