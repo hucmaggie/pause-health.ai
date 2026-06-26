@@ -135,9 +135,9 @@ type Substrate = {
 const techFoundation: Substrate[] = [
   {
     title: "JupyterHealth Exchange",
-    status: "designed",
+    status: "prototype",
     detail:
-      "Consented FHIR R5 data exchange substrate. The interop plane for wearable, EHR, and intake records. Federation target for Phase 2; not the live grounding path today.",
+      "Consented FHIR R5 data exchange substrate. The interop plane for wearable, EHR, and intake records. Real JHE Django + Postgres stack stood up on the maintainer's box (2026-06-16); pause_ingest round-trips both a raw Oura heart-rate sample (mapped handler) and a derived HRV-time-domain feature (auxiliary handler, with derivedFrom provenance) end-to-end. Followed up 2026-06-23 with an opt-in PAUSE_USE_REAL_JHE=1 pytest marker — same seven contract assertions now run against the live JHE instance, not just the wire-level mock. Federation across customer-org JHE deployments is the Phase-2 target.",
     href: "/proposal/integration",
     cta: "JupyterHealth integration brief →"
   },
@@ -161,7 +161,7 @@ const techFoundation: Substrate[] = [
     title: "MuleSoft + Agent Fabric",
     status: "partial",
     detail:
-      "MuleSoft CloudHub 2.0 worker live (iterations 1–7 shipped: Flex Gateway runtime enforcement, Auth0 RS256 JWT validation, plain Rate Limiting, OAS 3.0 spec in Exchange). Iteration 8 (Phase-2 contract DataWeave matching the mock's full shape — distance, signals, sanctions, insurance, dataset provenance) is committed and awaiting CloudHub deploy; production degrades cleanly to mock-fallback in the meantime so there's no patient-visible regression. The Agent Fabric multi-agent control plane (agent registry, policy catalog, trace plane) is the designed production home for the Anthropic-backed Care Router; the underlying MuleSoft surface is more than 'designed' — it's running.",
+      "MuleSoft CloudHub 2.0 worker live (iterations 1–8 shipped: Flex Gateway runtime enforcement, Auth0 RS256 JWT validation, plain Rate Limiting, OAS 3.0 spec in Exchange, and the Phase-2 contract DataWeave deployed as v1.0.4 on 2026-06-16 with the mock's full shape — distance, signals, sanctions, insurance, dataset provenance — live behind Auth0-JWT). Production /api/mulesoft/providers reports meta._source: 'live-mulesoft' end-to-end. Iteration 9 (persistent VM hosting for the Flex Gateway, moving off the local-ngrok rig) is the remaining piece. The Agent Fabric multi-agent control plane (agent registry, policy catalog, trace plane) is the designed production home for the Anthropic-backed Care Router; the underlying MuleSoft surface is more than 'designed' — it's running.",
     href: "/proposal/agent-fabric",
     cta: "Agent Fabric brief →"
   }
