@@ -2456,18 +2456,18 @@ th {
   background: rgba(255, 255, 255, 0.07);
 }
 
-/* Checkbox row in the provider filters. The previous version reused
-   `.contact-form-row` (a 2-column grid) which spread the three
-   checkboxes across half-width cells with their checkbox inputs
-   stretched to 100% width — so the checkbox sat at the far-left of
-   its cell and the text floated to the right with a big gap. This
-   container is a flex-wrap row instead, and the inputs get an
-   explicit width:auto + margin:0 to override the global
-   `.contact-form input` width:100%. Reads as: `[ ] label · [ ] label · [ ] label`. */
+/* Checkbox stack in the provider filters. Stacked one-per-line
+   (column) so each filter clause reads as a discrete `[ ] sentence`,
+   matching the long-form text in the second checkbox ("Include
+   nearby/relevant providers if no certified-local match"). The
+   previous wrap-row layout pushed that long label onto its own
+   visual line anyway, breaking the rhythm — column makes it
+   intentional. Inputs get explicit width:auto + margin:0 to override
+   the global `.contact-form input` width:100% rule. */
 .provider-filter-checks {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.25rem;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-top: 0.2rem;
 }
 
