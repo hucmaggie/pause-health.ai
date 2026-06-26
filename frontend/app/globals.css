@@ -2467,24 +2467,33 @@ th {
 .provider-filter-checks {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 0.5rem;
   margin-top: 0.2rem;
 }
 
-.provider-filter-check {
-  display: inline-flex;
+/* Two-class descendant selector (.provider-filter-checks
+   .provider-filter-check) so this beats `.contact-form label`
+   (class + type = lower specificity). Without the higher-specificity
+   selector the form's global label rule wins and forces the checkbox
+   + label to stack vertically AND center-align, which is the bug
+   we're fixing. Forcing `flex-direction: row` + `justify-content:
+   flex-start` + `align-self: flex-start` makes each row read as
+   `[ ] label` left-justified. */
+.provider-filter-checks .provider-filter-check {
+  display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: flex-start;
+  align-self: flex-start;
   gap: 0.5rem;
   font-size: 0.85rem;
   color: var(--text);
   cursor: pointer;
   padding: 0.35rem 0;
-  /* Each check takes its natural width so labels stay glued to
-     their checkbox. flex-wrap on the parent lets the third drop
-     to a new line on narrow viewports without forcing a grid. */
 }
 
-.provider-filter-check input[type="checkbox"] {
+.provider-filter-checks .provider-filter-check input[type="checkbox"] {
   /* Width override: the global `.contact-form input { width: 100% }`
      stretches the checkbox across its parent and pushes the label
      far to the right. Fix that by overriding to a small, fixed,
