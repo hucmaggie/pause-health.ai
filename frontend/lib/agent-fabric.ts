@@ -27,6 +27,7 @@
  */
 
 import { nowIso } from "./a2a";
+import { emitSpanEvent } from "./salesforce-platform-event-sink";
 
 export type AgentRecord = {
   id: string;
@@ -436,6 +437,12 @@ export function recordSpan(span: Omit<TraceSpan, "id">): TraceSpan {
   if (s.traces.length > TRACE_RING_CAP) {
     s.traces.splice(0, s.traces.length - TRACE_RING_CAP);
   }
+  // Best-effort Salesforce Platform Event egress. emitSpanEvent
+  // never throws and short-circuits to "skipped" when unconfigured,
+  // so the agent fabric is unchanged in the default (designed)
+  // posture. We intentionally don't await — telemetry must not
+  // delay the routing decision the span describes.
+  void emitSpanEvent(finalSpan);
   return finalSpan;
 }
 

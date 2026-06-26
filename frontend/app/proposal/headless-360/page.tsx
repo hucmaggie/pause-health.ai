@@ -195,10 +195,10 @@ const missingForFullConformance: Array<{
     pill: "designed"
   },
   {
-    gap: "Agent Fabric event-monitoring trace export",
-    why: "Headless 360 leans on Event Monitoring + Salesforce Shield for governance. The Pause prototype already records spans on its own Agent Fabric trace surface, but doesn't yet ship them into Salesforce's Event Monitoring stream.",
-    needed: "An optional sink in lib/agent-fabric.ts that emits Real-Time Event Monitoring events when SF_EVENT_MONITORING_BASE_URL is set. Salesforce Shield-style audit, end-to-end across the prototype's agents.",
-    pill: "designed"
+    gap: "Agent Fabric → Salesforce Platform Event egress",
+    why: "Headless 360 leans on Salesforce Shield + Event Monitoring for governance. The Pause prototype already records spans on its own Agent Fabric trace surface, but doesn't yet ship them into the customer org. Note: Real-Time Event Monitoring's catalog (LoginEvent / ApiEvent / etc.) is Salesforce-platform-internal — external apps cannot define a new RTEM event type. The partner-supported pattern is publishing custom Platform Events, which the customer admin then routes into their audit pipeline (Transaction Security policies, Flow subscribers, Pub/Sub gRPC, etc.).",
+    needed: "Shipped 2026-06-24 as a dormant seam. lib/salesforce-platform-event-sink.ts emits each Agent Fabric span as a custom Pause_Agent_Trace__e Platform Event via REST sObjects, authenticated via OAuth 2.0 Client Credentials against a dedicated Connected App. Best-effort, fire-and-forget — recordSpan() never waits on the sink and never throws on Salesforce errors. 22 unit tests pin env parsing, schema mapping, truncation, token caching, and the no-throw invariant on Salesforce failures. Activate by setting SF_PLATFORM_EVENT_BASE_URL + SF_PLATFORM_EVENT_CLIENT_ID + SF_PLATFORM_EVENT_CLIENT_SECRET; see docs/SF_PLATFORM_EVENT_SINK_RUNBOOK.md for the Connected App + Platform Event procurement steps.",
+    pill: "prototype"
   },
   {
     gap: "Salesforce CLI parity for Pause tools",
