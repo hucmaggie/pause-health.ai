@@ -7,7 +7,7 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Full Proposal",
   description:
-    "The complete Pause-Health.ai investor brief — market thesis, target outcomes, technology foundation, business model, 24-month objectives, and the architecture deep-dives. Phase 2 is shipped: 2,015-provider directory with distance ranking + state license-sanction filters + synthetic-shaped insurance, Salesforce Data Cloud Calculated Insights live in production, MuleSoft live worker carrying iterations 1–7 + iteration 8 awaiting deploy.",
+    "The complete Pause-Health.ai investor brief — market thesis, target outcomes, technology foundation, business model, 24-month objectives, and the architecture deep-dives. Phase 2 is shipped: 2,015-provider directory with distance ranking + state license-sanction filters + synthetic-shaped insurance, Salesforce Data Cloud Calculated Insights live in production, MuleSoft CloudHub 2.0 worker live through iteration 8 (Phase-2 contract DataWeave deployed), MCP server published on stdio + Streamable HTTP with the Care Router operating as MCP host, and the Headless 360 conformance plane (PKCE External Client App + Platform Event egress + Agentforce Voice seam) wired and dormant pending customer-org provisioning.",
   path: "/proposal/full",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Full investor proposal — Pause-Health.ai."
@@ -117,8 +117,15 @@ const whatPauseProvides: Capability[] = [
     title: "Outcomes telemetry baked in",
     status: "partial",
     detail:
-      "Every Care Router decision emits OpenTelemetry-style spans (intake → identity → grounding → routing). The 'clinician's eventual action' attribute is designed (a real clinician needs to be on the other end first); spans are populated today by the prototype.",
+      "Every Care Router decision emits OpenTelemetry-style spans (intake → identity → grounding → routing). The 'clinician's eventual action' attribute is designed (a real clinician needs to be on the other end first); spans are populated today by the prototype. Optional Salesforce Platform Event egress (sink wired 2026-06-24, dormant until customer-org Connected App + Pause_Agent_Trace__e are provisioned) ships every span into the customer's Shield + Event-Monitoring audit pipeline under the Connected App's integration user.",
     cta: { href: "/demo/agent-fabric", label: "See the trace plane →" }
+  },
+  {
+    title: "MCP server + host (both directions)",
+    status: "prototype",
+    detail:
+      "Pause-as-tool-source: the @pause-health/mcp server (stdio + Streamable HTTP at /api/mcp) exposes get_patient_timeline, get_patient_intake, find_menopause_providers, and experience_api_health to Claude Desktop, Cursor, and the Salesforce Agentforce 3.0 Registry. Pause-as-tool-consumer: the Care Router task endpoint now runs an MCP client per request — registers the loopback /api/mcp plus any external slots from PAUSE_MCP_HOST_REMOTES — and resolves provider recommendations via tool calls instead of direct HTTP. Verified end-to-end: host-on and host-off paths return byte-identical provider lists.",
+    cta: { href: "/proposal/mcp", label: "MCP brief →" }
   }
 ];
 
@@ -164,6 +171,22 @@ const techFoundation: Substrate[] = [
       "MuleSoft CloudHub 2.0 worker live (iterations 1–8 shipped: Flex Gateway runtime enforcement, Auth0 RS256 JWT validation, plain Rate Limiting, OAS 3.0 spec in Exchange, and the Phase-2 contract DataWeave deployed as v1.0.4 on 2026-06-16 with the mock's full shape — distance, signals, sanctions, insurance, dataset provenance — live behind Auth0-JWT). Production /api/mulesoft/providers reports meta._source: 'live-mulesoft' end-to-end. Iteration 9 (persistent VM hosting for the Flex Gateway, moving off the local-ngrok rig) is the remaining piece. The Agent Fabric multi-agent control plane (agent registry, policy catalog, trace plane) is the designed production home for the Anthropic-backed Care Router; the underlying MuleSoft surface is more than 'designed' — it's running.",
     href: "/proposal/agent-fabric",
     cta: "Agent Fabric brief →"
+  },
+  {
+    title: "Salesforce Headless 360 conformance",
+    status: "partial",
+    detail:
+      "Salesforce's TDX 2026 architecture umbrella — 'every Salesforce surface is an API, MCP tool, or CLI command, and agents can use all of it.' Pause covers most of it incidentally: REST (mulesoft + data 360 + agent.json), MCP (the /api/mcp server + the Care Router host), A2A (the care-router/tasks endpoint with an Agent Card). The /proposal/headless-360 audit page names the four explicit gaps; two are now wired dormant — the PKCE External Client App OAuth flow (gap #1) with six routes under /api/salesforce/headless-360/* and 25 unit tests pinning S256 + signed-cookie invariants, and the Salesforce Platform Event egress sink (gap #3) emitting every Agent Fabric span as a Pause_Agent_Trace__e record once the customer-org Connected App is provisioned. Activation runbooks ship alongside the code so the operator-side hand-off is one document.",
+    href: "/proposal/headless-360",
+    cta: "Headless 360 audit →"
+  },
+  {
+    title: "Agentforce Voice",
+    status: "designed",
+    detail:
+      "Salesforce announced Agentforce Voice GA on 2025-10-13 and shipped Agentforce Contact Center on 2026-03-10. The partner-web developer surface is sales-gated as of 2026-06-24 (no public LWC, no Agent API voice endpoint), and the audio round-trip requires Contact Center licensing + a CCaaS partner contract (Amazon Connect / Five9 / NiCE / Vonage). Shipped honestly: a 4-env-var seam (PROVIDER + BASE_URL + DEPLOYMENT_REF + AGENT_DEPLOYMENT) plus a public-safe /api/agentforce/voice/config probe and a launch button that renders one of three affordances driven by provisioning state. The button click currently surfaces a 'verification pending' toast — the CCaaS handshake lands on activation day. The page deliberately does NOT claim a Web Speech API browser wrapper is 'Agentforce Voice'; that's a different product.",
+    href: "/proposal/agentforce-voice",
+    cta: "Agentforce Voice brief →"
   }
 ];
 
@@ -326,8 +349,9 @@ const archDeepDives = [
   },
   {
     href: "/proposal/mcp",
-    title: "MCP server",
-    summary: "Pause's MCP tools (copy-pasteable Claude Desktop + Cursor configs).",
+    title: "MCP server + host",
+    summary:
+      "Pause's MCP tools (copy-pasteable Claude Desktop + Cursor configs) on stdio AND Streamable HTTP at /api/mcp for the Agentforce 3.0 Registry. The Care Router now also acts as an MCP HOST — calls external MCP servers as tools via PAUSE_MCP_HOST_REMOTES.",
     demoHref: null
   },
   {
@@ -335,6 +359,20 @@ const archDeepDives = [
     title: "Agentforce intake",
     summary: "Why Salesforce Agentforce for intake, and what's live today vs. what's customer-deployment shape.",
     demoHref: "/demo/intake"
+  },
+  {
+    href: "/proposal/agentforce-voice",
+    title: "Agentforce Voice",
+    summary:
+      "Salesforce Agentforce Voice (GA 2025-10-13) — partner-web seam is wired and env-driven; audio round-trip gates on Agentforce Contact Center licensing + a CCaaS partner. Honest 'designed' pill until activation.",
+    demoHref: null
+  },
+  {
+    href: "/proposal/headless-360",
+    title: "Headless 360 conformance audit",
+    summary:
+      "Maps every Pause surface (Agentforce chat, Data 360, MCP server+host, A2A Care Router, Agentforce Voice, Platform Event sink) onto Salesforce's TDX 2026 three-pattern architecture. Names the four explicit conformance gaps with status pills; gaps #1 (PKCE) and #3 (Platform Event sink) are wired dormant.",
+    demoHref: null
   },
   {
     href: "/proposal/integration",
@@ -469,7 +507,7 @@ export default function FullProposalPage() {
 
       <section style={{ marginTop: "2rem" }}>
         <p className="eyebrow">What Pause-Health.ai provides</p>
-        <h2 className="proposal-section-title">Five capabilities, each verifiable in the live prototype</h2>
+        <h2 className="proposal-section-title">Six capabilities, each verifiable in the live prototype</h2>
         <div className="card-grid" style={{ marginTop: "0.8rem" }}>
           {whatPauseProvides.map((c) => (
             <article key={c.title} className="card">
@@ -501,7 +539,7 @@ export default function FullProposalPage() {
             fontSize: "0.95rem"
           }}
         >
-          Pause-Health.ai composes four substrates the customer&apos;s data
+          Pause-Health.ai composes six substrates the customer&apos;s data
           team already trusts. Architecture briefs link out to each.
         </p>
         <div className="card-grid">
@@ -734,7 +772,7 @@ export default function FullProposalPage() {
       <section style={{ marginTop: "2.5rem" }}>
         <p className="eyebrow">Read deeper · architecture + implementation</p>
         <h2 className="proposal-section-title">
-          The architecture story (nine briefs)
+          The architecture story (eleven briefs)
         </h2>
         <p style={{ color: "var(--muted)", margin: "0 0 0.8rem", fontSize: "0.95rem" }}>
           Each architecture brief covers one substrate or agent in depth, with a
