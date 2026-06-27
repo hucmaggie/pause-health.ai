@@ -326,7 +326,7 @@ export default function AgentFabricInvestorPage() {
 
       <section className="card" style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Why investors should care</p>
-        <ul className="metric-list" style={{ marginTop: "0.5rem" }}>
+        <ul className="metric-list metric-list-stacked" style={{ marginTop: "0.5rem" }}>
           {investorTakeaways.map((item) => (
             <li key={item.label}>
               <span>{item.label}</span>
@@ -338,7 +338,7 @@ export default function AgentFabricInvestorPage() {
 
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Read deeper</p>
-        <ul className="metric-list" style={{ marginTop: "0.5rem" }}>
+        <ul className="metric-list metric-list-stacked" style={{ marginTop: "0.5rem" }}>
           <li>
             <span>
               <a href="/proposal/agentforce">Agentforce intake</a>

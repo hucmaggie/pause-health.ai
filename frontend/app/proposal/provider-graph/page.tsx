@@ -348,7 +348,7 @@ export default function ProviderGraphPage() {
           provider list to its output — agent + UI + traces all read the
           same shape.
         </p>
-        <ul className="metric-list" style={{ marginTop: "0.6rem" }}>
+        <ul className="metric-list metric-list-stacked" style={{ marginTop: "0.6rem" }}>
           <li>
             <span>Directory size</span>
             <strong style={{ fontWeight: 500 }}>
@@ -448,7 +448,7 @@ export default function ProviderGraphPage() {
                 {source.type}
               </p>
               <p style={{ margin: 0, color: "var(--text)", lineHeight: 1.6 }}>{source.detail}</p>
-              <ul className="metric-list" style={{ marginTop: "0.5rem" }}>
+              <ul className="metric-list metric-list-stacked" style={{ marginTop: "0.5rem" }}>
                 <li>
                   <span>Purpose</span>
                   <strong style={{ fontWeight: 500 }}>{source.purpose}</strong>

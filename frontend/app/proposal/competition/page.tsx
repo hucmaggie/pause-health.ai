@@ -252,7 +252,7 @@ export default function CompetitionPage() {
               <p style={{ color: "var(--brand)", fontWeight: 600, marginBottom: "0.5rem" }}>
                 {c.examples}
               </p>
-              <ul className="metric-list">
+              <ul className="metric-list metric-list-stacked">
                 <li>
                   <span>Primary audience</span>
                   <strong style={{ fontWeight: 500 }}>{c.audience}</strong>

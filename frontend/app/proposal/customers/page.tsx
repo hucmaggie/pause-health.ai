@@ -231,7 +231,7 @@ export default function CustomersPage() {
                 </span>
               </div>
               <p style={{ margin: "0 0 0.6rem", color: "var(--text)" }}>{s.profile}</p>
-              <ul className="metric-list">
+              <ul className="metric-list metric-list-stacked">
                 <li>
                   <span>Acute pain</span>
                   <strong style={{ fontWeight: 500 }}>{s.pain}</strong>
