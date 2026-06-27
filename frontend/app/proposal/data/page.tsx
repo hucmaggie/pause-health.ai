@@ -201,7 +201,7 @@ export default function DataPage() {
               <p style={{ color: "var(--brand)", fontWeight: 600, marginBottom: "0.5rem" }}>
                 {d.type}
               </p>
-              <ul className="metric-list">
+              <ul className="metric-list metric-list-stacked">
                 <li>
                   <span>Volume / coverage</span>
                   <strong style={{ fontWeight: 500 }}>{d.volume}</strong>
