@@ -1,0 +1,362 @@
+openapi: "3.0.3"
+
+info:
+  title: Pause Empatica E4 System API
+  version: "1.0.0"
+  description: |
+    System-tier API contract for the Pause Mule app that ingests
+    Empatica E4 session archives and emits normalized Open mHealth
+    (IEEE 1752.1) samples downstream to Process APIs.
+
+    ## The upload pattern (variant)
+
+    Empatica E4 is the most common research-grade wearable in academic
+    menopause and women's health studies. The E4 device records to its
+    own SD card or pairs with the Empatica Real-Time mobile app, which
+    exports session data as a **.zip archive**: one CSV per signal
+    (`HR.csv`, `IBI.csv`, `EDA.csv`, `TEMP.csv`, `ACC.csv`, `BVP.csv`)
+    plus a metadata file.
+
+    There is no Empatica Cloud REST API in the consumer sense — the
+    research-grade integration model is researcher-uploaded archives.
+    So this System API uses the **upload pattern** rather than the
+    pull-from-vendor pattern (see
+    [`pause-oura-system-api-spec`](../pause-oura-system-api-spec/) for
+    pull-pattern; [`pause-healthkit-system-api-spec`](../pause-healthkit-system-api-spec/)
+    for the iOS-app-side upload pattern).
+
+    Two ingest paths:
+
+    1. `POST /empatica/{patient}/upload` — accepts the E4 .zip directly
+       as `multipart/form-data`. The Mule app unpacks, normalizes each
+       signal CSV to OMH, persists the originals to Anypoint blob
+       storage for re-processing, and returns a per-signal acceptance
+       report.
+    2. `POST /empatica/{patient}/derive` — the deferred-features path.
+       Given an already-uploaded session id, kick off a fresh feature
+       compute via the DBDP System API. Useful when feature algorithms
+       improve and the same raw signal needs re-derivation.
+
+    ## Anchoring in pause_ingest
+
+    `pause_ingest/pause_ingest/empatica.py` is currently a stub
+    (`EmpaticaIngestNotImplemented`) — Phase 2 of the DBDP integration.
+    The module-level docstring spells out the gating constraints
+    (devicely's numpy<2.0 pin breaks Python 3.13 — Empatica
+    de-identification will move behind an isolated subprocess once
+    devicely updates). This spec describes the HTTP surface a future
+    Mule wrapper would expose; once the Python stub lights up and the
+    Mule project lands in Phase 1c, the contract is here waiting.
+
+    ## Status (2026-06-27) — contract only, no live REST surface yet
+
+    No Mule wrapper, no de-id pipeline, no archive parser running in
+    production. The contract describes the surface so the Phase 2 DBDP
+    integration has a shape to wire against — and so research
+    customers can review the data path before Empatica's archives ever
+    leave their site.
+
+  contact:
+    name: Pause-Health.ai
+    url: https://pause-health.ai
+    email: founders@pause-health.ai
+
+servers:
+  - url: http://localhost:8099
+    description: Local Mule dev (placeholder; the Mule wrapper doesn't exist yet)
+  - url: https://empatica.example.com
+    description: Customer-deployed empatica-system-api (placeholder)
+
+security:
+  - oauth2ClientCredentials: []
+
+paths:
+  /empatica/{patient}/upload:
+    post:
+      operationId: uploadEmpaticaSession
+      summary: Upload an Empatica E4 session archive (.zip)
+      description: |
+        Accepts a single E4 session .zip. The archive must contain at
+        least one of the supported signal CSVs (`HR.csv`, `IBI.csv`,
+        `EDA.csv`, `TEMP.csv`, `ACC.csv`, `BVP.csv`); a `tags.csv` is
+        optional but recommended for event-correlated analysis. The
+        Mule app:
+
+        1. Verifies the archive structure.
+        2. Runs Pause's de-identification step (strips any
+           researcher-noted fields that might re-identify the
+           participant — see Phase 2 gating in
+           [`pause_ingest/pause_ingest/empatica.py`](../../../pause_ingest/pause_ingest/empatica.py)).
+        3. Normalizes each signal CSV to OMH and emits downstream.
+        4. Persists the (de-identified) archive to Anypoint blob
+           storage for re-processing via `POST /empatica/{patient}/derive`.
+
+        Returns a per-signal acceptance report and an opaque
+        `sessionId` the caller can use later for `derive`.
+      parameters:
+        - in: path
+          name: patient
+          required: true
+          schema:
+            type: string
+            example: "40001"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [archive]
+              properties:
+                archive:
+                  type: string
+                  format: binary
+                  description: The E4 session .zip exported by Empatica's app or downloaded from the SD card.
+                sessionStartIso:
+                  type: string
+                  format: date-time
+                  description: |
+                    Optional. When the recording started. If absent, the
+                    Mule app derives it from the archive's filename
+                    pattern (`<unix_ts>_<deviceId>.zip`).
+                tz:
+                  type: string
+                  description: IANA timezone the recording was made in. Required if any signals will be normalized as daily-aggregate types.
+                  example: America/Los_Angeles
+      responses:
+        "202":
+          description: Archive accepted. Per-signal report below.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadReport"
+              example:
+                sessionId: "e4-2026-04-09-A12345"
+                acceptedSignalCount: 4
+                rejectedSignalCount: 0
+                reports:
+                  - signal: HR
+                    accepted: true
+                    sampleCount: 7200
+                    omhSchemaName: heart-rate
+                    omhSchemaVersion: "2.0"
+                  - signal: IBI
+                    accepted: true
+                    sampleCount: 6840
+                    omhSchemaName: heart-rate-variability
+                    omhSchemaVersion: "1.0"
+                  - signal: EDA
+                    accepted: true
+                    sampleCount: 14400
+                    omhSchemaName: electrodermal-activity
+                    omhSchemaVersion: "1.0"
+                  - signal: TEMP
+                    accepted: true
+                    sampleCount: 14400
+                    omhSchemaName: body-temperature
+                    omhSchemaVersion: "4.0"
+        "400":
+          description: |
+            Malformed archive. Common causes:
+              - Not a valid .zip
+              - Missing any recognizable signal CSV
+              - Archive too large (the Mule app enforces a per-upload size cap)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemApiError"
+        "401":
+          description: Missing / invalid bearer token.
+        "413":
+          description: Archive exceeded the configured per-upload size cap.
+
+  /empatica/{patient}/derive:
+    post:
+      operationId: deriveEmpaticaFeatures
+      summary: Re-run feature derivation on a previously-uploaded E4 session
+      description: |
+        Triggers a fresh feature compute against an already-stored
+        session archive. Useful when the DBDP feature library updates
+        and the raw signal should be re-derived against the new
+        algorithms. The Mule app fans out to
+        [`pause-dbdp-system-api-spec`](../pause-dbdp-system-api-spec/)
+        (`POST /features/hrv:compute` etc.) and writes derived
+        Observations back to JHE with `derivedFrom` lineage pointing at
+        the raw Observations created on upload.
+      parameters:
+        - in: path
+          name: patient
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId]
+              properties:
+                sessionId:
+                  type: string
+                  description: Returned by a prior `/upload` call.
+                features:
+                  type: array
+                  description: Which feature families to re-derive. Defaults to all of them.
+                  items:
+                    type: string
+                    enum:
+                      - hrv-time-domain
+                      - hrv-sliding-window
+                      - eda-tonic-phasic
+                      - temperature-windows
+      responses:
+        "202":
+          description: Re-derivation triggered (fire-and-forget). The DBDP system will write back to JHE on completion.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionId:
+                    type: string
+                  triggered:
+                    type: array
+                    items:
+                      type: string
+        "404":
+          description: No archive stored for that sessionId.
+        "401":
+          description: Missing / invalid bearer token.
+
+  /empatica/{patient}/sessions:
+    get:
+      operationId: listEmpaticaSessions
+      summary: List uploaded E4 sessions for a patient
+      description: |
+        Returns the list of session ids the Mule app has stored
+        (de-identified) blob copies of. Pause's research customers use
+        this to audit what's been uploaded and to drive re-derivation
+        workflows.
+      parameters:
+        - in: path
+          name: patient
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: Session list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sessions]
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SessionSummary"
+
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      description: Downstream auth (caller → System API). No upstream vendor auth exists for E4 — the archive is the source.
+      flows:
+        clientCredentials:
+          tokenUrl: /o/token/
+          scopes:
+            wearable.write: Upload E4 archives on behalf of patients the caller's tenant owns.
+
+  schemas:
+    UploadReport:
+      type: object
+      required: [sessionId, acceptedSignalCount, rejectedSignalCount, reports]
+      properties:
+        sessionId:
+          type: string
+          description: Opaque identifier for the stored, de-identified archive. Pass to `/derive` for re-processing.
+        acceptedSignalCount:
+          type: integer
+        rejectedSignalCount:
+          type: integer
+        reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/SignalReport"
+
+    SignalReport:
+      type: object
+      required: [signal, accepted]
+      properties:
+        signal:
+          type: string
+          enum: [HR, IBI, EDA, TEMP, ACC, BVP, TAGS]
+        accepted:
+          type: boolean
+        sampleCount:
+          type: integer
+          description: Number of rows in this signal's CSV. Present iff accepted.
+        omhSchemaName:
+          type: string
+          description: Present iff accepted.
+        omhSchemaVersion:
+          type: string
+          description: Present iff accepted.
+        rejectReason:
+          type: string
+          description: Present iff rejected.
+          enum:
+            - signal-not-recognized
+            - csv-malformed
+            - sample-rate-out-of-range
+            - timestamp-missing
+
+    SessionSummary:
+      type: object
+      required: [sessionId, uploadedIso, signals]
+      properties:
+        sessionId:
+          type: string
+        uploadedIso:
+          type: string
+          format: date-time
+        sessionStartIso:
+          type: string
+          format: date-time
+        sessionEndIso:
+          type: string
+          format: date-time
+        deviceSerial:
+          type: string
+          description: E4 device serial (from the archive filename).
+        signals:
+          type: array
+          items:
+            type: string
+            enum: [HR, IBI, EDA, TEMP, ACC, BVP, TAGS]
+
+    SystemApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - malformed-archive
+            - archive-too-large
+            - session-not-found
+            - patient-not-found
+            - internal-error
+        message:
+          type: string
+        detail:
+          type: string

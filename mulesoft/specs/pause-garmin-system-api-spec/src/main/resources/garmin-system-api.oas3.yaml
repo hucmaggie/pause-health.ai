@@ -1,0 +1,332 @@
+openapi: "3.0.3"
+
+info:
+  title: Pause Garmin System API
+  version: "1.0.0"
+  description: |
+    System-tier API contract for the Pause Mule app that wraps Garmin's
+    Health API and emits normalized Open mHealth (IEEE 1752.1) samples
+    downstream to Process APIs.
+
+    Follows the
+    [`pause-oura-system-api-spec`](../pause-oura-system-api-spec/)
+    template — same downstream OMH envelope shape, same
+    `GET /{vendor}/{patient}/{dataType}` URL pattern. The differences
+    are entirely on the upstream side: Garmin's data-type catalog and
+    its (still-active) OAuth 1.0a authentication model. The downstream
+    contract does not surface those upstream choices; the Mule app
+    encapsulates them.
+
+    ## Two Garmin-specific upstream quirks the spec doesn't show
+
+    These are operator-side concerns hidden inside the Mule app, but
+    worth flagging here so customer integration teams aren't surprised:
+
+    1. **OAuth 1.0a on the upstream.** Garmin's Health API has not
+       migrated to OAuth 2.0 — the Mule app speaks OAuth 1.0a (consumer
+       key + token secret + HMAC-SHA1 signing) to Garmin. This is a
+       configuration detail of the Mule app, not a parameter of the
+       downstream contract. Downstream callers still use OAuth 2.0
+       client_credentials against this System API (same as every other
+       Pause System API).
+    2. **Garmin's Health API is push-via-webhook + pull-via-ping.**
+       Garmin pushes a "data available" ping to the Mule app's webhook
+       endpoint when new samples land in the patient's account; the
+       Mule app then pulls the actual data via REST. To the downstream
+       caller this looks like any other pull-poll source: the data is
+       *eventually* available via GET, and the AccountStatus
+       endpoint's `lastSyncIso` field reports when the Mule app last
+       pulled.
+
+    ## Status (2026-06-27) — contract only, no live REST surface yet
+
+    No Garmin integration code in `pause_ingest` today. Same posture as
+    Whoop / HealthKit: contract published so customer-side Mule apps
+    and the future Pause Garmin connector can wire against the shape
+    without waiting on Phase 1c implementation.
+
+  contact:
+    name: Pause-Health.ai
+    url: https://pause-health.ai
+    email: founders@pause-health.ai
+
+servers:
+  - url: http://localhost:8098
+    description: Local Mule dev (placeholder; the Mule wrapper doesn't exist yet)
+  - url: https://garmin.example.com
+    description: Customer-deployed garmin-system-api (placeholder)
+
+security:
+  - oauth2ClientCredentials: []
+
+paths:
+  /garmin/{patient}/{dataType}:
+    get:
+      operationId: getGarminSamples
+      summary: Read Open mHealth samples of one type for one patient
+      description: |
+        Same shape as `pause-oura-system-api-spec` and
+        `pause-whoop-system-api-spec`. Returns an array of OMH IEEE
+        1752.1 envelopes for the requested type within the optional
+        time window.
+
+        Garmin's data lands via webhook ping → Mule app pull. Callers
+        querying immediately after a sample was generated may get
+        `samples: []` and should retry on `lastSyncIso` advancement
+        from `/garmin/{patient}/account`.
+      parameters:
+        - in: path
+          name: patient
+          required: true
+          description: Patient identifier the upstream Garmin account is bound to.
+          schema:
+            type: string
+            example: "40001"
+        - in: path
+          name: dataType
+          required: true
+          description: One of Garmin's supported data types.
+          schema:
+            type: string
+            enum:
+              - heart-rate
+              - heart-rate-variability
+              - step-count
+              - sleep-duration
+              - sleep-episode
+              - physical-activity
+              - body-temperature
+              - oxygen-saturation
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: tz
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+        - in: query
+          name: pageToken
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Zero or more OMH envelopes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OmhSamplesResponse"
+              examples:
+                heartRate:
+                  summary: Two heart-rate samples from a Garmin Forerunner
+                  value:
+                    samples:
+                      - header:
+                          uuid: "garmin-hr-001"
+                          schema_id:
+                            namespace: omh
+                            name: heart-rate
+                            version: "2.0"
+                          creation_date_time: "2026-04-09T08:00:00Z"
+                          acquisition_provenance:
+                            source_name: "Garmin Forerunner 965"
+                        body:
+                          heart_rate:
+                            value: 70
+                            unit: beats/min
+                          effective_time_frame:
+                            date_time: "2026-04-09T08:00:00Z"
+                bodyTemperature:
+                  summary: Skin temperature deviation (Garmin Forerunner / fēnix Body Battery feed)
+                  value:
+                    samples:
+                      - header:
+                          uuid: "garmin-temp-001"
+                          schema_id:
+                            namespace: omh
+                            name: body-temperature
+                            version: "4.0"
+                          creation_date_time: "2026-04-09T05:00:00Z"
+                          acquisition_provenance:
+                            source_name: "Garmin Forerunner 965"
+                        body:
+                          body_temperature:
+                            value: 0.4
+                            unit: "C"
+                            descriptive_statistic: average
+                            descriptive_statistic_denominator: "skin-temperature-deviation"
+                          effective_time_frame:
+                            time_interval:
+                              start_date_time: "2026-04-09T00:00:00Z"
+                              end_date_time: "2026-04-09T06:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing / invalid downstream bearer token.
+        "404":
+          $ref: "#/components/responses/PatientOrAccountNotFound"
+        "503":
+          $ref: "#/components/responses/UpstreamUnavailable"
+
+  /garmin/{patient}/account:
+    get:
+      operationId: getGarminAccountStatus
+      summary: Check whether a patient's Garmin account is linked + last-sync state
+      description: |
+        Same shape as Oura / Whoop equivalents. `lastSyncIso` is
+        particularly meaningful for Garmin because the Mule app pulls
+        on webhook ping rather than on a fixed schedule.
+      parameters:
+        - in: path
+          name: patient
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Account linkage status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountStatus"
+        "404":
+          description: Patient not found.
+
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      description: |
+        Downstream auth (caller → System API). The upstream side is
+        OAuth 1.0a on the patient's behalf — handled inside the Mule
+        app via Anypoint Secret Manager and not exposed in this
+        contract.
+      flows:
+        clientCredentials:
+          tokenUrl: /o/token/
+          scopes:
+            wearable.read: Read samples on behalf of patients the caller's tenant owns.
+
+  responses:
+    BadRequest:
+      description: Invalid input.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SystemApiError"
+    PatientOrAccountNotFound:
+      description: Patient not found or no Garmin account linked.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SystemApiError"
+    UpstreamUnavailable:
+      description: Garmin upstream unavailable after retry + circuit-breaker.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SystemApiError"
+
+  schemas:
+    OmhSamplesResponse:
+      type: object
+      required: [samples]
+      properties:
+        samples:
+          type: array
+          items:
+            $ref: "#/components/schemas/OmhEnvelope"
+        nextPageToken:
+          type: string
+
+    OmhEnvelope:
+      type: object
+      required: [header, body]
+      properties:
+        header:
+          $ref: "#/components/schemas/OmhHeader"
+        body:
+          type: object
+          additionalProperties: true
+
+    OmhHeader:
+      type: object
+      required: [uuid, schema_id, creation_date_time]
+      properties:
+        uuid:
+          type: string
+        schema_id:
+          type: object
+          required: [namespace, name, version]
+          properties:
+            namespace:
+              type: string
+              enum: [omh]
+            name:
+              type: string
+              example: heart-rate
+            version:
+              type: string
+              example: "2.0"
+        creation_date_time:
+          type: string
+          format: date-time
+        acquisition_provenance:
+          type: object
+          properties:
+            source_name:
+              type: string
+              example: Garmin Forerunner 965
+            source_origin_id:
+              type: string
+
+    AccountStatus:
+      type: object
+      required: [linked, tokenFresh]
+      properties:
+        linked:
+          type: boolean
+        tokenFresh:
+          type: boolean
+          description: "True if the OAuth 1.0a token + token secret are still valid."
+        scopes:
+          type: array
+          items:
+            type: string
+          example: [HEALTH_API_DAILY, HEALTH_API_ACTIVITY, HEALTH_API_SLEEP, HEALTH_API_BODY_COMPOSITION]
+        lastSyncIso:
+          type: string
+          format: date-time
+          description: When the Mule app last pulled new data from Garmin (typically driven by webhook ping arrival).
+
+    SystemApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - unsupported-data-type
+            - invalid-time-window
+            - missing-timezone
+            - patient-not-found
+            - account-not-linked
+            - upstream-unavailable
+            - internal-error
+        message:
+          type: string
+        detail:
+          type: string

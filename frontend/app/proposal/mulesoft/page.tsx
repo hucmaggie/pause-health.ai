@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata = pageMetadata({
   title: "Investor Brief · MuleSoft Integration",
   description:
-    "MuleSoft Anypoint integration plane for Pause-Health.ai. Iterations 1–7 shipped (CloudHub 2.0 worker live, Flex Gateway enforcing JWT + rate limiting, OAS 3.0 spec on Exchange). Phase 3 has five shared Exchange assets: pause-omh-to-fhir-library (consumed live), three System-API specs (JHE, DBDP, Oura), and pause-ingest-process-api-spec (orchestration tier). Full three-tier architecture activates with first design partner.",
+    "MuleSoft Anypoint integration plane for Pause-Health.ai. Iterations 1–7 shipped (CloudHub 2.0 worker live, Flex Gateway enforcing JWT + rate limiting, OAS 3.0 spec on Exchange). Phase 3 has nine shared Exchange assets: pause-omh-to-fhir-library (consumed live), five per-wearable System-API specs covering pull (Oura, Whoop, Garmin) and upload (HealthKit, Empatica) patterns, two infrastructure specs (JHE, DBDP), and the Process-tier spec. Full three-tier architecture activates with first design partner.",
   path: "/proposal/mulesoft",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "MuleSoft integration strategy — Pause-Health.ai investor brief."
@@ -183,7 +183,7 @@ const phases: Array<{
     status: "prototype",
     duration: "Started · 2026-06-26",
     detail:
-      "Five shared artifacts on Anypoint Exchange under the Pause Health business group. (1) pause-omh-to-fhir-library v1.0.0 — the DataWeave transform consumed by the CloudHub worker 1.0.5 as a Maven dependency. (2) pause-jhe-system-api-spec — JupyterHealth Exchange's REST + Django data plane. (3) pause-dbdp-system-api-spec — DBDP/FLIRT feature compute (sliding-window or time-domain-fallback modes). (4) pause-oura-system-api-spec — per-wearable template, clones to follow for HealthKit / Whoop / Garmin. (5) pause-ingest-process-api-spec — the orchestration tier that consumes the System APIs and uses the DataWeave library. With (5) the full API-led three-tier story is on Exchange (System + Process + Experience). The four spec-tier assets are contract-only — implementations are gated on Phase 1c (real Mule projects wrapping the existing pause_ingest Python layer); pause_ingest does the equivalent orchestration in-process today."
+      "Nine shared artifacts on Anypoint Exchange under the Pause Health business group. One end-to-end consumed library — pause-omh-to-fhir-library v1.0.0 (CloudHub worker 1.0.5 consumes it as a Maven dependency). Five per-wearable System API specs covering both architectural patterns: pull-from-vendor for pause-oura-system-api-spec (the template) + pause-whoop-system-api-spec + pause-garmin-system-api-spec (OAuth 1.0a upstream), and upload-to-Pause for pause-healthkit-system-api-spec (iOS app posts HealthKit batches) + pause-empatica-system-api-spec (researcher uploads E4 .zip archives). Plus two infrastructure System APIs (pause-jhe-system-api-spec, pause-dbdp-system-api-spec) and the Process tier (pause-ingest-process-api-spec) that ties them together. With the Process tier published, the full MuleSoft API-led three-tier story is on Exchange (System + Process + Experience). The eight spec-tier assets are contract-only — implementations are gated on Phase 1c (real Mule projects wrapping the existing pause_ingest Python layer); pause_ingest does the equivalent orchestration in-process today."
   }
 ];
 

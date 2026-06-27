@@ -1,0 +1,300 @@
+openapi: "3.0.3"
+
+info:
+  title: Pause Whoop System API
+  version: "1.0.0"
+  description: |
+    System-tier API contract for the Pause Mule app that wraps the Whoop
+    Cloud API and emits normalized Open mHealth (IEEE 1752.1) samples
+    downstream to Process APIs.
+
+    Follows the
+    [`pause-oura-system-api-spec`](../pause-oura-system-api-spec/)
+    template — Whoop uses the same upstream pattern (REST poll + OAuth2)
+    and the same downstream OMH envelope shape. What changes is the
+    data-type catalog and the upstream URL set.
+
+    ## Whoop-specific data types
+
+    Whoop emits some types that no other vendor has, plus the standard
+    cardiovascular ones:
+
+    - **recovery** — Whoop's daily recovery score (a 0–100 composite of
+      HRV, RHR, sleep quality). Modeled as a synthetic OMH schema
+      `recovery-score:1.0` because the OMH catalog doesn't define this.
+    - **strain** — Whoop's daily training load score (a 0–21 logarithmic
+      scale). Modeled as synthetic OMH `cardiovascular-strain:1.0`.
+    - **sleep_cycle** — Whoop's per-cycle sleep stage breakdown (REM /
+      SWS / Light / Wake) with sleep performance, efficiency,
+      consistency scores. Modeled as OMH `sleep-episode:1.1`.
+    - **workout** — Whoop's workout sessions with sport id, average +
+      max HR, calories. Modeled as OMH `physical-activity:1.2`.
+
+    The standard cardiovascular ones (`heart-rate`,
+    `heart-rate-variability`) come from Whoop's `recovery` endpoint
+    (Whoop only exposes resting HR + HRV summary per recovery, not
+    continuous HR).
+
+    ## Status (2026-06-27) — contract only, no live REST surface yet
+
+    Like Oura, HealthKit, JHE, and DBDP specs: this is a *prospective*
+    contract. There is no Whoop integration code in `pause_ingest`
+    today. The contract uses the per-wearable template so when the
+    Whoop integration ships, the contract is ready.
+
+  contact:
+    name: Pause-Health.ai
+    url: https://pause-health.ai
+    email: founders@pause-health.ai
+
+servers:
+  - url: http://localhost:8097
+    description: Local Mule dev (placeholder; the Mule wrapper doesn't exist yet)
+  - url: https://whoop.example.com
+    description: Customer-deployed whoop-system-api (placeholder)
+
+security:
+  - oauth2ClientCredentials: []
+
+paths:
+  /whoop/{patient}/{dataType}:
+    get:
+      operationId: getWhoopSamples
+      summary: Read Open mHealth samples of one type for one patient
+      description: |
+        Same shape as `pause-oura-system-api-spec` `GET
+        /oura/{patient}/{dataType}` — returns an array of OMH IEEE
+        1752.1 envelopes for the requested type within the optional time
+        window. Differs only in the supported `dataType` enum (Whoop's
+        catalog).
+
+        Whoop's API is granular per resource (recoveries, cycles,
+        workouts, sleep_cycles) — the Mule app maps each request to the
+        right Whoop upstream call. Whoop pagination uses cursor tokens;
+        the Mule app converts them to opaque `nextPageToken` for the
+        downstream caller.
+      parameters:
+        - in: path
+          name: patient
+          required: true
+          description: Patient identifier the upstream Whoop account is bound to.
+          schema:
+            type: string
+            example: "40001"
+        - in: path
+          name: dataType
+          required: true
+          description: One of Whoop's supported data types.
+          schema:
+            type: string
+            enum:
+              - recovery-score
+              - cardiovascular-strain
+              - heart-rate
+              - heart-rate-variability
+              - sleep-episode
+              - physical-activity
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: tz
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+        - in: query
+          name: pageToken
+          schema:
+            type: string
+            description: Opaque continuation token returned by a prior page.
+      responses:
+        "200":
+          description: Zero or more OMH envelopes for the requested type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OmhSamplesResponse"
+              examples:
+                recovery:
+                  summary: Whoop recovery score (synthetic OMH schema)
+                  value:
+                    samples:
+                      - header:
+                          uuid: "whoop-r-abc"
+                          schema_id:
+                            namespace: omh
+                            name: recovery-score
+                            version: "1.0"
+                          creation_date_time: "2026-04-09T05:00:00Z"
+                          acquisition_provenance:
+                            source_name: "Whoop 4.0"
+                        body:
+                          recovery_score:
+                            value: 78
+                            unit: "%"
+                          effective_time_frame:
+                            date_time: "2026-04-09T00:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing / invalid downstream bearer token.
+        "404":
+          $ref: "#/components/responses/PatientOrAccountNotFound"
+        "503":
+          $ref: "#/components/responses/UpstreamUnavailable"
+
+  /whoop/{patient}/account:
+    get:
+      operationId: getWhoopAccountStatus
+      summary: Check whether a patient's Whoop account is linked + token-fresh
+      parameters:
+        - in: path
+          name: patient
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Account linkage status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountStatus"
+        "404":
+          description: Patient not found.
+
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      description: |
+        Downstream auth (caller → System API). Upstream Whoop auth is
+        OAuth 2.0 authorization_code on the patient's behalf, handled
+        inside the Mule app via Anypoint Secret Manager.
+      flows:
+        clientCredentials:
+          tokenUrl: /o/token/
+          scopes:
+            wearable.read: Read samples on behalf of patients the caller's tenant owns.
+
+  responses:
+    BadRequest:
+      description: Invalid input (unsupported dataType, `from > to`, missing required `tz`, etc.).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SystemApiError"
+    PatientOrAccountNotFound:
+      description: Patient not found or no Whoop account linked.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SystemApiError"
+    UpstreamUnavailable:
+      description: Whoop upstream unavailable after retry + circuit-breaker.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SystemApiError"
+
+  schemas:
+    OmhSamplesResponse:
+      type: object
+      required: [samples]
+      properties:
+        samples:
+          type: array
+          items:
+            $ref: "#/components/schemas/OmhEnvelope"
+        nextPageToken:
+          type: string
+
+    OmhEnvelope:
+      type: object
+      required: [header, body]
+      properties:
+        header:
+          $ref: "#/components/schemas/OmhHeader"
+        body:
+          type: object
+          additionalProperties: true
+
+    OmhHeader:
+      type: object
+      required: [uuid, schema_id, creation_date_time]
+      properties:
+        uuid:
+          type: string
+        schema_id:
+          type: object
+          required: [namespace, name, version]
+          properties:
+            namespace:
+              type: string
+              enum: [omh]
+            name:
+              type: string
+              example: recovery-score
+            version:
+              type: string
+              example: "1.0"
+        creation_date_time:
+          type: string
+          format: date-time
+        acquisition_provenance:
+          type: object
+          properties:
+            source_name:
+              type: string
+              example: Whoop 4.0
+            source_origin_id:
+              type: string
+
+    AccountStatus:
+      type: object
+      required: [linked, tokenFresh]
+      properties:
+        linked:
+          type: boolean
+        tokenFresh:
+          type: boolean
+        scopes:
+          type: array
+          items:
+            type: string
+          example: [read:recovery, read:cycles, read:workout, read:sleep, offline]
+        lastSyncIso:
+          type: string
+          format: date-time
+
+    SystemApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - unsupported-data-type
+            - invalid-time-window
+            - missing-timezone
+            - patient-not-found
+            - account-not-linked
+            - upstream-unavailable
+            - internal-error
+        message:
+          type: string
+        detail:
+          type: string

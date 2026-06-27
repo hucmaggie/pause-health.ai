@@ -1,0 +1,332 @@
+openapi: "3.0.3"
+
+info:
+  title: Pause HealthKit System API
+  version: "1.0.0"
+  description: |
+    System-tier API contract for the Pause Mule app that ingests Apple
+    HealthKit data and emits normalized Open mHealth (IEEE 1752.1)
+    samples downstream to Process APIs.
+
+    ## The upload pattern (vs. Oura's pull pattern)
+
+    HealthKit is architecturally **different** from
+    [`pause-oura-system-api-spec`](../pause-oura-system-api-spec/) and
+    Whoop/Garmin. Apple does not expose a cloud API — HealthKit data
+    lives on the patient's iPhone. The integration model is:
+
+    1. The Pause iOS app reads HealthKit via `HKHealthStore` (with the
+       patient's per-type consent — Apple's auth is on-device, not OAuth).
+    2. The app batches samples into HealthKit-shaped JSON blobs.
+    3. The app POSTs those blobs to **this** System API — `POST
+       /healthkit/{patient}/upload`. The System API normalizes per-type
+       (HealthKit `HKQuantityTypeIdentifierHeartRate` → OMH
+       `heart-rate:2.0`, etc.) and forwards to the Process API.
+
+    Contrast with Oura: the Mule app polls Oura's cloud REST + OAuth2
+    upstream and exposes the same OMH envelope downstream. With
+    HealthKit there's no upstream to poll — the **app** is the upstream.
+
+    The downstream contract Pause exposes to Process APIs (
+    [`pause-ingest-process-api-spec`](../pause-ingest-process-api-spec/)
+    ) is identical regardless: an OMH IEEE 1752.1 envelope per sample.
+    What changes is where the System API gets the data from — and so
+    its public surface differs.
+
+    ## Status (2026-06-27) — contract only, no live REST surface yet
+
+    **Spec only.** There is no Pause iOS app, no HealthKit Mule wrapper,
+    and no actual HealthKit consent flow wired today. This contract
+    describes the surface a future implementation would expose; it lets
+    customer-side Mule apps and the Pause iOS team wire against the
+    same shape now.
+
+    The supported data type list is filtered to the menopause-relevant
+    subset that `pause_ingest.convert.SUPPORTED["ow_normalized"]` already
+    accepts on the OMH side — plus the cycle-tracking types HealthKit
+    uniquely exposes (`HKCategoryTypeIdentifierMenstrualFlow` etc.) that
+    no other vendor has.
+
+  contact:
+    name: Pause-Health.ai
+    url: https://pause-health.ai
+    email: founders@pause-health.ai
+
+servers:
+  - url: http://localhost:8096
+    description: Local Mule dev (placeholder; the Mule wrapper doesn't exist yet)
+  - url: https://healthkit.example.com
+    description: Customer-deployed healthkit-system-api (placeholder)
+
+security:
+  - oauth2ClientCredentials: []
+
+paths:
+  /healthkit/{patient}/upload:
+    post:
+      operationId: uploadHealthKitBatch
+      summary: Upload a batch of HealthKit samples (called by the Pause iOS app)
+      description: |
+        Accepts a HealthKit-shaped batch (the iOS app's "samples since
+        last sync" payload). Normalizes each sample to OMH and emits
+        downstream. Returns a per-sample acceptance report so the iOS
+        app can checkpoint what was accepted vs. rejected.
+
+        **The iOS app is the canonical caller.** The auth bearer here
+        identifies the *patient's app session*, not the patient
+        directly — Apple's HealthKit consent lives on-device and is not
+        re-validated by this endpoint. The Mule app enforces that the
+        bearer's tenant matches `{patient}` and treats the upload as
+        authoritative for the data types the patient granted consent for
+        in iOS.
+
+        Daily-aggregate types require an explicit `tz` per OMH; the iOS
+        app sends `Apple/timezone` (the device's current timezone) and
+        the Mule app passes it through. Time-series types accept `tz`
+        but don't require it.
+      parameters:
+        - in: path
+          name: patient
+          required: true
+          description: Patient identifier the iOS app session is bound to.
+          schema:
+            type: string
+            example: "40001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HealthKitBatch"
+            examples:
+              heartRateBatch:
+                summary: Two HeartRate samples from Apple Watch
+                value:
+                  deviceTimezone: America/Los_Angeles
+                  samples:
+                    - hkType: HKQuantityTypeIdentifierHeartRate
+                      hkUnit: count/min
+                      value: 72
+                      startDate: "2026-04-09T08:00:00Z"
+                      endDate: "2026-04-09T08:00:00Z"
+                      sourceName: "Apple Watch Series 10"
+                      sourceUuid: "AB-12-..."
+                    - hkType: HKQuantityTypeIdentifierHeartRate
+                      hkUnit: count/min
+                      value: 70
+                      startDate: "2026-04-09T08:05:00Z"
+                      endDate: "2026-04-09T08:05:00Z"
+                      sourceName: "Apple Watch Series 10"
+                      sourceUuid: "AB-12-..."
+              cycleTracking:
+                summary: Menstrual flow (HealthKit-unique data type)
+                value:
+                  deviceTimezone: America/Los_Angeles
+                  samples:
+                    - hkType: HKCategoryTypeIdentifierMenstrualFlow
+                      value: 3  # HKCategoryValueVaginalBleeding.medium
+                      startDate: "2026-04-09T00:00:00Z"
+                      endDate: "2026-04-09T23:59:59Z"
+                      sourceName: "Health app"
+                      sourceUuid: "iPhone-AB-..."
+      responses:
+        "202":
+          description: |
+            Batch accepted (in whole or in part). The response carries a
+            per-sample report so the iOS app can mark each sample as
+            checkpointed vs. retry-needed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadReport"
+              example:
+                acceptedCount: 2
+                rejectedCount: 0
+                reports:
+                  - sampleId: "AB-12-...#0"
+                    accepted: true
+                    omhSchemaName: heart-rate
+                    omhSchemaVersion: "2.0"
+                  - sampleId: "AB-12-...#1"
+                    accepted: true
+                    omhSchemaName: heart-rate
+                    omhSchemaVersion: "2.0"
+        "400":
+          description: |
+            Malformed batch (missing `samples`, malformed `hkType`, etc.).
+            Per-sample errors do NOT cause a 400 — they show up as
+            `accepted: false` rows in the 202 report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemApiError"
+        "401":
+          description: Missing / invalid bearer token.
+        "413":
+          description: |
+            Batch too large. The Mule app enforces a per-batch size cap
+            (default 10 MB) to keep ingest predictable. The iOS app
+            should split and retry.
+
+  /healthkit/{patient}/types:
+    get:
+      operationId: getSupportedHealthKitTypes
+      summary: List supported HealthKit types the Mule app will accept
+      description: |
+        Returns the allow-list of HKType identifiers this System API
+        normalizes. Lets the iOS app skip requesting consent for types
+        Pause won't ingest, and avoids upload-then-reject round trips.
+      parameters:
+        - in: path
+          name: patient
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Supported HealthKit type allow-list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportedTypes"
+
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      description: |
+        OAuth 2.0 client_credentials grant for the **downstream** auth
+        (caller → System API). The upstream side (HealthKit consent)
+        is on-device and out-of-band with respect to this contract.
+      flows:
+        clientCredentials:
+          tokenUrl: /o/token/
+          scopes:
+            wearable.write: Upload samples on behalf of patients the caller's tenant owns.
+
+  schemas:
+    HealthKitBatch:
+      type: object
+      required: [samples]
+      properties:
+        deviceTimezone:
+          type: string
+          description: "IANA timezone the iOS device was in when these samples were collected. Required for daily-aggregate types; carried as `tz` into the OMH envelope."
+          example: America/Los_Angeles
+        samples:
+          type: array
+          items:
+            $ref: "#/components/schemas/HealthKitSample"
+          minItems: 1
+          maxItems: 10000
+
+    HealthKitSample:
+      type: object
+      description: |
+        One HealthKit sample as the iOS HKHealthStore exposes it. The
+        Mule app maps `hkType` to OMH schema names — e.g.
+        `HKQuantityTypeIdentifierHeartRate` → `heart-rate:2.0`.
+      required: [hkType, startDate, endDate, sourceName, sourceUuid]
+      properties:
+        hkType:
+          type: string
+          description: HealthKit type identifier.
+          example: HKQuantityTypeIdentifierHeartRate
+        hkUnit:
+          type: string
+          description: HealthKit unit string. Required for quantity types; absent for category types.
+          example: count/min
+        value:
+          oneOf:
+            - type: number
+            - type: integer
+          description: "Numeric value for quantity types, or the HKCategoryValue enum for category types (e.g. HKCategoryValueVaginalBleeding)."
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        sourceName:
+          type: string
+          example: "Apple Watch Series 10"
+        sourceUuid:
+          type: string
+          description: HealthKit source identifier — used to dedupe across uploads.
+        metadata:
+          type: object
+          additionalProperties: true
+          description: "Free-form HealthKit metadata dict (HKMetadataKeyWasTakenInLab, HKMetadataKeyHeartRateMotionContext, etc.)."
+
+    UploadReport:
+      type: object
+      required: [acceptedCount, rejectedCount, reports]
+      properties:
+        acceptedCount:
+          type: integer
+        rejectedCount:
+          type: integer
+        reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/SampleReport"
+
+    SampleReport:
+      type: object
+      required: [sampleId, accepted]
+      properties:
+        sampleId:
+          type: string
+          description: "`<sourceUuid>#<index>` of the sample inside the batch."
+        accepted:
+          type: boolean
+        omhSchemaName:
+          type: string
+          description: Present iff accepted. The OMH schema_id.name the sample normalized to.
+        omhSchemaVersion:
+          type: string
+          description: Present iff accepted.
+        rejectReason:
+          type: string
+          description: Present iff rejected.
+          enum:
+            - unsupported-hkType
+            - missing-required-field
+            - duplicate-source-uuid
+            - timestamp-out-of-range
+
+    SupportedTypes:
+      type: object
+      required: [types]
+      properties:
+        types:
+          type: array
+          items:
+            type: object
+            required: [hkType, omhSchemaName, omhSchemaVersion]
+            properties:
+              hkType:
+                type: string
+              omhSchemaName:
+                type: string
+              omhSchemaVersion:
+                type: string
+              category:
+                type: string
+                enum: [time-series, daily-aggregate, cycle-tracking]
+
+    SystemApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - malformed-batch
+            - batch-too-large
+            - patient-not-found
+            - internal-error
+        message:
+          type: string
+        detail:
+          type: string

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  Pause-Health.ai  -  pause-empatica-system-api-spec
+  Per-wearable System API spec for Empatica E4. Upload pattern
+  (researcher posts session .zip archives). Anchored to
+  pause_ingest/empatica.py (currently a Phase-2 NotImplementedError stub).
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>56707cc3-a0e3-4318-b110-78126aace370</groupId>
+    <artifactId>pause-empatica-system-api-spec</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>pause-empatica-system-api-spec</name>
+    <description>OAS 3.0 contract for the Pause Empatica E4 System API (prospective; archive-upload pattern)</description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+    </build>
+</project>
