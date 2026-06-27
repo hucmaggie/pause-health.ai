@@ -293,7 +293,7 @@ export default function IntegrationPage() {
                   {p.repo.replace("https://github.com/", "")}
                 </a>
               </p>
-              <ul className="metric-list">
+              <ul className="metric-list metric-list-stacked">
                 <li>
                   <span>What it does</span>
                   <strong style={{ fontWeight: 500 }}>{p.role}</strong>
