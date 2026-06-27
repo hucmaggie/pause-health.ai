@@ -1,0 +1,556 @@
+openapi: "3.0.3"
+
+info:
+  title: Pause JHE System API
+  version: "1.0.0"
+  description: |
+    System-tier API contract for [JupyterHealth
+    Exchange](https://github.com/jupyterhealth/jupyterhealth-exchange) —
+    the upstream FHIR R5 + Open mHealth substrate that Pause Health's
+    `pause_ingest` Python worker integrates with today, and that a
+    customer-side `jhe-system-api` Mule project will wrap as a Mule
+    System API in MuleSoft Phase 1c.
+
+    ## Status (2026-06-27)
+
+    **This spec is published to Anypoint Exchange as a contract, NOT a
+    live Mule app.** It is honest about JHE's actual REST surface today:
+
+    - The **REST surface** (this spec's `paths` section) is exactly what
+      `pause_ingest.exchange` calls against real JHE — verified by the
+      `tests/test_exchange_real_jhe.py` suite which runs against the
+      `jhe-local` Docker stack (see [`docs/JHE_REAL_RUN_2026-06-16.md`](https://github.com/hucmaggie/pause-health.ai/blob/main/docs/JHE_REAL_RUN_2026-06-16.md)).
+    - The **data plane** (this spec's `components.schemas` Study, Patient,
+      DataSource, FhirSource, etc.) describes the Django ORM models JHE
+      manages internally. **Real JHE does not expose these as REST
+      endpoints today** — they are seeded out-of-band by the `jhe-local`
+      bootstrap script and/or JHE's Django admin UI. They are documented
+      here as schemas so any Mule app calling JHE can speak the same
+      vocabulary and so customer integration teams can audit the full
+      JHE-side data model from one place. If/when JHE grows admin REST
+      routes, this spec is the natural place to add them.
+
+    ## Authentication
+
+    All requests use OAuth 2.0 client_credentials. The client is a real
+    `JheClient` row in JHE associated with a specific `JheUser` whose
+    Patient identity owns the writes (see `JheClient` schema below). For
+    the Pause prototype, the bootstrap creates a `pause-ingest` client
+    bound to Patient 40001 — calls authenticate **as that patient**.
+
+    JHE accepts only `openid` + `email` as OAuth scopes. **Do NOT pass
+    `observation.write`-style scopes** — JHE 400s with `invalid_scope`.
+    Authorization for FHIR writes is enforced at the resource layer via
+    `Study` ↔ `StudyPatientScopeConsent`, not via the OAuth scope.
+
+    ## The mapped-vs-auxiliary `/Observation` routing contract
+
+    JHE's `POST /fhir/r5/Observation` endpoint routes writes between two
+    internal handlers based on the resource's `code.coding[0].system`:
+
+    | `system` value | Handler | Pk type | Header requirement |
+    |---|---|---|---|
+    | `https://w3id.org/openmhealth` | Mapped Observation handler | integer | `X-JHE-FHIR-Source-ID` ignored if sent |
+    | _anything else_ (e.g. `https://pause-health.ai/schemas/derived`) | `FhirAuxResource` handler | UUID | `X-JHE-FHIR-Source-ID` **required** — 400 otherwise |
+
+    The mapped handler is used for raw OMH samples (heart-rate,
+    rr-interval, sleep, etc.). The auxiliary handler is used for
+    pause-side derived features (e.g. HRV time-domain stats with a
+    `derivedFrom` pointer to a raw row).
+
+    `pause_ingest` always sends the `X-JHE-FHIR-Source-ID` header when the
+    config carries `fhir_source_id`, because the mapped handler ignores it
+    on writes that route to it. This is the contract pinned by
+    `pause_ingest/tests/test_exchange_integration.py::test_upload_aux_routed_observation_requires_fhir_source_id_header`.
+
+    ## Content type quirks JHE enforces
+
+    - `POST /fhir/r5/Observation` requires `Content-Type: application/json`
+      (NOT `application/fhir+json`; the real JHE Django REST Framework
+      parser 415s on the FHIR media type).
+    - `POST /o/token/` requires
+      `Content-Type: application/x-www-form-urlencoded`.
+
+  contact:
+    name: Pause-Health.ai
+    url: https://pause-health.ai
+    email: founders@pause-health.ai
+
+servers:
+  - url: http://localhost:8000
+    description: jhe-local development stack (see jhe-local/bootstrap.sh)
+  - url: https://jhe.example.com
+    description: Customer-deployed JHE instance (placeholder)
+
+security:
+  - oauth2ClientCredentials: []
+
+paths:
+  /o/token/:
+    post:
+      operationId: getAccessToken
+      summary: OAuth 2.0 client_credentials grant
+      description: |
+        Exchange `client_id` + `client_secret` for a short-lived bearer
+        access token. The trailing slash on `/o/token/` is required —
+        Django's `APPEND_SLASH` setting redirects, but JHE-side OAuth
+        middleware short-circuits before that, so omitting the slash 404s.
+
+        **Do not send custom scopes.** JHE only accepts `openid` + `email`
+        and 400s anything else with `invalid_scope`.
+      security: []  # token endpoint authenticates via the request body
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [grant_type, client_id, client_secret]
+              properties:
+                grant_type:
+                  type: string
+                  enum: [client_credentials]
+                client_id:
+                  type: string
+                  example: pause-ingest-client-id
+                client_secret:
+                  type: string
+                  example: pause-ingest-client-secret-xyz123
+                scope:
+                  type: string
+                  description: Optional. JHE only accepts `openid` and/or `email`.
+                  example: openid email
+      responses:
+        "200":
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthTokenResponse"
+              example:
+                access_token: "eY...redacted"
+                token_type: Bearer
+                expires_in: 3600
+                scope: "openid email"
+        "400":
+          description: Bad request (e.g. `invalid_scope` for a non-openid/email scope, or `unsupported_grant_type`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+        "401":
+          description: Bad credentials (`invalid_client`)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+
+  /fhir/r5/Observation:
+    post:
+      operationId: createObservation
+      summary: Write a FHIR R5 Observation (routes mapped vs auxiliary)
+      description: |
+        Writes an Observation to JHE. The internal handler is chosen by
+        the `code.coding[0].system` value on the posted resource — see
+        the routing table in `info.description`.
+
+        For OMH-derived raw samples the system should be
+        `https://w3id.org/openmhealth` and `code` should be
+        `omh:<schema>:<version>` (matches JHE's
+        `core/fhir/fhir_config.json` mapped-Observation criteria).
+
+        For pause-derived features the system should be
+        `https://pause-health.ai/schemas/derived` (or any other
+        non-mapped system), AND the request MUST include the
+        `X-JHE-FHIR-Source-ID` header pointing at a registered
+        `FhirSource.id` row tying the patient to the data source.
+
+        JHE assigns its own `id` server-side and overrides any client-side
+        UUID. The client MUST trust the server's id for downstream
+        `derivedFrom` references.
+      parameters:
+        - in: header
+          name: X-JHE-FHIR-Source-ID
+          description: |
+            Required when the Observation routes to the auxiliary
+            handler. Ignored when it routes to the mapped handler.
+            Always send it when the config has it — the mapped handler
+            is tolerant, the auxiliary one is not.
+          required: false
+          schema:
+            type: string
+            example: "90003"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FhirObservation"
+            examples:
+              mappedOmhHeartRate:
+                summary: OMH heart-rate sample (mapped handler)
+                value:
+                  resourceType: Observation
+                  status: final
+                  code:
+                    coding:
+                      - system: https://w3id.org/openmhealth
+                        code: "omh:heart-rate:2.0"
+                  subject:
+                    reference: Patient/40001
+                  valueAttachment:
+                    contentType: application/json
+                    data: "eyJoZWFkZXIiOiB7Li4ufX0="  # base64 OMH envelope
+              auxiliaryDerivedHrv:
+                summary: Pause-derived HRV time-domain feature (auxiliary handler — needs X-JHE-FHIR-Source-ID)
+                value:
+                  resourceType: Observation
+                  status: final
+                  code:
+                    coding:
+                      - system: https://pause-health.ai/schemas/derived
+                        code: "hrv-time-domain:1.0"
+                  subject:
+                    reference: Patient/40001
+                  valueAttachment:
+                    contentType: application/json
+                    data: "eyJybXNzZCI6IDQyfQ=="
+                  derivedFrom:
+                    - reference: Observation/63600
+      responses:
+        "201":
+          description: Observation accepted. Response body carries the server-assigned id; `valueAttachment` is NOT echoed back by real JHE (only the envelope is).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FhirObservation"
+        "400":
+          description: |
+            Validation error. Common cases:
+            - Missing `subject.reference` or it doesn't start with `Patient/`
+            - Missing `valueAttachment.data`
+            - Routes to auxiliary handler but `X-JHE-FHIR-Source-ID` header is missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JheError"
+        "401":
+          description: Missing / invalid bearer token
+        "415":
+          description: Wrong Content-Type. Use `application/json`, NOT `application/fhir+json`.
+
+    get:
+      operationId: searchObservations
+      summary: Search Observations by patient
+      description: |
+        Returns a FHIR Bundle of type `searchset`. The `patient` query
+        parameter accepts either a raw patient id or a `Patient/<id>`
+        reference.
+
+        **Real JHE does NOT filter by unknown patient ids.** Passing
+        `patient=<unknown>` returns whatever the OAuth client is
+        authorized to see across its studies, NOT an empty bundle. Callers
+        must check `entry[].resource.subject.reference` against the
+        requested patient to enforce no-leakage. This is the contract
+        pinned by `tests/test_exchange_real_jhe.py`.
+      parameters:
+        - in: query
+          name: patient
+          required: true
+          description: Patient id (e.g. `40001`) or `Patient/<id>` reference.
+          schema:
+            type: string
+        - in: query
+          name: _count
+          description: Maximum number of entries to return.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: "FHIR R5 Bundle (`type: searchset`)"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FhirBundle"
+        "401":
+          description: Missing / invalid bearer token
+
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      description: OAuth 2.0 client_credentials grant via `POST /o/token/`.
+      flows:
+        clientCredentials:
+          tokenUrl: /o/token/
+          scopes:
+            openid: Required by Django OIDC; JHE accepts it.
+            email: Required by Django OIDC; JHE accepts it.
+
+  schemas:
+    # =====================================================================
+    # REST-exposed schemas (touched by the paths above)
+    # =====================================================================
+    OAuthTokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_in:
+          type: integer
+          example: 3600
+        scope:
+          type: string
+          example: "openid email"
+
+    OAuthError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          enum: [invalid_client, invalid_scope, unsupported_grant_type, invalid_grant]
+        error_description:
+          type: string
+
+    JheError:
+      type: object
+      properties:
+        detail:
+          type: string
+        error:
+          type: string
+        message:
+          type: string
+
+    FhirBundle:
+      type: object
+      required: [resourceType, type]
+      properties:
+        resourceType:
+          type: string
+          enum: [Bundle]
+        type:
+          type: string
+          enum: [searchset, transaction-response, batch-response]
+        total:
+          type: integer
+        entry:
+          type: array
+          items:
+            type: object
+            properties:
+              fullUrl:
+                type: string
+              resource:
+                $ref: "#/components/schemas/FhirObservation"
+
+    FhirObservation:
+      type: object
+      required: [resourceType, status]
+      properties:
+        resourceType:
+          type: string
+          enum: [Observation]
+        id:
+          type: string
+          description: Server-assigned by JHE on write. Integer-shaped for the mapped handler, UUID-shaped for the auxiliary handler.
+        status:
+          type: string
+          enum: [registered, preliminary, final, amended, corrected, cancelled, entered-in-error, unknown]
+        code:
+          type: object
+          properties:
+            coding:
+              type: array
+              items:
+                type: object
+                properties:
+                  system:
+                    type: string
+                    example: https://w3id.org/openmhealth
+                  code:
+                    type: string
+                    example: "omh:heart-rate:2.0"
+                  display:
+                    type: string
+        subject:
+          type: object
+          properties:
+            reference:
+              type: string
+              example: Patient/40001
+        valueAttachment:
+          type: object
+          properties:
+            contentType:
+              type: string
+              example: application/json
+            data:
+              type: string
+              format: byte
+              description: Base64-encoded OMH envelope (or pause-derived feature payload). NOT echoed back in real JHE's POST response.
+        effectiveDateTime:
+          type: string
+          format: date-time
+        meta:
+          type: object
+          properties:
+            lastUpdated:
+              type: string
+              format: date-time
+            versionId:
+              type: string
+            source:
+              type: string
+        derivedFrom:
+          type: array
+          description: For auxiliary-handler derived Observations, pointer(s) to the raw mapped Observation(s) the derivation was computed from.
+          items:
+            type: object
+            properties:
+              reference:
+                type: string
+                example: Observation/63600
+
+    # =====================================================================
+    # JHE data-plane schemas — Django ORM models, NOT exposed as REST today
+    # (documented here so customer-side Mule apps know the JHE-internal
+    # vocabulary; see jhe-local/bootstrap.sh for the seed flow)
+    # =====================================================================
+    JheUser:
+      type: object
+      description: JHE's internal user record. Each `JheClient` is associated with one `JheUser` whose identity authorizes writes from that client.
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        is_active:
+          type: boolean
+
+    JheClient:
+      type: object
+      description: OAuth 2.0 client credentials with an associated `JheUser`. Bootstrap creates `pause-ingest-client-id` tied to Patient 40001's user.
+      properties:
+        client_id:
+          type: string
+          example: pause-ingest-client-id
+        client_secret:
+          type: string
+        user:
+          $ref: "#/components/schemas/JheUser"
+        client_type:
+          type: string
+          enum: [confidential, public]
+        authorization_grant_type:
+          type: string
+          enum: [client-credentials, authorization-code]
+
+    Patient:
+      type: object
+      description: A patient subject in JHE. References by `Patient/<id>` from FHIR resources point at this row.
+      properties:
+        id:
+          type: integer
+          example: 40001
+        user:
+          $ref: "#/components/schemas/JheUser"
+
+    DataSource:
+      type: object
+      description: A data source category (e.g. Oura, Apple HealthKit). Bootstrap creates an Oura entry at id 70004.
+      properties:
+        id:
+          type: integer
+          example: 70004
+        name:
+          type: string
+          example: Oura
+
+    ClientDataSource:
+      type: object
+      description: Many-to-many between `JheClient` and `DataSource` — declares which data sources a client is allowed to write for.
+      properties:
+        client:
+          $ref: "#/components/schemas/JheClient"
+        data_source:
+          $ref: "#/components/schemas/DataSource"
+
+    Study:
+      type: object
+      description: A study groups a `JheClient` with `Patient`s and `DataSource`s under a named research/clinical context. Bootstrap creates `pause-ingest demo study`.
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          example: pause-ingest demo study
+
+    StudyClient:
+      type: object
+      properties:
+        study:
+          $ref: "#/components/schemas/Study"
+        client:
+          $ref: "#/components/schemas/JheClient"
+
+    StudyDataSource:
+      type: object
+      properties:
+        study:
+          $ref: "#/components/schemas/Study"
+        data_source:
+          $ref: "#/components/schemas/DataSource"
+
+    StudyPatient:
+      type: object
+      properties:
+        study:
+          $ref: "#/components/schemas/Study"
+        patient:
+          $ref: "#/components/schemas/Patient"
+
+    StudyScopeRequest:
+      type: object
+      description: "A scope-level write permission declared by a study (e.g. `omh:heart-rate:2.0`). Must be paired with a matching `StudyPatientScopeConsent` for the write to succeed."
+      properties:
+        study:
+          $ref: "#/components/schemas/Study"
+        scope:
+          type: string
+          example: "omh:heart-rate:2.0"
+
+    StudyPatientScopeConsent:
+      type: object
+      description: Per-patient consent for a specific scope within a study. Without a matching row, JHE will reject writes for that scope at the resource layer even if the OAuth token is valid.
+      properties:
+        study:
+          $ref: "#/components/schemas/Study"
+        patient:
+          $ref: "#/components/schemas/Patient"
+        scope:
+          type: string
+          example: "omh:heart-rate:2.0"
+        granted:
+          type: boolean
+
+    FhirSource:
+      type: object
+      description: Ties a `Patient` to a `DataSource` and provides the `X-JHE-FHIR-Source-ID` header value the auxiliary `/Observation` handler requires. Bootstrap creates one for (Patient 40001, Oura) at pk ≥ 90003.
+      properties:
+        id:
+          type: integer
+          description: The pk used as the `X-JHE-FHIR-Source-ID` header value.
+          example: 90003
+        patient:
+          $ref: "#/components/schemas/Patient"
+        data_source:
+          $ref: "#/components/schemas/DataSource"

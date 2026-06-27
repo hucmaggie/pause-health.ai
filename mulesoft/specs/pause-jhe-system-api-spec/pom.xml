@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  Pause-Health.ai  -  pause-jhe-system-api-spec
+
+  Anypoint Exchange asset that publishes the JupyterHealth Exchange (JHE)
+  System API contract as a shared, versioned spec. The OAS 3.0 file is
+  bundled into a plain Maven jar so any Mule project (today: customer-side
+  jhe-system-api in Phase 1c; later: pause-ingest-process-api) can pull it
+  as a dependency and pin against the contract.
+
+  This is the second Phase 3 artifact promoted to Exchange (the first was
+  pause-omh-to-fhir-library v1.0.0; see /proposal/mulesoft).
+
+  Coordinates:
+    groupId    = 56707cc3-a0e3-4318-b110-78126aace370   (Pause Health business group)
+    artifactId = pause-jhe-system-api-spec
+    version    = 1.0.0
+    packaging  = jar
+
+  See README.md for the consumer pattern + the Exchange v2 publish recipe.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+            http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>56707cc3-a0e3-4318-b110-78126aace370</groupId>
+    <artifactId>pause-jhe-system-api-spec</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>pause-jhe-system-api-spec</name>
+    <description>OAS 3.0 contract for JupyterHealth Exchange's REST surface + Django data plane</description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+    </build>
+</project>

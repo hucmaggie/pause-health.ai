@@ -29,10 +29,19 @@ type ChangelogWeek = {
 const weeks: ChangelogWeek[] = [
   {
     range: "Week of June 21, 2026",
-    headline: "MuleSoft Phase 3 opens: first shared DataWeave library promoted to Anypoint Exchange",
+    headline: "MuleSoft Phase 3 opens: two shared Exchange assets (DataWeave library + JHE OAS spec)",
     intro:
-      "The /proposal/mulesoft page's Phase 3 (multi-customer fabric) was pilled `future` since launch — it described a promotion that wouldn't activate without a second customer. That assumption was wrong: the OMH→FHIR R5 transform was already a freestanding artifact in the CloudHub worker, and promoting it as a shared Anypoint Exchange asset is decoupled from any single customer onboarding. So 2026-06-26 flipped the pill from `future` to `prototype` with one real shipped artifact: `pause-omh-to-fhir-library` v1.0.0 published to Anypoint Exchange under the Pause Health business group, and the CloudHub worker bumped to 1.0.5 consuming it as a Maven dependency. Response shape stays byte-identical to 1.0.4 (the worker still inlines the bundle in the flow; the library dependency proves the wiring, not a refactor yet).",
+      "The /proposal/mulesoft page's Phase 3 (multi-customer fabric) was pilled `future` since launch — it described a promotion that wouldn't activate without a second customer. That assumption was wrong: shared System-API artifacts can land on Exchange the moment they exist, decoupled from any single customer onboarding. So 2026-06-26 flipped the pill from `future` to `prototype` with the first shipped artifact (pause-omh-to-fhir-library v1.0.0); 2026-06-27 added the second (pause-jhe-system-api-spec v1.0.0), the OAS 3.0 contract for JupyterHealth Exchange's REST surface + Django data plane. The CloudHub worker is at 1.0.5 in production consuming the DataWeave library; the JHE spec is contract-only because Phase 1c (the real jhe-system-api Mule project) is gated on later work.",
     entries: [
+      {
+        title: "MuleSoft Phase 3 second asset — pause-jhe-system-api-spec v1.0.0 published to Anypoint Exchange",
+        summary:
+          "Published the JHE System API contract as a versioned Anypoint Exchange asset under the Pause Health business group. The spec at mulesoft/specs/pause-jhe-system-api-spec/src/main/resources/jhe-system-api.oas3.yaml documents three real JHE REST endpoints — POST /o/token/ (OAuth2 client_credentials, openid+email scopes only — anything else 400s with invalid_scope), POST /fhir/r5/Observation (with the mapped-vs-auxiliary handler routing keyed on code.coding[0].system, and the X-JHE-FHIR-Source-ID header gotcha the auxiliary handler 400s without), and GET /fhir/r5/Observation?patient=… (no-filter-on-unknown-patient invariant pinned by pause_ingest's real-JHE tests). Plus 10 data-plane schemas (Study, Patient, DataSource, FhirSource, etc.) documenting JHE's Django ORM models — honest framing: those are NOT exposed as REST today, they're seeded by jhe-local/bootstrap.sh; documenting them here gives any customer-side Mule app the JHE-internal vocabulary in one place. Packaging is plain Maven jar (same approach as pause-omh-to-fhir-library to dodge Exchange's mule-plugin extension-extraction 502s); consumers add `<dependency>...pause-jhe-system-api-spec...</dependency>` and read the yaml off the classpath. Published via the curl-PUT publish recipe (POM as application/xml, jar as application/java-archive — the Exchange v2 mvn-deploy Content-Type gotcha already documented for the DataWeave library applies here too). Spec validates clean (17 schemas, no missing $refs). Verified: Exchange asset listing returns status: published. Page updates: /proposal/mulesoft Phase 3 detail now names both shipped assets and notes the implementation gating; metadata description refreshed. No code paths in pause-health.ai consume the spec yet — this is contract-first publishing. Phase 1c will materialize the implementation.",
+        commits: [
+          { sha: "PENDING", label: "mulesoft: ship pause-jhe-system-api-spec v1.0.0 (Phase 3 second asset)" }
+        ],
+        status: "shipped"
+      },
       {
         title: "MuleSoft Phase 3 opens — pause-omh-to-fhir-library v1.0.0 published to Anypoint Exchange",
         summary:
