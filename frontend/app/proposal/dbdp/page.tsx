@@ -325,7 +325,7 @@ export default function DbdpIntegrationPage() {
                 {piece.license}
               </p>
               <p style={{ margin: 0, color: "var(--text)", lineHeight: 1.6 }}>{piece.role}</p>
-              <ul className="metric-list" style={{ marginTop: "0.5rem" }}>
+              <ul className="metric-list metric-list-stacked" style={{ marginTop: "0.5rem" }}>
                 <li>
                   <span>Why it matters</span>
                   <strong style={{ fontWeight: 500 }}>{piece.why}</strong>
