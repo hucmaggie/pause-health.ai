@@ -1,0 +1,377 @@
+openapi: "3.0.3"
+
+info:
+  title: Pause Oura System API
+  version: "1.0.0"
+  description: |
+    System-tier API contract for the Pause Mule app that wraps the Oura
+    Cloud API and emits normalized Open mHealth (IEEE 1752.1) samples
+    downstream to Process APIs.
+
+    The contract is shaped by what `pause_ingest` already does for Oura
+    today (see [`pause_ingest/pause_ingest/convert.py`](https://github.com/hucmaggie/pause-health.ai/blob/main/pause_ingest/pause_ingest/convert.py)):
+    `omh_shim` accepts an `oura_raw` source with six supported data types
+    (`heart_rate`, `heart_rate_variability`, `step_count`,
+    `sleep_duration`, `sleep_episode`, `physical_activity`) and returns
+    IEEE 1752.1 envelopes. A Mule `oura-system-api` lifts that boundary
+    to HTTP: the *upstream* side authenticates with Oura's OAuth and
+    polls Oura's REST endpoints; the *downstream* side exposes a uniform
+    `GET /oura/{patient}/{dataType}?from=&to=` that returns OMH records
+    (or empty when no samples).
+
+    ## Status (2026-06-27) — contract only, no live REST surface yet
+
+    **This spec is published to Anypoint Exchange as a *prospective*
+    contract, NOT a live Mule app.** Like
+    [`pause-jhe-system-api-spec`](../pause-jhe-system-api-spec/) and
+    [`pause-dbdp-system-api-spec`](../pause-dbdp-system-api-spec/):
+
+    - `pause_ingest.convert.convert_sample(source="oura_raw", ...)` runs
+      against an in-process Python `omh_shim` import today — there is no
+      Mule app fronting it. The
+      [`oura_sample_upload.py`](https://github.com/hucmaggie/pause-health.ai/blob/main/pause_ingest/examples/oura_sample_upload.py)
+      example reads from a synthetic JSON fixture (Oura's `bpm` +
+      `timestamp` shape), not the live Oura Cloud API.
+    - Phase 1c of `/proposal/mulesoft` will materialize the Mule wrapper.
+      This spec describes the HTTP surface that wrapping will expose so
+      customer-side Mule apps and the future `pause-ingest-process-api`
+      can wire against the contract now.
+
+    ## Pattern: this is the per-wearable template
+
+    The intent of the `/proposal/mulesoft` Phase 3 plan is to promote a
+    System API per wearable (Oura, Apple HealthKit, Whoop, Garmin,
+    Empatica E4). This Oura spec is the **template**:
+
+    - Same `GET /{vendor}/{patient}/{dataType}` URL shape.
+    - Same six supported data types (filtered per vendor — HealthKit
+      adds cycle-tracking and `oxygen_saturation`; Whoop adds recovery
+      scores; etc.).
+    - Same OMH-record response envelope.
+    - Same per-vendor auth choice surfaced via the `securitySchemes`
+      block.
+
+    A `pause-healthkit-system-api-spec` published later would be a
+    near-clone with HealthKit-specific data types + Apple's auth model
+    (which is iOS-app-side, so the upstream story is different — the
+    System API wraps an app-uploaded blob endpoint, not a pull-from-vendor
+    poll).
+
+  contact:
+    name: Pause-Health.ai
+    url: https://pause-health.ai
+    email: founders@pause-health.ai
+
+servers:
+  - url: http://localhost:8095
+    description: Local Mule dev (placeholder; the Mule wrapper doesn't exist yet)
+  - url: https://oura.example.com
+    description: Customer-deployed oura-system-api (placeholder)
+
+security:
+  - oauth2ClientCredentials: []
+
+paths:
+  /oura/{patient}/{dataType}:
+    get:
+      operationId: getOuraSamples
+      summary: Read Open mHealth samples of one type for one patient
+      description: |
+        Returns an array of Open mHealth (IEEE 1752.1) envelopes for the
+        requested data type, within the optional time window. The Mule
+        app handles Oura-side auth + pagination + retry + circuit-
+        breaking; the caller never sees Oura's vendor JSON.
+
+        **Authoritative supported data types** (from
+        `pause_ingest.convert.SUPPORTED["oura_raw"]`):
+        `heart-rate`, `heart-rate-variability`, `step-count`,
+        `sleep-duration`, `sleep-episode`, `physical-activity`.
+
+        Hyphenated path values map to underscored `omh_shim` keys via
+        the System API; both forms describe the same OMH schema (e.g.
+        `heart-rate` ↔ `omh:heart-rate:2.0`).
+
+        Daily-aggregate types (`step-count`, `physical-activity`,
+        `sleep-duration`) require an explicit `tz` query param per
+        `omh_shim` — the Mule app injects the patient's configured
+        timezone if the caller omits it. Instant types accept `tz` but
+        don't require it.
+      parameters:
+        - in: path
+          name: patient
+          required: true
+          description: Patient identifier the upstream Oura account is bound to. Format is operator-defined (typically the JHE Patient pk that owns the FhirSource row pointing at this Oura account).
+          schema:
+            type: string
+            example: "40001"
+        - in: path
+          name: dataType
+          required: true
+          description: One of the six supported Oura data types.
+          schema:
+            type: string
+            enum:
+              - heart-rate
+              - heart-rate-variability
+              - step-count
+              - sleep-duration
+              - sleep-episode
+              - physical-activity
+        - in: query
+          name: from
+          description: ISO-8601 lower bound (inclusive). Maps to Oura's `start_date` / `start_datetime` depending on data type.
+          required: false
+          schema:
+            type: string
+            format: date-time
+            example: "2026-04-09T00:00:00Z"
+        - in: query
+          name: to
+          description: ISO-8601 upper bound (inclusive). Maps to Oura's `end_date` / `end_datetime`.
+          required: false
+          schema:
+            type: string
+            format: date-time
+            example: "2026-04-09T23:59:59Z"
+        - in: query
+          name: tz
+          description: IANA timezone (e.g. `America/Los_Angeles`). Required for daily-aggregate types if not preconfigured on the patient. Ignored by instant types.
+          required: false
+          schema:
+            type: string
+            example: America/Los_Angeles
+        - in: query
+          name: limit
+          description: Maximum samples to return in one page. Server may return fewer.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+      responses:
+        "200":
+          description: Zero or more Open mHealth envelopes for the requested type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OmhSamplesResponse"
+              examples:
+                heartRate:
+                  summary: Two heart-rate samples
+                  value:
+                    samples:
+                      - header:
+                          uuid: "abc-1"
+                          schema_id:
+                            namespace: omh
+                            name: heart-rate
+                            version: "2.0"
+                          creation_date_time: "2026-04-09T08:00:00Z"
+                          acquisition_provenance:
+                            source_name: "Oura Ring Gen3"
+                        body:
+                          heart_rate:
+                            value: 72
+                            unit: beats/min
+                          effective_time_frame:
+                            date_time: "2026-04-09T08:00:00Z"
+                      - header:
+                          uuid: "abc-2"
+                          schema_id:
+                            namespace: omh
+                            name: heart-rate
+                            version: "2.0"
+                          creation_date_time: "2026-04-09T08:05:00Z"
+                          acquisition_provenance:
+                            source_name: "Oura Ring Gen3"
+                        body:
+                          heart_rate:
+                            value: 70
+                            unit: beats/min
+                          effective_time_frame:
+                            date_time: "2026-04-09T08:05:00Z"
+                empty:
+                  summary: No samples in window
+                  value:
+                    samples: []
+        "400":
+          description: |
+            Invalid input. Common causes:
+              - Unsupported `dataType` (only the six listed types are accepted)
+              - `from > to`
+              - Daily-aggregate type requested without a `tz` query param AND no patient-configured timezone
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemApiError"
+        "401":
+          description: Missing / invalid bearer token (downstream auth — the caller's bearer, not Oura's)
+        "404":
+          description: |
+            Patient not found, or the patient has no Oura account linked.
+            Distinct from a 200 with `samples: []` (which means the
+            patient is linked but emitted no samples in the window).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemApiError"
+        "503":
+          description: |
+            Oura upstream unavailable. The Mule app honored its retry +
+            circuit-breaker policy and still couldn't reach Oura. Body
+            carries `detail` for runbook diagnosis. Callers should treat
+            this as transient and retry.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemApiError"
+
+  /oura/{patient}/account:
+    get:
+      operationId: getOuraAccountStatus
+      summary: Check whether a patient's Oura account is linked + token-fresh
+      description: |
+        Lightweight diagnostic. Returns the account-link state so a
+        Process API can fail fast when no samples will ever come (e.g.
+        if the patient revoked Oura access, the token expired and
+        re-auth is needed, etc.).
+
+        Pause's intent for this endpoint: the Care Router can render a
+        "Please re-link your Oura account" CTA without polling the data
+        path and seeing empty results forever.
+      parameters:
+        - in: path
+          name: patient
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Account linkage status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountStatus"
+        "404":
+          description: Patient not found.
+
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      description: |
+        OAuth 2.0 client_credentials grant — for the **downstream** auth
+        between Pause's Process API tier and this System API. The
+        **upstream** auth to Oura is OAuth 2.0 authorization_code on the
+        patient's behalf, handled inside the Mule app via Anypoint Secret
+        Manager; it is NOT a parameter of this contract.
+      flows:
+        clientCredentials:
+          tokenUrl: /o/token/
+          scopes:
+            wearable.read: Read samples on behalf of patients the caller's tenant owns.
+
+  schemas:
+    OmhSamplesResponse:
+      type: object
+      required: [samples]
+      properties:
+        samples:
+          type: array
+          description: Zero or more IEEE 1752.1 envelopes for the requested data type. Empty array when the window contained no samples.
+          items:
+            $ref: "#/components/schemas/OmhEnvelope"
+        nextPageToken:
+          type: string
+          description: Opaque continuation token. Present iff Oura had more samples than `limit` allowed. Pass back as `?pageToken=...` to fetch the next page.
+
+    OmhEnvelope:
+      type: object
+      description: |
+        Open mHealth IEEE 1752.1 sample envelope. Shape is fixed by the
+        OMH spec + `omh_shim` v1.0.1 output. See
+        [openmhealth.org](https://www.openmhealth.org/) for the
+        per-data-type body schemas.
+      required: [header, body]
+      properties:
+        header:
+          $ref: "#/components/schemas/OmhHeader"
+        body:
+          type: object
+          additionalProperties: true
+          description: Data-type-specific payload. See `examples` on the operation for `heart-rate`'s shape; other data types follow OMH's published schemas (`step-count:3.0`, `sleep-duration:2.0`, etc.).
+
+    OmhHeader:
+      type: object
+      required: [uuid, schema_id, creation_date_time]
+      properties:
+        uuid:
+          type: string
+        schema_id:
+          type: object
+          required: [namespace, name, version]
+          properties:
+            namespace:
+              type: string
+              enum: [omh]
+            name:
+              type: string
+              example: heart-rate
+            version:
+              type: string
+              example: "2.0"
+        creation_date_time:
+          type: string
+          format: date-time
+        acquisition_provenance:
+          type: object
+          properties:
+            source_name:
+              type: string
+              example: Oura Ring Gen3
+            source_origin_id:
+              type: string
+              description: Oura-side sample identifier for cross-referencing.
+            modality:
+              type: string
+              example: sensed
+
+    AccountStatus:
+      type: object
+      required: [linked, tokenFresh]
+      properties:
+        linked:
+          type: boolean
+          description: True if the patient has authorized Oura access.
+        tokenFresh:
+          type: boolean
+          description: True if the Oura access token is non-expired AND the refresh token still works.
+        scopes:
+          type: array
+          items:
+            type: string
+          example: [daily, heartrate, personal, ring_configuration, session, sleep, workout]
+        lastSyncIso:
+          type: string
+          format: date-time
+          description: When the Mule app last successfully fetched from Oura for this patient.
+
+    SystemApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - unsupported-data-type
+            - invalid-time-window
+            - missing-timezone
+            - patient-not-found
+            - account-not-linked
+            - upstream-unavailable
+            - internal-error
+        message:
+          type: string
+        detail:
+          type: string

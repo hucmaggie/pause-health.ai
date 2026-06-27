@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  Pause-Health.ai  -  pause-oura-system-api-spec
+
+  Anypoint Exchange asset that publishes the per-wearable System API
+  contract for Oura. Same plain-jar packaging + curl-PUT publish recipe
+  as the JHE and DBDP spec assets.
+
+  This is the fourth Phase 3 artifact promoted to Exchange and the
+  template for additional per-wearable specs (Apple HealthKit, Whoop,
+  Garmin, Empatica E4).
+
+  Coordinates:
+    groupId    = 56707cc3-a0e3-4318-b110-78126aace370   (Pause Health business group)
+    artifactId = pause-oura-system-api-spec
+    version    = 1.0.0
+    packaging  = jar
+
+  See README.md for the consumer pattern + the Exchange v2 publish recipe.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+            http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>56707cc3-a0e3-4318-b110-78126aace370</groupId>
+    <artifactId>pause-oura-system-api-spec</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>pause-oura-system-api-spec</name>
+    <description>OAS 3.0 contract for the Pause Oura System API (prospective; per-wearable template)</description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+    </build>
+</project>
