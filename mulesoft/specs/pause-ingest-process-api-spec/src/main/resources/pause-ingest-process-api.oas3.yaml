@@ -1,0 +1,300 @@
+openapi: "3.0.3"
+
+info:
+  title: Pause Ingest Process API
+  version: "1.0.0"
+  description: |
+    Process-tier contract for the Pause ingest pipeline. Sits between the
+    wearable System APIs (Oura, HealthKit, Whoop, Garmin, Empatica E4)
+    and the JHE + DBDP System APIs. One endpoint, one orchestration:
+    validate an Open mHealth sample, transform to FHIR R5, write to JHE,
+    fire-and-forget a DBDP feature compute, return the JHE-assigned ids
+    to the caller.
+
+    Anchored to the real reference flow at
+    [`mulesoft/flows/pause-process-api.example.xml`](https://github.com/hucmaggie/pause-health.ai/blob/main/mulesoft/flows/pause-process-api.example.xml)
+    — five-step `<flow>` (validate → transform → write → trigger
+    features async → respond), customer-managed config in Mule property
+    files (org id, secret-manager keys, downstream URLs).
+
+    ## How this asset relates to the other Phase 3 specs
+
+    Process-tier in MuleSoft's API-led pattern. Composes:
+
+    - **Down to the System tier** — calls
+      [`pause-jhe-system-api-spec`](../pause-jhe-system-api-spec/)'s
+      `POST /fhir/r5/Observation` (write), then
+      [`pause-dbdp-system-api-spec`](../pause-dbdp-system-api-spec/)'s
+      `POST /features/hrv:compute` (compute). The Per-wearable System
+      APIs ([`pause-oura-system-api-spec`](../pause-oura-system-api-spec/),
+      future HealthKit / Whoop / Garmin) sit upstream of this Process
+      API — they're the producers of the OMH payloads this endpoint
+      ingests.
+    - **Sideways via DataWeave** — the OMH → FHIR transform is
+      `pause-omh-to-fhir-library`'s `dw::pause::health::omh::omhToObservation`.
+      This Process API is the canonical first consumer of that library.
+
+    With this spec the full API-led three-tier story is on Exchange:
+    System (JHE + DBDP + Oura) → **Process (this asset)** → Experience
+    (`pause-provider-experience-api-spec`, published earlier as part of
+    the CloudHub worker's contract).
+
+    ## Status (2026-06-27) — contract only, no deployable Mule project yet
+
+    **Like the other System-tier specs in `mulesoft/specs/`, this is a
+    *prospective* contract.** The reference Mule XML at
+    [`mulesoft/flows/pause-process-api.example.xml`](https://github.com/hucmaggie/pause-health.ai/blob/main/mulesoft/flows/pause-process-api.example.xml)
+    is labeled "REFERENCE, not deployable" because it lacks the
+    customer-managed property files (Anypoint Platform org, secret
+    manager keys, endpoint URLs) and the OMH JSON schema bundled into
+    `src/main/resources/schemas/`. Phase 1c materializes the deployable
+    project.
+
+    Today, `pause_ingest`'s Python worker performs the equivalent
+    orchestration in-process: see
+    [`pause_ingest/examples/oura_sample_upload.py`](https://github.com/hucmaggie/pause-health.ai/blob/main/pause_ingest/examples/oura_sample_upload.py)
+    for the same shape (validate → transform → POST to JHE → derive
+    features → POST derived feature back to JHE). This contract reflects
+    the Mule lift of that flow; the Python implementation and the Mule
+    contract have to stay in lockstep.
+
+    ## Fire-and-forget by design
+
+    Step 4 of the reference flow wraps the DBDP call in `<async>`:
+    feature compute is correlated by `observationId` and writes its
+    result back to JHE on its own schedule. **The Process API never
+    waits on DBDP** — `featureComputeTriggered: true` in the response
+    means "the trigger was issued," not "features were computed." Callers
+    who need the computed values must read them from JHE later.
+
+    This is the same trade-off `pause_ingest` makes: the derived HRV
+    Observation is written separately and carries `derivedFrom` lineage
+    back to the raw one (see `pause_ingest.hrv_features_to_fhir_observation`).
+
+  contact:
+    name: Pause-Health.ai
+    url: https://pause-health.ai
+    email: founders@pause-health.ai
+
+servers:
+  - url: http://localhost:8080
+    description: Local Mule dev (placeholder; the deployable project is Phase 1c)
+  - url: https://process.example.com
+    description: Customer-deployed pause-ingest-process-api (placeholder)
+
+security:
+  - oauth2ClientCredentials: []
+
+paths:
+  /samples:
+    post:
+      operationId: ingestSample
+      summary: Ingest one Open mHealth sample (the canonical Process-tier entrypoint)
+      description: |
+        The single Process-tier endpoint. Triggered whenever a wearable
+        System API emits a new sample. Performs the five-step
+        orchestration documented in the reference Mule flow:
+
+        1. **Validate** the incoming OMH envelope against the IEEE 1752.1
+           schema. 400 on validation failure with `errorType:
+           "JSON:SCHEMA_NOT_HONOURED"`.
+        2. **Transform** OMH → FHIR R5 Observation via
+           `pause-omh-to-fhir-library`'s `dw::pause::health::omh`.
+        3. **Write** the FHIR Observation to JHE (mapped or auxiliary
+           handler chosen by `code.coding[0].system` — see
+           [`pause-jhe-system-api-spec`](../pause-jhe-system-api-spec/)
+           for the routing contract).
+        4. **Trigger** DBDP feature compute, fire-and-forget. Failure
+           here does NOT fail the request — the trigger is best-effort
+           and `featureComputeTriggered` flips to `false` in that case.
+        5. **Respond** with the JHE-assigned observation id and the
+           feature-trigger status.
+
+        Per the reference flow's `<error-handler>` block, any unhandled
+        downstream failure surfaces as the error envelope shape with
+        the underlying Mule `errorType.identifier` propagated for
+        diagnosis.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestSampleRequest"
+            examples:
+              ouraHeartRate:
+                summary: Heart-rate sample from Oura (routes to JHE's mapped handler)
+                value:
+                  source: oura
+                  header:
+                    uuid: "9f1b-…"
+                    schema_id:
+                      namespace: omh
+                      name: heart-rate
+                      version: "2.0"
+                    creation_date_time: "2026-04-09T08:00:00Z"
+                    acquisition_provenance:
+                      source_name: "Oura Ring Gen3"
+                  body:
+                    heart_rate:
+                      value: 72
+                      unit: beats/min
+                    effective_time_frame:
+                      date_time: "2026-04-09T08:00:00Z"
+      responses:
+        "202":
+          description: |
+            Sample accepted. JHE has the raw Observation; DBDP feature
+            compute has been triggered (fire-and-forget). The response
+            shape mirrors the reference flow's step-5 envelope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestSampleResponse"
+              example:
+                status: accepted
+                observationId: "63600"
+                source: oura
+                featureComputeTriggered: true
+        "400":
+          description: |
+            Validation failed at step 1. Common cases:
+              - Body is not a valid OMH IEEE 1752.1 envelope
+                (`errorType: JSON:SCHEMA_NOT_HONOURED`).
+              - `source` is missing or not a known wearable identifier.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessApiError"
+              example:
+                status: error
+                error: "Schema validation failed: header.uuid is required"
+                errorType: "JSON:SCHEMA_NOT_HONOURED"
+        "401":
+          description: Missing / invalid bearer token (downstream auth — the caller's bearer, not JHE's).
+        "502":
+          description: |
+            JHE write failed. The pipeline could not assign an observation
+            id, so nothing was triggered. `errorType` carries the
+            Mule-side identifier for the upstream failure (typically
+            `HTTP:CONNECTIVITY` or `HTTP:UNAUTHORIZED`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessApiError"
+        "503":
+          description: |
+            Pipeline temporarily unavailable. Used when a System API's
+            circuit breaker is open or Anypoint Secret Manager is
+            unreachable.
+
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      description: |
+        OAuth 2.0 client_credentials grant — caller-side auth. The
+        Process API authenticates itself to JHE and DBDP via Anypoint
+        Secret Manager credentials, separate from this caller bearer.
+      flows:
+        clientCredentials:
+          tokenUrl: /o/token/
+          scopes:
+            samples.ingest: Ingest OMH samples on behalf of caller's tenant.
+
+  schemas:
+    IngestSampleRequest:
+      type: object
+      required: [source, header, body]
+      description: |
+        Wraps a standard OMH IEEE 1752.1 envelope with a `source` tag.
+        The envelope shape is the same one `pause-oura-system-api-spec`
+        and the other per-wearable specs emit; `source` is the
+        identifier the wearable System API stamped on its output (e.g.
+        `oura`, `healthkit`, `whoop`, `garmin`, `empatica_e4`).
+      properties:
+        source:
+          type: string
+          description: "Wearable identifier. Echoed back in the response for the audit trail."
+          example: oura
+        header:
+          $ref: "#/components/schemas/OmhHeader"
+        body:
+          type: object
+          additionalProperties: true
+          description: "OMH data-type-specific body. See the System API specs for per-type shapes."
+
+    OmhHeader:
+      type: object
+      required: [uuid, schema_id, creation_date_time]
+      properties:
+        uuid:
+          type: string
+        schema_id:
+          type: object
+          required: [namespace, name, version]
+          properties:
+            namespace:
+              type: string
+              enum: [omh]
+            name:
+              type: string
+              example: heart-rate
+            version:
+              type: string
+              example: "2.0"
+        creation_date_time:
+          type: string
+          format: date-time
+        acquisition_provenance:
+          type: object
+          properties:
+            source_name:
+              type: string
+              example: Oura Ring Gen3
+            source_origin_id:
+              type: string
+            modality:
+              type: string
+              example: sensed
+
+    IngestSampleResponse:
+      type: object
+      required: [status, observationId, source, featureComputeTriggered]
+      properties:
+        status:
+          type: string
+          enum: [accepted]
+        observationId:
+          type: string
+          description: "JHE-assigned id of the raw Observation. The DBDP trigger (when fired) carries this so the derived Observation can link back via `derivedFrom`."
+        source:
+          type: string
+          description: "Echoed from the request for the audit trail."
+        featureComputeTriggered:
+          type: boolean
+          description: |
+            `true` when the DBDP system API accepted the trigger (HTTP
+            2xx on the fire-and-forget call); `false` when the trigger
+            failed at the wire. The raw JHE write is unaffected — a
+            failed trigger does NOT roll back the JHE Observation.
+
+    ProcessApiError:
+      type: object
+      required: [status, error]
+      description: |
+        Mirrors the `<error-handler>` envelope from the reference Mule
+        flow's `on-error-propagate` block: `{status: "error", error,
+        errorType}` where `errorType` is the Mule-side identifier
+        (`HTTP:CONNECTIVITY`, `JSON:SCHEMA_NOT_HONOURED`, `HTTP:UNAUTHORIZED`,
+        etc.).
+      properties:
+        status:
+          type: string
+          enum: [error]
+        error:
+          type: string
+          description: "Human-readable error.description from the Mule flow."
+        errorType:
+          type: string
+          description: "Mule errorType.identifier — pass to operations for runbook diagnosis."
+          example: "HTTP:CONNECTIVITY"

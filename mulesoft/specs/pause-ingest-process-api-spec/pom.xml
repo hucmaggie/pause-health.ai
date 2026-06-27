@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  Pause-Health.ai  -  pause-ingest-process-api-spec
+
+  Process-tier contract on Anypoint Exchange. With this asset the
+  Pause API-led three-tier story is complete on Exchange:
+    System tier   = pause-jhe-system-api-spec + pause-dbdp-system-api-spec
+                  + pause-oura-system-api-spec (+ future per-wearable)
+    Process tier  = pause-ingest-process-api-spec  (this asset)
+    Experience    = pause-provider-experience-api-spec (live worker)
+
+  Coordinates:
+    groupId    = 56707cc3-a0e3-4318-b110-78126aace370   (Pause Health business group)
+    artifactId = pause-ingest-process-api-spec
+    version    = 1.0.0
+    packaging  = jar
+
+  See README.md for the consumer pattern + the Exchange v2 publish recipe.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+            http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>56707cc3-a0e3-4318-b110-78126aace370</groupId>
+    <artifactId>pause-ingest-process-api-spec</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>pause-ingest-process-api-spec</name>
+    <description>OAS 3.0 contract for the Pause Process tier (prospective; orchestrates JHE + DBDP)</description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+    </build>
+</project>
