@@ -202,9 +202,9 @@ const missingForFullConformance: Array<{
   },
   {
     gap: "Salesforce CLI parity for Pause tools",
-    why: "Headless 360's tagline includes 'CLI command' alongside 'API and MCP tool.' The Salesforce CLI is the operator-facing surface for everything an agent can do — Pause has the API + MCP sides but no CLI shim.",
-    needed: "Optional. A thin `@pause-health/cli` Node package that wraps the existing Pause REST endpoints with sf-style commands. Low priority — investors and design partners interact via the web surfaces, not the CLI.",
-    pill: "future"
+    why: "Headless 360's tagline includes 'CLI command' alongside 'API and MCP tool.' The Salesforce CLI is the operator-facing surface for everything an agent can do — Pause needed the third surface to complete the trio.",
+    needed: "Shipped 2026-06-27 as an in-repo package: `cli/` builds to `@pause-health/cli` with `pause health`, `pause providers`, `pause timeline`, and `pause intake` commands wrapping the same `/api/mulesoft/*` surface the MCP server exposes. Hand-rolled argv parser (zero runtime deps) keeps the install lean. Supports `--json` for jq piping and `--base-url` / `PAUSE_BASE_URL` for hitting preview deploys. 17 unit tests pin the parser + client; 6 smoke cases exercise the built bin against the live Experience APIs. Not published to npm yet — gap #4 of the audit ships the artifact; the npm-scope ownership decision is a separate ops step. See `cli/README.md` for install + usage.",
+    pill: "prototype"
   }
 ];
 
@@ -390,7 +390,10 @@ export default function HeadlessSixtyPage() {
           Pause covers most of Headless 360 incidentally — three out of three patterns
           (REST + MCP + A2A) have at least one live or wired surface. The gaps below
           are the explicit Headless 360 invariants the prototype doesn&apos;t yet
-          satisfy. Each is named here so it can be tracked, not hidden.
+          satisfy. Each is named here so it can be tracked, not hidden. As of
+          2026-06-27 all four read <strong>prototype</strong> — the code seams
+          are in place; activation per gap requires the env-side procurement
+          steps each <code>needed</code> column describes.
         </p>
         <div style={{ overflowX: "auto", marginTop: "0.6rem" }}>
           <table className="data-table" style={{ width: "100%" }}>
