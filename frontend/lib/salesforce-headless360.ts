@@ -423,6 +423,78 @@ function scopeContainsMcpApi(scope: string | undefined | null): boolean {
   return scope.split(/\s+/).some((s) => s === "mcp_api");
 }
 
+// -----------------------------------------------------------------------------
+// Bounded process-local cache for positive introspection results
+// -----------------------------------------------------------------------------
+//
+// On a hot Vercel function instance, a single MCP client can fire dozens of
+// JSON-RPC requests against /api/mcp within a few seconds. Re-validating the
+// same bearer with Salesforce on every request costs ~50-100ms of extra
+// latency. We cache only positive results for a short TTL (60s) so revocation
+// latency stays bounded — a token revoked in Salesforce takes at most one
+// TTL window to be rejected by Pause.
+//
+// Trade-offs and bounds:
+//   - Only ok:true results are cached. Negatives re-check so a freshly-issued
+//     token doesn't stay rejected, and a scope grant flips through immediately.
+//   - The cache is process-local (Vercel functions are isolated per instance).
+//     There is intentionally no shared cache: a process restart or
+//     cold-instance miss costs one fresh introspect, which is fine.
+//   - Capacity is bounded at 1024 entries to prevent unbounded growth from
+//     a long-lived process seeing many distinct tokens. LRU-on-insert (oldest
+//     evicted first) keeps the implementation a few lines.
+//   - The cache key is the raw token. Process memory holds tokens for up to
+//     the TTL; that's the same trust posture as any reverse proxy that
+//     terminates Bearer auth in memory.
+//
+// Tests reach `_resetIntrospectCacheForTesting` to clear between cases.
+// -----------------------------------------------------------------------------
+
+const INTROSPECT_CACHE_TTL_MS = 60_000;
+const INTROSPECT_CACHE_MAX_ENTRIES = 1024;
+
+type CachedCheck = {
+  expiresAt: number;
+  result: Extract<McpApiBearerCheck, { ok: true }>;
+};
+
+const introspectCache = new Map<string, CachedCheck>();
+
+function readCachedCheck(token: string, now: number): Extract<McpApiBearerCheck, { ok: true }> | null {
+  const hit = introspectCache.get(token);
+  if (!hit) return null;
+  if (hit.expiresAt <= now) {
+    introspectCache.delete(token);
+    return null;
+  }
+  // Refresh insertion order so the LRU bookkeeping below evicts truly cold
+  // entries rather than recently-used ones.
+  introspectCache.delete(token);
+  introspectCache.set(token, hit);
+  return hit.result;
+}
+
+function writeCachedCheck(
+  token: string,
+  result: Extract<McpApiBearerCheck, { ok: true }>,
+  now: number
+): void {
+  if (introspectCache.size >= INTROSPECT_CACHE_MAX_ENTRIES) {
+    // Map iteration is insertion-order; first key is oldest.
+    const oldest = introspectCache.keys().next().value;
+    if (oldest !== undefined) introspectCache.delete(oldest);
+  }
+  introspectCache.set(token, {
+    expiresAt: now + INTROSPECT_CACHE_TTL_MS,
+    result
+  });
+}
+
+/** Test-only: clear the cache between cases. */
+export function _resetIntrospectCacheForTesting(): void {
+  introspectCache.clear();
+}
+
 /**
  * Validate a `/api/mcp` request's bearer token against Salesforce.
  *
@@ -433,22 +505,24 @@ function scopeContainsMcpApi(scope: string | undefined | null): boolean {
  * + `scope: null` so callers can decide whether to accept the weaker
  * guarantee for their threat model.
  *
- * Why not cache introspections process-wide: serverless invocations on
- * Vercel are short-lived; a process-local cache compounds the risk
- * window if a token is revoked mid-life. Per-request memoization is
- * fine (one /api/mcp request issues many tools/call subrequests, all
- * sharing one validation) but cross-request caching belongs at a
- * dedicated KV layer when traffic justifies it.
+ * Positive results are cached for `INTROSPECT_CACHE_TTL_MS` (60s) — see
+ * the cache block above. The cache is consulted before the introspect
+ * network call; the `nowMs` parameter is exposed for deterministic
+ * testing of TTL behavior.
  *
  * Never throws. Network errors collapse to `introspect-error`.
  */
 export async function validateMcpApiBearer(
   req: Request,
   cfg: Headless360Config,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  nowMs: () => number = () => Date.now()
 ): Promise<McpApiBearerCheck> {
   const token = extractBearer(req);
   if (!token) return { ok: false, reason: "missing-bearer" };
+
+  const cached = readCachedCheck(token, nowMs());
+  if (cached) return cached;
 
   // --- Step 1: RFC 7662 introspect (strict path) ----------------------------
   let introspectResp: Response | null = null;
@@ -491,7 +565,14 @@ export async function validateMcpApiBearer(
       }
       const username =
         typeof parsed.username === "string" ? parsed.username : undefined;
-      return { ok: true, via: "introspect", scope, username };
+      const result: Extract<McpApiBearerCheck, { ok: true }> = {
+        ok: true,
+        via: "introspect",
+        scope,
+        username
+      };
+      writeCachedCheck(token, result, nowMs());
+      return result;
     }
     // 200 but `active` field missing — fall through to userinfo.
   }
@@ -542,5 +623,12 @@ export async function validateMcpApiBearer(
       : typeof userinfo.email === "string"
         ? userinfo.email
         : undefined;
-  return { ok: true, via: "userinfo-fallback", scope: null, username };
+  const result: Extract<McpApiBearerCheck, { ok: true }> = {
+    ok: true,
+    via: "userinfo-fallback",
+    scope: null,
+    username
+  };
+  writeCachedCheck(token, result, nowMs());
+  return result;
 }

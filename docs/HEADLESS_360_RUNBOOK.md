@@ -193,7 +193,34 @@ Implementation lives in `frontend/lib/salesforce-headless360.ts` (`validateMcpAp
 | `token-inactive` | 401 | `Bearer realm="mcp_api", error="token-inactive"` |
 | `scope-mismatch` | 403 | `Bearer realm="mcp_api", error="scope-mismatch"` |
 | `introspect-error` | 401 | `Bearer realm="mcp_api", error="introspect-error"` (body carries `detail`) |
-| Valid | (passes through to MCP handler) | n/a |
+| Valid | (passes through to MCP handler; response carries `X-Pause-MCP-User` + `X-Pause-MCP-Via`) | n/a |
+
+### Identity headers on every successful response
+
+When the gate is on and a request validates, the MCP response carries two headers (added 2026-06-27):
+
+- `X-Pause-MCP-User: <preferred_username>` — Salesforce-side identity from the introspect or userinfo payload. Absent if Salesforce didn't return one (rare).
+- `X-Pause-MCP-Via: introspect | userinfo-fallback` — which validation path answered, so the trace plane can distinguish the strict RFC 7662 path from the permissive aliveness-only path.
+
+The Agent Fabric trace plane should pick these up and stamp them on every recorded span originating from a gated `/api/mcp` request.
+
+### /api/mcp/whoami — gate diagnostic
+
+`GET /api/mcp/whoami` returns plain JSON describing the gate state and the resolved identity. Same authentication path as `/api/mcp` — useful for operator smoke tests without parsing the SSE stream:
+
+```bash
+# Gate off
+curl -s https://pause-health.ai/api/mcp/whoami
+# → {"gate":"off"}
+
+# Gate on, no bearer
+curl -s https://pause-health.ai/api/mcp/whoami
+# → HTTP 401, WWW-Authenticate: Bearer realm="mcp_api", error="missing-bearer"
+
+# Gate on, valid bearer
+curl -s -H "Authorization: Bearer <token>" https://pause-health.ai/api/mcp/whoami
+# → {"gate":"on","via":"introspect","username":"u@example.com"}
+```
 
 ### Loopback bearer propagation
 
@@ -225,8 +252,13 @@ After gap #1 is provisioned (see the procurement section above):
 - `frontend/lib/mcp/host.test.ts` adds 3 tests pinning that the inbound bearer attaches to loopback only (NOT to external remotes), no bearer is attached when the verifier returns empty, and disabling loopback drops the bearer entirely.
 - `createMCPHostFromRequest(req)` reads the request's `Authorization` header and passes it through `resolveRemotesFromEnv(origin, { loopbackBearer })` — the connecting glue between the inbound request and the loopback transport.
 
-### Known limitations
+### Follow-ups shipped 2026-06-27
 
-- **Introspect-or-userinfo result is opaque to the MCP handler.** Today the gate either allows the request through or returns a non-2xx; the MCP server below doesn't see *who* called. A follow-up enhancement could thread the validated `username` into the MCP server via request context so individual tool calls can include it in the agent-fabric trace.
-- **No caching of validation results.** Each `/api/mcp` request does its own introspect/userinfo round-trip. Acceptable for prototype throughput; production volumes would justify a KV-layer cache keyed by `(token, scope-required)` with a 30-60s TTL.
-- **Userinfo-fallback path does not enforce scope.** Operators who need RFC 7662-strict scope validation must keep introspect enabled on their External Client App. The runbook flags this honestly so the audit posture matches the deployed behavior.
+Two limitations the initial gap #2 ship flagged are now addressed:
+
+- **Validated identity surfaced as response headers + a diagnostic endpoint.** `guardMcpAuth` now returns the validated identity (`username` + `via`) instead of swallowing it. `/api/mcp` attaches `X-Pause-MCP-User` and `X-Pause-MCP-Via` headers to every successful response so the Agent Fabric trace plane can attribute tool calls. A new `GET /api/mcp/whoami` endpoint lets operators verify the gate is wired correctly without parsing the SSE stream — returns `{gate: "off"}` when the gate is unset, `{gate: "on", via, username}` when the bearer validates, and the same 401/403/503 errors as `/api/mcp` otherwise.
+- **Positive introspect results cached for 60s.** A bounded process-local cache (`Map<token, {expiresAt, result}>`, capped at 1024 entries, LRU-on-insert) in `lib/salesforce-headless360.ts` avoids hammering Salesforce on a hot Vercel instance. Only `ok: true` results are cached — negatives re-check so a freshly-issued token doesn't stay rejected and a scope grant flips through immediately. Revocation latency is bounded at one TTL window (60s). Process restart wipes the cache; cross-instance sharing belongs at a dedicated KV layer when traffic justifies it.
+
+### Still open
+
+- **Userinfo-fallback path does not enforce scope.** Operators who need RFC 7662-strict scope validation must keep introspect enabled on their External Client App. The runbook flags this honestly so the audit posture matches the deployed behavior. This is a Salesforce-side configuration choice, not something Pause can close from this side.

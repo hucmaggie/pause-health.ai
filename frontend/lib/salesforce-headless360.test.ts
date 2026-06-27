@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomBytes, createHmac } from "node:crypto";
 
 import {
+  _resetIntrospectCacheForTesting,
   generateOauthState,
   generatePkceChallenge,
   generatePkceVerifier,
@@ -322,7 +323,10 @@ describe("isMcpApiAuthRequired", () => {
 
 describe("validateMcpApiBearer", () => {
   const ORIGINAL = { ...process.env };
-  beforeEach(() => clearEnv());
+  beforeEach(() => {
+    clearEnv();
+    _resetIntrospectCacheForTesting();
+  });
   afterEach(() => {
     Object.keys(process.env).forEach((k) => {
       if (!(k in ORIGINAL)) delete process.env[k];
@@ -511,5 +515,140 @@ describe("validateMcpApiBearer", () => {
     expect(out.ok).toBe(true);
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(String(init.body)).toContain("token=real-token");
+  });
+
+  // -------------------------------------------------------------------------
+  // Cache behavior — gap #2 follow-up (2026-06-27)
+  // -------------------------------------------------------------------------
+
+  it("caches positive introspect results across calls within the TTL window", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResp({ active: true, scope: "mcp_api", username: "u@example.com" }));
+    let now = 1_000_000;
+    const nowFn = () => now;
+    const first = await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer cached-token" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch,
+      nowFn
+    );
+    expect(first.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Second call within 60s — should hit cache, NOT re-introspect.
+    now += 30_000;
+    const second = await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer cached-token" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch,
+      nowFn
+    );
+    expect(second).toEqual(first);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-introspects after the cache TTL expires", async () => {
+    // Use mockImplementation so each call gets a fresh Response — once a
+    // Response body is consumed with .json() it can't be re-read, which
+    // would otherwise cause the second introspect to look like a parse
+    // failure and trigger the userinfo fallback.
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async () =>
+        jsonResp({ active: true, scope: "mcp_api" })
+      );
+    let now = 1_000_000;
+    const nowFn = () => now;
+    await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer expiring-token" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch,
+      nowFn
+    );
+    // 61s later — past the TTL.
+    now += 61_000;
+    await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer expiring-token" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch,
+      nowFn
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("caches userinfo-fallback results too", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("nope", { status: 404 }))
+      .mockResolvedValueOnce(jsonResp({ preferred_username: "u@example.com" }));
+    let now = 1_000_000;
+    const nowFn = () => now;
+    await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer fallback-token" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch,
+      nowFn
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // Second call should hit cache.
+    now += 1_000;
+    const second = await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer fallback-token" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch,
+      nowFn
+    );
+    expect(second.ok).toBe(true);
+    if (second.ok) expect(second.via).toBe("userinfo-fallback");
+    expect(fetchMock).toHaveBeenCalledTimes(2);  // no new calls
+  });
+
+  it("does NOT cache negative results (token-inactive re-checks every call)", async () => {
+    // Fresh Response per call so the second introspect actually returns
+    // active:false rather than a consumed-body parse failure.
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async () => jsonResp({ active: false }));
+    await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer revoked-token" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch
+    );
+    await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer revoked-token" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch
+    );
+    // Both calls hit Salesforce — negatives don't cache, so a freshly-
+    // granted token doesn't stay rejected.
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does NOT cache missing-bearer (no token to key the cache on)", async () => {
+    const fetchMock = vi.fn();
+    await validateMcpApiBearer(new Request("https://x/y"), cfg(), fetchMock as unknown as typeof fetch);
+    await validateMcpApiBearer(new Request("https://x/y"), cfg(), fetchMock as unknown as typeof fetch);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("caches per-token (different tokens don't collide)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResp({ active: true, scope: "mcp_api", username: "alice" }))
+      .mockResolvedValueOnce(jsonResp({ active: true, scope: "mcp_api", username: "bob" }));
+    const a = await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer alice-token" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch
+    );
+    const b = await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer bob-token" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch
+    );
+    expect(a.ok && a.username).toBe("alice");
+    expect(b.ok && b.username).toBe("bob");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
