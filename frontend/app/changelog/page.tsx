@@ -28,6 +28,23 @@ type ChangelogWeek = {
 
 const weeks: ChangelogWeek[] = [
   {
+    range: "Week of June 21, 2026",
+    headline: "MuleSoft Phase 3 opens: first shared DataWeave library promoted to Anypoint Exchange",
+    intro:
+      "The /proposal/mulesoft page's Phase 3 (multi-customer fabric) was pilled `future` since launch — it described a promotion that wouldn't activate without a second customer. That assumption was wrong: the OMH→FHIR R5 transform was already a freestanding artifact in the CloudHub worker, and promoting it as a shared Anypoint Exchange asset is decoupled from any single customer onboarding. So 2026-06-26 flipped the pill from `future` to `prototype` with one real shipped artifact: `pause-omh-to-fhir-library` v1.0.0 published to Anypoint Exchange under the Pause Health business group, and the CloudHub worker bumped to 1.0.5 consuming it as a Maven dependency. Response shape stays byte-identical to 1.0.4 (the worker still inlines the bundle in the flow; the library dependency proves the wiring, not a refactor yet).",
+    entries: [
+      {
+        title: "MuleSoft Phase 3 opens — pause-omh-to-fhir-library v1.0.0 published to Anypoint Exchange",
+        summary:
+          "Promoted the OMH (IEEE 1752.1) → FHIR R5 Observation DataWeave transform out of the pause-mulesoft-health-v1 worker and into a versioned, reusable Anypoint Exchange asset on the Pause Health business group (groupId 56707cc3-a0e3-4318-b110-78126aace370). Shipped: a new mulesoft/pause-omh-to-fhir-library/ Maven project (plain `jar` packaging, no classifier — see below) with the canonical `omhToObservation(sample, patientRef, idx)` function at `dw/pause/health/omh.dwl`, importable as `dw::pause::health::omh` from any Mule DataWeave script. The CloudHub worker bumped to v1.0.5 with the new artifact as a `<dependency>`; the deployable mule-application jar now bundles `repository/.../pause-omh-to-fhir-library-1.0.0.jar`, proving end-to-end consumption of the Exchange asset. Worker flow XML unchanged, so the runtime `/health` and `/providers` responses stay byte-identical to 1.0.4 — this entry is about Phase 3 wiring, not a refactor of the existing flow. Two non-obvious gotchas found and documented: (1) Anypoint Exchange v2 500s on the .pom upload with `application/x-www-form-urlencoded` (mvn-deploy-plugin's default for .pom files), so the publish recipe uses a direct curl PUT with `Content-Type: application/xml` — the .jar upload through mvn is fine because aether sends octet-stream for jars; (2) tagging the library jar `classifier=mule-plugin` triggers Exchange's `ms-exchange-tooling-service` extension-model extraction, which 502s on a no-SDK jar (`invalid json response body: Error proc...`). DataWeave libraries don't need the classifier — the Mule runtime discovers the `dw/` namespace from any jar on the classpath. Page updates: /proposal/mulesoft Phase 3 pill flipped `future` → `prototype`, with a new detail block naming the asset coordinates and the consumer wiring; the protoVsProd table's `OMH → FHIR transform` row now describes the shipped Exchange asset (was: 'reference dwl in the repo'). Verified: Exchange asset listing returns `status: published`; HEAD on both 1.0.0 artifacts returns 200; worker 1.0.5 deployed to CloudHub-US-West-1 Sandbox in 2:12 (BUILD SUCCESS); direct CloudHub `/health` + `/providers` smoke green. New docs at mulesoft/pause-omh-to-fhir-library/README.md (consumer pom snippet, DataWeave import example, the curl-PUT publish recipe with both gotchas inline) and an updated docs/MULESOFT_RUNBOOK.md.",
+        commits: [
+          { sha: "PENDING", label: "mulesoft: ship pause-omh-to-fhir-library v1.0.0 + worker 1.0.5 (Phase 3 first asset)" }
+        ],
+        status: "shipped"
+      }
+    ]
+  },
+  {
     range: "Week of June 13, 2026",
     headline: "Phase 2 across the stack: provider-graph + Data 360 + MuleSoft contract update",
     intro:

@@ -22,7 +22,7 @@
 
     <groupId>56707cc3-a0e3-4318-b110-78126aace370</groupId>
     <artifactId>pause-mulesoft-health-v1</artifactId>
-    <version>1.0.4</version>
+    <version>1.0.5</version>
     <packaging>mule-application</packaging>
 
     <name>pause-mulesoft-health-v1</name>
@@ -38,6 +38,22 @@
             <artifactId>mule-http-connector</artifactId>
             <version>1.9.1</version>
             <classifier>mule-plugin</classifier>
+        </dependency>
+        <!--
+          Pause-Health.ai Phase 3 shared Exchange asset. Plain Maven jar
+          carrying the OMH -> FHIR R5 DataWeave library at
+          `dw/pause/health/omh.dwl`. Promoting it out of this worker into
+          Exchange (Phase 3 — multi-customer fabric, /proposal/mulesoft)
+          means future Mule apps — pause-ingest-process-api, customer-side
+          Process APIs — can `import dw::pause::health::omh` without
+          re-implementing the OMH<->FHIR mapping. The 1.0.5 worker simply
+          pulls the dependency; the flow XML still inlines its bundle, so
+          the runtime response shape is byte-identical to 1.0.4.
+        -->
+        <dependency>
+            <groupId>56707cc3-a0e3-4318-b110-78126aace370</groupId>
+            <artifactId>pause-omh-to-fhir-library</artifactId>
+            <version>1.0.0</version>
         </dependency>
     </dependencies>
 

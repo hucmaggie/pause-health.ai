@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  Pause-Health.ai  -  pause-omh-to-fhir-library
+
+  Custom DataWeave Library. Promotes the OMH (IEEE 1752.1) -> FHIR R5
+  Observation transform out of pause-mulesoft-health-v1 and into a shared,
+  versioned Anypoint Exchange asset so any customer-side Process API can
+  call it directly instead of re-implementing the OMH<->FHIR mapping.
+
+  Exchange asset type: Custom DataWeave Library (consumed via
+  `<classifier>mule-plugin</classifier>` Maven dependency).
+
+  Coordinates:
+    groupId    = 56707cc3-a0e3-4318-b110-78126aace370   (Pause Health business group)
+    artifactId = pause-omh-to-fhir-library
+    version    = 1.0.0
+    packaging  = jar (no classifier; see README.md)
+
+  Consumer pom snippet + DataWeave import example + Exchange v2 publish
+  recipe (uses a direct curl PUT because mvn-deploy-plugin sends the wrong
+  Content-Type for .pom files): see README.md.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+            http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>56707cc3-a0e3-4318-b110-78126aace370</groupId>
+    <artifactId>pause-omh-to-fhir-library</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>pause-omh-to-fhir-library</name>
+    <description>Reusable DataWeave library: Open mHealth (IEEE 1752.1) -> FHIR R5 Observation</description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <!--
+      Plain Maven jar (no classifier). Exchange's `classifier=mule-plugin`
+      flag triggers a Mule extension-model extraction step that expects
+      Mule SDK metadata in META-INF; this library carries pure DataWeave
+      resources, not a Mule extension. The Mule runtime still discovers
+      the `dw/` namespace from any jar on the classpath, so consumers
+      can `import dw::pause::health::omh` without the classifier.
+    -->
+</project>

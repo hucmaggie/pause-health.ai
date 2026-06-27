@@ -364,3 +364,138 @@ required VPC peering setup we don't expect a Sandbox env to need).
 When the user is ready to execute this runbook, the agent has everything
 needed in the repo. The only external dependency is the Connected App
 credentials from Step 1.
+
+## Phase 3 — first shared Exchange asset shipped (2026-06-26)
+
+**Status: SHIPPED.** `pause-omh-to-fhir-library` v1.0.0 is published to
+Anypoint Exchange. The CloudHub worker `pause-mulesoft-health-v1` is
+deployed at v1.0.5 consuming it as a Maven dependency. Phase 3 pill on
+`/proposal/mulesoft` flipped `future` → `prototype`.
+
+**Why this counts as Phase 3 and not Phase 1c:** the `/proposal/mulesoft`
+investor page defines Phase 3 as "promote shared System APIs to versioned
+Anypoint Exchange assets … Customer-specific Process and Experience APIs
+remain in customer orgs." This ship is exactly that pattern, just with a
+DataWeave library instead of an OAS-spec'd System API — the same multi-
+customer wiring story, scoped down to one freestanding artifact that was
+already inside the live worker. Phase 1c (real System APIs against JHE +
+`pause_ingest`) still hasn't shipped; it's gated on a `pause-ingest-process-api`
+Mule project materializing.
+
+### What was promoted
+
+The OMH (IEEE 1752.1) → FHIR R5 Observation transform. It existed in the
+worker as `pause-mulesoft-health-v1/src/main/resources/transforms/omh-to-fhir-observation.dwl`
+(reachable from inside the worker classpath only; never invoked because the
+flow XML still inlines its bundle). Promoting it changes nothing for the
+runtime response shape; it makes the function `omhToObservation(sample, patientRef, idx)`
+callable as `dw::pause::health::omh` from any future Mule app that adds the
+dependency.
+
+### Coordinates
+
+| | |
+|---|---|
+| groupId | `56707cc3-a0e3-4318-b110-78126aace370` (Pause Health business group) |
+| assetId | `pause-omh-to-fhir-library` |
+| version | `1.0.0` |
+| packaging | `jar` (no classifier — see gotchas) |
+| Exchange asset type | `unknown` (plain Maven jar; not a Mule SDK extension) |
+| Status | `published` |
+
+### Consumer pattern (now live in `pause-mulesoft-health-v1` 1.0.5)
+
+```xml
+<dependency>
+    <groupId>56707cc3-a0e3-4318-b110-78126aace370</groupId>
+    <artifactId>pause-omh-to-fhir-library</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+```dataweave
+%dw 2.0
+import dw::pause::health::omh
+output application/json
+---
+omh::omhToObservation(payload, "Patient/pause-demo-patient-001", 0)
+```
+
+The deployable mule-application jar verifies this end-to-end — it ships
+the dependency at `repository/56707cc3-a0e3-4318-b110-78126aace370/pause-omh-to-fhir-library/1.0.0/pause-omh-to-fhir-library-1.0.0.jar`.
+
+### Two non-obvious gotchas hit during the publish
+
+1. **POM Content-Type.** `mvn-deploy-plugin` sends `.pom` uploads with
+   `Content-Type: application/x-www-form-urlencoded` (its default for
+   text-ish files); Anypoint Exchange v2 responds with
+   `500 java.io.EOFException: input contained no data`. The `.jar` upload
+   works fine because aether sends `application/java-archive` for jars.
+   Workaround: direct curl PUT for the POM with `Content-Type: application/xml`.
+   See `mulesoft/pause-omh-to-fhir-library/README.md` § "Build & publish"
+   for the full recipe (jar upload through curl too, for symmetry).
+
+2. **Don't use `classifier=mule-plugin` on a DataWeave-only library.**
+   Tagging triggers Exchange's `ms-exchange-tooling-service`
+   extension-model extraction step, which expects Mule SDK metadata in
+   `META-INF`. With a no-SDK jar it 502s with
+   `BadGatewayError: invalid json response body: Error proc... is not valid JSON`.
+   Plain `jar` packaging is correct — the Mule runtime picks up the
+   `dw/` namespace from any jar on the classpath without the classifier.
+   Use `classifier=mule-plugin` only for real Mule Custom Connectors
+   (built with the Mule SDK + Studio packager).
+
+### Publish recipe (Phase 3 future versions)
+
+Bump version in `mulesoft/pause-omh-to-fhir-library/pom.xml`. Then:
+
+```bash
+cd mulesoft/pause-omh-to-fhir-library
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+export PATH=$JAVA_HOME/bin:$PATH
+
+# 1. Build
+mvn -B clean package
+
+# 2. Mint an Anypoint Platform access token from the Connected App creds
+CRED=$(grep -A 3 anypoint-exchange-v2 ~/.m2/settings.xml | grep password | sed 's/.*>\(.*\)<.*/\1/')
+CLIENT_ID=$(echo $CRED | cut -d'~' -f1)
+CLIENT_SECRET=$(echo $CRED | cut -d'~' -f3)
+TOKEN=$(curl -s -X POST "https://anypoint.mulesoft.com/accounts/api/v2/oauth2/token" \
+  -d "grant_type=client_credentials&client_id=$CLIENT_ID&client_secret=$CLIENT_SECRET" \
+  | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+
+# 3. PUT POM + jar with the right Content-Types
+BASE=https://maven.anypoint.mulesoft.com/api/v2/organizations/56707cc3-a0e3-4318-b110-78126aace370/maven/56707cc3-a0e3-4318-b110-78126aace370/pause-omh-to-fhir-library/<NEW_VERSION>
+curl -s -X PUT "$BASE/pause-omh-to-fhir-library-<NEW_VERSION>.pom" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/xml" \
+  --data-binary @pom.xml -w "POM HTTP %{http_code}\n"
+curl -s -X PUT "$BASE/pause-omh-to-fhir-library-<NEW_VERSION>.jar" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/java-archive" \
+  --data-binary @target/pause-omh-to-fhir-library-<NEW_VERSION>.jar -w "JAR HTTP %{http_code}\n"
+```
+
+Anypoint Exchange tombstones deleted versions — never re-publish a
+version number that's been deleted. Bump to 1.0.1, 1.1.0, 2.0.0, etc.
+
+### How consumer worker re-deploys
+
+When the library bumps and the worker should consume the new version:
+
+1. Edit `mulesoft/pause-mulesoft-health-v1/pom.xml` — bump worker version
+   AND the library dependency version.
+2. Re-run the two-command CloudHub 2.0 deploy already documented in
+   `memory/project_mulesoft_state.md` (Exchange-v2 deploy-file, then
+   `-DmuleDeploy deploy`). The library-jar upload works through mvn —
+   only the standalone library POM hits the Content-Type gotcha.
+3. Smoke-test `/api/mulesoft/health` + `/api/mulesoft/providers` in prod.
+
+### Next assets to promote
+
+The plan called out three System APIs as Phase 3 candidates:
+`jhe-system-api`, `dbdp-system-api`, and per-wearable System APIs (Oura,
+Apple Health). None of these exist as deployable Mule projects yet —
+they're gated on Phase 1c (real System APIs wired to local JHE +
+`pause_ingest`). So the next Phase 3 ship is whichever of those Phase 1c
+artifacts materializes first; the OAS specs publish to Exchange the same
+way this DataWeave library did.

@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata = pageMetadata({
   title: "Investor Brief · MuleSoft Integration",
   description:
-    "MuleSoft Anypoint integration plane for Pause-Health.ai. Iterations 1–7 shipped: CloudHub 2.0 worker live, Flex Gateway enforcing JWT + rate limiting, OAS 3.0 spec published to Exchange. Full three-tier architecture activates with first design partner.",
+    "MuleSoft Anypoint integration plane for Pause-Health.ai. Iterations 1–7 shipped (CloudHub 2.0 worker live, Flex Gateway enforcing JWT + rate limiting, OAS 3.0 spec on Exchange). Phase 3 opened 2026-06-26 with the first shared Exchange asset (pause-omh-to-fhir-library v1.0.0). Full three-tier architecture activates with first design partner.",
   path: "/proposal/mulesoft",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "MuleSoft integration strategy — Pause-Health.ai investor brief."
@@ -134,9 +134,9 @@ const protoVsProd = [
   {
     aspect: "OMH → FHIR transform",
     proto:
-      "mulesoft/transforms/omh-to-fhir.example.dwl — DataWeave 2.0 reference; same file ships into the real project.",
+      "Shipped 2026-06-26 as pause-omh-to-fhir-library v1.0.0 on Anypoint Exchange. CloudHub worker (1.0.5) consumes it as a Maven dependency at dw::pause::health::omh.",
     prod:
-      "Promoted to a shared Anypoint Exchange asset reused across customers."
+      "Same shared Exchange asset, reused unchanged across customer Mule apps and a future pause-ingest-process-api."
   },
   {
     aspect: "Wearable vendor adapters",
@@ -180,10 +180,10 @@ const phases: Array<{
   },
   {
     name: "Phase 3 — Multi-customer fabric",
-    status: "future",
-    duration: "Ongoing",
+    status: "prototype",
+    duration: "Started · 2026-06-26",
     detail:
-      "Promote shared System APIs (Oura, Apple Health, JHE) to versioned Anypoint Exchange assets. Customer-specific Process and Experience APIs remain in customer orgs."
+      "First shared artifact promoted to Anypoint Exchange: pause-omh-to-fhir-library v1.0.0, the Open mHealth → FHIR R5 Observation DataWeave transform, published as a versioned asset on the Pause Health business group. The CloudHub 2.0 worker now consumes it as a Maven dependency (1.0.5 in production, response shape byte-identical to 1.0.4) — proving the multi-customer dependency story end-to-end. Next: promote jhe-system-api and dbdp-system-api specs once their Mule projects materialize in Phase 1c."
   }
 ];
 
