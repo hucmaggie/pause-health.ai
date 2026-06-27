@@ -150,47 +150,99 @@ ARCH_DIAGRAM = """\
 """
 
 MONOREPO_LAYOUT = """\
-shipping-quote-by-zip-api/                  ← legacy repo name; retained
+pause-health.ai/                            ← repo root (Apache-2.0, public on GitHub)
 ├── frontend/                               ← Next.js 14 App Router site
 │   ├── app/                                  Pages + API routes
-│   │   ├── (marketing routes)
-│   │   ├── proposal/*                        Investor brief deep-dives
-│   │   ├── demo/*                            Clickable prototype
-│   │   └── api/                              All mocked APIs live here
-│   │       ├── agents/care-router/           A2A agent endpoints
-│   │       ├── agent-fabric/                 Agent Fabric console APIs
+│   │   ├── (marketing routes, about, blog, careers, hipaa, etc.)
+│   │   ├── proposal/*                        Investor brief deep-dives (16 routes)
+│   │   ├── demo/*                            Clickable prototype (intake/routing/
+│   │   │                                       patient/analytics/agent-fabric)
+│   │   ├── provider/                         Browseable directory (Phase-2 NPPES);
+│   │   │                                       /provider/[npi] profile pages
+│   │   ├── changelog/, roadmap/              Versioned project state
+│   │   └── api/
+│   │       ├── agents/care-router/           A2A agent + tool calls
+│   │       ├── agent-fabric/                 Console-backing endpoints
 │   │       ├── intake/route-to-care-router/  Handoff orchestrator
-│   │       ├── mulesoft/                     Mocked Experience APIs
-│   │       └── data-360/                     Mocked Salesforce Data 360
-│   ├── components/                           UI components + intake fallback + agentforce-embed
-│   ├── lib/                                  a2a, care-router, agent-fabric, data-360, mulesoft-mocks
-│   │   └── salesforce/                       auth.ts (OAuth client creds), grounding.ts (real SOQL),
-│   │                                         auth.test.ts, grounding.test.ts (vitest)
-│   ├── scripts/                              salesforce-smoke.mjs, salesforce-seed.mjs,
-│   │                                         grounding-smoke.mjs (idempotent demo data)
+│   │       ├── intake/prechat-context/       Hidden-prechat dossier endpoint
+│   │       ├── mulesoft/                     Experience APIs (live-or-mock proxy)
+│   │       ├── data-360/                     Health Cloud + Data Cloud read paths
+│   │       ├── salesforce/headless-360/*     PKCE External Client App seam (6 routes)
+│   │       ├── mcp/                          Streamable HTTP MCP server (Agentforce 3.0
+│   │       │                                   Registry); /api/mcp/whoami diagnostic
+│   │       └── agent-fabric/sf-sink/         Platform Event egress diagnostics
+│   ├── components/                           UI + intake fallback + agentforce-embed +
+│   │                                          recommended-providers + status-pill
+│   ├── lib/                                  a2a, care-router, agent-fabric, data-360,
+│   │   │                                      mulesoft-mocks, mscp-overlay, zip-centroids
+│   │   ├── salesforce/                       auth.ts + grounding.ts + tests
+│   │   ├── salesforce-headless360.ts         PKCE seam + validateMcpApiBearer
+│   │   ├── salesforce-platform-event-sink.ts Agent Fabric trace egress
+│   │   ├── mulesoft/health.ts + providers.ts Live-or-mock proxy with Auth0-JWT path
+│   │   └── mcp/host.ts                       Care Router MCP-host shim
+│   ├── scripts/                              smoke-test.mjs (168 routes),
+│   │                                          salesforce-seed.mjs, salesforce-smoke.mjs,
+│   │                                          grounding-smoke.mjs, preflight.mjs
 │   └── public/.well-known/mcp.json           MCP discovery descriptor
 │
+├── cli/                                    ← @pause-health/cli (Headless 360 gap #4)
+│   └── src/cli.ts + src/commands/{health,providers,timeline,intake}.ts
+│
+├── mcp/                                    ← @pause-health/mcp stdio MCP server
+│   ├── src/server.ts                         Four MCP tools (stdio transport)
+│   └── scripts/smoke.mjs                     End-to-end SDK smoke test
+│
+├── mulesoft/                               ← MuleSoft assets
+│   ├── pause-mulesoft-health-v1/             DEPLOYABLE Mule 4 app on CloudHub 2.0
+│   │                                          (v1.0.5, serving /health + /providers)
+│   ├── pause-omh-to-fhir-library/            Phase-3 shared DataWeave library on Exchange
+│   ├── specs/                                Eight OAS-3.0 spec assets on Exchange:
+│   │                                          pause-jhe-system-api-spec,
+│   │                                          pause-dbdp-system-api-spec,
+│   │                                          pause-oura/whoop/garmin/healthkit/empatica-system-api-spec,
+│   │                                          pause-ingest-process-api-spec
+│   ├── flex-gateway/                         Docker + ngrok runtime enforcement
+│   │                                          (JWT + rate limiting via Flex Gateway)
+│   ├── flows/pause-process-api.example.xml   Reference Process-tier flow
+│   └── transforms/omh-to-fhir.example.dwl    Reference DataWeave transform
+│
+├── salesforce/                             ← SFDX project (Phase 18b)
+│   ├── force-app/main/default/{flows,objects,permissionsets,messagingChannels,
+│   │   namedCredentials}                     Version-controlled Salesforce metadata
+│   └── deploy.sh, retrieve.sh
+│
 ├── pause_ingest/                           ← Python wearable ingest worker
-│   ├── flirt-based feature pipeline          HRV, sleep, vasomotor windows
+│   ├── pause_ingest/{convert,exchange,features*,empatica,data_cloud,cohort}.py
+│   ├── examples/oura_sample_upload.py        End-to-end smoke against real JHE
+│   ├── examples/data_cloud_push.py           Push real DBDP features to Data Cloud
+│   ├── tests/test_exchange_real_jhe.py       PAUSE_USE_REAL_JHE=1 opt-in suite
 │   └── pyproject.toml
 │
-├── mcp/                                    ← @pause-health/mcp MCP server
-│   ├── src/server.ts                         Four MCP tools wrapping the Experience APIs
-│   └── scripts/smoke.mjs                     End-to-end MCP smoke test
+├── provider_ingest/                        ← NPPES → Pause directory pipeline
+│   └── tracked refresh harness + 3-state sanctions overlay (CA/NY/TX)
 │
-├── mulesoft/                               ← MuleSoft reference artifacts
-│   ├── system-api/, process-api/, experience-api/   API-led tiers
-│   └── dataweave/omh-to-fhir.dwl             OMH → FHIR R5 transform
+├── jhe-local/                              ← JupyterHealth Exchange local stack
+│   └── bootstrap.sh + teardown.sh            Docker-compose, idempotent seed
 │
-├── docs/                                   ← Engineering runbooks alongside design docs
-│   ├── mulesoft-integration.md               Three-tier API-Led architecture
-│   ├── jupyterhealth-integration.md          Clinical substrate design
-│   ├── PHASE_3_RUNBOOK.md                    Next-session Agentforce deployment plan
-│   └── MULESOFT_RUNBOOK.md                   Next-session Anypoint deployment plan
+├── data-cloud/                             ← Salesforce Data Cloud assets
+│   ├── Pause_HRV_RMSSD_30d.sql, Pause_Vasomotor_Burden_30d.sql,
+│   │   Pause_Sleep_Disruption_7d.sql         Three live Calculated Insights
+│   └── Pause_Wearable_Feature.dlo-schema.json
 │
-├── app.py                                  ← Legacy FastAPI service (still functional)
-├── requirements.txt                          Python runtime deps
-└── README.md                                 Updated each phase
+├── docs/                                   ← 18+ engineering runbooks (point-in-time)
+│   ├── MULESOFT_RUNBOOK.md, MULESOFT_PHASE_1_HANDOFF.md, MULESOFT_API_MANAGER_RUNBOOK.md,
+│   │   MULESOFT_PHASE_2_DATA_CLOUD.md, FLEX_GATEWAY_RUNBOOK.md
+│   ├── HEADLESS_360_RUNBOOK.md, AGENTFORCE_VOICE_RUNBOOK.md,
+│   │   AGENTFORCE_PROVIDER_ACTION_RUNBOOK.md, SF_PLATFORM_EVENT_SINK_RUNBOOK.md
+│   ├── PHASE_2_ACTIVATION_CHECKLIST.md, PHASE_2_INGESTION_API_RUNBOOK.md,
+│   │   PHASE_3_RUNBOOK.md
+│   ├── JHE_SETUP_RUNBOOK.md, JHE_REAL_RUN_2026-06-16.md
+│   ├── PROVIDER_GRAPH_PHASE_1_RUNBOOK.md, branch-protection.md
+│   └── jupyterhealth-integration.md, mulesoft-integration.md
+│
+├── lighthouse-history/                     ← Nightly auto-maintained CWV time series
+├── LICENSE, CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md  ← OSS hygiene (Apache-2.0)
+└── README.md                                 ← Updated each phase
 """
 
 PHASES = [
@@ -1434,6 +1486,980 @@ PHASES = [
             "have I reported?' in the live chat.",
         ],
     },
+    {
+        "title": (
+            "Phase 18c — Visible Pre-Brief Panel pivot (V2 prechatAPI dead end)"
+        ),
+        "ask": (
+            "Verify the Phase 18b hidden-prechat pipeline end-to-end and "
+            "fix whatever still isn't carrying the dossier into the agent."
+        ),
+        "decisions": [
+            "Phase 18a/b's full 5-component pipeline (channel customParameters "
+            "→ routing Flow → MessagingSession.Pause_*__c → Bot contextVariables "
+            "→ topic instructions) was deployed correctly and verified at "
+            "every link, but MessagingSession.Pause_*__c stayed null on every "
+            "session. Two evenings of debug landed on a definitive root cause: "
+            "Salesforce's Embedded Messaging V2 SDK's prechatAPI is an empty "
+            "no-op Proxy. setHiddenPrechatFields returns true for every method "
+            "call but no bytes go out over the wire. The Salesforce-side Flow "
+            "fires (ApexLogs prove it) but all 20 input variables come in null.",
+            "Chose to ship a visible Pre-Brief Panel rather than a feature that "
+            "lies. /demo/intake now renders the dossier as a card above the "
+            "Agentforce embed; the chat agent itself walks a generic menopause "
+            "intake. Personalization lives in the surrounding UI, honest and "
+            "inspectable. Phase 18b Salesforce metadata stays in place so the "
+            "moment the V2 SDK binding works, the in-band path lights up.",
+            "Confirmed the empty-Proxy state is the SDK's actual fallback "
+            "behavior, not a configuration mistake on our side: bootstrap.min.js "
+            "for this deployment contains 25 mentions of 'prechat' and 5 of "
+            "'setHiddenPrechatFields' but ZERO references to any of our 19 "
+            "custom field names. The SDK fetches the allowed-field list from "
+            "somewhere at runtime; that fetch isn't returning our fields, so "
+            "the SDK falls back to the empty Proxy.",
+        ],
+        "built": [
+            "components/pre-brief-panel.tsx — renders the full dossier with "
+            "sections for Intake Scores, Care State, Cohort Context, Identity "
+            "Resolution. Two badges at the top declare Identity: real|mock + "
+            "Grounding: real|mock so reviewers see the wiring.",
+            "components/intake-patient-stage.tsx wires PreBriefPanel between "
+            "the persona picker and AgentforceEmbed; passes prechatFields=null "
+            "so the empty-Proxy code path is dormant.",
+            "components/agentforce-embed.tsx — doc comment now documents the "
+            "empty-Proxy behavior. The setHiddenPrechatFields call path is "
+            "preserved so the in-band feature lights up automatically if "
+            "Salesforce ever fixes the V2 binding.",
+            "PHASE_3_RUNBOOK.md gained a full 'Phase 18c: dead end' section "
+            "with the root-cause analysis, the 10 things we tried that didn't "
+            "fix it, the smoking-gun ApexLog excerpt, the visible-panel pivot "
+            "shipped, and the confirmation script for re-checking the binding.",
+        ],
+        "verified": [
+            "Reproduced the empty-Proxy state live on production in Chrome "
+            "incognito (window.embeddedservice_bootstrap.prechatAPI is a "
+            "Proxy(Object) {} with a get trap that returns true for every "
+            "method lookup).",
+            "Pre-Brief Panel renders above the chat on /demo/intake, picker "
+            "selection updates both the panel and re-keys the chat SDK, "
+            "Identity + Grounding badges flip real ↔ mock based on env.",
+            "All Phase 18b Salesforce metadata remains queryable via Tooling "
+            "API — left in place intentionally as a regression test for the "
+            "moment the SDK binding starts working.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 19 — /demo/* rebuild for persona-aware, Phase-2-honest UX"
+        ),
+        "ask": (
+            "Audit every /demo/* page against the shipped capabilities and "
+            "rebuild them so reviewers see live data, not stale fixtures. "
+            "Carry the selected persona across all five demo surfaces so "
+            "the flow reads as one coherent journey."
+        ),
+        "decisions": [
+            "Built a shared DemoShell with persona-preserving nav (intake → "
+            "patient → routing → analytics → agent-fabric) so the URL query "
+            "string carries personaId across pages. PersonaJourneyFooter "
+            "appears on all five so the next step is always one click away.",
+            "Rebuilt /demo/patient as a live persona-aware Care Detail page "
+            "rendering the actual federated dossier (real Salesforce when "
+            "SF_* env vars set, mock otherwise) instead of a static fixture.",
+            "Rebuilt /demo/routing as a persona-aware demonstration that "
+            "actually invokes the Care Router for the selected persona and "
+            "shows the resulting decision card with cited insights.",
+            "Rebuilt /demo/analytics with live operational metrics — cohort "
+            "counts, pathway distribution, queue depth — pulled from the "
+            "same federated store the agent uses.",
+            "Made /demo/agent-fabric persona-filterable so a reviewer can "
+            "click a persona and see only spans from that patient's flows.",
+        ],
+        "built": [
+            "components/demo-shell.tsx — shared persona-preserving nav + "
+            "PersonaJourneyFooter on every demo route.",
+            "frontend/app/demo/{patient,routing,analytics,agent-fabric}/ — "
+            "five rebuilt pages, all consuming the live federated dossier.",
+            "components/pre-brief-panel.tsx promoted into a persona-aware "
+            "card used across the demo flow.",
+            "DEMO_COHORT in lib/demo-cohort.ts hardened so every demo "
+            "surface, the seeder, and the prechat-context endpoint draw "
+            "from one authoritative list.",
+        ],
+        "verified": [
+            "ESLint + tsc clean. next build passes.",
+            "Manual end-to-end: select Anika Patel on /demo/intake → click "
+            "through to /demo/patient → /demo/routing → /demo/analytics → "
+            "/demo/agent-fabric, with the persona context preserved on every "
+            "page and the agent-fabric console filtered to her spans only.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 20 — Proposal-page honesty sweep + StatusPill standardization"
+        ),
+        "ask": (
+            "The /proposal/* pages had drifted into present-tense claims "
+            "('our integration runs through MuleSoft Anypoint') for surfaces "
+            "that were still mocked. Fix the tense across 14 deep-dives "
+            "and standardize the prototype-vs-production signal."
+        ),
+        "decisions": [
+            "Extracted a shared <StatusPill> component (designed | partial | "
+            "prototype | shipped | future) with consistent label + color "
+            "mapping across every investor page. Retrofit 8 polished pages "
+            "onto it first, then propagated to the remaining 6.",
+            "Reframed every page's narrative voice to the shipped reality: "
+            "explicit 'today' framing on prototype-stage cards, explicit "
+            "'plan' on designed-only ones. Where /demo links existed, "
+            "added per-card 'See it live' links.",
+            "Restructured the /proposal hub into Arc A (investment thesis: "
+            "customers + insights + competition + data + strategy + "
+            "technology) and Arc B (architecture deep-dives: integration + "
+            "dbdp + provider-graph + agentforce + mulesoft + mcp + "
+            "agent-fabric + data-360). Each card now shows the pill of "
+            "its target page so a reviewer can scan the entire shipped "
+            "state without drilling.",
+        ],
+        "built": [
+            "components/status-pill.tsx — the canonical five-state component.",
+            "Per-page honesty + pill passes on /proposal/agentforce, "
+            "/proposal/mcp, /proposal/mulesoft, /proposal/integration, "
+            "/proposal/dbdp, /proposal/provider-graph, "
+            "/proposal/menopause-society, /proposal/data-360.",
+            "Per-card pill rollup on /proposal/full (the single-document "
+            "narrative) including a deduplicated $1,685 ICP figure that "
+            "had been double-counted in two places.",
+            "/proposal hub rebuilt with Arc A / Arc B grouping + per-card "
+            "demo links.",
+        ],
+        "verified": [
+            "ESLint + tsc clean across all touched files.",
+            "Every prototype-vs-production claim on /proposal/* now matches "
+            "either a live deployment, a checked-in mock, or a documented "
+            "design — no ambient present-tense fiction.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 21 — OSS hygiene: Apache-2.0 + CONTRIBUTING + smoke harness"
+        ),
+        "ask": (
+            "Surface the project as open-source-ready: license, "
+            "contribution norms, security policy, and a smoke-test harness "
+            "that proves the site responds correctly across every route."
+        ),
+        "decisions": [
+            "Released the entire repo under Apache-2.0 (chosen over MIT for "
+            "the explicit patent grant — relevant given the OMH + FHIR "
+            "patent landscape).",
+            "Authored CONTRIBUTING.md + CODE_OF_CONDUCT.md + SECURITY.md "
+            "from scratch rather than templating, so every line maps to "
+            "Pause's actual practice (branch protection, code review, "
+            "PR-only merges to main, vulnerability disclosure flow).",
+            "Built scripts/smoke-test.mjs to probe every committed route "
+            "and surface API count, status code, byte size, and ms latency "
+            "per row. Output is checked-in as SMOKE_TEST_RESULTS.md so the "
+            "honesty of every page is part of the repo. Per-target reports "
+            "(localhost vs production) write to separate files so a prod "
+            "run doesn't clobber the local baseline.",
+            "Added /changelog and /roadmap as first-class routes alongside "
+            "the proposal hub. Every shipped feature gets a row in "
+            "/changelog with its SHA backfilled in a follow-up commit; "
+            "/roadmap lists what's queued vs in-progress vs designed.",
+        ],
+        "built": [
+            "LICENSE (Apache-2.0), CONTRIBUTING.md, CODE_OF_CONDUCT.md, "
+            "SECURITY.md, NOTICE.",
+            "frontend/scripts/smoke-test.mjs — probes ~168 routes; counts "
+            "per category; per-target reports.",
+            "SMOKE_TEST_RESULTS.md (committed) + SMOKE_TEST_RESULTS.*.md "
+            "(gitignored per-target).",
+            "/changelog and /roadmap routes with versioned entries.",
+        ],
+        "verified": [
+            "First smoke run: 132/132 pass. Subsequent runs: 160/160, then "
+            "168/168 as new routes shipped.",
+            "Apache-2.0 LICENSE validates via choosealicense.com checker.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 22 — MuleSoft Anypoint Phase 1: live CloudHub 2.0 worker"
+        ),
+        "ask": (
+            "Execute docs/MULESOFT_RUNBOOK.md: deploy one real Mule app to "
+            "the connected Anypoint org's CloudHub 2.0, swap "
+            "/api/mulesoft/health from mock to a live proxy with graceful "
+            "degradation."
+        ),
+        "decisions": [
+            "Authored pause-mulesoft-health-v1 as a real Mule 4 application "
+            "(runtime 4.11.2, mule-application packaging, mule-http-connector "
+            "dependency) and deployed via mvn-maven-plugin to Cloudhub-US-"
+            "West-1 in the Sandbox env.",
+            "Used OAuth 2.0 Client Credentials via the org's External Client "
+            "App ('pause-prototype-cloudhub' Connected App, rotated mid-build "
+            "after credentials were leaked in conversation; the original "
+            "client_id/secret are dead). Mvn-driven deploy was made to work "
+            "end-to-end with the right scope grants on the External Client "
+            "App (Runtime Manager env-scoped + Exchange org-scoped).",
+            "Built lib/mulesoft/health.ts as a live-or-mock proxy: when "
+            "MULESOFT_HEALTH_BASE_URL is set in Vercel env, /api/mulesoft/"
+            "health proxies to the live worker (meta._source = "
+            "'live-mulesoft'). When unset, or on any upstream failure, "
+            "serves the mock with meta._source = 'mock-fallback' + "
+            "_liveAttempted: true. Reviewers and previews still work "
+            "with zero credentials.",
+            "Repo's `mulesoft/` reorganized: removed legacy Northstar "
+            "shipping-API artifacts; pause-mulesoft-health-v1/ is now the "
+            "canonical deployable Mule project alongside the reference "
+            "flows/ and transforms/ directories.",
+            "MULESOFT_PHASE_1_HANDOFF.md authored: step-by-step deploy "
+            "playbook with the External Client App procurement, the v60 "
+            "API version, the right Maven incantation, the JDK constraint "
+            "(Java 17 required — Java 25 is rejected by mule-maven-plugin).",
+        ],
+        "built": [
+            "mulesoft/pause-mulesoft-health-v1/ — pom.xml, mule-artifact.json, "
+            "src/main/mule/health-flow.xml (GET /health serving the demo "
+            "patient FHIR Bundle), src/main/resources/config.yaml.",
+            "frontend/lib/mulesoft/health.ts — live-or-mock proxy with "
+            "Auth0-JWT preparation (filled in iteration 3+).",
+            "Vercel env vars: MULESOFT_HEALTH_BASE_URL pointing at the "
+            "CloudHub worker (Production + Preview).",
+            "docs/MULESOFT_PHASE_1_HANDOFF.md (deploy playbook), updated "
+            "docs/mulesoft-integration.md, /proposal/mulesoft updated "
+            "with the LIVE badge for /health.",
+            "README.md + /changelog + /roadmap reflect the live state.",
+        ],
+        "verified": [
+            "curl https://pause-health.ai/api/mulesoft/health | jq "
+            "'.meta._source' returns 'live-mulesoft' in production.",
+            "Degradation path verified: stopped the worker, the proxy "
+            "returns 'mock-fallback' + _liveAttempted: true without 500ing.",
+            "Anypoint Runtime Manager shows pause-mulesoft-health-v1 as "
+            "Started, 1 replica, 0.1 vCores, in Cloudhub-US-West-1.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 23 — MuleSoft iterations 2-7: API Manager governance, "
+            "Flex Gateway, JWT, rate limiting, OAS spec on Exchange"
+        ),
+        "ask": (
+            "Layer real Anypoint governance onto the live worker so the "
+            "demo's posture matches what a customer org would deploy: API "
+            "Manager Exchange asset, runtime policy enforcement at the "
+            "gateway, OAS 3.0 spec for the asset, working JWT auth."
+        ),
+        "decisions": [
+            "Iteration 2: added /providers Experience API (the menopause "
+            "provider directory) to the same worker, version 1.0.2 — gave "
+            "Anypoint API Manager something to govern beyond a single "
+            "endpoint.",
+            "Iteration 3: stood up Flex Gateway in Connected Mode (Docker "
+            "container locally + an ngrok tunnel for the Vercel-side path). "
+            "Applied Client ID Enforcement policy at the gateway. Documented "
+            "in FLEX_GATEWAY_RUNBOOK.md.",
+            "Iteration 4: added Rate Limiting SLA-based policy alongside "
+            "Client ID Enforcement; Demo tier (10 req/min auto-approve) "
+            "and Production tier (1000 req/min manual). Proxy sends both "
+            "Authorization: Basic + client_id/client_secret headers — the "
+            "SLA policy can't read the Basic-encoded body, so the headers "
+            "carry the same identity twice.",
+            "Iteration 5: authored pause-provider-experience-api.oas3.yaml "
+            "(OpenAPI 3.0) covering /health + /providers + the rate-limit "
+            "headers + the auth shape, published to Anypoint Exchange as a "
+            "REST API asset.",
+            "Iteration 6: replaced Client ID Enforcement with JWT Validation "
+            "(Auth0 RS256/JWKS, audience-validated, expiry-mandatory). The "
+            "proxy now fetches an M2M Bearer-JWT from Auth0 via lib/mulesoft/"
+            "auth.ts and presents it on every call. Falls back to Basic Auth "
+            "if AUTH0_MULESOFT_* env vars are unset (zero-cost downgrade).",
+            "Iteration 7: replaced SLA-based Rate Limiting with plain Rate "
+            "Limiting (10 req/min global). The SLA variant was incompatible "
+            "with JWT auth — its contract-lookup step BadArgument-errored on "
+            "JWT-authenticated requests. Plain rate limiting works orthogonally.",
+        ],
+        "built": [
+            "mulesoft/pause-mulesoft-health-v1/src/main/mule/health-flow.xml "
+            "expanded with /providers + DataWeave OMH→FHIR transform on "
+            "/health (v1.0.3).",
+            "mulesoft/flex-gateway/ — docker-compose.yml + .env.example + "
+            "registration.yaml.",
+            "mulesoft/pause-provider-experience-api.oas3.yaml — 591-line OAS "
+            "3.0 spec published to Exchange as pause-provider-experience-api-"
+            "spec v1.0.0.",
+            "frontend/lib/mulesoft/auth.ts — Auth0 M2M token acquisition with "
+            "in-process caching + in-flight dedup.",
+            "Vercel env vars: AUTH0_MULESOFT_CLIENT_ID / SECRET / DOMAIN / "
+            "AUDIENCE + MULESOFT_CLIENT_ID / SECRET (fallback).",
+            "docs/MULESOFT_API_MANAGER_RUNBOOK.md, docs/FLEX_GATEWAY_RUNBOOK.md.",
+        ],
+        "verified": [
+            "/api/mulesoft/health and /api/mulesoft/providers both report "
+            "meta._source: 'live-mulesoft' end-to-end through Auth0-JWT → "
+            "Flex Gateway → ngrok → CloudHub worker.",
+            "Manual probe: curl with no creds against the gateway returns "
+            "401; curl with an Auth0 M2M Bearer-JWT returns 200; 10 successive "
+            "calls in 60s show the rate-limit headers (x-ratelimit-limit: 10, "
+            "remaining: 0) and the 11th returns 429.",
+            "/proposal/mulesoft updated; iteration 1-7 marked shipped; "
+            "investor page narrative honest about which iterations are live "
+            "and which are designed.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 24 — Salesforce Data Cloud Phase 2 SHIPPED (CIs over real DMOs)"
+        ),
+        "ask": (
+            "Activate the Data Cloud workspace that's been provisioned-but-"
+            "empty since Phase 14: three Calculated Insights aggregating "
+            "real wearable + symptom data per persona, with the grounding "
+            "endpoint flipping from intake-only baselines to Phase 2 (SOQL "
+            "+ Data Cloud CI fusion)."
+        ),
+        "decisions": [
+            "Authored three SQL CIs (Pause_HRV_RMSSD_30d, "
+            "Pause_Vasomotor_Burden_30d, Pause_Sleep_Disruption_7d) over "
+            "ssot__Individual__dlm to start. Used MAX(constant) per-persona "
+            "wrappers so the CIs return deterministic seeded values until "
+            "real Data Streams hydrate them — then the CI SQL doesn't need "
+            "rewriting, only the underlying DLO does.",
+            "Discovered FIVE non-obvious gotchas the original Phase-2 "
+            "runbook got wrong, documented in PHASE_2_ACTIVATION_CHECKLIST.md: "
+            "(1) a core Salesforce client_credentials token is NOT valid "
+            "against the c360a tenant — you must exchange it via POST "
+            "<instanceUrl>/services/a360/token with grant_type=urn:salesforce:"
+            "grant-type:external:cdp. The c360a gateway rejects un-exchanged "
+            "tokens with a 400 and an empty body (not a 401). (2) The CI "
+            "query endpoint is GET /api/v1/insight/calculated-insights/<name>?"
+            "filters=[field=value], NOT /insight/query?insight_api_name=. "
+            "(3) DC appends __cio to every CI's API name. (4) The tenant "
+            "instance_url returned by /services/a360/token is authoritative; "
+            "prefer it over SF_DC_TENANT_URL. (5) cdp_api, cdp_profile_api, "
+            "cdp_ingest_api scopes must be on the External Client App.",
+            "Built lib/data-cloud.ts as the canonical exchange-then-query "
+            "client. Used by both the grounding endpoint and the Phase 2-bis "
+            "ingestion push path. Falls back independently per-insight: if "
+            "the HRV CI fails the grounding still includes vasomotor + "
+            "sleep; if all three fail the endpoint reports source: 'intake-"
+            "baseline' and the Care Router still decides on the intake data.",
+            "Phase 2-bis (hardening): wired pause_ingest to compute REAL "
+            "feature math and PUSH per-patient rows to a Pause_Wearable DLO "
+            "via the Data Cloud Ingestion API. CI SQL was upgraded from "
+            "MAX(constant) to actual SUM/AVG over the pushed rows. The "
+            "frontend grounding endpoint emits identical output columns; "
+            "no consumer-side change. Documented in PHASE_2_INGESTION_API_"
+            "RUNBOOK.md.",
+        ],
+        "built": [
+            "data-cloud/Pause_HRV_RMSSD_30d.sql, Pause_Vasomotor_Burden_30d."
+            "sql, Pause_Sleep_Disruption_7d.sql — three real CIs deployed to "
+            "trailsignup org and aggregated into the grounding endpoint.",
+            "data-cloud/Pause_Wearable_Feature.dlo-schema.json — DLO schema "
+            "for the Ingestion API push path.",
+            "frontend/lib/data-cloud.ts — exchange-then-query client with "
+            "per-insight independent fallback.",
+            "pause_ingest/pause_ingest/data_cloud.py + features_sleep.py + "
+            "features_vasomotor.py + cohort.py — real per-persona feature "
+            "math + push client. examples/data_cloud_push.py wires the "
+            "end-to-end push.",
+            "docs/PHASE_2_ACTIVATION_CHECKLIST.md (the five gotchas) + "
+            "docs/PHASE_2_INGESTION_API_RUNBOOK.md (the Phase 2-bis push "
+            "playbook) + docs/MULESOFT_PHASE_2_DATA_CLOUD.md (full narrative).",
+            "/proposal/data-360 updated with Phase 2 LIVE banner + Phase 2-bis "
+            "split-out card.",
+        ],
+        "verified": [
+            "Production /api/data-360/patient/<id>/grounding returns "
+            "\"Phase 2: SOQL (Health Cloud) + Data Cloud Calculated "
+            "Insights (HRV/vasomotor/sleep)\" on every call.",
+            "Per-insight fallback verified: bad CI name → that one insight "
+            "falls back; other two still return live values.",
+            "Phase 2-bis push: pause_ingest examples/data_cloud_push.py "
+            "successfully pushes rows; CI SQL reads them back; grounding "
+            "endpoint serves the real values without code change.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 25 — Provider graph Phase 1+2: NPPES ingest, distance "
+            "ranking, sanctions overlays, /provider UI"
+        ),
+        "ask": (
+            "Move the provider directory from the synthetic mock to a real "
+            "NPPES-derived dataset with build-time license-sanction filtering "
+            "and clinically-meaningful ranking. Make it queryable from the "
+            "Care Router AND surface it as a browseable /provider UI."
+        ),
+        "decisions": [
+            "Phase 1: built provider_ingest/ — a Python pipeline that streams "
+            "the monthly CMS NPPES bulk file, filters to a curated set of "
+            "menopause-relevant NUCC taxonomies (OB/GYN, family medicine, "
+            "internal medicine, urogyn, geriatric care), overlays the "
+            "Menopause Society's MSCP credential list (synthetic + self-"
+            "reported NPPES today, licensed feed once partnership lands), "
+            "and emits a 2,015-row directory shipped to "
+            "frontend/lib/provider-directory.generated.json. End-to-end "
+            "refresh runs in ~1m50s via the tracked refresh_national.sh.",
+            "Phase 2: added Census 2020 ZCTA centroid distance ranking "
+            "(provider_ingest/centroids.py — bundled in both the Python "
+            "pipeline and lib/zip-centroids.ts on the Next.js side so "
+            "build-time stamping and request-time resolution draw from "
+            "one source), six NPPES service-line signals "
+            "(FACOG/FAAFP/WHNP/multi-taxonomy/etc.) as a tie-breaker on the "
+            "relevant-local tier, and real-shaped synthetic insurance "
+            "acceptance per NPI (8 canonical plan tokens: aetna/bcbs/"
+            "cigna/humana/kaiser/medicaid/medicare/uhc).",
+            "Sanctions filtering: three state license-disposition overlays "
+            "(CA Medi-Cal S&I list, NY OPMC, TX TMB) cross-walked to NPPES "
+            "via license number + state code (NPPES has 15 license slots "
+            "per provider). Total 1,720 sanctioned candidates dropped at "
+            "build time in the June 2026 build (588 CA + 849 NY + 283 TX). "
+            "Survivors carry licenseStatus: 'active'; the patient-safety "
+            "filter is verifiable per response under provenance.dataset."
+            "sanctionedFilteredBySource.",
+            "Built /provider as a browseable directory index and "
+            "/provider/[npi] as per-provider profile pages. Filter "
+            "checkboxes (MSCP-certified-only, fallback ladder, telehealth-"
+            "only) work as URL query params. The Care Router consumes the "
+            "same queryProviderDirectory function the /provider UI calls — "
+            "triage and the directory stay in lockstep by construction.",
+            "Care Router wiring: MSCP-pathway routing decisions now attach "
+            "a distance-ranked, plan-narrowed, modality-aware recommended-"
+            "provider list to the decision payload. Three recommendations "
+            "per decision; the routing card on /demo/routing renders them; "
+            "agent-fabric trace spans include them in the decision attributes.",
+        ],
+        "built": [
+            "provider_ingest/ Python pipeline — NPPES streamer, NUCC filter, "
+            "MSCP overlay, centroid stamper, sanctions cross-walker, tracked "
+            "refresh harness, sidecar build metadata (date, source-file, "
+            "filter counts, sanctions-by-source).",
+            "data files: frontend/lib/provider-directory.generated.json "
+            "(2,015 providers across all 50 states + DC, 930 ZIP-3 prefixes, "
+            "15 MSCP-certified + 2,000 menopause-relevant non-certified).",
+            "frontend/lib/mulesoft-mocks.ts queryProviderDirectory — the "
+            "tier ladder (certified-local → certified-national → relevant-"
+            "local → certified-remote → none) and the insurance/telehealth "
+            "filter stack.",
+            "/provider browseable directory index + /provider/[npi] profile "
+            "pages + filter UI with three checkboxes.",
+            "Care Router integration: care-router-pathways.ts attaches "
+            "recommended-providers to MSCP decisions; recommended-providers."
+            "tsx renders them on /demo/routing with distance + insurance "
+            "+ telehealth chips.",
+            "Intake additions: patientZip + patientInsurance threaded "
+            "end-to-end through the demo flow + the prechat dossier + "
+            "Salesforce metadata (Pause_Patient_Zip__c, Pause_Patient_"
+            "Insurance__c custom fields on MessagingSession).",
+            "docs/PROVIDER_GRAPH_PHASE_1_RUNBOOK.md + the state-data "
+            "landscape survey (why CA/NY/TX, why not FL/NJ/IL — they don't "
+            "publish license disposition in a machine-readable form).",
+            "/proposal/provider-graph rewritten for the Phase-2 shipped "
+            "state; /provider linked from the proposal hub.",
+        ],
+        "verified": [
+            "Refresh harness against the June 2026 NPPES bulk file: 9.6M "
+            "rows streamed, 2,015 emitted, 1,720 dropped at build, all "
+            "sanctions-by-source counts match the published source lists.",
+            "Distance ranking verified: a 92614 patient query returns Dr. "
+            "Helen Okafor (Newport Beach, 92660, 4.2 mi away) before Dr. "
+            "Priya Anand (Irvine, 92614, 0 mi but 0.76 graphScore vs 1.0).",
+            "Sanctions filter verified: dropped NPI list cross-checked "
+            "against each state's published disposition file; zero "
+            "sanctioned providers surface in any /provider, /api/mulesoft/"
+            "providers, or Care Router response.",
+            "/proposal/provider-graph shows the Phase-2 contract live; "
+            "Care Router decisions on the moderate-hot-flash intake "
+            "include three real provider recommendations.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 26 — Agentforce provider-lookup action (External Service + "
+            "Named Credential + auto-ZIP)"
+        ),
+        "ask": (
+            "Make the live Agentforce Service Agent able to call Pause's "
+            "/api/mulesoft/providers from inside a conversation, with the "
+            "patient's ZIP supplied automatically from intake context. "
+            "Patients shouldn't have to re-state their ZIP after the agent "
+            "already saw it."
+        ),
+        "decisions": [
+            "Used Salesforce's External Service + Named Credential pattern "
+            "rather than custom Apex. The External Service is fed an OAS 3.0 "
+            "spec describing /api/mulesoft/providers; Salesforce auto-"
+            "generates the schema-aware Invocable Action. The Named "
+            "Credential (Pause_Provider_API) holds the base URL + auth "
+            "header; CI-deployable via SFDX.",
+            "Phase 18d sub-step: passed the patient's ZIP into the agent via "
+            "hidden prechat. The V2 SDK prechatAPI dead end (Phase 18c) is "
+            "FIXED — calling setHiddenPrechatFields({Patient_Zip: '92614'}) "
+            "now validates the field name and throws a clear error when the "
+            "field isn't registered. That's a real implementation again, not "
+            "the empty-Proxy fallback. Registered Patient_Zip as a hidden "
+            "prechat field on the deployment + on the channel; the Mule-side "
+            "Pause_Intake_Prechat_Router Flow writes it to "
+            "MessagingSession.Pause_Patient_Zip__c; the agent reads it as "
+            "$Context.Pause_Patient_Zip in its action input mapping.",
+            "Design decision: hard-bind the zip action-input to "
+            "{!$Context.Pause_Patient_Zip} rather than Agent-Populated. The "
+            "LLM does NOT reliably 'see' a context variable's value unless "
+            "it's injected into the action call deterministically. Tried "
+            "Agent-Populated with a 'use the variable, else ask' instruction "
+            "first — the agent asked for ZIP even when Pause_Patient_Zip was "
+            "populated (verified: session had 92614 but the agent still "
+            "asked). Hard-bind solves it.",
+            "Critical operator gotcha discovered + documented: the 'Activate' "
+            "button on the deployment must be clicked AFTER registering "
+            "Patient_Zip as a hidden prechat field. Without the re-publish, "
+            "setHiddenPrechatFields reports 'applied' (no throw, because the "
+            "SDK recognizes the channel variable name from the deployed "
+            "customParameter) but the value is only sent as a routing "
+            "attribute once the deployment is re-published. CDN propagation "
+            "is then 5-15 min. A test 3 minutes after publishing came back "
+            "blank; a test ~10 minutes after came back with Pause_Patient_"
+            "Zip__c = 92614.",
+        ],
+        "built": [
+            "salesforce/force-app/main/default/objects/MessagingSession/"
+            "fields/Pause_Patient_Zip__c.field-meta.xml + Pause_Patient_"
+            "Insurance__c.field-meta.xml — custom fields version-controlled "
+            "in the SFDX project.",
+            "salesforce/force-app/main/default/namedCredentials/"
+            "Pause_Provider_API.namedCredential-meta.xml — Named Credential "
+            "for the External Service.",
+            "salesforce/force-app/main/default/flows/"
+            "Pause_Intake_Prechat_Router.flow-meta.xml — Patient_Zip + "
+            "Patient_Insurance input variables added; recordUpdates wires "
+            "both onto MessagingSession.",
+            "salesforce/force-app/main/default/messagingChannels/"
+            "Messaging_for_In_App_Web.messagingChannel-meta.xml — added "
+            "customParameter for Patient_Zip (and later Patient_Insurance) "
+            "with actionParameterMappings to the Flow.",
+            "frontend/app/api/intake/prechat-context/route.ts — clamp+include "
+            "Patient_Zip in the prechat payload; agentforce-embed.tsx wires "
+            "it through.",
+            "docs/AGENTFORCE_PROVIDER_ACTION_RUNBOOK.md — paste-ready agent "
+            "instruction copy, the External Service procurement steps, the "
+            "Activate-after-prechat-field-registration sequence + the "
+            "CDN-propagation wait, the silent-context-ZIP UX framing (never "
+            "ask, never claim 'near you' if we fell back to national).",
+        ],
+        "verified": [
+            "End-to-end live verified on trailsignup org 2026-06-14: persona "
+            "Anika Patel (zip 92614) → 'find a provider that specializes in "
+            "menopause' → NO ZIP question → Dr. Helen Okafor DO MSCP "
+            "(Newport Beach) + Dr. Priya Anand MD FACOG MSCP (Irvine), both "
+            "926-prefix, no national fallback. SOQL confirmed "
+            "MessagingSession.Pause_Patient_Zip__c = '92614' on the session.",
+            "Agent's reasoning-instructions text rendered as-shipped: "
+            "presents providers neutrally, never says 'near you' or claims "
+            "distance unless the action returned a real distanceMiles.",
+            "Fallback verified: persona without ZIP context → agent still "
+            "gets a national result via the relevant-local-empty → certified-"
+            "national tier ladder; the response framing matches.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 27 — JHE local stack + real-run smoke + opt-in pytest marker"
+        ),
+        "ask": (
+            "Stand up a real JupyterHealth Exchange instance locally and "
+            "run pause_ingest's contract test suite against it. Find and "
+            "fix the bugs that the wire-level mock hid. Make the real-JHE "
+            "suite a first-class opt-in mode of pause_ingest's pytest."
+        ),
+        "decisions": [
+            "Built jhe-local/ — a Docker-compose stack with jhe-postgres "
+            "(postgres:16 on 5433) + jhe-web (locally-built jhe-local:latest "
+            "from upstream's Dockerfile, port 8000) on a private jhe-net "
+            "Docker network. Bootstrap.sh is idempotent: postgres + web "
+            "+ migrations + the OAuth client + Study + Patient + DataSource "
+            "+ Scope + Consent wiring all run once and short-circuit on "
+            "subsequent runs.",
+            "Discovered three bugs in pause_ingest.exchange that the wire-"
+            "level mock had hidden: (1) JHE's OAuth scope vocabulary is "
+            "fixed at openid + email; passing observation.write 400s with "
+            "invalid_scope (JHE authorizes FHIR writes by Study/Patient/Scope "
+            "consent, not by OAuth scope). (2) Content-Type must be "
+            "application/json — JHE's DRF parser rejects application/fhir+"
+            "json with 415. (3) OMH coding routes between mapped + auxiliary "
+            "handlers: mapped wants system=https://w3id.org/openmhealth + "
+            "code=omh:<schema>:<version>; the auxiliary handler (for "
+            "pause-derived features under https://pause-health.ai/schemas/"
+            "derived) 400s without an X-JHE-FHIR-Source-ID header. The mock "
+            "had over-permitted all three. Fixed in commit d49cd2d.",
+            "Wired the derived-features write path: features compute → "
+            "FHIR Observation with derivedFrom pointer to the raw row → "
+            "auxiliary handler with the FhirSource header. The bootstrap "
+            "now creates the FhirSource row and prints its pk so the env "
+            "block JHE_FHIR_SOURCE_ID has the right value.",
+            "Wire-level mock (pause_ingest/tests/jhe_mock_server.py) "
+            "updated to enforce all three contract rules so symmetric drift "
+            "fails CI. A contract test "
+            "(test_upload_aux_routed_observation_requires_fhir_source_id_"
+            "header) pins both directions.",
+            "Added PAUSE_USE_REAL_JHE=1 opt-in pytest marker (commit "
+            "3b08d6b): default pytest runs the in-process mock suite and "
+            "SKIPS the real_jhe tests; PAUSE_USE_REAL_JHE=1 pytest runs the "
+            "real_jhe suite against IngestConfig.from_env() and SKIPS the "
+            "mock-only module. Mutually exclusive on purpose so per-mode "
+            "logs stay deterministic.",
+            "Two more mock-vs-real divergences surfaced and documented: "
+            "(1) Real JHE's POST /Observation response body has NO "
+            "valueAttachment — only the envelope. The mock echoes the full "
+            "posted resource. Real-mode tests validate via read-back. "
+            "(2) Real JHE's GET /Observation?patient=<unknown> does NOT "
+            "return an empty Bundle — it returns whatever the OAuth client "
+            "is authorized to see, IGNORING the unknown filter. Real-mode "
+            "test asserts no-leakage instead of fetched == [].",
+        ],
+        "built": [
+            "jhe-local/bootstrap.sh — idempotent stack bringup. Boots "
+            "postgres + jhe-web, runs migrations, creates the pause-ingest "
+            "OAuth client (id pause-ingest-client-id, secret pause-ingest-"
+            "client-secret-xyz123), seeds Patient 40001, Oura DataSource "
+            "70004, the 'pause-ingest demo study', per-scope Study + "
+            "Consent rows for omh:heart-rate:2.0 / rr-interval:1.0 / "
+            "sleep-duration:2.0 / sleep-episode:1.1 / physical-activity:1.2 "
+            "/ step-count:3.0, plus a FhirSource row tying Patient 40001 ↔ "
+            "Oura. teardown.sh + teardown.sh --purge.",
+            "Updated pause_ingest/pause_ingest/exchange.py with the three "
+            "real-JHE contract fixes; pause_ingest/pause_ingest/fhir.py "
+            "with the derived-features routing.",
+            "Updated pause_ingest/examples/oura_sample_upload.py to round-"
+            "trip BOTH raw heart-rate (mapped, integer pk) AND derived HRV-"
+            "time-domain (auxiliary, UUID pk, with derivedFrom).",
+            "pause_ingest/tests/conftest.py — PAUSE_USE_REAL_JHE marker + "
+            "collection hook for the mutually-exclusive suites.",
+            "pause_ingest/tests/test_exchange_real_jhe.py — 7-test real-"
+            "JHE contract suite (passes 7/7 against jhe-local on the ship "
+            "date).",
+            "docs/JHE_SETUP_RUNBOOK.md, docs/JHE_REAL_RUN_2026-06-16.md "
+            "(the transcript), updated pause_ingest/README.md.",
+        ],
+        "verified": [
+            "jhe-local/bootstrap.sh → both containers Up, OAuth token + "
+            "FHIR read/write works against the local instance.",
+            "pause_ingest/examples/oura_sample_upload.py against jhe-local "
+            "round-trips 2 observations (raw heart-rate + derived HRV-time-"
+            "domain) and prints OK.",
+            "Default pytest: 27/27 (mock suite); PAUSE_USE_REAL_JHE=1 pytest: "
+            "7/7 (real_jhe suite). Both modes are mutually exclusive — the "
+            "non-active suite is skipped, not failed.",
+            "/proposal/integration + /roadmap status pills updated: JHE "
+            "designed → prototype.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 28 — MCP Streamable HTTP transport + MCP Bridge + Agentforce 3.0 Registry"
+        ),
+        "ask": (
+            "Ship the Streamable HTTP transport for the MCP server at "
+            "/api/mcp so Agentforce 3.0's MCP Registry can discover and "
+            "use Pause's tools. Then turn the Care Router itself into an "
+            "MCP host that calls tools from arbitrary external MCP servers."
+        ),
+        "decisions": [
+            "Built the Streamable HTTP transport at /api/mcp using the "
+            "MCP SDK's WebStandardStreamableHTTPServerTransport — drops "
+            "directly into Next.js App Router's Request → Response shape "
+            "with no Express adapter. Stateless mode (sessionIdGenerator "
+            "= undefined) since Vercel functions are short-lived and the "
+            "Agentforce Registry stores session at its own layer.",
+            "Same four tools (timeline / intake / providers / health "
+            "check), single registration in frontend/lib/mcp/tools.ts. "
+            "The stdio transport in mcp/src/server.ts and the Streamable "
+            "HTTP transport in app/api/mcp/route.ts both consume the same "
+            "tool registrations — schema-aware, single source of truth.",
+            "MCP Bridge (commit f333c2d): turned the Care Router into an "
+            "MCP host that loads remote MCP servers per-request, calls "
+            "their tools, and surfaces results in the agent-fabric trace. "
+            "Loopback remote (Pause's own /api/mcp) is always on so the "
+            "Care Router demonstrates the host pattern against our own "
+            "tools without a third-party dependency. External remotes are "
+            "configurable via PAUSE_MCP_HOST_REMOTES (JSON-encoded array).",
+            "Production flip (commit 0dcc65c): MCP Bridge enabled in "
+            "production env. Every Care Router decision now records a span "
+            "for each MCP tool call it made — fan-out, latency, success/"
+            "failure visible in the trace plane.",
+        ],
+        "built": [
+            "frontend/app/api/mcp/route.ts — Streamable HTTP MCP server. "
+            "GET/POST/DELETE all handled.",
+            "frontend/lib/mcp/tools.ts — shared tool registrations consumed "
+            "by both stdio + HTTP transports.",
+            "frontend/lib/mcp/host.ts — MCPHost class + resolveRemotesFromEnv "
+            "+ createMCPHostFromRequest. Per-request lifecycle (fresh MCP "
+            "handshake per Care Router invocation; transport is closed at "
+            "end of request).",
+            "frontend/lib/mcp/host.test.ts + host.integration.test.ts — 14 "
+            "tests pinning the host's fan-out behavior + the loopback path.",
+            "Wiring in /api/agents/care-router/tasks to use the host for "
+            "tool calls. Span types extended in lib/agent-fabric.ts.",
+            "mcp/v0.2.0 published — README + smoke updated for the new "
+            "transport.",
+        ],
+        "verified": [
+            "Agentforce 3.0 Registry connection: paste "
+            "https://pause-health.ai/api/mcp into Setup → New MCP server → "
+            "Pause's four tools enumerate cleanly + are callable from the "
+            "Agentforce agent's builder.",
+            "Care Router smoke: a routing request makes a loopback MCP "
+            "tools/call → the trace shows the span with remoteId: 'loopback' "
+            "+ tool name + duration + result attribution.",
+            "External-remote test: PAUSE_MCP_HOST_REMOTES set to a "
+            "speculative Salesforce MCP endpoint → the host attempts the "
+            "call, traces the failure cleanly when the endpoint isn't "
+            "reachable, falls back without breaking the routing decision.",
+        ],
+    },
+    {
+        "title": (
+            "Phase 29 — Headless 360 conformance audit + four gap closures"
+        ),
+        "ask": (
+            "Stand up a Salesforce Headless 360 conformance audit page so "
+            "investors can see honestly which of Salesforce's Headless 360 "
+            "architectural invariants Pause already satisfies vs which "
+            "need work. Then close each gap as a dormant env-gated seam "
+            "so the audit moves from 4×designed to 4×prototype."
+        ),
+        "decisions": [
+            "Authored /proposal/headless-360 with three-row pattern-mapping "
+            "table (REST + MCP + A2A) showing which Pause surface implements "
+            "each Headless 360 pattern, and a four-row gap table naming the "
+            "specific invariants the prototype doesn't yet satisfy. Each "
+            "gap row has a pill: designed → prototype → shipped.",
+            "Gap #1 — PKCE External Client App OAuth flow (commit a20806e). "
+            "Authored lib/salesforce-headless360.ts + six routes under "
+            "/api/salesforce/headless-360/* (config, authorize, callback, "
+            "token/refresh, me, logout). RFC 7636 PKCE with S256, signed-"
+            "cookie session envelope with HMAC-SHA256 + timingSafeEqual "
+            "tamper detection. Three-state status machine (designed | "
+            "prototype | shipped) driven by SF_HEADLESS360_* env vars. 25 "
+            "unit tests pin the env matrix, PKCE alphabet, signed-cookie "
+            "round-trip, tamper detection.",
+            "Gap #2 — `mcp_api` scope on /api/mcp (commit 3202a2a). Built "
+            "validateMcpApiBearer with introspect-first (strict: requires "
+            "active=true AND scope contains mcp_api) + userinfo fallback "
+            "(permissive: verifies token aliveness only when introspect is "
+            "disabled — flagged in the return value as via: 'userinfo-"
+            "fallback' so callers can log the weaker guarantee). /api/mcp "
+            "route handler wraps the validator behind SF_HEADLESS360_"
+            "REQUIRE_MCP_AUTH=on. WWW-Authenticate header per RFC 6750. "
+            "Loopback bearer propagation in lib/mcp/host.ts attaches the "
+            "inbound bearer to the loopback remote only — structural same-"
+            "origin guarantee (the loopback URL is built from the request "
+            "origin so there's no way to leak cross-origin).",
+            "Gap #2 follow-ups (commit ec056ad): bounded process-local "
+            "cache for positive introspect results (60s TTL, 1024-entry "
+            "LRU-on-insert; only positive results cached so a freshly-"
+            "issued token isn't stuck rejected). guardMcpAuth now returns "
+            "the validated identity instead of swallowing it; /api/mcp "
+            "decorates every successful response with X-Pause-MCP-User + "
+            "X-Pause-MCP-Via headers for trace-plane attribution. New "
+            "GET /api/mcp/whoami diagnostic endpoint returns "
+            "{gate: 'on'|'off', via, username} so operators can verify "
+            "gate wiring without parsing the SSE response stream.",
+            "Gap #3 — Agent Fabric → Salesforce Platform Event egress "
+            "(commit 830bb8e). Initial framing was 'write into Real-Time "
+            "Event Monitoring's stream' but research before code corrected "
+            "it: RTEM's catalog (LoginEvent, ApiEvent, etc.) is Salesforce-"
+            "platform-internal — external apps cannot define new RTEM "
+            "event types. The partner-supported pattern is custom Platform "
+            "Events. lib/salesforce-platform-event-sink.ts emits each "
+            "Agent Fabric span as a Pause_Agent_Trace__e Platform Event "
+            "via REST sObjects, authenticated via OAuth 2.0 Client "
+            "Credentials against a dedicated Connected App. Fire-and-"
+            "forget, never blocks routing, swallows all Salesforce errors. "
+            "Token cached for expires_in − 60s; 401 wipes the cache so "
+            "the next call re-mints. 22 unit tests + a no-throw-on-failure "
+            "invariant test.",
+            "Gap #4 — Salesforce CLI parity (commit 0626bf6). Salesforce's "
+            "Headless 360 trust model exposes every agent capability "
+            "through REST + MCP + CLI. Pause already had REST + MCP; this "
+            "completed the triad. Built cli/ in-repo as @pause-health/cli "
+            "with four commands (pause health, pause providers, pause "
+            "timeline, pause intake) wrapping /api/mulesoft/*. Hand-rolled "
+            "argv parser (zero runtime deps) — Salesforce's sf CLI is "
+            "itself a heavy tree, but for a four-endpoint wrapper a "
+            "minimal parser is honest. --json for jq piping; --base-url + "
+            "PAUSE_BASE_URL for preview deploys; PAUSE_API_KEY → "
+            "Authorization. 17 unit tests + 6 smoke cases against live "
+            "pause-health.ai.",
+        ],
+        "built": [
+            "/proposal/headless-360 — conformance audit page with the "
+            "three-row pattern-mapping + four-row gap table + activation "
+            "snippets for each gap.",
+            "lib/salesforce-headless360.ts — PKCE seam, validateMcpApiBearer "
+            "with introspect+userinfo fallback, process-local cache, "
+            "isMcpApiAuthRequired, signed-cookie helpers.",
+            "frontend/app/api/salesforce/headless-360/* — six routes "
+            "implementing the OAuth Authorization Code + PKCE flow.",
+            "frontend/app/api/mcp/whoami/route.ts — operator-side gate "
+            "diagnostic.",
+            "lib/salesforce-platform-event-sink.ts + agent-fabric "
+            "integration — Pause_Agent_Trace__e Platform Event egress.",
+            "cli/ npm package — @pause-health/cli with four commands, "
+            "hand-rolled argv parser, smoke harness against live endpoints.",
+            "docs/HEADLESS_360_RUNBOOK.md + docs/SF_PLATFORM_EVENT_SINK_"
+            "RUNBOOK.md.",
+        ],
+        "verified": [
+            "/proposal/headless-360 reads: all four gaps prototype (gap #1 "
+            "PKCE 2026-06-24, gap #3 Platform Event sink 2026-06-24, gap #2 "
+            "mcp_api gate 2026-06-27, gap #4 CLI 2026-06-27).",
+            "Gap #2 vitest: 53 tests including the introspect/scope/"
+            "inactive/fallback matrix, the cache TTL + negative-no-cache + "
+            "per-token-isolation behavior, and the whoami diagnostic envelope.",
+            "Gap #4 CLI smoke: 6/6 cases green against live pause-health.ai.",
+            "Total project test count after Phase 29: 493 frontend vitest "
+            "+ 17 cli vitest = 510 passing (up from 409 before gap #1).",
+        ],
+    },
+    {
+        "title": (
+            "Phase 30 — MuleSoft Phase 3: nine Anypoint Exchange assets"
+        ),
+        "ask": (
+            "The /proposal/mulesoft page's Phase 3 (multi-customer fabric) "
+            "had been pilled `future` since launch — assumed it required a "
+            "second customer. That assumption was wrong. Shared System-API "
+            "artifacts can land on Exchange the moment they exist, "
+            "decoupled from any single customer onboarding."
+        ),
+        "decisions": [
+            "Asset #1 — pause-omh-to-fhir-library v1.0.0 (commit b7f143b). "
+            "Promoted the OMH→FHIR R5 Observation DataWeave transform out "
+            "of pause-mulesoft-health-v1 into a versioned Anypoint Exchange "
+            "library asset. Worker bumped to 1.0.5 and consumes the library "
+            "as a Maven dependency at dw::pause::health::omh. Flow XML "
+            "unchanged so the runtime response is byte-identical to 1.0.4. "
+            "This is the ONLY end-to-end consumed Phase-3 artifact today "
+            "(the CloudHub worker actually pulls + bundles it); the rest "
+            "are contract-only.",
+            "Assets #2-#9 — eight OAS 3.0 spec assets. Two architectural "
+            "patterns covered: PULL-FROM-VENDOR (pause-oura-system-api-spec "
+            "as the template; pause-whoop and pause-garmin as clones with "
+            "vendor-specific data-type catalogs + auth quirks — Whoop has "
+            "synthetic OMH recovery-score:1.0 + cardiovascular-strain:1.0 "
+            "schemas; Garmin honestly documents OAuth 1.0a upstream + "
+            "webhook-pull cadence) and UPLOAD-TO-PAUSE (pause-healthkit-"
+            "system-api-spec for iOS-app-side HealthKit batches; pause-"
+            "empatica-system-api-spec for researcher-uploaded .zip session "
+            "archives; the latter honestly anchored to pause_ingest's "
+            "EmpaticaIngestNotImplemented stub blocked by devicely's "
+            "numpy<2.0 pin). Plus pause-jhe-system-api-spec (JHE's REST "
+            "surface + Django data plane), pause-dbdp-system-api-spec "
+            "(HRV feature compute with two modes), and pause-ingest-"
+            "process-api-spec (Process tier orchestration; completes the "
+            "API-led three-tier story on Exchange).",
+            "Two non-obvious gotchas discovered + documented (apply to all "
+            "8 spec assets): (1) mvn-deploy-plugin sends .pom uploads with "
+            "Content-Type: application/x-www-form-urlencoded by default, "
+            "which Exchange v2 500s on with java.io.EOFException: input "
+            "contained no data. The .jar upload via mvn works fine (aether "
+            "sets octet-stream for jars). Workaround: direct curl PUT for "
+            "the POM with Content-Type: application/xml. (2) Tagging a "
+            "DataWeave-only library jar with classifier=mule-plugin "
+            "triggers Exchange's ms-exchange-tooling-service extension-"
+            "model extraction, which 502s on a no-SDK jar. Plain jar "
+            "packaging without the classifier is correct — the Mule "
+            "runtime picks up the dw/ namespace from any jar on the "
+            "classpath.",
+            "All eight specs honestly framed as contract-only in their "
+            "info.description. Phase 1c will materialize the deployable "
+            "Mule projects; pause_ingest does the equivalent orchestration "
+            "in-process today. The proposal-page Phase 3 detail names all "
+            "nine assets + the two architectural patterns covered.",
+        ],
+        "built": [
+            "mulesoft/pause-omh-to-fhir-library/ — plain Maven jar with "
+            "src/main/resources/dw/pause/health/omh.dwl. Published 1.0.0 + "
+            "consumed by worker 1.0.5.",
+            "mulesoft/specs/pause-{jhe,dbdp,oura,whoop,garmin,healthkit,"
+            "empatica,ingest-process}-system-api-spec/ — eight OAS 3.0 spec "
+            "assets, each with pom.xml + README + .gitignore + the .yaml "
+            "spec file. All eight published to Anypoint Exchange v2 with "
+            "status: published.",
+            "mulesoft/specs/pause-omh-to-fhir-library/README.md documents "
+            "both Exchange-v2 gotchas with the curl-PUT recipe.",
+        ],
+        "verified": [
+            "Every OAS spec validates clean (parses, no missing $refs).",
+            "Exchange asset listing for each of the 9 assets returns "
+            "status: published.",
+            "Worker 1.0.5 deployed to CloudHub Sandbox in 2:12 (BUILD "
+            "SUCCESS); direct /health + /providers smoke green; the "
+            "deployable mule-application jar bundles "
+            "repository/.../pause-omh-to-fhir-library-1.0.0.jar.",
+            "Total Phase 3 assets on Exchange: 9 (1 consumed library + "
+            "8 contract-only specs).",
+        ],
+    },
+    {
+        "title": (
+            "Phase 31 — Agentforce Voice partner-web seam"
+        ),
+        "ask": (
+            "Salesforce's Headless 360 product surface includes Agentforce "
+            "Voice (the voice channel). Stand up a partner-web seam "
+            "matching the same env-driven, dormant-until-activated pattern "
+            "the Headless 360 gap closures use."
+        ),
+        "decisions": [
+            "Built the partner-web seam as a separate lib + routes from the "
+            "Headless 360 PKCE one, even though both speak OAuth to "
+            "Salesforce. Agentforce Voice has its own External Client App "
+            "model (different scopes: agentforce_api + voice_call_api), so "
+            "fusing them into one would have created a misleading 'one knob "
+            "to rule them all' that doesn't actually exist on the Salesforce "
+            "side.",
+            "Env-driven activation: AGENTFORCE_VOICE_CLIENT_ID + "
+            "AGENTFORCE_VOICE_CLIENT_SECRET + AGENTFORCE_VOICE_AUTH_BASE_URL. "
+            "Status pill on /proposal/agentforce-voice: designed when "
+            "unset, prototype when set + AGENTFORCE_VOICE_VERIFIED is unset, "
+            "shipped when both set. Mirrors the Headless 360 three-state "
+            "model.",
+            "Gated on Salesforce Agentforce Contact Center licensing: the "
+            "underlying voice infrastructure requires a SKU Pause doesn't "
+            "have on the trailsignup org. Documented the procurement path "
+            "in AGENTFORCE_VOICE_RUNBOOK.md for the customer-side "
+            "activation. Until that SKU lands, the seam is functionally "
+            "designed-only.",
+        ],
+        "built": [
+            "lib/agentforce-voice.ts — config parser + token client + "
+            "isAgentforceVoiceConfigured guard + three-state status machine.",
+            "frontend/app/api/agentforce-voice/* routes — config probe + "
+            "token-mint + a placeholder call endpoint that returns 503 "
+            "until Contact Center licensing activates.",
+            "/proposal/agentforce-voice — pattern card with the dormant-"
+            "seam pill + activation snippet.",
+            "docs/AGENTFORCE_VOICE_RUNBOOK.md — procurement steps for the "
+            "Contact Center SKU, the External Client App scopes, the "
+            "env-var checklist.",
+        ],
+        "verified": [
+            "Config probe with env unset: returns designed.",
+            "Config probe with env set + AGENTFORCE_VOICE_VERIFIED unset: "
+            "returns prototype + the configured scopes.",
+            "Token-mint route 503s with an honest diagnostic when "
+            "Contact Center licensing isn't active.",
+            "/proposal/agentforce-voice reads as a dormant seam linked "
+            "from /proposal/headless-360.",
+        ],
+    },
 ]
 
 OPERATIONS_LOG = {
@@ -1636,30 +2662,126 @@ OPERATIONS_LOG = {
                 "history reads as a build journal on its own."
             ),
         },
+        {
+            "name": "Anypoint Exchange v2 POM Content-Type 500",
+            "detail": (
+                "Discovered in Phase 30. mvn-deploy-plugin sends .pom "
+                "uploads with Content-Type: application/x-www-form-"
+                "urlencoded by default; Anypoint Exchange v2's Maven "
+                "endpoint responds with 500 + 'java.io.EOFException: "
+                "input contained no data'. The .jar upload via mvn works "
+                "fine (aether sends application/java-archive for jars). "
+                "Workaround that ships: direct curl PUT for the POM with "
+                "Content-Type: application/xml. Recipe documented in "
+                "every Phase-3 spec asset's README.md. Affects ALL 8 "
+                "spec assets + the DataWeave library."
+            ),
+        },
+        {
+            "name": "Don't tag DataWeave-only libraries classifier=mule-plugin",
+            "detail": (
+                "Discovered in Phase 30. Anypoint Exchange's "
+                "ms-exchange-tooling-service tries to extract a Mule "
+                "extension model from any artifact tagged "
+                "classifier=mule-plugin; a no-SDK jar (one containing "
+                "only DataWeave resources) makes it 502 with "
+                "'BadGatewayError: invalid json response body: Error "
+                "proc...'. The Mule runtime picks up the dw/ namespace "
+                "from any jar on the classpath, so plain jar packaging "
+                "without the classifier is correct. Use "
+                "classifier=mule-plugin only for real Mule SDK extensions "
+                "(Custom Connectors built with Studio's packager)."
+            ),
+        },
+        {
+            "name": "vi.fn().mockResolvedValue(Response) and consumed bodies",
+            "detail": (
+                "Caught in Phase 29 gap #2 follow-ups. "
+                "vi.fn().mockResolvedValue(new Response(...)) returns the "
+                "SAME Response object on every call — but a Response body "
+                "can only be consumed once with .json(). If a test calls "
+                "the validator twice with mockResolvedValue, the second "
+                ".json() throws and the validator falls through to a "
+                "different code path (in our case, the introspect → "
+                "userinfo fallback), making fetch call counts off by "
+                "one. Fix: vi.fn().mockImplementation(async () => new "
+                "Response(...)) for any test that drives the validator "
+                "more than once. Pre-existing tests didn't hit this "
+                "because each called validateMcpApiBearer once; the new "
+                "TTL + negative-cache tests called it twice and revealed "
+                "the issue. Documented in memory/project_headless360_"
+                "state.md."
+            ),
+        },
+        {
+            "name": "Free-tier ngrok allows one tunnel; CF Tunnel needs a domain",
+            "detail": (
+                "Surfaced when scoping Phase 1c. Pause's Flex Gateway "
+                "(Phase 23 iteration 3) already owns the "
+                "cattail-reactive-sassy.ngrok-free.dev pinned subdomain; "
+                "a second ngrok process can't get the same domain on "
+                "free tier. Cloudflare Tunnel sounds like a drop-in "
+                "alternative but the 'free permanent domain' story only "
+                "applies if you already own a domain on CF — "
+                "trycloudflare.com URLs are ephemeral and change per "
+                "restart. The architecturally correct next move is the "
+                "Phase-1 iteration-8 persistent VM (Fly.io / Lightsail) "
+                "hosting the Flex Gateway, which also unblocks Phase 1c. "
+                "Documented as the 'iteration 8' row in docs/MULESOFT_"
+                "RUNBOOK.md."
+            ),
+        },
     ],
 }
 
 CURRENT_STATE = {
     "title": "Current state — what is live, what is mocked",
     "live": [
-        "Marketing site, About page (with founder picture + LinkedIn), "
-        "blog and press scaffolds, footer, legal pages, SEO surface "
-        "(sitemap, robots, OG, Twitter, security.txt, Organization "
-        "JSON-LD), canonical URLs on the pause-health.ai apex domain.",
-        "Investor brief: 14 deep-dive pages plus the /proposal/full "
-        "single-document narrative.",
+        "Marketing site, About page (with founder picture, LinkedIn, "
+        "and Person JSON-LD), blog and press scaffolds, footer, legal "
+        "pages, SEO surface (sitemap, robots, OG, Twitter, security.txt, "
+        "Organization JSON-LD), canonical URLs on the pause-health.ai "
+        "apex domain.",
+        "Investor brief: 16 deep-dive pages plus the /proposal/full "
+        "single-document narrative — including /proposal/headless-360 "
+        "(four-row conformance audit with all four gaps at prototype) "
+        "and /proposal/agentforce-voice (Headless 360 voice surface).",
         "Clickable prototype: /demo/intake (Agentforce real-or-scripted "
-        "fallback), /demo/patient, /demo/routing (with live Care Router "
-        "decision card), /demo/analytics, /demo/agent-fabric (live "
-        "console with real-vs-mock source banners on every span).",
-        "Real Code Repository nav link to the GitHub repo.",
+        "fallback with persona picker + visible Pre-Brief Panel), "
+        "/demo/patient (persona-aware care detail), /demo/routing "
+        "(with live Care Router decision card + distance-ranked "
+        "recommended providers), /demo/analytics (persona-filterable "
+        "operational metrics + pathway chart), /demo/agent-fabric "
+        "(persona-filterable trace console with real-vs-mock source "
+        "banners on every span). All five share the DemoShell + "
+        "PersonaJourneyFooter and preserve personaId across pages.",
+        "Real Code Repository nav link to the GitHub repo (Apache-2.0).",
         "Python wearable-ingest worker (pause_ingest/) — FLIRT-based, "
-        "pytest-covered.",
-        "MCP server (mcp/) — four real MCP tools wrapping the Experience "
-        "APIs.",
+        "pytest-covered, with the PAUSE_USE_REAL_JHE=1 opt-in suite that "
+        "passes 7/7 against the local jhe-local Docker stack.",
+        "JupyterHealth Exchange local stack (jhe-local/) — idempotent "
+        "Docker-compose bootstrap; OAuth client + Study + Patient + "
+        "DataSource + Scope + FhirSource all seeded so pause_ingest can "
+        "round-trip both raw + derived FHIR Observations against real JHE.",
+        "MCP servers (two transports, one tool registration): mcp/ ships "
+        "@pause-health/mcp v0.2.0 over stdio (Claude Desktop, Cursor); "
+        "frontend/app/api/mcp serves the same four tools over Streamable "
+        "HTTP for the Agentforce 3.0 Registry. Both consume "
+        "frontend/lib/mcp/tools.ts so a tool change ships to both at once.",
+        "MCP Bridge — the Care Router is itself an MCP host. Loads "
+        "remote MCP servers per-request, calls their tools, records "
+        "each call as a span. Loopback (Pause's own /api/mcp) always on; "
+        "external remotes via PAUSE_MCP_HOST_REMOTES.",
+        "Pause CLI (cli/) — @pause-health/cli with four commands "
+        "wrapping /api/mulesoft/* (health, providers, timeline, intake). "
+        "Hand-rolled argv parser (zero runtime deps), --json mode for "
+        "jq piping, --base-url / PAUSE_BASE_URL for preview deploys. "
+        "Closes Headless 360 audit gap #4 (REST + MCP + CLI triad).",
         "Multi-agent control plane: real A2A handoff, real Agent Fabric "
         "trace store, real governance evaluation, real Anthropic path "
-        "when configured.",
+        "when configured. Trace spans egress to Salesforce as "
+        "Pause_Agent_Trace__e Platform Events via the dormant Headless "
+        "360 gap-#3 sink when SF_PLATFORM_EVENT_* env vars are set.",
         "Salesforce Health Cloud grounding (Phase 12) — LIVE against a "
         "real connected Developer Edition org via OAuth client "
         "credentials. SOQL against Contact + CareProgramEnrollee + "
@@ -1667,85 +2789,156 @@ CURRENT_STATE = {
         "specific care plans. Agent Fabric trace spans show _source: "
         "'real' on the federated-query span when env vars are set; "
         "fall back to mock when unset (zero-credential default).",
-        "Salesforce Agentforce Embedded Messaging intake on "
-        "/demo/intake (Phase 18, shipped 2026-06-02; Phase 18b "
-        "completed 2026-06-03) — LIVE on pause-health.ai. "
-        "Pause_Health_Intake_Agent (a real Agentforce Service Agent "
-        "on Service Cloud, Active, with two subagents and nine "
-        "instructions including red-flag escalation and two new "
-        "Phase-18b dossier-aware instructions) responds to messages "
-        "from the chat panel embedded in the Next.js app via the V2 "
-        "Messaging-for-Web bootstrap. Routing: Omni-Channel -> "
-        "Pause_Intake_Prechat_Router routing Flow -> Pause_Health_"
-        "Intake_Agent. The 'View as <patient>' picker hands ~20 "
-        "hidden-prechat fields to "
-        "embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields() "
-        "before the conversation starts; the channel routes them "
-        "into the Flow, which writes each to a Pause_<Name>__c "
-        "custom field on MessagingSession; the agent then references "
-        "them as $Context.Pause_<Name> in its topic instructions and "
-        "personalizes its first message accordingly. Every field is "
-        "clamped to 255 chars per Salesforce's channel hard cap; the "
-        "full multi-KB dossier remains available out-of-band via "
-        "/api/intake/prechat-context for future custom Apex actions. "
-        "Scripted Pause-branded fallback still runs for any "
-        "deployment without the four NEXT_PUBLIC_AGENTFORCE_* env "
-        "vars set (forks, previews without org credentials).",
-        "lib/salesforce/auth.ts test suite: 17 vitest tests covering "
-        "token acquisition, caching, in-flight dedup, expiry, error "
-        "paths. Plus 6 tests for the warn-once dedup helper.",
+        "Salesforce Agentforce Embedded Messaging intake on /demo/intake. "
+        "Pause_Health_Intake_Agent (real Agentforce Service Agent on "
+        "Service Cloud) responds to messages from the chat panel "
+        "embedded via the V2 Messaging-for-Web bootstrap. Routing: "
+        "Omni-Channel → Pause_Intake_Prechat_Router Flow → "
+        "Pause_Health_Intake_Agent. Phase 18a/b laid the 5-component "
+        "data pipeline (channel customParameters → routing Flow → "
+        "MessagingSession.Pause_*__c → Bot contextVariables → topic "
+        "instructions); Phase 18c discovered the V2 SDK's prechatAPI "
+        "was an empty Proxy and pivoted to a visible Pre-Brief Panel; "
+        "Phase 26's auto-ZIP work confirmed the V2 prechatAPI is now "
+        "FIXED on the live SDK — setHiddenPrechatFields({Patient_Zip}) "
+        "actually transports the value through the channel + Flow to "
+        "MessagingSession.Pause_Patient_Zip__c, which the agent reads "
+        "as $Context.Pause_Patient_Zip and hard-binds into the "
+        "findMenopauseProviders action so the agent never re-asks for "
+        "ZIP. Agentforce provider-lookup action (Phase 26) lets the "
+        "agent call /api/mulesoft/providers via an External Service + "
+        "Named Credential. Scripted Pause-branded fallback runs when "
+        "the four NEXT_PUBLIC_AGENTFORCE_* env vars are unset.",
+        "Salesforce Data Cloud Phase 2 — three Calculated Insights "
+        "(HRV, vasomotor burden, sleep disruption) live on trailsignup "
+        "org over ssot__Individual__dlm. /api/data-360/patient/<id>/"
+        "grounding returns 'Phase 2: SOQL (Health Cloud) + Data Cloud "
+        "Calculated Insights' on every call. Phase 2-bis (real DBDP "
+        "feature math via the Ingestion API push path) is SHIPPED in "
+        "the repo; operationalization for trailsignup is the remaining "
+        "Setup UI work in PHASE_2_INGESTION_API_RUNBOOK.md.",
+        "MuleSoft Anypoint Phase 1 LIVE on CloudHub 2.0 — worker "
+        "pause-mulesoft-health-v1 v1.0.5 serving /health + /providers "
+        "behind Flex Gateway (Auth0-JWT validation + plain rate "
+        "limiting), DataWeave OMH→FHIR on /health, Phase-2 full "
+        "provider contract on /providers (distance-ranked, plan-"
+        "narrowed, sanctioned-filtered, MSCP-overlay-flagged). "
+        "Production /api/mulesoft/{health,providers} both report "
+        "meta._source: 'live-mulesoft' end-to-end. Graceful "
+        "degradation to mock-fallback on tunnel-down (laptop sleep, "
+        "VPN, etc.); the proxy + worker stay byte-shape-compatible.",
+        "MuleSoft Phase 3 — nine Anypoint Exchange assets on the "
+        "Pause Health business group. One CONSUMED LIVE: "
+        "pause-omh-to-fhir-library v1.0.0 (CloudHub worker 1.0.5 "
+        "pulls + bundles it). Eight CONTRACT-ONLY: pause-jhe-system-"
+        "api-spec, pause-dbdp-system-api-spec, pause-oura/whoop/"
+        "garmin/healthkit/empatica-system-api-spec (covering both "
+        "pull-from-vendor + upload-to-Pause patterns), pause-ingest-"
+        "process-api-spec. With the Process tier published, the "
+        "MuleSoft API-led three-tier story (System + Process + "
+        "Experience) is fully on Exchange.",
+        "Provider graph LIVE — 2,015 NPPES-derived providers across "
+        "all 50 states + DC + 930 ZIP-3 prefixes, 15 MSCP-certified + "
+        "2,000 menopause-relevant non-certified. Six NPPES service-"
+        "line signals (FACOG/FAAFP/WHNP/multi-taxonomy/etc.). Three "
+        "state license-sanction overlays at build time (588 CA + 849 "
+        "NY + 283 TX = 1,720 sanctioned candidates dropped before any "
+        "ranking). Census 2020 ZCTA centroid distance ranking. "
+        "Real-shaped synthetic insurance acceptance per NPI (8 "
+        "canonical plan tokens). Browseable /provider directory + "
+        "/provider/[npi] profile pages. The Care Router consumes the "
+        "SAME queryProviderDirectory function the /provider UI calls "
+        "— triage and the directory stay in lockstep.",
+        "Headless 360 audit (Phase 29) — /proposal/headless-360 with "
+        "the three-row pattern-mapping (REST + MCP + A2A) and the "
+        "four-row gap table. ALL FOUR GAPS at prototype: gap #1 PKCE "
+        "External Client App seam + 6 routes, gap #2 mcp_api bearer "
+        "gate on /api/mcp with introspect+userinfo fallback + 60s "
+        "cache + identity-headers + /api/mcp/whoami diagnostic, gap "
+        "#3 Platform Event egress sink, gap #4 @pause-health/cli. "
+        "Activation per gap is operator-side env-var procurement.",
+        "Test coverage: 493 frontend vitest + 17 cli vitest + 27 (mock) "
+        "or 7 (real_jhe opt-in) pause_ingest pytest = 510-537 passing "
+        "depending on the JHE-suite mode. ESLint + tsc clean across "
+        "frontend + cli. Smoke harness: 168/168 routes 200 OK on "
+        "production.",
         "GitHub Actions: frontend-check, codeql, dependabot, vercel-"
-        "preview, lighthouse-nightly.",
-        "Production deployment on Vercel at pause-health.ai.",
+        "preview, lighthouse-nightly (with checked-in summary.json "
+        "time series).",
+        "Production deployment on Vercel at pause-health.ai. Open-source "
+        "(Apache-2.0) with CONTRIBUTING.md, CODE_OF_CONDUCT.md, "
+        "SECURITY.md, NOTICE.",
     ],
     "mocked": [
-        "Salesforce Data Cloud unified-profile layer (Phase 14) — "
-        "PROVISIONED but EMPTY. 31 unified DMOs exist; no Data Streams "
-        "currently feed them. External Client App scopes are pre-"
-        "configured (cdp_api, cdp_profile_api, cdp_ingest_api) so the "
-        "OAuth side is ready. Activation is a 2-4 hour Setup UI exercise "
-        "(Data Streams + DLO mappings + Identity Resolution + Calculated "
-        "Insights) deferred to a dedicated session.",
-        "MuleSoft Experience APIs (Phase 7) — fixture-backed Next.js "
-        "routes. A real Anypoint Platform org is now available (Phase "
-        "16) but no Mule app is deployed yet. Production swaps the base "
-        "URL for the customer's Anypoint deployment without contract "
-        "changes; the MCP server's PAUSE_MCP_BASE_URL already supports "
-        "the swap. Next-session 3-5 hour playbook in "
-        "docs/MULESOFT_RUNBOOK.md.",
+        "Salesforce Data Cloud Phase 2-bis (real wearable feature math). "
+        "Phase 2 SHIPPED the three Calculated Insights (HRV, vasomotor, "
+        "sleep) over ssot__Individual__dlm in MAX(constant) form; Phase "
+        "2-bis upgraded the CI SQL to actual SUM/AVG over per-patient "
+        "rows pushed via the Data Cloud Ingestion API. Push client + "
+        "DLO schema + real CI SQL are all SHIPPED in the repo; "
+        "operationalizing it for the trailsignup org is the remaining "
+        "Setup UI work documented in PHASE_2_INGESTION_API_RUNBOOK.md.",
+        "MuleSoft Experience APIs beyond /health + /providers — "
+        "/timeline + /intake routes remain Next.js mocks. /health + "
+        "/providers are LIVE on CloudHub 2.0 (iterations 1-7 SHIPPED, "
+        "with worker v1.0.5 consuming pause-omh-to-fhir-library v1.0.0 "
+        "as a Maven dependency, behind Flex Gateway with JWT auth + "
+        "rate limiting). The other two endpoints follow the same "
+        "live-or-mock proxy pattern; flip with one env var when their "
+        "Mule flows ship.",
+        "Phase 1c implementations of the Phase-3 spec assets. Eight "
+        "OAS 3.0 contracts SHIPPED on Anypoint Exchange (JHE, DBDP, "
+        "Oura, Whoop, Garmin, HealthKit, Empatica E4 system APIs + the "
+        "ingest-process API), all CONTRACT-ONLY. The deployable Mule "
+        "projects that honor each contract are Phase 1c; pause_ingest's "
+        "Python worker does the equivalent orchestration in-process "
+        "today.",
         "MuleSoft Agent Fabric — in-memory registry, policy catalog, "
         "trace store. Production swaps for the real Anypoint Agent "
-        "Fabric service.",
-        "Salesforce Data 360 federated reads beyond Health Cloud — the "
-        "in-memory federated patient store and four calculated insights "
-        "from Phase 11 still serve any code path that asks for data the "
-        "real Health Cloud org doesn't have (wearable HRV time series, "
-        "cohort comparisons, population segments). Hybrid: Health Cloud "
-        "live, everything else mocked, both surface together through "
-        "the same GroundingContext type.",
+        "Fabric service. Spans now egress to Salesforce as "
+        "Pause_Agent_Trace__e Platform Events (Headless 360 audit "
+        "gap #3) when SF_PLATFORM_EVENT_* env vars are set; without "
+        "those env vars the spans live in-process only.",
+        "Headless 360 conformance gaps activation. All 4 gaps SHIPPED "
+        "as dormant env-gated seams (pill: prototype). Activation per "
+        "gap is operator-side env-var procurement: SF_HEADLESS360_* "
+        "for gap #1 (PKCE) + gap #2 (mcp_api bearer gate); "
+        "SF_PLATFORM_EVENT_* for gap #3 (Platform Event egress); the "
+        "@pause-health/cli npm-publish decision for gap #4 (the artifact "
+        "ships in-repo today, npm-scope ownership is a separate ops step).",
         "Anthropic Claude — real when ANTHROPIC_API_KEY is set, "
         "deterministic policy engine fallback otherwise.",
-        "JupyterHealth + DBDP — design documented and reference "
-        "scaffolds present; live federation happens when a customer "
-        "deployment wires the System APIs to their real JupyterHealth "
-        "instance and DBDP feature warehouse.",
+        "Agentforce Voice (Phase 31) — partner-web seam SHIPPED dormant; "
+        "voice round-trip gated on Salesforce Agentforce Contact Center "
+        "licensing not present on the trailsignup org.",
     ],
     "deferred_with_runbook": [
-        "Phase 2 (Salesforce Data Cloud activation) — README.md status "
-        "section + .env.example comments; estimated 2-4 hours UI work.",
-        "MuleSoft Phase 1 (one live CloudHub 2.0 Experience API "
-        "replacing /api/mulesoft/health) — docs/MULESOFT_RUNBOOK.md; "
-        "estimated 3-5 hours combined UI + wiring.",
-        "Move the Phase 18a/18b Salesforce metadata artifacts (20 "
-        "MessagingSession custom fields, the Pause_Health_Intake_"
-        "Prechat_Dossier permission set, the Pause_Intake_Prechat_"
-        "Router routing Flow, the augmented Messaging_for_In_App_Web "
-        "channel, and the Bot + GenAiPlannerBundle for Pause_Health_"
-        "Intake_Agent) from /tmp scratch dirs into salesforce/ in "
-        "this repo, add a deploy script, and CI-validate them. "
-        "Today the Salesforce org IS the source of truth for these "
-        "artifacts; the next session makes the repo authoritative "
-        "instead. ~2 hours of scaffolding work.",
+        "Phase 1c — turn one Phase-3 spec asset (pause-jhe-system-api-"
+        "spec is the recommended first target) into a deployable Mule "
+        "project that wraps pause_ingest.exchange over HTTP. Real "
+        "infrastructure constraint: free-tier ngrok allows one tunnel "
+        "at a time, and the Flex Gateway already owns the "
+        "cattail-reactive-sassy subdomain. Cloudflare Tunnel free tier "
+        "needs a CF-owned domain for permanent URLs. The architecturally "
+        "right next move is Phase-1 iteration 8 — host the Flex Gateway "
+        "on a small persistent VM (Fly.io / Lightsail, ~$5/mo) so it "
+        "stops dropping on laptop sleep AND it unblocks the Phase 1c "
+        "tunnel constraint. Documented as the 'iteration 8' row in "
+        "docs/MULESOFT_RUNBOOK.md.",
+        "Headless 360 gap #2 known limitation — userinfo-fallback path "
+        "doesn't enforce scope. Operators who need RFC 7662-strict "
+        "scope validation must keep introspect enabled on their "
+        "External Client App. Salesforce-side org-config choice; "
+        "Pause can't close from this side.",
+        "Phase 31 — Agentforce Voice voice round-trip. Seam shipped "
+        "dormant; voice infrastructure requires Salesforce Agentforce "
+        "Contact Center licensing on the customer org. Documented in "
+        "docs/AGENTFORCE_VOICE_RUNBOOK.md.",
+        "Smoke harness against the live MuleSoft Phase 1 worker — the "
+        "frontend smoke at frontend/scripts/smoke-test.mjs covers the "
+        "Next.js proxy layer (live-or-mock); a complementary harness "
+        "that probes the gateway + worker independently would catch "
+        "drift the proxy-layer smoke can mask. ~1 hour.",
     ],
 }
 
@@ -1939,13 +3132,23 @@ def render(doc: Document):
     )
     add_paragraph(
         doc,
-        "Three integrations are deferred to dedicated sessions with "
-        "checked-in runbooks: Salesforce Data Cloud activation, "
-        "Pause-owned Agentforce Embedded Messaging deployment, and the "
-        "first live MuleSoft Anypoint Experience API. Each runbook was "
-        "written immediately after an investigation session so the next "
-        "session is click-through-only rather than re-investigation — "
-        "the most expensive failure mode discovered during the build.",
+        "The three deferrals the original Phase 14 / 15 / 16 sessions "
+        "ended with — Salesforce Data Cloud activation, Pause-owned "
+        "Agentforce Embedded Messaging deployment, and the first live "
+        "MuleSoft Anypoint Experience API — have ALL SHIPPED. Phase 18 "
+        "stood up the Pause-Health-owned Agentforce deployment with the "
+        "real Pause_Health_Intake_Agent. Phase 22 deployed "
+        "pause-mulesoft-health-v1 to CloudHub 2.0 with live-or-mock "
+        "graceful degradation; Phase 23 layered Flex Gateway runtime "
+        "enforcement + JWT auth + rate limiting + an OAS 3.0 spec on "
+        "Exchange. Phase 24 activated Data Cloud Phase 2 with three "
+        "Calculated Insights live on trailsignup org. The current "
+        "deferrals are smaller and more specific: Phase 1c Mule "
+        "implementations of the 8 Phase-3 spec assets, the Phase-1 "
+        "iteration-8 persistent VM that hosts Flex Gateway off the "
+        "laptop, and the operator-side env-var procurement that flips "
+        "the four Headless 360 audit gaps from prototype to shipped. "
+        "Each is one focused session away.",
     )
 
 
