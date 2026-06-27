@@ -21,17 +21,32 @@
  * agent's session at its own layer). If a future client needs sticky
  * sessions, swap to a stateful generator + an `EventStore`.
  *
- * Auth: no bearer enforcement on this prototype endpoint — the
- * underlying Experience APIs are the public mock surface. When pointed
- * at a customer Anypoint instance, layer auth at the Vercel proxy or
- * the Anypoint Experience tier; do not bolt it on here without coordinating
- * with the Agentforce Registry's connection profile.
+ * Auth: by default no bearer enforcement on this prototype endpoint — the
+ * underlying Experience APIs are the public mock surface, and the
+ * Agentforce 3.0 Registry expects a public connection profile.
+ *
+ * **Headless 360 audit gap #2 (`mcp_api` scope) — env-gated activation.**
+ * When the operator sets `SF_HEADLESS360_REQUIRE_MCP_AUTH=on` (and the
+ * other `SF_HEADLESS360_*` env vars are provisioned), this route requires
+ * every request to carry an `Authorization: Bearer <token>` header that
+ * Salesforce validates as active with the `mcp_api` scope. Validation is
+ * introspect-first with a userinfo fallback for orgs that disable
+ * introspect — see `validateMcpApiBearer` in
+ * `frontend/lib/salesforce-headless360.ts` for the trust model rationale
+ * and `docs/HEADLESS_360_RUNBOOK.md` § "Closing gap #2" for the operator
+ * runbook. Without the env, this route stays public for backwards
+ * compatibility with the Agentforce Registry.
  */
 import {
   WebStandardStreamableHTTPServerTransport
 } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 
 import { createPauseMcpServer, SERVER_NAME } from "../../../lib/mcp/tools";
+import {
+  getHeadless360Config,
+  isMcpApiAuthRequired,
+  validateMcpApiBearer
+} from "../../../lib/salesforce-headless360";
 
 // The MCP SDK depends on Node-only APIs (crypto, streams). Pin Node
 // runtime so Vercel doesn't try to compile this for the Edge runtime.
@@ -50,7 +65,51 @@ function pauseBaseUrl(req: Request): string {
   return `${url.protocol}//${url.host}`;
 }
 
+/**
+ * Bearer-gate guard. Returns a Response when the gate is active and the
+ * request fails validation; returns null when the request should
+ * proceed (gate off, or gate on + bearer valid).
+ *
+ * `WWW-Authenticate: Bearer realm="mcp_api"` follows RFC 6750 so MCP
+ * clients that handle 401 challenges can prompt for re-auth.
+ */
+async function guardMcpAuth(req: Request): Promise<Response | null> {
+  if (!isMcpApiAuthRequired()) return null;
+  const cfg = getHeadless360Config();
+  if (!cfg) {
+    // Operator opted into auth without provisioning the Headless 360
+    // config. Fail closed; 503 + diagnostic so the runbook check is
+    // actionable.
+    return new Response(
+      JSON.stringify({
+        error: "mcp-auth-misconfigured",
+        detail:
+          "SF_HEADLESS360_REQUIRE_MCP_AUTH is set but the Headless 360 env vars are not. Either unset the gate or provision SF_HEADLESS360_CLIENT_ID + AUTH_BASE_URL + REDIRECT_URI + SESSION_SECRET."
+      }),
+      {
+        status: 503,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  }
+  const check = await validateMcpApiBearer(req, cfg);
+  if (check.ok) return null;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "WWW-Authenticate": `Bearer realm="mcp_api", error="${check.reason}"`
+  };
+  const status = check.reason === "scope-mismatch" ? 403 : 401;
+  return new Response(JSON.stringify({ error: check.reason, ...("detail" in check ? { detail: check.detail } : {}) }), {
+    status,
+    headers
+  });
+}
+
 async function handle(req: Request): Promise<Response> {
+  const blocked = await guardMcpAuth(req);
+  if (blocked) return blocked;
+
   const baseUrl = pauseBaseUrl(req);
   const server = createPauseMcpServer({
     baseUrl,

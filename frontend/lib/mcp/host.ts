@@ -74,15 +74,34 @@ export interface MCPTransportLike {
  * Returns the ordered list of remotes the host will try. Loopback is
  * always position 0 unless explicitly disabled by setting
  * `PAUSE_MCP_HOST_LOOPBACK=off`.
+ *
+ * **Headless 360 gap #2 — loopback bearer propagation.** When the
+ * caller passes an inbound `Authorization: Bearer <token>` header (e.g.
+ * the Care Router was itself called under a Salesforce user identity),
+ * it's attached to the **loopback remote only**. We never forward a
+ * Salesforce-issued bearer to an externally-configured MCP server —
+ * those have their own auth profiles, and leaking a customer's user
+ * token across origins would be a serious trust violation. The
+ * same-origin guarantee is structural: the loopback URL is built from
+ * the same `origin` the inbound request landed on.
  */
-export function resolveRemotesFromEnv(origin: string): MCPRemoteConfig[] {
+export function resolveRemotesFromEnv(
+  origin: string,
+  options: { loopbackBearer?: string } = {}
+): MCPRemoteConfig[] {
   const remotes: MCPRemoteConfig[] = [];
   const loopback = (process.env.PAUSE_MCP_HOST_LOOPBACK ?? "on").trim().toLowerCase();
   if (loopback !== "off") {
-    remotes.push({
+    const loopbackEntry: MCPRemoteConfig = {
       id: "loopback",
       url: `${origin.replace(/\/+$/, "")}/api/mcp`
-    });
+    };
+    if (options.loopbackBearer && options.loopbackBearer.length > 0) {
+      loopbackEntry.headers = {
+        Authorization: `Bearer ${options.loopbackBearer}`
+      };
+    }
+    remotes.push(loopbackEntry);
   }
   const rawExternal = process.env.PAUSE_MCP_HOST_REMOTES?.trim();
   if (rawExternal) {
@@ -250,9 +269,20 @@ export class MCPHost {
  * Convenience: build a per-request host from the env, deriving the
  * loopback origin from the incoming Request. Use this from API route
  * handlers.
+ *
+ * When the inbound Request carries `Authorization: Bearer ...`, the
+ * token is propagated to the loopback remote only (same-origin guard;
+ * see `resolveRemotesFromEnv` for the rationale). External remotes
+ * configured via `PAUSE_MCP_HOST_REMOTES` keep their own headers — we
+ * never leak a Salesforce-issued bearer cross-origin.
  */
 export function createMCPHostFromRequest(req: Request): MCPHost {
   const url = new URL(req.url);
   const origin = `${url.protocol}//${url.host}`;
-  return new MCPHost({ remotes: resolveRemotesFromEnv(origin) });
+  const auth = req.headers.get("authorization");
+  const m = auth ? /^Bearer\s+(.+)$/i.exec(auth) : null;
+  const loopbackBearer = m ? m[1].trim() : undefined;
+  return new MCPHost({
+    remotes: resolveRemotesFromEnv(origin, { loopbackBearer })
+  });
 }

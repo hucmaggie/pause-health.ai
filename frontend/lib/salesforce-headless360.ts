@@ -65,7 +65,17 @@ const ENV_KEYS = {
   redirectUri: "SF_HEADLESS360_REDIRECT_URI",
   scopes: "SF_HEADLESS360_SCOPES",
   sessionSecret: "SF_HEADLESS360_SESSION_SECRET",
-  verified: "SF_HEADLESS360_VERIFIED"
+  verified: "SF_HEADLESS360_VERIFIED",
+  /**
+   * Gate the /api/mcp endpoint behind Salesforce-issued bearer tokens.
+   * When unset, /api/mcp stays public (the Agentforce 3.0 Registry
+   * default + the design-partner public-mock posture). When set to a
+   * truthy value, every /api/mcp request must carry an
+   * `Authorization: Bearer <token>` header that Salesforce validates as
+   * active with the `mcp_api` scope (introspect-first, userinfo fallback;
+   * see `validateMcpApiBearer`).
+   */
+  requireMcpAuth: "SF_HEADLESS360_REQUIRE_MCP_AUTH"
 } as const;
 
 function readEnv(key: string): string {
@@ -339,4 +349,198 @@ export function cookieFlags(maxAge: number): string {
 
 export function clearedCookieFlags(): string {
   return "Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0";
+}
+
+// -----------------------------------------------------------------------------
+// Gap #2 — `mcp_api` bearer validation for /api/mcp
+// -----------------------------------------------------------------------------
+//
+// The Headless 360 trust model says external clients calling MCP tools
+// present a Salesforce-issued OAuth bearer with `mcp_api` scope, so the
+// MCP server can attribute the call to a Salesforce user identity for
+// Event Monitoring + Shield audit. This block implements the server-side
+// half: when `SF_HEADLESS360_REQUIRE_MCP_AUTH` is set, the /api/mcp route
+// uses `validateMcpApiBearer` to gate every request.
+//
+// Why introspect-first with a userinfo fallback (vs. local JWT decode):
+// Salesforce access tokens are opaque to the client. The canonical RFC
+// 7662 introspect endpoint at /services/oauth2/introspect returns the
+// `scope` claim so we can enforce `mcp_api` strictly. BUT introspect is
+// configurable per org and may be disabled. When that happens, we fall
+// back to /services/oauth2/userinfo, which validates token aliveness
+// (200 = valid, 401 = bad) but doesn't surface scope. That fallback is
+// honest about its weaker guarantee in the returned result so callers
+// can log it and the runbook can flag it as a posture decision.
+// -----------------------------------------------------------------------------
+
+export function isMcpApiAuthRequired(): boolean {
+  const raw = readEnv(ENV_KEYS.requireMcpAuth).toLowerCase();
+  return raw === "1" || raw === "true" || raw === "on";
+}
+
+export type McpApiBearerCheck =
+  /**
+   * Token validated. `via` records which Salesforce endpoint answered
+   * so the caller can log + traces can distinguish the strict and
+   * permissive paths.
+   */
+  | { ok: true; via: "introspect"; scope: string; username?: string }
+  | { ok: true; via: "userinfo-fallback"; scope: null; username?: string }
+  /**
+   * No bearer presented, or the bearer is malformed (e.g. wrong scheme).
+   * Caller should respond 401.
+   */
+  | { ok: false; reason: "missing-bearer" }
+  /**
+   * Salesforce introspect said the token is inactive (revoked, expired,
+   * unknown). Caller should respond 401.
+   */
+  | { ok: false; reason: "token-inactive" }
+  /**
+   * Introspect said the token is active but the `scope` claim does NOT
+   * contain `mcp_api`. Caller should respond 403 (authenticated, not
+   * authorized for this surface).
+   */
+  | { ok: false; reason: "scope-mismatch"; scope: string }
+  /**
+   * Both introspect and userinfo failed at the network / Salesforce
+   * layer. Caller should respond 503 — the gate cannot make a decision.
+   * `detail` is included in the response body for runbook diagnosis.
+   */
+  | { ok: false; reason: "introspect-error"; detail: string };
+
+function extractBearer(req: Request): string | null {
+  const auth = req.headers.get("authorization");
+  if (!auth) return null;
+  const m = /^Bearer\s+(.+)$/i.exec(auth);
+  if (!m) return null;
+  const token = m[1].trim();
+  return token.length > 0 ? token : null;
+}
+
+function scopeContainsMcpApi(scope: string | undefined | null): boolean {
+  if (!scope) return false;
+  return scope.split(/\s+/).some((s) => s === "mcp_api");
+}
+
+/**
+ * Validate a `/api/mcp` request's bearer token against Salesforce.
+ *
+ * Calls `${cfg.authBaseUrl}/services/oauth2/introspect` first. If that
+ * endpoint 404s or 405s (some orgs have it disabled), falls back to
+ * `/services/oauth2/userinfo` which only proves token aliveness, not
+ * scope. The fallback result is flagged via `via: "userinfo-fallback"`
+ * + `scope: null` so callers can decide whether to accept the weaker
+ * guarantee for their threat model.
+ *
+ * Why not cache introspections process-wide: serverless invocations on
+ * Vercel are short-lived; a process-local cache compounds the risk
+ * window if a token is revoked mid-life. Per-request memoization is
+ * fine (one /api/mcp request issues many tools/call subrequests, all
+ * sharing one validation) but cross-request caching belongs at a
+ * dedicated KV layer when traffic justifies it.
+ *
+ * Never throws. Network errors collapse to `introspect-error`.
+ */
+export async function validateMcpApiBearer(
+  req: Request,
+  cfg: Headless360Config,
+  fetchImpl: typeof fetch = fetch
+): Promise<McpApiBearerCheck> {
+  const token = extractBearer(req);
+  if (!token) return { ok: false, reason: "missing-bearer" };
+
+  // --- Step 1: RFC 7662 introspect (strict path) ----------------------------
+  let introspectResp: Response | null = null;
+  try {
+    const body = new URLSearchParams({
+      token,
+      token_type_hint: "access_token",
+      client_id: cfg.clientId
+    });
+    introspectResp = await fetchImpl(
+      `${cfg.authBaseUrl}/services/oauth2/introspect`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json"
+        },
+        body
+      }
+    );
+  } catch (err) {
+    // Network blew up. Skip to userinfo fallback below.
+    introspectResp = null;
+  }
+
+  if (introspectResp && introspectResp.ok) {
+    let parsed: Record<string, unknown> = {};
+    try {
+      parsed = (await introspectResp.json()) as Record<string, unknown>;
+    } catch {
+      // Salesforce returned 200 with a non-JSON body. Treat as introspect
+      // failure and try userinfo.
+      parsed = {};
+    }
+    if (typeof parsed.active === "boolean") {
+      if (!parsed.active) return { ok: false, reason: "token-inactive" };
+      const scope = typeof parsed.scope === "string" ? parsed.scope : "";
+      if (!scopeContainsMcpApi(scope)) {
+        return { ok: false, reason: "scope-mismatch", scope };
+      }
+      const username =
+        typeof parsed.username === "string" ? parsed.username : undefined;
+      return { ok: true, via: "introspect", scope, username };
+    }
+    // 200 but `active` field missing — fall through to userinfo.
+  }
+
+  // --- Step 2: userinfo fallback (permissive path) --------------------------
+  //
+  // Reached when introspect is disabled (404/405), errored at the
+  // network layer, or returned an unexpected body. userinfo proves the
+  // token is alive but cannot surface scope; the returned `via:
+  // "userinfo-fallback"` flag tells the caller this is the weaker path.
+  let userinfoResp: Response | null = null;
+  try {
+    userinfoResp = await fetchImpl(
+      `${cfg.authBaseUrl}/services/oauth2/userinfo`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json"
+        }
+      }
+    );
+  } catch (err) {
+    return {
+      ok: false,
+      reason: "introspect-error",
+      detail: `userinfo network error: ${(err as Error).message}`
+    };
+  }
+
+  if (userinfoResp.status === 401) return { ok: false, reason: "token-inactive" };
+  if (!userinfoResp.ok) {
+    return {
+      ok: false,
+      reason: "introspect-error",
+      detail: `userinfo HTTP ${userinfoResp.status}`
+    };
+  }
+  let userinfo: Record<string, unknown> = {};
+  try {
+    userinfo = (await userinfoResp.json()) as Record<string, unknown>;
+  } catch {
+    userinfo = {};
+  }
+  const username =
+    typeof userinfo.preferred_username === "string"
+      ? userinfo.preferred_username
+      : typeof userinfo.email === "string"
+        ? userinfo.email
+        : undefined;
+  return { ok: true, via: "userinfo-fallback", scope: null, username };
 }

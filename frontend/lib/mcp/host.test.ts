@@ -111,6 +111,54 @@ describe("resolveRemotesFromEnv", () => {
     expect(warn).toHaveBeenCalledTimes(2);
     warn.mockRestore();
   });
+
+  // -------------------------------------------------------------------------
+  // Headless 360 gap #2 — loopback bearer propagation
+  // -------------------------------------------------------------------------
+
+  it("propagates a loopbackBearer to the loopback remote only", () => {
+    process.env.PAUSE_MCP_HOST_REMOTES = JSON.stringify([
+      { id: "external", url: "https://partner.example/mcp" }
+    ]);
+    const remotes = resolveRemotesFromEnv("https://pause-health.ai", {
+      loopbackBearer: "00DHp...real-sf-token"
+    });
+    expect(remotes).toHaveLength(2);
+    expect(remotes[0]).toEqual({
+      id: "loopback",
+      url: "https://pause-health.ai/api/mcp",
+      headers: { Authorization: "Bearer 00DHp...real-sf-token" }
+    });
+    // External remote MUST NOT receive the Salesforce bearer.
+    expect(remotes[1]).toEqual({
+      id: "external",
+      url: "https://partner.example/mcp"
+    });
+    expect(remotes[1].headers).toBeUndefined();
+  });
+
+  it("does not attach an Authorization header when loopbackBearer is empty", () => {
+    expect(
+      resolveRemotesFromEnv("https://pause-health.ai", { loopbackBearer: "" })[0]
+        .headers
+    ).toBeUndefined();
+    expect(
+      resolveRemotesFromEnv("https://pause-health.ai")[0].headers
+    ).toBeUndefined();
+  });
+
+  it("does not surface a loopbackBearer when loopback is disabled", () => {
+    process.env.PAUSE_MCP_HOST_LOOPBACK = "off";
+    process.env.PAUSE_MCP_HOST_REMOTES = JSON.stringify([
+      { id: "external", url: "https://partner.example/mcp" }
+    ]);
+    const remotes = resolveRemotesFromEnv("https://pause-health.ai", {
+      loopbackBearer: "00D..."
+    });
+    // Only the external remote remains; it must not pick up the bearer.
+    expect(remotes).toHaveLength(1);
+    expect(remotes[0].headers).toBeUndefined();
+  });
 });
 
 describe("MCPHost.callTool", () => {

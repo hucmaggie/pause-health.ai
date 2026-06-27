@@ -159,12 +159,74 @@ After redeploy the `/config` route reports `designed` again and all five OAuth r
 - **Token rotation policy.** Some Salesforce orgs are configured to rotate the refresh token on every refresh; some are not. The seam handles both (uses the new refresh_token when returned, falls back to the existing one). If your org has rotation enabled, ensure long-lived sessions aren't depending on the original refresh_token surviving.
 - **PKCE downgrade attacks.** The seam requires `code_challenge_method=S256`; do not enable `plain` on the External Client App.
 
-## Next: closing gap #2 (`mcp_api` scope on the Pause MCP server)
+## Closing gap #2 — `mcp_api` scope on the Pause MCP server (SHIPPED 2026-06-27)
 
-After this seam ships, gap #2 in the audit becomes the natural follow-up: validating incoming `Bearer` tokens with `mcp_api` scope on the Pause `/api/mcp` endpoint. Specifically:
+Shipped as an env-gated middleware. The audit page on `/proposal/headless-360` now shows gap #2 with the `prototype` pill.
 
-1. Extract a middleware from this seam's verify-cookie path.
-2. Apply it conditionally on `/api/mcp` — public when `SF_HEADLESS360_REQUIRE_MCP_AUTH` is unset, gated when set.
-3. Update `frontend/lib/mcp/host.ts` so the host attaches the user's bearer token when the loopback remote is in the same origin.
+### What activates the gate
 
-That work depends on this PKCE seam being live, which is why it's gated behind this activation.
+Set `SF_HEADLESS360_REQUIRE_MCP_AUTH=on` (or `1` or `true`) **alongside** the existing `SF_HEADLESS360_*` env vars provisioned during gap #1. The gate is structurally tied to the same External Client App because it calls Salesforce's `/services/oauth2/introspect` with the same `clientId`.
+
+When unset (the default), `/api/mcp` stays public — exactly the posture the Agentforce 3.0 Registry expects today. The gate is opt-in per environment.
+
+### Validation flow
+
+Implementation lives in `frontend/lib/salesforce-headless360.ts` (`validateMcpApiBearer`), wired into `frontend/app/api/mcp/route.ts`'s `handle()` via the `guardMcpAuth()` pre-check.
+
+1. **Extract bearer.** `Authorization: Bearer <token>` only — non-Bearer schemes return `missing-bearer` immediately.
+2. **Introspect (strict path).** `POST ${cfg.authBaseUrl}/services/oauth2/introspect` with `token`, `token_type_hint=access_token`, and `client_id`. If the response is 200 + `active=true`:
+   - Scope contains `mcp_api` → `{ok: true, via: "introspect", scope, username}`.
+   - Scope does NOT contain `mcp_api` → `{ok: false, reason: "scope-mismatch"}` → HTTP 403.
+   - `active=false` → `{ok: false, reason: "token-inactive"}` → HTTP 401.
+3. **Userinfo fallback (permissive path).** Reached when introspect 404s (org disabled it), errors at the network layer, or returns a 200 with an unexpected body shape. `GET ${cfg.authBaseUrl}/services/oauth2/userinfo` with `Authorization: Bearer <token>`:
+   - 200 → `{ok: true, via: "userinfo-fallback", scope: null, username}` (note: scope is NOT verified by this path; the result self-documents the weaker guarantee).
+   - 401 → `{ok: false, reason: "token-inactive"}` → HTTP 401.
+   - any other failure → `{ok: false, reason: "introspect-error", detail}` → HTTP 401.
+
+### HTTP semantics on /api/mcp
+
+| Outcome | Status | `WWW-Authenticate` |
+|---|---|---|
+| Gate off | n/a | n/a — request handled normally |
+| Gate on, env unprovisioned | 503 | (none) — body explains the misconfig |
+| `missing-bearer` | 401 | `Bearer realm="mcp_api", error="missing-bearer"` |
+| `token-inactive` | 401 | `Bearer realm="mcp_api", error="token-inactive"` |
+| `scope-mismatch` | 403 | `Bearer realm="mcp_api", error="scope-mismatch"` |
+| `introspect-error` | 401 | `Bearer realm="mcp_api", error="introspect-error"` (body carries `detail`) |
+| Valid | (passes through to MCP handler) | n/a |
+
+### Loopback bearer propagation
+
+`frontend/lib/mcp/host.ts` reads the inbound `Authorization` header off the request and propagates it to the **loopback remote only** — the `MCPRemoteConfig` for `https://<this-origin>/api/mcp`. External remotes configured via `PAUSE_MCP_HOST_REMOTES` keep their own headers; Salesforce-issued bearers must never be forwarded cross-origin. The same-origin guarantee is structural: the loopback URL is built from the request origin, so there's no path by which an externally-configured remote could end up carrying it.
+
+### Operator activation steps
+
+After gap #1 is provisioned (see the procurement section above):
+
+1. **Configure your External Client App** to grant `mcp_api` to the same client that calls `/api/mcp`. If `mcp_api` doesn't yet surface in your org's scope list, the introspect-only path will reject all tokens — switch to userinfo fallback by ensuring introspect is disabled (or accept the weaker guarantee documented above).
+2. **Set `SF_HEADLESS360_REQUIRE_MCP_AUTH=on`** in Vercel Production + Preview env. No other env var is needed.
+3. **Redeploy.** The new env propagates to the next preview build.
+4. **Smoke-test:**
+   ```bash
+   # Expect 401 without bearer
+   curl -i "https://pause-health.ai/api/mcp" -X POST | head -5
+   # Expect 401/403 with a known-bad bearer
+   curl -i "https://pause-health.ai/api/mcp" -H "Authorization: Bearer fake" -X POST | head -5
+   # Expect a normal MCP initialize response with a real Salesforce-issued mcp_api-scoped bearer
+   curl -i "https://pause-health.ai/api/mcp" -H "Authorization: Bearer <real-token>" -X POST \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{...}}'
+   ```
+5. **Rollback** is `unset SF_HEADLESS360_REQUIRE_MCP_AUTH`. Restoring public access is one env-var deletion away.
+
+### Tests pinning the contract
+
+- `frontend/lib/salesforce-headless360.test.ts` adds 22 unit tests covering: `isMcpApiAuthRequired` truthy-table, introspect happy path, scope-mismatch, token-inactive, introspect 404 → userinfo fallback, fallback 401, network errors → `introspect-error`, bogus introspect body falls through to userinfo, bearer whitespace handling.
+- `frontend/lib/mcp/host.test.ts` adds 3 tests pinning that the inbound bearer attaches to loopback only (NOT to external remotes), no bearer is attached when the verifier returns empty, and disabling loopback drops the bearer entirely.
+- `createMCPHostFromRequest(req)` reads the request's `Authorization` header and passes it through `resolveRemotesFromEnv(origin, { loopbackBearer })` — the connecting glue between the inbound request and the loopback transport.
+
+### Known limitations
+
+- **Introspect-or-userinfo result is opaque to the MCP handler.** Today the gate either allows the request through or returns a non-2xx; the MCP server below doesn't see *who* called. A follow-up enhancement could thread the validated `username` into the MCP server via request context so individual tool calls can include it in the agent-fabric trace.
+- **No caching of validation results.** Each `/api/mcp` request does its own introspect/userinfo round-trip. Acceptable for prototype throughput; production volumes would justify a KV-layer cache keyed by `(token, scope-required)` with a 30-60s TTL.
+- **Userinfo-fallback path does not enforce scope.** Operators who need RFC 7662-strict scope validation must keep introspect enabled on their External Client App. The runbook flags this honestly so the audit posture matches the deployed behavior.

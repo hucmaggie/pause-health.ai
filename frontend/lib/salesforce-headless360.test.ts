@@ -8,12 +8,14 @@ import {
   getHeadless360Config,
   getHeadless360Status,
   isHeadless360Configured,
+  isMcpApiAuthRequired,
   parsePending,
   parseSession,
   serializePending,
   serializeSession,
   signCookieValue,
   toPublicConfig,
+  validateMcpApiBearer,
   verifyCookieValue
 } from "./salesforce-headless360";
 
@@ -42,7 +44,8 @@ const KEYS = [
   "SF_HEADLESS360_REDIRECT_URI",
   "SF_HEADLESS360_SCOPES",
   "SF_HEADLESS360_SESSION_SECRET",
-  "SF_HEADLESS360_VERIFIED"
+  "SF_HEADLESS360_VERIFIED",
+  "SF_HEADLESS360_REQUIRE_MCP_AUTH"
 ] as const;
 
 function clearEnv() {
@@ -279,5 +282,234 @@ describe("session cookie shape", () => {
 
   it("rejects session objects missing required fields", () => {
     expect(parseSession(JSON.stringify({ instanceUrl: "x" }))).toBeNull();
+  });
+});
+
+// =============================================================================
+// Headless 360 audit gap #2 — `mcp_api` bearer validation for /api/mcp
+// =============================================================================
+
+describe("isMcpApiAuthRequired", () => {
+  const ORIGINAL = { ...process.env };
+  beforeEach(() => clearEnv());
+  afterEach(() => {
+    Object.keys(process.env).forEach((k) => {
+      if (!(k in ORIGINAL)) delete process.env[k];
+    });
+    Object.assign(process.env, ORIGINAL);
+  });
+
+  it("returns false when unset", () => {
+    expect(isMcpApiAuthRequired()).toBe(false);
+  });
+
+  it.each(["1", "true", "on", "True", "ON", " on "])(
+    "returns true for truthy %p",
+    (val) => {
+      process.env.SF_HEADLESS360_REQUIRE_MCP_AUTH = val;
+      expect(isMcpApiAuthRequired()).toBe(true);
+    }
+  );
+
+  it.each(["0", "false", "off", "no", ""])(
+    "returns false for %p",
+    (val) => {
+      process.env.SF_HEADLESS360_REQUIRE_MCP_AUTH = val;
+      expect(isMcpApiAuthRequired()).toBe(false);
+    }
+  );
+});
+
+describe("validateMcpApiBearer", () => {
+  const ORIGINAL = { ...process.env };
+  beforeEach(() => clearEnv());
+  afterEach(() => {
+    Object.keys(process.env).forEach((k) => {
+      if (!(k in ORIGINAL)) delete process.env[k];
+    });
+    Object.assign(process.env, ORIGINAL);
+  });
+
+  // Build a config the same way runtime code does (env → getHeadless360Config).
+  function cfg() {
+    fullyProvisioned();
+    const c = getHeadless360Config();
+    if (!c) throw new Error("test setup: config should be provisioned");
+    return c;
+  }
+
+  function reqWith(headers: Record<string, string>): Request {
+    return new Request("https://pause-health.ai/api/mcp", { headers });
+  }
+
+  function jsonResp(body: unknown, status = 200): Response {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
+  it("returns missing-bearer when no Authorization header is present", async () => {
+    const out = await validateMcpApiBearer(new Request("https://x/y"), cfg());
+    expect(out).toEqual({ ok: false, reason: "missing-bearer" });
+  });
+
+  it("returns missing-bearer for non-Bearer schemes", async () => {
+    const out = await validateMcpApiBearer(
+      reqWith({ authorization: "Basic dXNlcjpwYXNz" }),
+      cfg()
+    );
+    expect(out).toEqual({ ok: false, reason: "missing-bearer" });
+  });
+
+  it("introspect-active + mcp_api scope → ok via introspect", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResp({ active: true, scope: "mcp_api refresh_token api", username: "u@example.com" })
+    );
+    const out = await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer real-token" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch
+    );
+    expect(out).toEqual({
+      ok: true,
+      via: "introspect",
+      scope: "mcp_api refresh_token api",
+      username: "u@example.com"
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://test.my.salesforce.com/services/oauth2/introspect");
+    expect(init.method).toBe("POST");
+    expect(String(init.body)).toContain("token=real-token");
+    expect(String(init.body)).toContain("token_type_hint=access_token");
+    expect(String(init.body)).toContain("client_id=3MVG9_test_client_id");
+  });
+
+  it("introspect-active without mcp_api scope → scope-mismatch", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResp({ active: true, scope: "api refresh_token" })
+    );
+    const out = await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer real-token" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch
+    );
+    expect(out).toEqual({
+      ok: false,
+      reason: "scope-mismatch",
+      scope: "api refresh_token"
+    });
+  });
+
+  it("introspect-inactive → token-inactive (no userinfo fallback)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResp({ active: false }));
+    const out = await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer revoked" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch
+    );
+    expect(out).toEqual({ ok: false, reason: "token-inactive" });
+    // userinfo should NOT be called when introspect gave a definitive answer
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("introspect 404 → userinfo fallback succeeds → ok via userinfo-fallback", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("not found", { status: 404 }))
+      .mockResolvedValueOnce(
+        jsonResp({ preferred_username: "u@example.com", email: "u@example.com" })
+      );
+    const out = await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer t" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch
+    );
+    expect(out).toEqual({
+      ok: true,
+      via: "userinfo-fallback",
+      scope: null,
+      username: "u@example.com"
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [introspectCall, userinfoCall] = fetchMock.mock.calls as [
+      [string, RequestInit],
+      [string, RequestInit]
+    ];
+    expect(introspectCall[0]).toContain("/services/oauth2/introspect");
+    expect(userinfoCall[0]).toBe(
+      "https://test.my.salesforce.com/services/oauth2/userinfo"
+    );
+    expect((userinfoCall[1].headers as Record<string, string>).Authorization).toBe(
+      "Bearer t"
+    );
+  });
+
+  it("introspect 404 + userinfo 401 → token-inactive", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("disabled", { status: 404 }))
+      .mockResolvedValueOnce(new Response("unauth", { status: 401 }));
+    const out = await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer bad" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch
+    );
+    expect(out).toEqual({ ok: false, reason: "token-inactive" });
+  });
+
+  it("introspect network error + userinfo network error → introspect-error", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("ECONNREFUSED introspect"))
+      .mockRejectedValueOnce(new Error("ECONNREFUSED userinfo"));
+    const out = await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer t" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch
+    );
+    expect(out.ok).toBe(false);
+    if (!out.ok) {
+      expect(out.reason).toBe("introspect-error");
+      expect("detail" in out && out.detail).toContain("ECONNREFUSED userinfo");
+    }
+  });
+
+  it("introspect 200 with bogus body → falls back to userinfo", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("<html>maintenance</html>", {
+          status: 200,
+          headers: { "Content-Type": "text/html" }
+        })
+      )
+      .mockResolvedValueOnce(jsonResp({ preferred_username: "u@example.com" }));
+    const out = await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer t" }),
+      cfg(),
+      fetchMock as unknown as typeof fetch
+    );
+    expect(out).toEqual({
+      ok: true,
+      via: "userinfo-fallback",
+      scope: null,
+      username: "u@example.com"
+    });
+  });
+
+  it("trims whitespace in the Authorization header", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResp({ active: true, scope: "mcp_api" }));
+    const out = await validateMcpApiBearer(
+      reqWith({ authorization: "Bearer    real-token   " }),
+      cfg(),
+      fetchMock as unknown as typeof fetch
+    );
+    expect(out.ok).toBe(true);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(String(init.body)).toContain("token=real-token");
   });
 });

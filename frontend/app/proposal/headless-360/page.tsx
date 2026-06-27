@@ -191,8 +191,8 @@ const missingForFullConformance: Array<{
   {
     gap: "`mcp_api` scope on the Pause MCP server",
     why: "Today the MCP server is unauthenticated against the public mock. Headless 360's MCP pattern expects the calling agent to present an OAuth token with `mcp_api` scope so the server can attribute tool calls to a Salesforce user identity for Event Monitoring and Shield audit.",
-    needed: "Authorization middleware on /api/mcp that validates `mcp_api` bearer tokens issued by the External Client App. Doesn't block on activation — the existing public deployment stays open until a customer org wires their own External Client App; then the middleware activates conditionally.",
-    pill: "designed"
+    needed: "Shipped 2026-06-27 as an env-gated middleware. validateMcpApiBearer in lib/salesforce-headless360.ts calls Salesforce's /services/oauth2/introspect (strict path — verifies token is active AND scope contains mcp_api) with a /services/oauth2/userinfo fallback for orgs that disable introspect (permissive path — verifies token aliveness only; result flags itself as `userinfo-fallback` so callers can log the weaker guarantee). /api/mcp's handler now calls this guard up-front when SF_HEADLESS360_REQUIRE_MCP_AUTH=on; returns 401 with WWW-Authenticate: Bearer realm=\"mcp_api\" on missing/invalid token, 403 on scope-mismatch, 503 on misconfig. The Care Router's MCP host (lib/mcp/host.ts) propagates the inbound bearer to the loopback remote only — never cross-origin to externally-configured MCP servers. 22 new unit tests pin the introspect happy path, scope-mismatch, token-inactive, both userinfo fallback branches, and the same-origin host guarantee. Activate by setting SF_HEADLESS360_REQUIRE_MCP_AUTH=on alongside the existing SF_HEADLESS360_* env (provisioned during gap #1 activation). The Agentforce 3.0 Registry public-mock posture stays the default when unset.",
+    pill: "prototype"
   },
   {
     gap: "Agent Fabric → Salesforce Platform Event egress",
