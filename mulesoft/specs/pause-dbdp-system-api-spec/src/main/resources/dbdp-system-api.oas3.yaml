@@ -1,0 +1,362 @@
+openapi: "3.0.3"
+
+info:
+  title: Pause DBDP System API
+  version: "1.0.0"
+  description: |
+    System-tier API contract for the Pause feature-engineering layer that
+    wraps the [Digital Biomarker Discovery Pipeline](https://www.dbdp.org/code-repository)
+    (DBDP) toolkit and the [FLIRT](https://github.com/im-ethz/flirt)
+    sliding-window HRV library. The implementation lives in the
+    `pause_ingest` Python package — specifically
+    `pause_ingest.features.hrv_features_flirt` (FLIRT-backed,
+    sliding-window) and `pause_ingest.features.hrv_time_domain_fallback`
+    (DBDP-style, validated against Kubios). The
+    [`pause-mulesoft-health-v1`](https://github.com/hucmaggie/pause-health.ai/tree/main/mulesoft/pause-mulesoft-health-v1)
+    CloudHub worker emits derived HRV Observations that carry these
+    metrics as `valueQuantity` (RMSSD example: `obs-feature-rmssd-001` in
+    the `/health` Bundle).
+
+    ## Status (2026-06-27) — contract only, no live REST surface yet
+
+    **This spec is published to Anypoint Exchange as a *prospective*
+    contract, NOT a live Mule app.** As of today:
+
+    - `pause_ingest.features.hrv_features_flirt(ibi_ms, ...)` and
+      `hrv_time_domain_fallback(ibi_ms)` are called **in-process from
+      Python** (see `pause_ingest/examples/oura_sample_upload.py`). There
+      is no HTTP server fronting them yet.
+    - The third tier of MuleSoft's API-led pattern
+      (see [`/proposal/mulesoft`](https://pause-health.ai/proposal/mulesoft)
+      and [`docs/mulesoft-integration.md`](https://github.com/hucmaggie/pause-health.ai/blob/main/docs/mulesoft-integration.md))
+      calls for `dbdp-system-api` to wrap this Python layer as a Mule
+      System API. Phase 1c materializes that Mule project.
+    - **This spec describes the HTTP surface that wrapping will expose.**
+      It is shaped by:
+        1. The endpoint sketch in [`mulesoft/flows/pause-process-api.example.xml`](https://github.com/hucmaggie/pause-health.ai/blob/main/mulesoft/flows/pause-process-api.example.xml)
+           (`POST /features/hrv:compute`).
+        2. The actual Python function signatures in
+           `pause_ingest/pause_ingest/features.py`.
+        3. The FHIR derivation shape the CloudHub worker already returns
+           (`urn:pause-health:code:dbdp-features` /
+           `hrv_rmssd_sliding_180s`, with `derivedFrom` lineage).
+
+    The expectation is that the implementation will honor this contract
+    1:1 once the Mule project lands; consumers can wire against the spec
+    now without waiting.
+
+    ## Two computation modes
+
+    The contract exposes a single `POST /features/hrv:compute` endpoint
+    parameterized by `mode`:
+
+    - `mode=sliding-window` → wraps `hrv_features_flirt`. Returns one
+      result row per sliding window. Default window 180s / step 60s.
+      Multiple feature domains (time, frequency, statistical).
+    - `mode=time-domain-fallback` → wraps `hrv_time_domain_fallback`.
+      Returns a single aggregate object. Dependency-light; deterministic;
+      validated against Kubios. Used when FLIRT is unavailable or the
+      input is too small for sliding windows.
+
+    The Process-API caller picks the mode; the system API doesn't decide.
+
+    ## Fire-and-forget vs synchronous
+
+    The reference Process API ([`mulesoft/flows/pause-process-api.example.xml`](https://github.com/hucmaggie/pause-health.ai/blob/main/mulesoft/flows/pause-process-api.example.xml))
+    treats DBDP triggers as fire-and-forget (`<async>` block, no
+    response wait). That's an orchestration choice, not a server-side
+    requirement — the endpoint always returns the computed payload. A
+    fire-and-forget caller simply ignores the response body.
+
+    A future `prefer=respond-async` variant could push the result onto
+    Anypoint MQ instead of returning inline; out of scope for v1.0.0.
+
+  contact:
+    name: Pause-Health.ai
+    url: https://pause-health.ai
+    email: founders@pause-health.ai
+
+servers:
+  - url: http://localhost:8090
+    description: Local Mule dev (when pause-ingest is wrapped, placeholder port)
+  - url: https://dbdp.example.com
+    description: Customer-deployed dbdp-system-api (placeholder)
+
+security:
+  - oauth2ClientCredentials: []
+
+paths:
+  /features/hrv:compute:
+    post:
+      operationId: computeHrvFeatures
+      summary: Compute HRV features from a series of inter-beat intervals
+      description: |
+        Compute HRV (heart-rate variability) features from a series of
+        IBI (inter-beat / RR) intervals.
+
+        Input is always a JSON array of IBIs in **milliseconds** (per
+        `pause_ingest.features._validate_ibi_ms` — values outside
+        100–5000 ms are rejected as likely unit confusion). Output shape
+        depends on `mode`.
+
+        Honors the optional `correlationId` field for end-to-end tracing
+        through the Process API's `<async>` fire-and-forget trigger.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HrvComputeRequest"
+            examples:
+              slidingWindow:
+                summary: Default mode — FLIRT sliding-window across time + frequency + statistical domains
+                value:
+                  mode: sliding-window
+                  ibiMs: [812, 798, 825, 841, 833, 820, 836, 829, 847, 818]
+                  source: oura
+                  observationId: "63600"
+                  windowLengthSec: 180
+                  windowStepSizeSec: 60
+                  domains: ["td", "fd", "stat"]
+                  correlationId: "trace-abc-123"
+              fallback:
+                summary: Time-domain fallback — single aggregate, dependency-light, Kubios-validated
+                value:
+                  mode: time-domain-fallback
+                  ibiMs: [812, 798, 825, 841, 833, 820]
+                  source: oura
+                  observationId: "63600"
+      responses:
+        "200":
+          description: Features computed
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/HrvSlidingWindowResponse"
+                  - $ref: "#/components/schemas/HrvTimeDomainResponse"
+              examples:
+                slidingWindow:
+                  summary: sliding-window response
+                  value:
+                    mode: sliding-window
+                    observationId: "63600"
+                    source: oura
+                    windowLengthSec: 180
+                    windowStepSizeSec: 60
+                    domains: ["td", "fd", "stat"]
+                    windows:
+                      - windowStartIso: "2026-05-25T02:00:00Z"
+                        features:
+                          hrv_rmssd: 18.4
+                          hrv_sdnn: 27.1
+                          hrv_mean_nn: 824.0
+                    correlationId: "trace-abc-123"
+                fallback:
+                  summary: time-domain-fallback response
+                  value:
+                    mode: time-domain-fallback
+                    observationId: "63600"
+                    source: oura
+                    features:
+                      meanNnMs: 824.83
+                      sdnnMs: 14.62
+                      rmssdMs: 21.84
+                      nn50Count: 0
+                      pnn50Pct: 0.0
+                      meanHrBpm: 72.74
+                      sampleCount: 6
+        "400":
+          description: |
+            Invalid input. Common causes:
+              - Empty IBI array
+              - IBI values outside the 100–5000 ms physiological range
+                (almost always a unit confusion — passing seconds instead
+                of milliseconds)
+              - `mode=sliding-window` with fewer than 2 samples
+              - `mode=time-domain-fallback` with fewer than 5 samples
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DbdpError"
+              examples:
+                unitMismatch:
+                  value:
+                    code: invalid-ibi-series
+                    message: "IBI values outside the plausible physiological range 100-5000 ms; did you accidentally pass seconds or a different unit?"
+                tooShort:
+                  value:
+                    code: invalid-ibi-series
+                    message: "IBI series has only 3 sample(s); need >= 5"
+        "401":
+          description: Missing / invalid bearer token
+        "503":
+          description: |
+            FLIRT-backed mode requested but FLIRT is not installed on the
+            worker. Caller should retry with `mode=time-domain-fallback`
+            for a smaller-but-deterministic result, or escalate to
+            operations to install FLIRT.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DbdpError"
+
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      description: OAuth 2.0 client_credentials grant. Same flow shape as the JHE System API (see `pause-jhe-system-api-spec`).
+      flows:
+        clientCredentials:
+          tokenUrl: /o/token/
+          scopes:
+            features.compute: Compute features on behalf of the calling service.
+
+  schemas:
+    HrvComputeRequest:
+      type: object
+      required: [mode, ibiMs]
+      properties:
+        mode:
+          type: string
+          enum: [sliding-window, time-domain-fallback]
+          description: "Which `pause_ingest.features.*` implementation to invoke."
+        ibiMs:
+          type: array
+          description: "Inter-beat / RR intervals in MILLISECONDS. Values outside 100–5000 ms are rejected."
+          items:
+            type: number
+            minimum: 100
+            maximum: 5000
+          minItems: 1
+          example: [812, 798, 825, 841, 833, 820]
+        source:
+          type: string
+          description: "Origin wearable, for provenance. Free-form string; common values: `oura`, `apple-healthkit`, `whoop`, `garmin`, `empatica-e4`."
+          example: oura
+        observationId:
+          type: string
+          description: "JHE-assigned id of the raw IBI Observation this computation derives from. The Process API attaches this so the derived FHIR Observation can carry a `derivedFrom: [{reference: Observation/<id>}]` pointer."
+          example: "63600"
+        windowLengthSec:
+          type: integer
+          description: "sliding-window only. Window width in seconds. Default 180 (FLIRT default)."
+          default: 180
+          minimum: 30
+          maximum: 600
+        windowStepSizeSec:
+          type: integer
+          description: "sliding-window only. Hop size in seconds. Default 60 (pause_ingest default; FLIRT default is 1)."
+          default: 60
+          minimum: 1
+          maximum: 600
+        domains:
+          type: array
+          description: "sliding-window only. Which feature domains to compute. Default [td, fd, stat]."
+          items:
+            type: string
+            enum: [td, fd, stat]
+          default: [td, fd, stat]
+        threshold:
+          type: number
+          description: "sliding-window only. Fraction of expected IBIs that must be present per window before FLIRT processes it."
+          default: 0.2
+          minimum: 0.0
+          maximum: 1.0
+        correlationId:
+          type: string
+          description: "Opaque caller-supplied identifier. Echoed back in the response for tracing through fire-and-forget invocations."
+
+    HrvSlidingWindowResponse:
+      type: object
+      required: [mode, windows]
+      properties:
+        mode:
+          type: string
+          enum: [sliding-window]
+        observationId:
+          type: string
+        source:
+          type: string
+        windowLengthSec:
+          type: integer
+        windowStepSizeSec:
+          type: integer
+        domains:
+          type: array
+          items:
+            type: string
+        correlationId:
+          type: string
+        windows:
+          type: array
+          description: "One row per sliding window. Mirrors the rows of the pandas.DataFrame returned by `flirt.hrv.get_hrv_features`."
+          items:
+            type: object
+            required: [windowStartIso, features]
+            properties:
+              windowStartIso:
+                type: string
+                format: date-time
+                description: "Window start time, ISO-8601. Comes from the FLIRT DataFrame index."
+              features:
+                type: object
+                additionalProperties:
+                  type: number
+                description: "FLIRT feature columns. Names follow FLIRT's convention (e.g. `hrv_rmssd`, `hrv_sdnn`, `hrv_lf`, `hrv_hf`, `hrv_lf_hf_ratio`, etc.). The exact key set depends on the requested `domains`."
+
+    HrvTimeDomainResponse:
+      type: object
+      required: [mode, features]
+      properties:
+        mode:
+          type: string
+          enum: [time-domain-fallback]
+        observationId:
+          type: string
+        source:
+          type: string
+        correlationId:
+          type: string
+        features:
+          $ref: "#/components/schemas/HrvTimeDomain"
+
+    HrvTimeDomain:
+      type: object
+      description: "Mirrors `pause_ingest.features.HrvTimeDomain` 1:1. Definitions follow Task Force (1996) standard, replicated by DBDP's Kubios validation."
+      required: [meanNnMs, sdnnMs, rmssdMs, nn50Count, pnn50Pct, meanHrBpm, sampleCount]
+      properties:
+        meanNnMs:
+          type: number
+          description: "Mean NN (normal-to-normal) interval in milliseconds."
+        sdnnMs:
+          type: number
+          description: "Standard deviation of NN intervals (ms, ddof=1 to match Kubios)."
+        rmssdMs:
+          type: number
+          description: "Root mean square of successive differences (ms)."
+        nn50Count:
+          type: integer
+          description: "Count of successive differences > 50 ms."
+        pnn50Pct:
+          type: number
+          description: "NN50 / (N - 1) expressed as a percent."
+        meanHrBpm:
+          type: number
+          description: "Mean heart rate in beats per minute. Derived from mean NN: 60000 / mean_nn_ms."
+        sampleCount:
+          type: integer
+          description: "Number of IBI samples that contributed."
+
+    DbdpError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [invalid-ibi-series, flirt-unavailable, internal-error]
+        message:
+          type: string
+        detail:
+          type: string
+          description: "Optional free-form diagnostic context."

@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata = pageMetadata({
   title: "Investor Brief · MuleSoft Integration",
   description:
-    "MuleSoft Anypoint integration plane for Pause-Health.ai. Iterations 1–7 shipped (CloudHub 2.0 worker live, Flex Gateway enforcing JWT + rate limiting, OAS 3.0 spec on Exchange). Phase 3 opened 2026-06-26: two shared Exchange assets published (pause-omh-to-fhir-library v1.0.0 + pause-jhe-system-api-spec v1.0.0). Full three-tier architecture activates with first design partner.",
+    "MuleSoft Anypoint integration plane for Pause-Health.ai. Iterations 1–7 shipped (CloudHub 2.0 worker live, Flex Gateway enforcing JWT + rate limiting, OAS 3.0 spec on Exchange). Phase 3 opened 2026-06-26: three shared Exchange assets published (pause-omh-to-fhir-library v1.0.0 + pause-jhe-system-api-spec v1.0.0 + pause-dbdp-system-api-spec v1.0.0). Full three-tier architecture activates with first design partner.",
   path: "/proposal/mulesoft",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "MuleSoft integration strategy — Pause-Health.ai investor brief."
@@ -183,7 +183,7 @@ const phases: Array<{
     status: "prototype",
     duration: "Started · 2026-06-26",
     detail:
-      "Two shared artifacts on Anypoint Exchange under the Pause Health business group: (1) pause-omh-to-fhir-library v1.0.0 — the Open mHealth → FHIR R5 Observation DataWeave transform, consumed by the CloudHub worker 1.0.5 as a Maven dependency. (2) pause-jhe-system-api-spec v1.0.0 — the OAS 3.0 contract for JupyterHealth Exchange's REST surface + Django data plane, ready for any customer-side jhe-system-api Mule project. The implementation is gated on Phase 1c (real Mule project); the spec asset lands first so the contract review can happen now. Next: dbdp-system-api spec on the same pattern."
+      "Three shared artifacts on Anypoint Exchange under the Pause Health business group: (1) pause-omh-to-fhir-library v1.0.0 — the Open mHealth → FHIR R5 Observation DataWeave transform, consumed by the CloudHub worker 1.0.5 as a Maven dependency. (2) pause-jhe-system-api-spec v1.0.0 — the OAS 3.0 contract for JupyterHealth Exchange's REST surface + Django data plane. (3) pause-dbdp-system-api-spec v1.0.0 — the OAS 3.0 contract for the DBDP/FLIRT feature-engineering System API (mode=sliding-window wraps hrv_features_flirt; mode=time-domain-fallback wraps hrv_time_domain_fallback). The two System-API specs are contract-only — implementations are gated on Phase 1c (real Mule projects wrapping the existing pause_ingest Python layer). Honest framing: the dependency wiring story is end-to-end on the DataWeave library; the spec-tier assets land first so contract review can happen now."
   }
 ];
 
