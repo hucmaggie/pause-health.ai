@@ -33,6 +33,38 @@ type Milestone = {
   status: StatusPillStatus;
 };
 
+type MediaMention = {
+  /** Display name of the publisher / poster (e.g. "The Menopause Society"). */
+  source: string;
+  /** Handle if applicable (e.g. "@menopausesociety"). Omitted for non-social mentions. */
+  handle?: string;
+  /** Short quote or paraphrase of what the post says about Pause / menopause care. */
+  quote: string;
+  /** Absolute date when published (YYYY-MM-DD). */
+  date: string;
+  /** Outbound link to the source post. */
+  href: string;
+  /** Platform label rendered as a tag (Instagram, LinkedIn, etc.). */
+  platform: string;
+};
+
+const mediaMentions: MediaMention[] = [
+  // TODO: replace this placeholder with the real Instagram reel content.
+  // The reel URL is https://www.instagram.com/reels/DZXz49gk70D/ — fill
+  // in source/handle/quote/date once captured. Until then this entry
+  // displays a clearly-flagged placeholder so the section structure
+  // ships and the real content is a one-edit follow-up.
+  {
+    source: "TODO: account display name",
+    handle: "@TODO_handle",
+    quote:
+      "TODO: paste the caption or key quote from the Instagram reel. Keep it short — one or two sentences is enough; the link sends readers to the full post.",
+    date: "2026-06-28",
+    href: "https://www.instagram.com/reels/DZXz49gk70D/",
+    platform: "Instagram"
+  }
+];
+
 const milestonesDone: Milestone[] = [
   {
     year: "2026",
@@ -196,6 +228,97 @@ export default function PressPage() {
           organizations for 2026 H2 pilots.
         </p>
       </section>
+
+      {/*
+        TODO: "Recent mentions" section — uncomment once the IG reel
+        content is captured. The reel URL is
+        https://www.instagram.com/reels/DZXz49gk70D/. Edit the
+        `mediaMentions` array above (source / handle / quote / date)
+        before un-commenting. Section structure is ready; only the
+        real content is missing.
+
+        <section style={{ marginTop: "1.5rem" }}>
+          <p className="eyebrow">Recent mentions</p>
+          <p style={{ color: "var(--muted)", maxWidth: "65ch", marginBottom: "0.75rem" }}>
+            External coverage and partner posts about Pause-Health.ai and
+            menopause care. Each card links to the original post — the quotes
+            here are excerpts, not the full piece.
+          </p>
+          <div className="card-grid" style={{ marginTop: "0.6rem" }}>
+            {mediaMentions.map((m) => (
+              <article key={m.href} className="card">
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "baseline",
+                    gap: "0.6rem",
+                    marginBottom: "0.4rem"
+                  }}
+                >
+                  <strong style={{ fontSize: "0.95rem" }}>{m.source}</strong>
+                  <span
+                    style={{
+                      color: "var(--brand)",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em"
+                    }}
+                  >
+                    {m.platform}
+                  </span>
+                </div>
+                {m.handle ? (
+                  <p
+                    style={{
+                      color: "var(--muted)",
+                      fontSize: "0.85rem",
+                      margin: "0 0 0.6rem"
+                    }}
+                  >
+                    {m.handle}
+                  </p>
+                ) : null}
+                <blockquote
+                  style={{
+                    margin: "0 0 0.75rem",
+                    paddingLeft: "0.8rem",
+                    borderLeft: "3px solid var(--brand)",
+                    color: "var(--text)",
+                    fontStyle: "italic"
+                  }}
+                >
+                  {m.quote}
+                </blockquote>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginTop: "auto"
+                  }}
+                >
+                  <time
+                    dateTime={m.date}
+                    style={{ color: "var(--muted)", fontSize: "0.85rem" }}
+                  >
+                    {m.date}
+                  </time>
+                  <a
+                    href={m.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "var(--brand)", fontWeight: 600, fontSize: "0.9rem" }}
+                  >
+                    View post →
+                  </a>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      */}
 
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Key facts</p>
