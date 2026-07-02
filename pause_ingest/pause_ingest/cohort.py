@@ -38,7 +38,11 @@ HRV_WINDOW_DAYS = 30
 SLEEP_WINDOW_NIGHTS = 7
 VASOMOTOR_WINDOW_DAYS = 30
 
-# HRV normative anchor (matches the Calculated Insight z-score denominator).
+# Resting NN-interval mean (~70 bpm) the synthetic IBI walk is centered on.
+# This is an *input* to RMSSD synthesis, NOT the z-score anchor: the z-score
+# denominator (42 ms mean / 12 ms SD normative RMSSD) lives only in the
+# Pause_HRV_RMSSD_30d Calculated Insight SQL, which the CI computes over the
+# AVG(rmssd) these rows produce.
 _HRV_MEAN_NN_MS = 850.0
 _HRV_SAMPLES_PER_DAY = 120
 
