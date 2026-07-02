@@ -59,6 +59,23 @@ ids upsert in place), which is why the CIs need **no SQL date filter**.
 
 ---
 
+## Preflight — know where you stand (30 sec, run anytime)
+
+These steps are manual Data Cloud UI clicks; nothing here can click them for
+you. But the preflight probes the org and tells you which steps have already
+taken effect, so you can confirm each stage instead of clicking blind. Run it
+before you start and again after each step:
+
+```bash
+cd pause_ingest && source .venv/bin/activate
+python -m examples.data_cloud_preflight
+```
+
+It prints a `[x]/[ ]/[?]` checklist mapped to the steps below (token exchange →
+DMO → pushed rows → CIs reachable) and, when everything is wired, tells you to
+run the verifier (Step 6). Exit 0 = ready to verify; 1 = steps remain; 2 = not
+configured.
+
 ## Step 1 — Grant the Connected App the ingest scope (5 min)
 
 The read path already has `cdp_query_api`. Add the write scope:

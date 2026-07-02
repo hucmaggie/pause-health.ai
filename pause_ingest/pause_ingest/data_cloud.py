@@ -214,6 +214,16 @@ class DataCloudClientBase:
             self._token = self._exchange_for_dc_token(client, core, instance_url)
         return self._token
 
+    def check_auth(self) -> str:
+        """Fetch a Data Cloud token and return the tenant URL.
+
+        Isolates the two-legged auth so the preflight can tell an auth problem
+        (bad creds / Data Cloud not enabled / missing CDP grant) apart from a
+        data problem (DMO or CI not created yet). Raises on any auth failure.
+        """
+        with httpx.Client(timeout=self._timeout) as client:
+            return self._get_token(client).tenant_url
+
 
 class DataCloudIngestClient(DataCloudClientBase):
     """Thin Data Cloud Ingestion API client (the write path).
@@ -306,6 +316,36 @@ class DataCloudQueryClient(DataCloudClientBase):
                 raise DataCloudConfigError(
                     f"insight query for {insight_api_name} failed "
                     f"({resp.status_code}): {resp.text[:600]}"
+                )
+            try:
+                body = resp.json()
+            except ValueError:
+                return []
+            data = body.get("data")
+            return data if isinstance(data, list) else []
+
+    def query(self, sql: str) -> list[dict]:
+        """Run a Data Cloud SQL query via ``POST /api/v1/query``.
+
+        Mirrors the frontend's ``dcQuery`` (data-cloud.ts). Used by the
+        preflight to probe whether the ``Pause_Wearable_Feature__dlm`` DMO
+        exists and holds rows; raises :class:`DataCloudConfigError` on an HTTP
+        error (e.g. the DMO not existing yet).
+        """
+        with httpx.Client(timeout=self._timeout) as client:
+            token = self._get_token(client)
+            resp = client.post(
+                f"{token.tenant_url}/api/v1/query",
+                json={"sql": sql},
+                headers={
+                    "Authorization": f"Bearer {token.access_token}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+            )
+            if resp.status_code >= 400:
+                raise DataCloudConfigError(
+                    f"query failed ({resp.status_code}): {resp.text[:600]}"
                 )
             try:
                 body = resp.json()

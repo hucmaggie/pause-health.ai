@@ -243,3 +243,56 @@ def test_query_calculated_insight_raises_on_http_error(monkeypatch):
     client = DataCloudQueryClient(_config())
     with pytest.raises(DataCloudConfigError):
         client.query_calculated_insight("Nope__cio", "[unified_id__c=003X]")
+
+
+def test_query_sql_two_legged(monkeypatch):
+    """The generic query() posts SQL to /api/v1/query on the tenant host."""
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if url.endswith("/services/oauth2/token"):
+            return httpx.Response(200, json={"access_token": "CORE", "instance_url": "https://example.my.salesforce.com"})
+        if url.endswith("/services/a360/token"):
+            return httpx.Response(200, json={"access_token": "DC_TOKEN", "instance_url": "https://tenant.c360a.salesforce.com"})
+        if url.endswith("/api/v1/query"):
+            seen["auth"] = request.headers.get("authorization")
+            seen["host"] = request.url.host
+            seen["sql"] = json.loads(request.content.decode())["sql"]
+            return httpx.Response(200, json={"data": [{"unified_id__c": "003X"}]})
+        raise AssertionError(f"unexpected request to {url}")
+
+    transport = httpx.MockTransport(handler)
+    real_client = httpx.Client
+    monkeypatch.setattr(httpx, "Client", lambda *a, **k: real_client(*a, **{**k, "transport": transport}))
+
+    client = DataCloudQueryClient(_config())
+    rows = client.query("SELECT unified_id__c FROM Pause_Wearable_Feature__dlm LIMIT 1")
+    assert rows == [{"unified_id__c": "003X"}]
+    assert seen["auth"] == "Bearer DC_TOKEN"
+    assert seen["host"] == "tenant.c360a.salesforce.com"
+    assert "Pause_Wearable_Feature__dlm" in seen["sql"]
+
+
+def test_check_auth_returns_tenant_url(monkeypatch):
+    _mock_two_legged(monkeypatch, lambda req: httpx.Response(200, json={"data": []}))
+    client = DataCloudQueryClient(_config())
+    assert client.check_auth() == "https://tenant.c360a.salesforce.com"
+
+
+def test_check_auth_raises_on_exchange_failure(monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if url.endswith("/services/oauth2/token"):
+            return httpx.Response(200, json={"access_token": "CORE", "instance_url": "https://example.my.salesforce.com"})
+        if url.endswith("/services/a360/token"):
+            return httpx.Response(400, text="")
+        raise AssertionError("should not reach query")
+
+    transport = httpx.MockTransport(handler)
+    real_client = httpx.Client
+    monkeypatch.setattr(httpx, "Client", lambda *a, **k: real_client(*a, **{**k, "transport": transport}))
+
+    client = DataCloudQueryClient(_config())
+    with pytest.raises(DataCloudConfigError):
+        client.check_auth()
