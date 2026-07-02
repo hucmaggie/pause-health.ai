@@ -131,7 +131,10 @@ const REGISTRY: AgentSeed[] = [
     kind: "mcp-server",
     protocol: "mcp",
     endpoint: "@pause-health/mcp via stdio",
-    version: "0.1.0",
+    // Must track SERVER_VERSION in lib/mcp/tools.ts (the version the MCP
+    // server actually reports on `initialize`, on both the stdio and
+    // Streamable HTTP transports). Pinned by lib/mcp/registry-parity.test.ts.
+    version: "0.3.0",
     status: "prototype",
     capabilities: [
       "get_patient_timeline (FHIR R5 Bundle)",
