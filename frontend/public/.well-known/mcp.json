@@ -2,7 +2,7 @@
   "$schema": "https://modelcontextprotocol.io/schemas/mcp-server-descriptor/draft-1.json",
   "name": "pause-health-mcp",
   "displayName": "Pause-Health.ai MCP",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "vendor": {
     "name": "Pause-Health.ai",
     "url": "https://pause-health.ai"
@@ -44,7 +44,7 @@
     },
     {
       "name": "find_menopause_providers",
-      "description": "Search Pause's provider directory by ZIP and menopause-certified flag. Returns providers ranked by Pause's internal graph score.",
+      "description": "Search Pause's provider directory by ZIP, menopause-certified flag, and insurance plan. Providers are ranked by distance from the patient's ZIP when its Census ZCTA centroid is known (graph-score ranking is the fallback when distance can't be computed). Every returned provider is currently-licensed (sanctioned providers are filtered at build time). Read the response `matchType` and `sort` fields to present results accurately.",
       "productionApi": "MuleSoft pause-provider-directory-experience-api"
     },
     {
