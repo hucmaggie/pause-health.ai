@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { A2AAgentCard } from "../../../../../../lib/a2a";
+import { getPoliciesForAgent } from "../../../../../../lib/agent-fabric";
 
 /**
  * Google A2A Agent Card for the Pause Care Router agent.
@@ -16,6 +17,12 @@ import type { A2AAgentCard } from "../../../../../../lib/a2a";
 const HOST = process.env.NEXT_PUBLIC_SITE_URL ?? "https://pause-health.ai";
 const MODEL =
   process.env.PAUSE_CARE_ROUTER_MODEL ?? "claude-sonnet-4-5-20250929";
+
+// The fabric agent id this card describes. Its advertised governance policies
+// are derived from the Agent Fabric registry (see below) rather than
+// hand-listed, so the public discovery document can't overclaim or omit a
+// policy relative to what the /tasks handler actually enforces.
+const FABRIC_AGENT_ID = "care-router-claude";
 
 const CARD: A2AAgentCard = {
   name: "Pause Care Router",
@@ -46,15 +53,9 @@ const CARD: A2AAgentCard = {
     }
   ],
   pauseGovernance: {
-    fabricRegisteredAs: "care-router-claude",
-    policies: [
-      "policy.model.anthropic-claude-sonnet-allowlisted",
-      "policy.clinical.no-prescribing",
-      "policy.clinical.rationale-required",
-      "policy.fallback.deterministic-on-api-failure",
-      "policy.intake.red-flag-mandatory",
-      "policy.audit.hipaa-log-every-turn"
-    ]
+    fabricRegisteredAs: FABRIC_AGENT_ID,
+    // Single source of truth: the Agent Fabric policy catalog (appliesTo).
+    policies: getPoliciesForAgent(FABRIC_AGENT_ID).map((p) => p.id)
   }
 };
 

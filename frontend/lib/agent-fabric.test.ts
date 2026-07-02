@@ -80,6 +80,65 @@ describe("Agent + Policy registries", () => {
   });
 });
 
+describe("Registry policies derive from the policy catalog (single source of truth)", () => {
+  // Regression guard: agent .policies used to be a hand-maintained second copy
+  // that drifted from POLICIES[].appliesTo. It under-listed the Care Router
+  // (missing the consent, red-flag, and HIPAA-audit policies it enforces) and
+  // MuleSoft (missing FHIR + bearer-token), and referenced a policy id that
+  // doesn't exist. Now .policies is derived, so these can never disagree.
+  it("every agent's .policies exactly equals getPoliciesForAgent(id)", () => {
+    for (const a of listAgents()) {
+      expect(a.policies).toEqual(getPoliciesForAgent(a.id).map((p) => p.id));
+    }
+  });
+
+  it("the Care Router advertises every policy it actually enforces", () => {
+    const p = getAgent("care-router-claude")!.policies;
+    // The two policies evaluateGovernance() can actively block on...
+    expect(p).toContain("policy.intake.red-flag-mandatory");
+    expect(p).toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    // ...plus the audit + consent policies whose appliesTo includes the router
+    // but which the old hand-list omitted.
+    expect(p).toContain("policy.audit.hipaa-log-every-turn");
+    expect(p).toContain("policy.data360.consent-required-before-grounding");
+  });
+
+  it("MuleSoft ingest no longer references a phantom policy id", () => {
+    const p = getAgent("mulesoft-ingest")!.policies;
+    // The old registry listed "policy.audit.correlation-id-mandatory", which
+    // was never defined in the catalog. The real id is the return- form.
+    expect(p).not.toContain("policy.audit.correlation-id-mandatory");
+    expect(p).toContain("policy.audit.return-mulesoft-correlation-id");
+    expect(p).toContain("policy.data.fhir-r5-only");
+  });
+});
+
+describe("Referential integrity · registry ⇄ policy catalog", () => {
+  it("every policy's appliesTo names a real registered agent", () => {
+    const agentIds = new Set(listAgents().map((a) => a.id));
+    for (const p of listPolicies()) {
+      for (const target of p.appliesTo) {
+        expect(
+          agentIds.has(target),
+          `policy ${p.id} applies to unknown agent "${target}"`
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("every policy id carried by an agent exists in the catalog", () => {
+    const policyIds = new Set(listPolicies().map((p) => p.id));
+    for (const a of listAgents()) {
+      for (const pid of a.policies) {
+        expect(
+          policyIds.has(pid),
+          `agent ${a.id} carries unknown policy "${pid}"`
+        ).toBe(true);
+      }
+    }
+  });
+});
+
 describe("evaluateGovernance · Care Router pre-flight", () => {
   it("allows a well-formed task with red-flag screen and approved model", () => {
     const out = evaluateGovernance({

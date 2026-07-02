@@ -77,7 +77,20 @@ export type TraceSpan = {
   attributes?: Record<string, unknown>;
 };
 
-const REGISTRY: AgentRecord[] = [
+/**
+ * Agent seed — everything about an agent EXCEPT its governance policy set.
+ *
+ * An agent's policies are NOT hand-listed here. They are derived from the
+ * single source of truth, `POLICIES[].appliesTo`, via getPoliciesForAgent().
+ * Maintaining a second per-agent copy drifted badly: it under-listed several
+ * agents (e.g. the Care Router omitted the consent, red-flag, and HIPAA-audit
+ * policies it actually enforces) and even referenced a policy id that doesn't
+ * exist. listAgents()/getAgent() now attach the derived list so the registry,
+ * the Agent Card, and the governance engine can never disagree.
+ */
+type AgentSeed = Omit<AgentRecord, "policies">;
+
+const REGISTRY: AgentSeed[] = [
   {
     id: "agentforce-intake",
     name: "Agentforce Service Agent · Patient Intake",
@@ -91,11 +104,6 @@ const REGISTRY: AgentRecord[] = [
       "Red-flag screening",
       "Structured intake record persistence",
       "Hands captured task off to Care Router via Google A2A"
-    ],
-    policies: [
-      "policy.phi.no-free-text-pii",
-      "policy.intake.red-flag-mandatory",
-      "policy.audit.hipaa-log-every-turn"
     ],
     provider: "Salesforce",
     governanceTier: "patient-facing"
@@ -114,12 +122,6 @@ const REGISTRY: AgentRecord[] = [
       "Premature ovarian insufficiency rule (<40 with menopause symptoms)",
       "Returns rationale + provenance with every decision"
     ],
-    policies: [
-      "policy.model.anthropic-claude-sonnet-allowlisted",
-      "policy.clinical.no-prescribing",
-      "policy.clinical.rationale-required",
-      "policy.fallback.deterministic-on-api-failure"
-    ],
     provider: "Anthropic + Pause-Health.ai",
     governanceTier: "clinical-decision"
   },
@@ -136,11 +138,6 @@ const REGISTRY: AgentRecord[] = [
       "get_patient_intake (structured Agentforce record)",
       "find_menopause_providers (provider graph slice)",
       "experience_api_health (liveness)"
-    ],
-    policies: [
-      "policy.mcp.tools-allowlisted",
-      "policy.phi.bearer-token-required-in-prod",
-      "policy.audit.return-mulesoft-correlation-id"
     ],
     provider: "Pause-Health.ai",
     governanceTier: "data-plane"
@@ -159,11 +156,6 @@ const REGISTRY: AgentRecord[] = [
       "POSTs to JupyterHealth Exchange",
       "Triggers DBDP feature compute"
     ],
-    policies: [
-      "policy.network.mtls-required",
-      "policy.data.fhir-r5-only",
-      "policy.audit.correlation-id-mandatory"
-    ],
     provider: "MuleSoft Anypoint",
     governanceTier: "integration"
   },
@@ -180,12 +172,6 @@ const REGISTRY: AgentRecord[] = [
       "Calculated Insights (30-day HRV z-score, vasomotor burden index, sleep disruption, days since MSCP contact)",
       "Identity Resolution with confidence scoring across federated sources",
       "Population Segments activated to Agentforce, the Agent Fabric, and Health Cloud"
-    ],
-    policies: [
-      "policy.data360.zero-copy-federation",
-      "policy.data360.consent-required-before-grounding",
-      "policy.data360.segment-activation-allowlist",
-      "policy.audit.hipaa-log-every-turn"
     ],
     provider: "Salesforce",
     governanceTier: "data-grounding"
@@ -411,12 +397,23 @@ function store(): FabricStore {
   );
 })();
 
+/**
+ * Attach an agent's governance policy ids, derived from the policy catalog's
+ * appliesTo membership. This is the ONLY place the per-agent policy list is
+ * produced, so it always matches what evaluateGovernance() enforces and what
+ * the Agent Card advertises.
+ */
+function withPolicies(seed: AgentSeed): AgentRecord {
+  return { ...seed, policies: getPoliciesForAgent(seed.id).map((p) => p.id) };
+}
+
 export function listAgents(): AgentRecord[] {
-  return REGISTRY.slice();
+  return REGISTRY.map(withPolicies);
 }
 
 export function getAgent(id: string): AgentRecord | undefined {
-  return REGISTRY.find((a) => a.id === id);
+  const seed = REGISTRY.find((a) => a.id === id);
+  return seed ? withPolicies(seed) : undefined;
 }
 
 export function listPolicies(): PolicyRecord[] {
