@@ -207,15 +207,51 @@ describe("evaluateGovernance · Care Router pre-flight", () => {
     expect(out.decision).toBe("allow");
   });
 
+  it("blocks when the rationale field is explicitly false", () => {
+    const out = evaluateGovernance({
+      agentId: "care-router-claude",
+      task: {
+        hasRedFlagScreen: true,
+        requestedModel: "claude-sonnet-4-5-20250929",
+        hasRationaleField: false
+      }
+    });
+    expect(out.decision).toBe("block");
+    expect(out.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.clinical.rationale-required"
+    );
+  });
+
+  it("does NOT block when hasRationaleField is undefined (mirrors the red-flag rule)", () => {
+    const out = evaluateGovernance({
+      agentId: "care-router-claude",
+      task: {
+        hasRedFlagScreen: true,
+        requestedModel: "claude-sonnet-4-5-20250929"
+      }
+    });
+    expect(out.decision).toBe("allow");
+    expect(out.blockingViolations).toEqual([]);
+  });
+
   it("returns all blocking violations together, not just the first", () => {
     const out = evaluateGovernance({
       agentId: "care-router-claude",
       task: {
         hasRedFlagScreen: false,
-        requestedModel: "gpt-4o"
+        requestedModel: "gpt-4o",
+        hasRationaleField: false
       }
     });
-    expect(out.blockingViolations).toHaveLength(2);
+    // red-flag + off-allowlist model + missing rationale = 3 blocks.
+    expect(out.blockingViolations).toHaveLength(3);
+    expect(out.blockingViolations.map((v) => v.policyId).sort()).toEqual(
+      [
+        "policy.clinical.rationale-required",
+        "policy.intake.red-flag-mandatory",
+        "policy.model.anthropic-claude-sonnet-allowlisted"
+      ].sort()
+    );
   });
 
   it("an unknown agent has no applicable policies and therefore allows", () => {

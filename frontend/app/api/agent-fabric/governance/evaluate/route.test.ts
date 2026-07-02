@@ -1,0 +1,83 @@
+import { describe, expect, it } from "vitest";
+import { POST } from "./route";
+
+/**
+ * Route test for POST /api/agent-fabric/governance/evaluate -- the HTTP
+ * wrapper over evaluateGovernance(). The evaluator's logic is unit-tested in
+ * lib/agent-fabric.test.ts; here we pin the request/response contract:
+ * defaults, error handling, no-store caching, and that the wired-up rationale
+ * signal actually surfaces through the endpoint.
+ */
+
+function post(body: unknown, { raw }: { raw?: string } = {}): Request {
+  return new Request("http://test/api/agent-fabric/governance/evaluate", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: raw ?? JSON.stringify(body)
+  });
+}
+
+describe("POST /api/agent-fabric/governance/evaluate", () => {
+  it("allows a well-formed Care Router task", async () => {
+    const res = await POST(
+      post({
+        agentId: "care-router-claude",
+        task: {
+          hasRedFlagScreen: true,
+          requestedModel: "claude-sonnet-4-5-20250929",
+          hasRationaleField: true
+        }
+      })
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    const json = await res.json();
+    expect(json.result.decision).toBe("allow");
+    expect(json.result.blockingViolations).toEqual([]);
+    expect(json.result.appliesPolicies.length).toBeGreaterThan(0);
+  });
+
+  it("blocks and reports violations for a non-compliant task", async () => {
+    const res = await POST(
+      post({
+        agentId: "care-router-claude",
+        task: {
+          hasRedFlagScreen: false,
+          requestedModel: "gpt-4o",
+          hasRationaleField: false
+        }
+      })
+    );
+    const json = await res.json();
+    expect(json.result.decision).toBe("block");
+    const ids = json.result.blockingViolations.map(
+      (v: { policyId: string }) => v.policyId
+    );
+    expect(ids).toContain("policy.intake.red-flag-mandatory");
+    expect(ids).toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    // Regression: hasRationaleField used to be accepted but ignored.
+    expect(ids).toContain("policy.clinical.rationale-required");
+  });
+
+  it("defaults agentId to care-router-claude and task to {}", async () => {
+    const res = await POST(post({}));
+    const json = await res.json();
+    // Empty task -> nothing to violate -> allow, with the router's policies.
+    expect(json.result.decision).toBe("allow");
+    expect(json.result.appliesPolicies.length).toBeGreaterThan(0);
+  });
+
+  it("returns 400 on an unparseable body", async () => {
+    const res = await POST(post(undefined, { raw: "{ not json" }));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toMatch(/Invalid JSON/i);
+  });
+
+  it("an unknown agent has no applicable policies and allows", async () => {
+    const res = await POST(post({ agentId: "ghost-agent", task: {} }));
+    const json = await res.json();
+    expect(json.result.appliesPolicies).toEqual([]);
+    expect(json.result.decision).toBe("allow");
+  });
+});

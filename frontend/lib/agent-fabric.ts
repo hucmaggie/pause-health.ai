@@ -507,6 +507,23 @@ export function evaluateGovernance(opts: {
         reason: `Requested model "${opts.task.requestedModel}" is not on the approved list`
       });
     }
+    // Mirrors the red-flag check: block only when the signal is
+    // explicitly false, never when it's absent, so partial fixtures
+    // (and the /demo "Run test case" form) don't trip the gate just by
+    // omitting the field. This makes policy.clinical.rationale-required
+    // actually enforceable -- hasRationaleField was previously accepted
+    // by the API + type but never evaluated, so an "enforced" block
+    // policy could not fire.
+    if (
+      p.id === "policy.clinical.rationale-required" &&
+      opts.task.hasRationaleField === false
+    ) {
+      blockingViolations.push({
+        policyId: p.id,
+        reason:
+          "Task did not carry a rationale field; every routing decision must include human-readable rationale"
+      });
+    }
   }
 
   return {
