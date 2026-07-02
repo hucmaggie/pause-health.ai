@@ -4,6 +4,7 @@ import {
   type A2ATask,
   type A2ATasksSendParams,
   agentMessage,
+  findDataPart,
   newTaskId,
   nowIso
 } from "../../../../../lib/a2a";
@@ -100,14 +101,15 @@ export async function POST(req: Request) {
       ? (params.metadata.personaId as string)
       : undefined;
 
-  const dataPart = params.message?.parts?.find((p) => p.type === "data");
-  const dataPayload =
-    dataPart && dataPart.type === "data" && typeof dataPart.data === "object"
-      ? (dataPart.data as {
-          intake?: IntakeRecord;
-          data360Grounding?: Data360GroundingHint;
-        })
-      : undefined;
+  // Accept a data part tagged either type:"data" (Pause's own agents +
+  // early A2A spec) or kind:"data" (current A2A spec) so a spec-current
+  // external caller isn't silently routed on an empty intake.
+  const dataPayload = findDataPart(params.message?.parts) as
+    | {
+        intake?: IntakeRecord;
+        data360Grounding?: Data360GroundingHint;
+      }
+    | undefined;
   const intake: IntakeRecord =
     dataPayload?.intake ?? (dataPayload as IntakeRecord) ?? {};
   const grounding: Data360GroundingHint | undefined =

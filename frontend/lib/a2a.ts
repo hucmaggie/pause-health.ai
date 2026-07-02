@@ -213,3 +213,40 @@ export function agentMessage(text: string, data?: Record<string, unknown>): A2AM
   if (data) parts.push({ type: "data", data });
   return { role: "agent", parts, timestamp: nowIso() };
 }
+
+/**
+ * A2A spec-version tolerance. Early A2A drafts (which Pause's A2APart type
+ * follows) discriminate Parts with `type` ("text" | "data"); the current
+ * spec renamed the discriminator to `kind`. Pause continues to EMIT the
+ * `type` form for its own agents, but any INBOUND endpoint (tasks/send)
+ * must accept either so a spec-current external client -- Vertex AI Agent
+ * Builder, an OpenAI Responses harness, a custom orchestrator -- is not
+ * silently dropped (its data part ignored, its intake collapsed to {}).
+ * These readers are deliberately defensive: they take `unknown` because
+ * the bytes come off the wire, not from our own typed builders.
+ */
+export function partKind(part: unknown): string | undefined {
+  if (!part || typeof part !== "object") return undefined;
+  const p = part as { type?: unknown; kind?: unknown };
+  if (typeof p.type === "string") return p.type;
+  if (typeof p.kind === "string") return p.kind;
+  return undefined;
+}
+
+/**
+ * Return the `data` object of the first data Part in `parts`, accepting
+ * either the `type:"data"` or `kind:"data"` discriminator. Returns
+ * undefined when there is no data part, the part carries no object `data`,
+ * or `parts` isn't an array. Text parts are skipped.
+ */
+export function findDataPart(parts: unknown): Record<string, unknown> | undefined {
+  if (!Array.isArray(parts)) return undefined;
+  for (const part of parts) {
+    if (partKind(part) !== "data") continue;
+    const data = (part as { data?: unknown }).data;
+    if (data && typeof data === "object") {
+      return data as Record<string, unknown>;
+    }
+  }
+  return undefined;
+}

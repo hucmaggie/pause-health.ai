@@ -298,6 +298,34 @@ describe("POST /api/agents/care-router/tasks · metadata + grounding passthrough
     expect(decision.groundingUsed.cohortName).toBe("perimenopausal-vasomotor");
   });
 
+  it("accepts a kind:'data' part (current A2A spec) as equivalent to type:'data'", async () => {
+    // A spec-current external client (Vertex, an OpenAI harness) tags its
+    // Parts with `kind`, not `type`. The route must read the intake either
+    // way -- otherwise the part is ignored, intake collapses to {}, and the
+    // task is silently blocked on the red-flag policy.
+    const body = validTaskBody({ id: "task-kinddata-001" });
+    body.params.message.parts = [
+      {
+        kind: "data",
+        data: {
+          intake: {
+            preferredName: "Kind Client",
+            ageBand: "45-49",
+            cycleStatus: "perimenopausal",
+            primarySymptom: "vasomotor",
+            severity: "moderate",
+            redFlagsAcknowledged: "no"
+          }
+        }
+      }
+    ] as unknown as typeof body.params.message.parts;
+    const res = await POST(rpcRequest(body));
+    const task = (await res.json()).result;
+    expect(task.status.state).toBe("completed");
+    expect(task.artifacts?.[0]?.name).toBe("RoutingDecision");
+    expect(task.metadata.agentFabric.decision).toBe("allow");
+  });
+
   it("blocks via red-flag-mandatory policy when the message has no data part", async () => {
     const body = validTaskBody({ id: "task-noparts-001" });
     // Strip the data part so the route's `dataPart` lookup misses.

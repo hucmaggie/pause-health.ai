@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   agentMessage,
+  findDataPart,
   newTaskId,
   nowIso,
+  partKind,
   sendA2ATask,
   userMessage,
   type A2ARpcRequest,
@@ -170,5 +172,55 @@ describe("message + id helpers", () => {
   it("nowIso returns a parseable ISO-8601 timestamp", () => {
     const iso = nowIso();
     expect(new Date(iso).toISOString()).toBe(iso);
+  });
+});
+
+describe("partKind + findDataPart · A2A spec-version tolerance", () => {
+  it("partKind reads the `type` discriminator (early spec / Pause's own emit)", () => {
+    expect(partKind({ type: "data", data: {} })).toBe("data");
+    expect(partKind({ type: "text", text: "hi" })).toBe("text");
+  });
+
+  it("partKind falls back to the `kind` discriminator (current spec)", () => {
+    expect(partKind({ kind: "data", data: {} })).toBe("data");
+    expect(partKind({ kind: "text", text: "hi" })).toBe("text");
+  });
+
+  it("partKind prefers `type` when both are present and returns undefined for junk", () => {
+    expect(partKind({ type: "data", kind: "text" })).toBe("data");
+    expect(partKind(null)).toBeUndefined();
+    expect(partKind("nope")).toBeUndefined();
+    expect(partKind({})).toBeUndefined();
+  });
+
+  it("findDataPart extracts the data object for a type:data part", () => {
+    const parts = [
+      { type: "text", text: "route this" },
+      { type: "data", data: { intake: { severity: "moderate" } } }
+    ];
+    expect(findDataPart(parts)).toEqual({ intake: { severity: "moderate" } });
+  });
+
+  it("findDataPart also accepts a kind:data part (spec-current client)", () => {
+    const parts = [{ kind: "data", data: { intake: { severity: "severe" } } }];
+    expect(findDataPart(parts)).toEqual({ intake: { severity: "severe" } });
+  });
+
+  it("findDataPart returns the first data part and skips text parts", () => {
+    const parts = [
+      { type: "text", text: "hi" },
+      { kind: "data", data: { first: true } },
+      { type: "data", data: { second: true } }
+    ];
+    expect(findDataPart(parts)).toEqual({ first: true });
+  });
+
+  it("findDataPart returns undefined for no data part, non-object data, or non-array", () => {
+    expect(findDataPart([{ type: "text", text: "hi" }])).toBeUndefined();
+    expect(findDataPart([{ type: "data", data: "not-an-object" }])).toBeUndefined();
+    expect(findDataPart([{ type: "data" }])).toBeUndefined();
+    expect(findDataPart(undefined)).toBeUndefined();
+    expect(findDataPart(null)).toBeUndefined();
+    expect(findDataPart("nope")).toBeUndefined();
   });
 });
