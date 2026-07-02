@@ -15,7 +15,7 @@
  * NOT a security boundary — this endpoint exists for diagnosis, not
  * for authorization decisions. The real gate is on `/api/mcp`.
  */
-import { guardMcpAuth } from "../route";
+import { guardMcpAuth } from "../../../../lib/mcp/http-auth";
 import { isMcpApiAuthRequired } from "../../../../lib/salesforce-headless360";
 
 export const runtime = "nodejs";
