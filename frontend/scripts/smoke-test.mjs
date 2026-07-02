@@ -128,6 +128,24 @@ const PERSONA_ROUTES = [
   `/demo/agent-fabric?personaId=${PERSONA_ID}`
 ];
 
+// A well-formed intake that PASSES the Care Router governance gate and
+// routes to a real pathway. The two fields that matter to governance are
+// redFlagsAcknowledged (evaluateGovernance blocks when it's absent) and an
+// allow-listed model (the server default). This exact shape is proven by
+// the tasks route unit test to yield a completed mscp-virtual-visit
+// decision -- so any smoke case that submits it and does NOT get a
+// completed task is a real routing regression, not a fixture problem.
+const SMOKE_INTAKE = {
+  preferredName: "Anika",
+  ageBand: "45-49",
+  cycleStatus: "perimenopausal",
+  primarySymptom: "vasomotor",
+  severity: "moderate",
+  chiefComplaint: "Vasomotor symptoms 4x/night, mood low for 6 weeks",
+  symptomCluster: ["vasomotor", "sleep", "mood"],
+  redFlagsAcknowledged: "no"
+};
+
 // Pages that intentionally proxy/mock external services. If 502/503
 // shows up on these in production we want to know, but in dev they
 // should always 200 (mock fallback is the default with no SF_* env).
@@ -228,14 +246,31 @@ const API_CALLS = [
         requestedModel: "claude-sonnet-4-5-20250929",
         hasRationaleField: true
       }
-    }
+    },
+    validate: (parsed) =>
+      parsed?.result?.decision === "allow"
+        ? null
+        : `governance pass-case decision=${parsed?.result?.decision ?? "none"} (expected allow)`
   },
   {
     label: "POST /api/intake/route-to-care-router",
     method: "POST",
     path: "/api/intake/route-to-care-router",
+    // This route does NOT hydrate intake from personaId -- it uses
+    // body.intake ?? {}. Sending only personaId means an empty intake,
+    // which the Care Router blocks on the red-flag policy, so the handoff
+    // returns 200 with decision:null. Send a real intake so the smoke
+    // check exercises the full Agentforce -> Data 360 -> Care Router path.
     body: {
+      intake: SMOKE_INTAKE,
       personaId: PERSONA_ID
+    },
+    validate: (parsed) => {
+      const state = parsed?.task?.status?.state;
+      if (state !== "completed") {
+        return `handoff task state=${state ?? "none"} (expected completed)`;
+      }
+      return parsed?.decision ? null : "handoff returned no routing decision";
     }
   },
   {
@@ -251,24 +286,32 @@ const API_CALLS = [
         sessionId: "smoke-session-1",
         message: {
           role: "user",
+          // The Care Router reads the intake from a part tagged
+          // type:"data" (matching lib/a2a.ts + the route handler). A
+          // kind:"data" tag -- an older mistake here -- is silently
+          // ignored, so intake becomes {} and the task is BLOCKED by the
+          // red-flag policy while still returning HTTP 200.
           parts: [
             {
-              kind: "data",
-              data: {
-                intake: {
-                  preferredName: "Anika",
-                  ageBand: "45-49",
-                  cycleStatus: "perimenopausal",
-                  chiefComplaint:
-                    "Vasomotor symptoms 4x/night, mood low for 6 weeks",
-                  symptomCluster: ["vasomotor", "sleep", "mood"],
-                  redFlagScreen: { chestPainSob: false, unilateralLegPain: false }
-                }
-              }
+              type: "data",
+              data: { intake: SMOKE_INTAKE }
             }
-          ]
+          ],
+          timestamp: new Date().toISOString()
         }
       }
+    },
+    validate: (parsed) => {
+      const state = parsed?.result?.status?.state;
+      if (state !== "completed") {
+        return `A2A task state=${state ?? "none"} (expected completed); governance blocked or routing failed`;
+      }
+      const hasDecision =
+        Array.isArray(parsed?.result?.artifacts) &&
+        parsed.result.artifacts.some((a) => a?.name === "RoutingDecision");
+      return hasDecision
+        ? null
+        : "A2A task completed but carried no RoutingDecision artifact";
     }
   }
 ];
@@ -434,6 +477,18 @@ async function probeApi(call) {
     } else if (!parseOk) {
       outcome = "warn";
       note = `non-JSON body (status=${status})`;
+    }
+    // Per-call body assertion. A 200 is necessary but not sufficient:
+    // JSON-RPC governance blocks and empty-intake rejections also return
+    // 200, so without inspecting the body the multi-agent A2A checks stay
+    // green even if routing is fully broken. A validate() that returns a
+    // string flips the case to a fail with that explanation.
+    if (outcome === "pass" && parseOk && typeof call.validate === "function") {
+      const problem = call.validate(parsed);
+      if (problem) {
+        outcome = "fail";
+        note = problem;
+      }
     }
     record("api", {
       outcome,
