@@ -384,18 +384,12 @@ function buildGroundingContext(args: {
     // (getProgramCohortSize), or a degenerate 1 when there's no enrollee.
     cohortSize: cohortSize || 1,
     // patientPercentile is scaled from the patient's OWN intake vasomotor score,
-    // not her rank in a real cohort distribution; pathwayOutcomes below are
-    // illustrative reference rates. Both are honestly marked via `basis` so
-    // no consumer presents them as live Data Cloud segment analytics — even
-    // though the wearable insights above may be real Phase-2 CIs.
+    // not her rank in a real cohort distribution — honestly marked via `basis`
+    // so no consumer presents it as a live Data Cloud segment rank, even though
+    // the wearable insights above may be real Phase-2 CIs.
     patientPercentile: Math.min(99, Math.max(1, Math.round((vasomotorScore / 10) * 100))),
     metric: "vasomotor symptom burden",
-    basis: "intake-estimate",
-    pathwayOutcomes: [
-      { pathway: "mscp-virtual-visit", n: 1840, resolutionRate: 0.71 },
-      { pathway: "mscp-in-person", n: 612, resolutionRate: 0.78 },
-      { pathway: "self-care-tracking", n: 690, resolutionRate: 0.34 }
-    ]
+    basis: "intake-estimate"
   };
 
   return {

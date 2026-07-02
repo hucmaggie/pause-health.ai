@@ -95,18 +95,16 @@ export type LongitudinalObservation = {
 };
 
 /**
- * How the cohort comparison's derived figures were produced. This is an
- * honesty marker, not decoration: today NEITHER the mock nor the real
- * grounding path computes `patientPercentile` or `pathwayOutcomes` from a real
- * Data Cloud segment, and the real path emits them right alongside a
+ * How `patientPercentile` was produced. This is an honesty marker, not
+ * decoration: today NEITHER the mock nor the real grounding path computes it
+ * from a real Data Cloud segment, and the real path emits it right alongside a
  * "Phase 2 … Data Cloud Calculated Insights" provenance string — so without
  * this flag a consumer (the Care Router rationale, the agent dossier) would
  * present an intake-scaled number as a live cohort statistic.
  *
  *   - "intake-estimate"     — `patientPercentile` is scaled from the patient's
  *                             OWN intake-reported vasomotor score, not her rank
- *                             within a real cohort distribution; `pathwayOutcomes`
- *                             are illustrative reference resolution rates.
+ *                             within a real cohort distribution.
  *   - "data-cloud-segment"  — (reserved) computed by a real Data Cloud segment /
  *                             Calculated Insight over the cohort. Nothing emits
  *                             this yet; wiring it is the Ingestion-API follow-up.
@@ -122,13 +120,8 @@ export type CohortComparison = {
   cohortSize: number;
   patientPercentile: number;
   metric: string;
-  /** Provenance of patientPercentile + pathwayOutcomes — see CohortBasis. */
+  /** Provenance of patientPercentile — see CohortBasis. */
   basis: CohortBasis;
-  pathwayOutcomes: Array<{
-    pathway: string;
-    n: number;
-    resolutionRate: number;
-  }>;
 };
 
 export type GroundingContext = {
@@ -339,13 +332,8 @@ export function getGroundingContext(args: {
     cohortSize: 3142,
     patientPercentile: 78,
     metric: "vasomotor symptom burden",
-    // Intake-scaled estimate + illustrative pathway rates — not a live segment.
-    basis: "intake-estimate",
-    pathwayOutcomes: [
-      { pathway: "mscp-virtual-visit", n: 1840, resolutionRate: 0.71 },
-      { pathway: "mscp-in-person", n: 612, resolutionRate: 0.78 },
-      { pathway: "self-care-tracking", n: 690, resolutionRate: 0.34 }
-    ]
+    // Intake-scaled estimate, not a live Data Cloud segment rank.
+    basis: "intake-estimate"
   };
 
   const finishedAt = Date.now();

@@ -95,11 +95,6 @@ type Grounding = {
     cohortSize: number;
     patientPercentile: number;
     metric: string;
-    pathwayOutcomes: Array<{
-      pathway: string;
-      n: number;
-      resolutionRate: number;
-    }>;
   };
   groundingProvenance: {
     federatedQuery: string;
