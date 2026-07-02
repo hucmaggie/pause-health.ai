@@ -28,6 +28,23 @@ type ChangelogWeek = {
 
 const weeks: ChangelogWeek[] = [
   {
+    range: "Week of June 28, 2026",
+    headline: "Data 360 grounding honesty: the cohort percentile stops posing as a live segment",
+    intro:
+      "A small, high-integrity fix in the highest-stakes surface. Even on the real grounding path, the cohort comparison's patientPercentile is scaled from the patient's own intake vasomotor score and the pathway resolution rates are hardcoded reference figures — but they were emitted right beside a \"Phase 2: SOQL + Data Cloud Calculated Insights\" provenance string, so the Care Router rationale and the Agentforce dossier read an intake-derived number as live segment analytics. This week added an explicit provenance discriminator so those figures can't be presented as something they're not.",
+    entries: [
+      {
+        title: "Data 360: stopped presenting the intake-scaled cohort percentile as a live Data Cloud segment",
+        summary:
+          "Truthfulness fix in the highest-stakes surface. Even on the real grounding path, cohortComparison.patientPercentile is scaled straight from the patient's OWN intake vasomotor score (not her rank within a real cohort distribution), and pathwayOutcomes are hardcoded reference resolution rates — yet they're emitted right next to a \"Phase 2: SOQL + Data Cloud Calculated Insights\" provenance string, so the Care Router rationale and the agent dossier would read an intake-derived number as live segment analytics. Same in the mock. Added an explicit `basis` discriminator to CohortComparison (\"intake-estimate\" | \"data-cloud-segment\"); both the mock and the real builder set \"intake-estimate\" (today's truth), and the field is required so any future builder must declare provenance. cohortSize is untouched — in the real path it's a genuine SOQL COUNT() of CareProgramEnrollee. Consumers made honest: the Care Router rationale now says \"…intake-reported vasomotor symptom burden maps to an estimated Nth-percentile burden (intake-derived estimate, not a live Data Cloud segment)\" instead of \"patient sits at the Nth percentile of <cohort>\", reserving the confident phrasing for a real data-cloud-segment; the Agentforce prechat dossier gains Patient_Percentile_Basis and both grounding telemetry spans carry patientPercentileBasis. Routing behavior is unchanged (the percentile-≥75 promotion still fires as a burden proxy) — only the labeling stops overclaiming. Tests: the rationale hedges by default, uses confident phrasing only for data-cloud-segment, and the mock cohort is flagged intake-estimate. 496 frontend tests green; the app compiles clean. (Heads-up unrelated to this change: `npm run build` is currently red on a pre-existing issue on HEAD — app/api/mcp/route.ts exports `guardMcpAuth`, which Next rejects as an invalid route export field; that's the Headless-360 workstream.)",
+        commits: [
+          { sha: "a50cbfb", label: "data-360: stop presenting the intake-scaled cohort percentile as a live segment" }
+        ],
+        status: "shipped"
+      }
+    ]
+  },
+  {
     range: "Week of June 21, 2026",
     headline: "MuleSoft Phase 3 = 9 Exchange assets (full API-led coverage + 5 wearable specs); Headless 360 audit reaches all-prototype",
     intro:
