@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 import {
+  createMCPHostFromRequest,
   MCPHost,
   resolveRemotesFromEnv,
   type MCPRemoteConfig
@@ -222,5 +223,111 @@ describe("MCPHost.callTool", () => {
       transportFactory: () => noopTransport()
     });
     expect(await host.callTool({ name: "any", arguments: {} })).toBeUndefined();
+  });
+});
+
+describe("createMCPHostFromRequest — header parsing + origin derivation", () => {
+  const original = { ...process.env };
+  beforeEach(() => {
+    delete process.env.PAUSE_MCP_HOST_LOOPBACK;
+    delete process.env.PAUSE_MCP_HOST_REMOTES;
+  });
+  afterEach(() => {
+    Object.keys(process.env).forEach((k) => delete process.env[k]);
+    Object.assign(process.env, original);
+  });
+
+  function reqWith(url: string, headers: Record<string, string> = {}): Request {
+    return new Request(url, { headers });
+  }
+
+  function loopback(host: MCPHost): MCPRemoteConfig | undefined {
+    return host.listRemotes().find((r) => r.id === "loopback");
+  }
+
+  it("derives the loopback origin (protocol + host + port) from the request url", () => {
+    const host = createMCPHostFromRequest(
+      reqWith("https://pause-health.ai/api/mcp")
+    );
+    expect(loopback(host)?.url).toBe("https://pause-health.ai/api/mcp");
+
+    const local = createMCPHostFromRequest(
+      reqWith("http://localhost:3000/api/mcp?foo=bar")
+    );
+    // Path + query are dropped; only origin drives the loopback url.
+    expect(loopback(local)?.url).toBe("http://localhost:3000/api/mcp");
+  });
+
+  it("attaches an inbound Bearer token to the loopback remote", () => {
+    const host = createMCPHostFromRequest(
+      reqWith("https://pause-health.ai/api/mcp", {
+        authorization: "Bearer 00DHp...sf-user-token"
+      })
+    );
+    expect(loopback(host)?.headers).toEqual({
+      Authorization: "Bearer 00DHp...sf-user-token"
+    });
+  });
+
+  it("accepts a case-insensitive scheme and trims surrounding whitespace", () => {
+    const host = createMCPHostFromRequest(
+      reqWith("https://pause-health.ai/api/mcp", {
+        authorization: "bearer    padded-token   "
+      })
+    );
+    expect(loopback(host)?.headers).toEqual({
+      Authorization: "Bearer padded-token"
+    });
+  });
+
+  it("does not attach headers when there is no Authorization header", () => {
+    const host = createMCPHostFromRequest(
+      reqWith("https://pause-health.ai/api/mcp")
+    );
+    expect(loopback(host)?.headers).toBeUndefined();
+  });
+
+  it("ignores a non-Bearer Authorization scheme (e.g. Basic)", () => {
+    const host = createMCPHostFromRequest(
+      reqWith("https://pause-health.ai/api/mcp", {
+        authorization: "Basic dXNlcjpwYXNz"
+      })
+    );
+    expect(loopback(host)?.headers).toBeUndefined();
+  });
+
+  it("ignores a Bearer header with an empty token", () => {
+    const host = createMCPHostFromRequest(
+      reqWith("https://pause-health.ai/api/mcp", { authorization: "Bearer   " })
+    );
+    expect(loopback(host)?.headers).toBeUndefined();
+  });
+
+  it("never forwards the inbound bearer to an external remote (cross-origin guard)", () => {
+    process.env.PAUSE_MCP_HOST_REMOTES = JSON.stringify([
+      { id: "external", url: "https://partner.example/mcp" }
+    ]);
+    const host = createMCPHostFromRequest(
+      reqWith("https://pause-health.ai/api/mcp", {
+        authorization: "Bearer 00DHp...sf-user-token"
+      })
+    );
+    const remotes = host.listRemotes();
+    expect(remotes.map((r) => r.id)).toEqual(["loopback", "external"]);
+    expect(remotes.find((r) => r.id === "loopback")?.headers).toEqual({
+      Authorization: "Bearer 00DHp...sf-user-token"
+    });
+    // The Salesforce-issued token must not leak to the partner remote.
+    expect(remotes.find((r) => r.id === "external")?.headers).toBeUndefined();
+  });
+
+  it("honors PAUSE_MCP_HOST_LOOPBACK=off (no loopback, bearer goes nowhere)", () => {
+    process.env.PAUSE_MCP_HOST_LOOPBACK = "off";
+    const host = createMCPHostFromRequest(
+      reqWith("https://pause-health.ai/api/mcp", {
+        authorization: "Bearer 00DHp...sf-user-token"
+      })
+    );
+    expect(host.listRemotes()).toEqual([]);
   });
 });
