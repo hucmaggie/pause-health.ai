@@ -282,6 +282,34 @@ describe("scriptedRoute · Data 360 grounding", () => {
     );
   });
 
+  it("hedges the cohort line as an intake estimate (not a live segment) by default", () => {
+    // The base fixture has no `basis` → treated as intake-estimate. The
+    // rationale must NOT present the percentile as a real cohort rank.
+    const out = scriptedRoute({ ...baseIntake, severity: "moderate" }, grounding);
+    const all = out.rationale.join(" ");
+    expect(all).toMatch(/intake-derived estimate, not a live Data Cloud segment/i);
+    expect(all).not.toMatch(/sits at the \d+th percentile of/i);
+  });
+
+  it("uses confident cohort phrasing only when basis is a real data-cloud-segment", () => {
+    const seg: Data360GroundingHint = {
+      ...grounding,
+      cohortComparison: { ...grounding.cohortComparison!, basis: "data-cloud-segment" }
+    };
+    const out = scriptedRoute({ ...baseIntake, severity: "moderate" }, seg);
+    const all = out.rationale.join(" ");
+    expect(all).toMatch(/sits at the 78th percentile of/i);
+    expect(all).not.toMatch(/intake-derived estimate/i);
+  });
+
+  it("marks the mock cohort percentile as an intake estimate (honesty flag)", () => {
+    const mock = getGroundingContext({
+      patientId: "pause-demo-patient-001",
+      hint: { ageBand: "45-49", primarySymptom: "vasomotor" }
+    });
+    expect(mock.cohortComparison.basis).toBe("intake-estimate");
+  });
+
   it("the mock grounding's kinds line up with what the router branches on", () => {
     // Integration guard: feed the real mock GroundingContext (not a hand-built
     // literal) and require all three grounded rationales to fire. If a future

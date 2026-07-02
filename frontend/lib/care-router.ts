@@ -97,6 +97,13 @@ export type Data360GroundingHint = {
     cohortSize: number;
     patientPercentile: number;
     metric: string;
+    /**
+     * Provenance of patientPercentile (see CohortBasis in lib/data-360.ts).
+     * "intake-estimate" (today's only value) means the percentile is scaled
+     * from the patient's own intake score, not a live cohort rank — the
+     * rationale hedges accordingly so it isn't presented as segment analytics.
+     */
+    basis?: string;
   };
 };
 
@@ -392,9 +399,17 @@ function groundingRationale(
 
   if (grounding.cohortComparison) {
     const c = grounding.cohortComparison;
-    out.push(
-      `Data 360 cohort: patient sits at the ${c.patientPercentile}th percentile of ${c.cohortName} (n=${c.cohortSize}) by ${c.metric}.`
-    );
+    if (c.basis === "data-cloud-segment") {
+      out.push(
+        `Data 360 cohort: patient sits at the ${c.patientPercentile}th percentile of ${c.cohortName} (n=${c.cohortSize}) by ${c.metric}.`
+      );
+    } else {
+      // "intake-estimate" (or unset): the percentile is scaled from the
+      // patient's own intake score, not a live cohort rank — say so plainly.
+      out.push(
+        `Data 360 cohort: ${c.cohortName} (n=${c.cohortSize}). Patient's intake-reported ${c.metric} maps to an estimated ${c.patientPercentile}th-percentile burden (intake-derived estimate, not a live Data Cloud segment).`
+      );
+    }
   }
 
   return { rationale: out, insightsCited: cited };

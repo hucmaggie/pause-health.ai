@@ -159,6 +159,7 @@ export async function POST(req: Request) {
       cohort: grounding.cohortComparison.cohortName,
       cohortSize: grounding.cohortComparison.cohortSize,
       patientPercentile: grounding.cohortComparison.patientPercentile,
+      patientPercentileBasis: grounding.cohortComparison.basis,
       lastClinicianContactDaysAgo: grounding.lastClinicianContact.daysAgo,
       durationMs: groundingFinishedAt - groundingStartedAt,
       ...(personaId ? { personaId } : {})

@@ -204,6 +204,7 @@ async function buildPrechatFields(
       cohort: grounding.cohortComparison.cohortName,
       cohortSize: grounding.cohortComparison.cohortSize,
       patientPercentile: grounding.cohortComparison.patientPercentile,
+      patientPercentileBasis: grounding.cohortComparison.basis,
       lastClinicianContactDaysAgo: grounding.lastClinicianContact.daysAgo,
       careProgram:
         careProgramInsight?.value !== undefined
@@ -275,6 +276,9 @@ async function buildPrechatFields(
     Cohort_Name: grounding.cohortComparison.cohortName,
     Cohort_Size: String(grounding.cohortComparison.cohortSize),
     Patient_Percentile: String(grounding.cohortComparison.patientPercentile),
+    // Honesty marker for the agent: today the percentile is scaled from the
+    // patient's own intake score ("intake-estimate"), not a live segment rank.
+    Patient_Percentile_Basis: grounding.cohortComparison.basis,
     Grounding_Source: groundingSource,
     Grounding_Insights_Count: String(
       grounding.groundingProvenance.computedInsightsCount

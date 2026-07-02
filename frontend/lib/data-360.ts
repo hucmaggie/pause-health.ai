@@ -94,11 +94,36 @@ export type LongitudinalObservation = {
   source: FederatedSource;
 };
 
+/**
+ * How the cohort comparison's derived figures were produced. This is an
+ * honesty marker, not decoration: today NEITHER the mock nor the real
+ * grounding path computes `patientPercentile` or `pathwayOutcomes` from a real
+ * Data Cloud segment, and the real path emits them right alongside a
+ * "Phase 2 … Data Cloud Calculated Insights" provenance string — so without
+ * this flag a consumer (the Care Router rationale, the agent dossier) would
+ * present an intake-scaled number as a live cohort statistic.
+ *
+ *   - "intake-estimate"     — `patientPercentile` is scaled from the patient's
+ *                             OWN intake-reported vasomotor score, not her rank
+ *                             within a real cohort distribution; `pathwayOutcomes`
+ *                             are illustrative reference resolution rates.
+ *   - "data-cloud-segment"  — (reserved) computed by a real Data Cloud segment /
+ *                             Calculated Insight over the cohort. Nothing emits
+ *                             this yet; wiring it is the Ingestion-API follow-up.
+ *
+ * `cohortSize` is tracked separately and is NOT covered by this flag: in the
+ * real grounding path it's a live SOQL COUNT() of CareProgramEnrollee; in the
+ * mock it's synthetic.
+ */
+export type CohortBasis = "intake-estimate" | "data-cloud-segment";
+
 export type CohortComparison = {
   cohortName: string;
   cohortSize: number;
   patientPercentile: number;
   metric: string;
+  /** Provenance of patientPercentile + pathwayOutcomes — see CohortBasis. */
+  basis: CohortBasis;
   pathwayOutcomes: Array<{
     pathway: string;
     n: number;
@@ -314,6 +339,8 @@ export function getGroundingContext(args: {
     cohortSize: 3142,
     patientPercentile: 78,
     metric: "vasomotor symptom burden",
+    // Intake-scaled estimate + illustrative pathway rates — not a live segment.
+    basis: "intake-estimate",
     pathwayOutcomes: [
       { pathway: "mscp-virtual-visit", n: 1840, resolutionRate: 0.71 },
       { pathway: "mscp-in-person", n: 612, resolutionRate: 0.78 },
