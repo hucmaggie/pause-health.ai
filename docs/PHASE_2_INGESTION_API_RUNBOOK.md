@@ -141,21 +141,46 @@ no frontend change or redeploy is required.
 
 ## Step 6 — Verify end to end (5 min)
 
+Run the read-back verifier. It queries all three CIs for **every** demo persona
+and **asserts** the returned columns match the values the cohort generator
+produces (`pause_ingest/pause_ingest/expected.py` recomputes them with the same
+formulas as the CI SQL). This turns "did the flip work?" into a deterministic
+PASS/FAIL instead of an eyeball check:
+
 ```bash
-# Per-CI (Data 360 Insight API) — values now vary by patient:
+cd pause_ingest
+source .venv/bin/activate
+python -m examples.data_cloud_verify          # CIs already activated + refreshed
+# ...or push + verify in one run (trigger a CI refresh in between):
+python -m examples.data_cloud_verify --push
+```
+
+Expected tail on success:
+
+```
+All patients match the expected DBDP-derived values. The Calculated Insights
+are real, not the MAX(constant) mock.
+```
+
+Exit code **0** = verified; **1** = a mismatch — or the mock is still active
+(the script explicitly flags when every patient returns an identical value);
+**2** = not configured. The per-patient table it prints also makes the clinical
+ordering obvious: **Deepa** (vasomotor 9) shows a lower HRV z-score than
+**Carmen** (vasomotor 2), and vasomotor flash counts differ per patient
+(Anika 14, Carmen 4).
+
+Prefer the verifier, but you can still spot-check a single patient through the
+deployed frontend (needs `SF_DC_TENANT_URL` set on the deployment):
+
+```bash
 curl -s "https://pause-health.ai/api/data-360/patient/anika-patel/grounding" \
   | jq '[.grounding.calculatedInsights[]
          | select(.federatedFrom[]? | contains("dbdp-wearable-features"))
          | {name, value, sourceWindow}]'
 ```
 
-Sanity checks that prove it's real, not the constant mock:
-- **Deepa** (vasomotor 9) has a **lower** HRV z-score than **Carmen** (vasomotor 2).
-- **Brianna** (sleep score 8) has **more** disrupted nights than **Carmen** (sleep 3).
-- Vasomotor event counts differ per patient (Anika ≈ 14, Carmen ≈ 4).
-
-If every patient shows the same numbers, the mock CIs are still active — re-do
-Step 5 for the offending CI.
+If the verifier reports every patient with identical numbers, the mock CIs are
+still active — re-do Step 5 for the offending CI.
 
 ---
 

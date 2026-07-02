@@ -38,6 +38,7 @@ dev = [
 [project.scripts]
 pause-ingest-smoke = "pause_ingest.examples.oura_sample_upload:main"
 pause-dc-push = "examples.data_cloud_push:main"
+pause-dc-verify = "examples.data_cloud_verify:main"
 
 [tool.setuptools.packages.find]
 include = ["pause_ingest*", "examples*"]

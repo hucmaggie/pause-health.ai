@@ -54,9 +54,11 @@ activation checklist + the gotchas we hit live in
   real DBDP feature math via the Data Cloud **Ingestion API**. The feature
   computation (`pause_ingest/features.py`, `features_sleep.py`,
   `features_vasomotor.py`), the per-persona generator (`cohort.py`), the push
-  client (`data_cloud.py` + `examples/data_cloud_push.py`), the DLO schema, and
+  client (`data_cloud.py` + `examples/data_cloud_push.py`), a read-back
+  **verifier** that asserts each activated CI returns the expected per-patient
+  values (`examples/data_cloud_verify.py` + `expected.py`), the DLO schema, and
   the real CI SQL are all in the repo and tested. Follow
-  `docs/PHASE_2_INGESTION_API_RUNBOOK.md` to wire the connector + DMO and flip
-  the CIs. (The older `docs/JHE_SETUP_RUNBOOK.md` Data-Stream-from-JHE path
+  `docs/PHASE_2_INGESTION_API_RUNBOOK.md` to wire the connector + DMO, flip
+  the CIs, and run `python -m examples.data_cloud_verify` to confirm the flip. (The older `docs/JHE_SETUP_RUNBOOK.md` Data-Stream-from-JHE path
   remains valid but needs a publicly-reachable JHE; the Ingestion API push
   avoids that.)

@@ -143,12 +143,12 @@ def _normalize_tenant_host(raw: str) -> str:
     return f"https://{trimmed}"
 
 
-class DataCloudIngestClient:
-    """Thin Data Cloud Ingestion API client.
+class DataCloudClientBase:
+    """Shared two-legged Data Cloud auth for the ingest + query clients.
 
-    Stateless except for a lazily-fetched Data Cloud token. Construct with a
-    config; call :meth:`ingest`. Network calls use httpx with explicit
-    timeouts so a hung tenant can't wedge the worker.
+    Stateless except for a lazily-fetched, per-instance Data Cloud token.
+    Network calls use httpx with explicit timeouts so a hung tenant can't
+    wedge the caller. Subclasses add the actual ingest / query calls.
     """
 
     def __init__(self, config: DataCloudIngestConfig, *, timeout: float = 30.0):
@@ -214,6 +214,14 @@ class DataCloudIngestClient:
             self._token = self._exchange_for_dc_token(client, core, instance_url)
         return self._token
 
+
+class DataCloudIngestClient(DataCloudClientBase):
+    """Thin Data Cloud Ingestion API client (the write path).
+
+    Construct with a config; call :meth:`ingest`. Needs the ``cdp_ingest_api``
+    scope on the Connected App.
+    """
+
     # -- ingest ---------------------------------------------------------------
 
     def ingest(self, records: Iterable[WearableFeatureRecord]) -> dict:
@@ -252,6 +260,59 @@ class DataCloudIngestClient:
             except ValueError:
                 body = {}
             return {"accepted": len(batch), "status_code": resp.status_code, **body}
+
+
+class DataCloudQueryClient(DataCloudClientBase):
+    """Read Calculated Insights back out of Data Cloud (the verify path).
+
+    The read-back counterpart to :class:`DataCloudIngestClient`: after the push
+    + CI refresh, this queries each activated Calculated Insight exactly the
+    way the frontend does (``frontend/lib/salesforce/data-cloud.ts``) so a
+    maintainer can prove the CIs return real per-patient values instead of the
+    ``MAX(constant)`` mock. Needs the ``cdp_query_api`` scope on the Connected
+    App (the read path already relies on it).
+    """
+
+    def query_calculated_insight(
+        self, insight_api_name: str, filter_expr: str | None = None
+    ) -> list[dict]:
+        """GET one Calculated Insight's rows, optionally filtered.
+
+        Mirrors the frontend read exactly:
+            GET {tenant}/api/v1/insight/calculated-insights/{name}?filters=[field=value]
+
+        ``filter_expr`` is the bare bracketed expression the Data 360 Insight
+        API expects, e.g. ``[unified_id__c=003Hp00003b9bdqIAA]`` — the brackets
+        are literal syntax, and httpx percent-encodes them the same way the
+        frontend's URLSearchParams does. Returns the ``data`` array (empty when
+        the CI has no row for the filter).
+        """
+        params = {"filters": filter_expr} if filter_expr else None
+        with httpx.Client(timeout=self._timeout) as client:
+            token = self._get_token(client)
+            path = (
+                f"{token.tenant_url}/api/v1/insight/calculated-insights/"
+                f"{insight_api_name}"
+            )
+            resp = client.get(
+                path,
+                params=params,
+                headers={
+                    "Authorization": f"Bearer {token.access_token}",
+                    "Accept": "application/json",
+                },
+            )
+            if resp.status_code >= 400:
+                raise DataCloudConfigError(
+                    f"insight query for {insight_api_name} failed "
+                    f"({resp.status_code}): {resp.text[:600]}"
+                )
+            try:
+                body = resp.json()
+            except ValueError:
+                return []
+            data = body.get("data")
+            return data if isinstance(data, list) else []
 
 
 def chunked(records: list[WearableFeatureRecord], size: int = 200) -> Iterable[list]:

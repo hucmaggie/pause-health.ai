@@ -18,6 +18,7 @@ from pause_ingest.data_cloud import (
     DataCloudConfigError,
     DataCloudIngestClient,
     DataCloudIngestConfig,
+    DataCloudQueryClient,
     WearableFeatureRecord,
     build_ingest_payload,
     chunked,
@@ -173,3 +174,72 @@ def test_ingest_empty_batch_is_noop():
     client = DataCloudIngestClient(_config())
     result = client.ingest([])
     assert result["accepted"] == 0
+
+
+def _mock_two_legged(monkeypatch, insight_handler):
+    """Wire httpx.Client to a MockTransport that serves the two-legged auth,
+    then delegates any insight GET to `insight_handler(request)`."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        url = str(request.url)
+        if url.endswith("/services/oauth2/token"):
+            return httpx.Response(
+                200,
+                json={"access_token": "CORE", "instance_url": "https://example.my.salesforce.com"},
+            )
+        if url.endswith("/services/a360/token"):
+            return httpx.Response(
+                200,
+                json={"access_token": "DC_TOKEN", "instance_url": "https://tenant.c360a.salesforce.com"},
+            )
+        if "/api/v1/insight/calculated-insights/" in url:
+            return insight_handler(request)
+        raise AssertionError(f"unexpected request to {url}")
+
+    transport = httpx.MockTransport(handler)
+    real_client = httpx.Client
+    monkeypatch.setattr(
+        httpx, "Client", lambda *a, **k: real_client(*a, **{**k, "transport": transport})
+    )
+
+
+def test_query_calculated_insight_two_legged(monkeypatch):
+    """Query client exchanges the token, then GETs the insight on the tenant host."""
+    seen: dict = {}
+
+    def insight_handler(request: httpx.Request) -> httpx.Response:
+        seen["auth"] = request.headers.get("authorization")
+        seen["host"] = request.url.host
+        seen["path"] = request.url.path
+        seen["filters"] = request.url.params.get("filters")
+        return httpx.Response(
+            200,
+            json={"data": [{"unified_id__c": "003X", "hrv_rmssd_ms__c": 41.5, "z_score__c": -0.04}]},
+        )
+
+    _mock_two_legged(monkeypatch, insight_handler)
+
+    client = DataCloudQueryClient(_config())
+    rows = client.query_calculated_insight(
+        "Pause_HRV_RMSSD_30d__cio", "[unified_id__c=003X]"
+    )
+
+    assert rows == [{"unified_id__c": "003X", "hrv_rmssd_ms__c": 41.5, "z_score__c": -0.04}]
+    assert seen["auth"] == "Bearer DC_TOKEN"
+    assert seen["host"] == "tenant.c360a.salesforce.com"
+    assert seen["path"].endswith("/api/v1/insight/calculated-insights/Pause_HRV_RMSSD_30d__cio")
+    # httpx decodes the percent-encoded bracket filter back to the bare form.
+    assert seen["filters"] == "[unified_id__c=003X]"
+
+
+def test_query_calculated_insight_empty_data(monkeypatch):
+    _mock_two_legged(monkeypatch, lambda req: httpx.Response(200, json={}))
+    client = DataCloudQueryClient(_config())
+    assert client.query_calculated_insight("Pause_HRV_RMSSD_30d__cio") == []
+
+
+def test_query_calculated_insight_raises_on_http_error(monkeypatch):
+    _mock_two_legged(monkeypatch, lambda req: httpx.Response(404, text="no such CI"))
+    client = DataCloudQueryClient(_config())
+    with pytest.raises(DataCloudConfigError):
+        client.query_calculated_insight("Nope__cio", "[unified_id__c=003X]")
