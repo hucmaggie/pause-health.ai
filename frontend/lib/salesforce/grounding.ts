@@ -256,7 +256,7 @@ function num(value: string | undefined, fallback: number): number {
  * Shape-compatible with getMockGroundingContext() so Care Router and
  * trace UI don't need to branch.
  */
-function buildGroundingContext(args: {
+export function buildGroundingContext(args: {
   patientId: string;
   contact: RealContact;
   enrollee: RealEnrollee | null;
@@ -392,6 +392,31 @@ function buildGroundingContext(args: {
     basis: "intake-estimate"
   };
 
+  // Provenance must reflect what actually grounded this context, not merely
+  // that Data Cloud was *queried*. getWearableInsights returns a non-null
+  // { hrv, vasomotor, sleep } object even when the CIs return no rows (each
+  // field independently null); in that case every insight above fell back to
+  // the intake baseline. So key the Phase-2 label + the wearable sources on
+  // whether any CI actually came back, and name only the insights that did —
+  // otherwise the discovery trace would claim live Data Cloud CIs that never
+  // fired.
+  const liveWearableInsights = [
+    wearable?.hrv ? "HRV" : null,
+    wearable?.vasomotor ? "vasomotor" : null,
+    wearable?.sleep ? "sleep" : null
+  ].filter((x): x is string => x !== null);
+  const hasLiveWearable = liveWearableInsights.length > 0;
+  const baseSources: FederatedSource[] = [realSource, "agentforce-intake-history"];
+  const wearableSources = hasLiveWearable
+    ? Array.from(
+        new Set(
+          [wearable?.hrv, wearable?.vasomotor, wearable?.sleep]
+            .filter((ci): ci is CalculatedInsight => Boolean(ci))
+            .flatMap((ci) => ci.federatedFrom)
+        )
+      ).filter((s) => !baseSources.includes(s))
+    : [];
+
   return {
     unifiedPatientId: args.patientId,
     identityResolution: {
@@ -408,13 +433,11 @@ function buildGroundingContext(args: {
     },
     cohortComparison,
     groundingProvenance: {
-      federatedQuery: wearable
-        ? "Phase 2: SOQL (Health Cloud) + Data Cloud Calculated Insights (HRV/vasomotor/sleep)"
+      federatedQuery: hasLiveWearable
+        ? `Phase 2: SOQL (Health Cloud) + Data Cloud Calculated Insights (${liveWearableInsights.join("/")})`
         : "Phase 1: SOQL (Contact + CareProgramEnrollee + CarePlan + Case)",
       durationMs: args.durationMs,
-      sourcesQueried: wearable
-        ? [realSource, "agentforce-intake-history", "dbdp-wearable-features", "jupyterhealth-fhir"]
-        : [realSource, "agentforce-intake-history"],
+      sourcesQueried: [...baseSources, ...wearableSources],
       computedInsightsCount: calculatedInsights.length
     }
   };
