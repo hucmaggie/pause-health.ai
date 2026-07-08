@@ -130,11 +130,22 @@ def test_record_shape_matches_contract():
         "serviceSignals",
         "licenseStatus",
         "insuranceAccepted",
+        # Mirrors the TS ProviderRecord + both OAS schemas; provenance of the
+        # menopauseCertified flag. Part of the frozen contract — see records.py.
+        "credentialSource",
     }
     # Build path with no sanctions overlay → every survivor is "active".
     assert rec.licenseStatus == "active"
     # Every record carries at least one accepted plan (Medicare floor).
     assert len(rec.insuranceAccepted) > 0
+    # credentialSource is present on every record and its value is bound to
+    # the certified flag: None when not certified, else an authoritative
+    # curated-overlay or an honest self-reported provenance.
+    for r in _build():
+        if r.menopauseCertified:
+            assert r.credentialSource in {"curated-overlay", "self-reported"}
+        else:
+            assert r.credentialSource is None
 
 
 def test_service_signals_stamped_for_non_certified_provider():
