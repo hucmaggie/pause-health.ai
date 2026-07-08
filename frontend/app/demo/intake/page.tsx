@@ -1,4 +1,5 @@
 import { AgentforceFallback } from "../../../components/agentforce-fallback";
+import { AgentforceVoiceButton } from "../../../components/agentforce-voice-button";
 import { DemoShell } from "../../../components/demo-shell";
 import { IntakePatientStage } from "../../../components/intake-patient-stage";
 import { PersonaJourneyFooter } from "../../../components/persona-journey-footer";
@@ -29,6 +30,22 @@ export default function IntakeDemoPage() {
         ) : (
           <AgentforceFallback />
         )}
+      </section>
+
+      <section className="intake-voice-channel card" style={{ marginBottom: "1.5rem" }}>
+        <div className="intake-voice-channel-copy">
+          <p className="eyebrow" style={{ marginBottom: "0.15rem" }}>
+            Another way in
+          </p>
+          <h3 style={{ margin: 0 }}>Prefer to talk? Voice is the next channel.</h3>
+          <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginTop: "0.3rem" }}>
+            Agentforce Voice routes to the <strong>same</strong> intake agent as
+            the chat above — same subagents, same Data 360 grounding, same Care
+            Router handoff. Its state below reflects what this deployment can
+            actually prove.
+          </p>
+        </div>
+        <AgentforceVoiceButton />
       </section>
 
       <section className="demo-grid">

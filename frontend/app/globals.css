@@ -1821,6 +1821,51 @@ th {
   background: color-mix(in srgb, var(--brand) 8%, transparent);
   color: var(--text);
   font-size: 0.88rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.agentforce-voice-toast-msg {
+  flex: 1 1 auto;
+}
+
+.agentforce-voice-toast-dismiss {
+  flex: 0 0 auto;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+  border-radius: 0.25rem;
+}
+
+.agentforce-voice-toast-dismiss:hover,
+.agentforce-voice-toast-dismiss:focus-visible {
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------------------
+   Intake demo — "another way in" voice channel strip.
+   Mounts <AgentforceVoiceButton/> alongside the chat intake so reviewers see
+   the voice entry point (degrades to the honest "designed" affordance on the
+   public deployment). See app/demo/intake/page.tsx.
+   --------------------------------------------------------------------------- */
+
+.intake-voice-channel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.intake-voice-channel-copy {
+  flex: 1 1 30ch;
+  min-width: 26ch;
 }
 
 /* ---------------------------------------------------------------------------

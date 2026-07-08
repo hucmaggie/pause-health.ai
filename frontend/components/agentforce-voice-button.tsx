@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type {
   AgentforceVoicePublicConfig,
@@ -53,9 +53,40 @@ const PROVIDER_DISPLAY: Record<string, string> = {
   "vonage": "Vonage"
 };
 
+const LAUNCH_TOAST_TTL_MS = 12_000;
+
 export function AgentforceVoiceButton() {
   const [state, setState] = useState<FetchState>({ kind: "loading" });
   const [launchToast, setLaunchToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearToast = () => {
+    if (toastTimer.current !== null) {
+      clearTimeout(toastTimer.current);
+      toastTimer.current = null;
+    }
+    setLaunchToast(null);
+  };
+
+  const showToast = (message: string) => {
+    if (toastTimer.current !== null) {
+      clearTimeout(toastTimer.current);
+    }
+    setLaunchToast(message);
+    toastTimer.current = setTimeout(() => {
+      toastTimer.current = null;
+      setLaunchToast(null);
+    }, LAUNCH_TOAST_TTL_MS);
+  };
+
+  // Belt-and-suspenders: never leak a pending timeout past unmount.
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current !== null) {
+        clearTimeout(toastTimer.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -148,12 +179,12 @@ export function AgentforceVoiceButton() {
   // status === "prototype" or "shipped"
   const handleLaunch = () => {
     if (status === "prototype") {
-      setLaunchToast(
+      showToast(
         `Voice launch handshake against ${providerLabel} is pending operator verification. The env vars are set; the runbook's "Verify" step has not been recorded for this deployment yet.`
       );
       return;
     }
-    setLaunchToast(
+    showToast(
       "Launching the live Agentforce Voice session… (real handshake lands here after activation-day commit.)"
     );
   };
@@ -187,9 +218,17 @@ export function AgentforceVoiceButton() {
         </a>
       </p>
       {launchToast && (
-        <p role="status" className="agentforce-voice-toast">
-          {launchToast}
-        </p>
+        <div role="status" className="agentforce-voice-toast">
+          <span className="agentforce-voice-toast-msg">{launchToast}</span>
+          <button
+            type="button"
+            className="agentforce-voice-toast-dismiss"
+            onClick={clearToast}
+            aria-label="Dismiss voice launch status"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
       )}
     </div>
   );
