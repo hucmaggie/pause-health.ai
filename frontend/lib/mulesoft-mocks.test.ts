@@ -454,6 +454,72 @@ describe("queryProviderDirectory · telehealth filter", () => {
   });
 });
 
+describe("queryProviderDirectory · accepting-new-patients filter", () => {
+  it("off by default, and the filter strictly narrows the matched total", () => {
+    const all = queryProviderDirectory({ menopauseOnly: false, limit: 1 });
+    const open = queryProviderDirectory({
+      menopauseOnly: false,
+      acceptingNewPatients: true,
+      limit: 1
+    });
+    // The directory carries closed-panel providers, so filtering to open
+    // panels must drop the matched total (proves the filter excludes some,
+    // independent of the top-N ranking).
+    expect(open.total).toBeLessThan(all.total);
+    expect(open.total).toBeGreaterThan(0);
+  });
+
+  it("acceptingNewPatients=true narrows to open-panel providers only", () => {
+    const out = queryProviderDirectory({
+      menopauseOnly: false,
+      acceptingNewPatients: true,
+      limit: 100
+    });
+    expect(out.providers.length).toBeGreaterThan(0);
+    for (const p of out.providers) {
+      expect(p.acceptingNewPatients).toBe(true);
+    }
+  });
+
+  it("applies BEFORE the tier ladder so each tier honors it", () => {
+    // certified-national tier (no ZIP, menopauseOnly) must also be open-panel
+    // only — we don't broaden past the filter just because the strict tier
+    // would otherwise include a closed panel.
+    const out = queryProviderDirectory({
+      menopauseOnly: true,
+      acceptingNewPatients: true,
+      fallback: true
+    });
+    for (const p of out.providers) {
+      expect(p.menopauseCertified).toBe(true);
+      expect(p.acceptingNewPatients).toBe(true);
+    }
+  });
+
+  it("composes with the telehealth filter (both narrow the same pool)", () => {
+    const out = queryProviderDirectory({
+      menopauseOnly: false,
+      acceptingNewPatients: true,
+      telehealth: true,
+      limit: 100
+    });
+    for (const p of out.providers) {
+      expect(p.acceptingNewPatients).toBe(true);
+      expect(p.telehealth).toBe(true);
+    }
+  });
+
+  it("does NOT add a key to the API-facing query echo (response shape unchanged)", () => {
+    // The Experience API / MCP tool don't expose this browse-only filter, so
+    // the echoed query must not gain an acceptingNewPatients field.
+    const out = queryProviderDirectory({
+      menopauseOnly: false,
+      acceptingNewPatients: true
+    });
+    expect("acceptingNewPatients" in out.query).toBe(false);
+  });
+});
+
 describe("queryProviderDirectory · credentialSource provenance", () => {
   // Pull every certified provider (certified-national tier, no cap).
   const certified = queryProviderDirectory({

@@ -222,6 +222,7 @@ export default async function ProviderIndexPage({
   const menopauseOnly = param(sp, "menopause") === "true";
   const fallback = param(sp, "fallback") !== "false"; // default ON for browse
   const telehealthOnly = param(sp, "telehealth") === "true";
+  const acceptingOnly = param(sp, "accepting") === "true";
   const plan = param(sp, "plan")?.trim() || undefined;
 
   const limitRaw = Number(param(sp, "limit") ?? "");
@@ -235,6 +236,7 @@ export default async function ProviderIndexPage({
     fallback,
     insurance: plan,
     telehealth: telehealthOnly,
+    acceptingNewPatients: acceptingOnly,
     zipCentroid,
     limit
   });
@@ -302,12 +304,16 @@ export default async function ProviderIndexPage({
               <input type="checkbox" name="telehealth" value="true" defaultChecked={telehealthOnly} />
               <span>Telehealth only</span>
             </label>
+            <label className="provider-filter-check">
+              <input type="checkbox" name="accepting" value="true" defaultChecked={acceptingOnly} />
+              <span>Accepting new patients only</span>
+            </label>
           </div>
           <div className="contact-form-actions">
             <button type="submit" className="btn btn-primary">
               Apply filters
             </button>
-            {(zip || plan || menopauseOnly || telehealthOnly) && (
+            {(zip || plan || menopauseOnly || telehealthOnly || acceptingOnly) && (
               <a className="btn btn-secondary" href="/provider">
                 Reset
               </a>

@@ -595,9 +595,26 @@ export function queryProviderDirectory(opts: {
    * patient's intent. Omit (or false) to include in-person-only providers.
    */
   telehealth?: boolean;
+  /**
+   * When true, narrow to providers whose panel is open (acceptingNewPatients).
+   * Applied BEFORE the tier ladder, alongside the insurance/telehealth filters,
+   * so a patient never gets steered to a closed panel in any tier. This is a
+   * browse-surface filter only (the /provider directory UI); the agent-facing
+   * Experience API does not expose it, so the API/MCP response shape is
+   * unchanged. Omit (or false) to include providers with closed panels.
+   */
+  acceptingNewPatients?: boolean;
 }) {
-  const { zip, menopauseOnly, limit, fallback, zipCentroid, insurance, telehealth } =
-    opts;
+  const {
+    zip,
+    menopauseOnly,
+    limit,
+    fallback,
+    zipCentroid,
+    insurance,
+    telehealth,
+    acceptingNewPatients
+  } = opts;
   const prefix = zip && zip.length >= 3 ? zip.slice(0, 3) : undefined;
   const inArea = (r: ProviderRecord) => !prefix || r.zip.startsWith(prefix);
 
@@ -611,8 +628,11 @@ export function queryProviderDirectory(opts: {
   const telehealthOnly = telehealth === true;
   const offersTelehealth = (r: ProviderRecord) =>
     !telehealthOnly || r.telehealth === true;
+  const acceptingOnly = acceptingNewPatients === true;
+  const isAccepting = (r: ProviderRecord) =>
+    !acceptingOnly || r.acceptingNewPatients === true;
   const POOL = PROVIDER_DIRECTORY.filter(
-    (r) => acceptsPlan(r) && offersTelehealth(r)
+    (r) => acceptsPlan(r) && offersTelehealth(r) && isAccepting(r)
   );
 
   let rows: ProviderRecord[];
