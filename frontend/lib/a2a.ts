@@ -197,6 +197,36 @@ export async function sendA2ATask(
 }
 
 /**
+ * Validate an inbound A2A JSON-RPC `tasks/send` envelope.
+ *
+ * Returns the params on success, or a JSON-RPC error (code + message)
+ * plus the echo id on failure. Mirrors the inline validation the Care
+ * Router route has used since v0, extracted here so every A2A endpoint
+ * (the funnel agents, etc.) rejects a malformed envelope identically:
+ *   - anything that isn't a `jsonrpc:"2.0"` `tasks/send` with `params`
+ *     is a -32600 Invalid Request.
+ * (JSON parse errors are -32700 and stay in the route, since the raw
+ * body read is the route's responsibility.)
+ */
+export function parseTasksSendEnvelope(body: unknown):
+  | { ok: true; id: string | number; params: A2ATasksSendParams }
+  | { ok: false; id: string | number | null; code: number; message: string } {
+  const b = (body ?? null) as Partial<A2ARpcRequest<A2ATasksSendParams>> | null;
+  const id =
+    b && (typeof b.id === "string" || typeof b.id === "number") ? b.id : null;
+  if (!b || b.jsonrpc !== "2.0" || b.method !== "tasks/send" || !b.params) {
+    return {
+      ok: false,
+      id,
+      code: -32600,
+      message:
+        "Invalid Request: expected a JSON-RPC 2.0 tasks/send call with params"
+    };
+  }
+  return { ok: true, id: id as string | number, params: b.params };
+}
+
+/**
  * Helper: build a single user-role text message in one line.
  */
 export function userMessage(text: string, data?: Record<string, unknown>): A2AMessage {

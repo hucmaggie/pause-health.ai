@@ -210,7 +210,9 @@ const REGISTRY: AgentSeed[] = [
     name: "Agentforce Prospecting & Nurture Agent · Menopause Outreach",
     kind: "agentforce",
     protocol: "a2a",
-    endpoint: "salesforce://agentforce/pause-prospecting@v1",
+    // Runnable A2A stand-in for the Salesforce-hosted Agentforce agent:
+    // POST /api/agents/prospecting/tasks (card at /.well-known/agent.json).
+    endpoint: "/api/agents/prospecting",
     version: "1.1.0",
     status: "prototype",
     capabilities: [
@@ -228,7 +230,9 @@ const REGISTRY: AgentSeed[] = [
     name: "Agentforce Inbound Lead Generation · Site & Chat",
     kind: "agentforce",
     protocol: "a2a",
-    endpoint: "salesforce://agentforce/pause-inbound-leads@v1",
+    // Runnable A2A stand-in for the Salesforce-hosted Agentforce agent:
+    // POST /api/agents/inbound-lead/tasks (card at /.well-known/agent.json).
+    endpoint: "/api/agents/inbound-lead",
     version: "1.0.0",
     status: "prototype",
     capabilities: [
@@ -245,7 +249,9 @@ const REGISTRY: AgentSeed[] = [
     name: "Agentforce Qualification · Lead Scoring & Routing",
     kind: "agentforce",
     protocol: "a2a",
-    endpoint: "salesforce://agentforce/pause-qualification@v1",
+    // Runnable A2A stand-in for the Salesforce-hosted Agentforce agent:
+    // POST /api/agents/qualification/tasks (card at /.well-known/agent.json).
+    endpoint: "/api/agents/qualification",
     version: "1.0.0",
     status: "prototype",
     capabilities: [

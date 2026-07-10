@@ -1,3 +1,4 @@
+import { AcquisitionFunnelPanel } from "../../../components/acquisition-funnel-panel";
 import { AgentforceFallback } from "../../../components/agentforce-fallback";
 import { AgentforceVoiceButton } from "../../../components/agentforce-voice-button";
 import { DemoShell } from "../../../components/demo-shell";
@@ -47,6 +48,8 @@ export default function IntakeDemoPage() {
         </div>
         <AgentforceVoiceButton />
       </section>
+
+      <AcquisitionFunnelPanel />
 
       <section className="demo-grid">
         <article className="card">
