@@ -12,6 +12,10 @@ import {
   recordSpan,
   type TraceSpan
 } from "./agent-fabric";
+import {
+  BOOLEAN_BLOCK_SIGNALS,
+  MODEL_ALLOWLIST_POLICY_ID
+} from "./governance-signals";
 
 /**
  * Tests for lib/agent-fabric.ts -- the in-memory mock of the
@@ -420,6 +424,29 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       }
     }
   });
+
+  it("every seeded trace span names a real registered agent", () => {
+    // Guards the illustrative console traces against drift: a seeded span
+    // that references a typo'd or removed agent id would render an
+    // orphaned row in the console. All four seed functions run at import.
+    const agentIds = new Set(listAgents().map((a) => a.id));
+    const seededTaskIds = [
+      "task-seed-historical-001",
+      "task-seed-growth-lifecycle-001",
+      "task-seed-inbound-lead-001",
+      "task-seed-commercial-001"
+    ];
+    for (const taskId of seededTaskIds) {
+      const spans = listTraces({ taskId });
+      expect(spans.length, `${taskId} should be seeded`).toBeGreaterThan(0);
+      for (const s of spans) {
+        expect(
+          agentIds.has(s.agentId),
+          `seeded trace ${taskId} span ${s.id} names unknown agent "${s.agentId}"`
+        ).toBe(true);
+      }
+    }
+  });
 });
 
 describe("evaluateGovernance · Care Router pre-flight", () => {
@@ -573,6 +600,26 @@ describe("Governance enforcement coverage · no advertised-but-unevaluated block
       expect(p!.enforcement).toBe("block");
       expect(p!.status).toBe("enforced");
     }
+  });
+
+  it("the shared signal metadata is well-formed (unique ids, model handled separately)", () => {
+    // BOOLEAN_BLOCK_SIGNALS + the model allow-list == the evaluable set. The
+    // /demo console form reads the same metadata, so this keeps the UI, the
+    // evaluator, and the catalog on one source of truth.
+    const seen = new Set<string>();
+    for (const s of BOOLEAN_BLOCK_SIGNALS) {
+      expect(seen.has(s.policyId), `duplicate signal for ${s.policyId}`).toBe(
+        false
+      );
+      seen.add(s.policyId);
+      // The model policy is a string+regex check, not a boolean signal.
+      expect(s.policyId).not.toBe(MODEL_ALLOWLIST_POLICY_ID);
+    }
+    const expected = new Set([
+      ...BOOLEAN_BLOCK_SIGNALS.map((s) => s.policyId),
+      MODEL_ALLOWLIST_POLICY_ID
+    ]);
+    expect(new Set(evaluableBlockPolicyIds())).toEqual(expected);
   });
 });
 

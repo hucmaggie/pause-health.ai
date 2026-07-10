@@ -10,6 +10,11 @@ import {
   findDemoPersona,
   type DemoPersona
 } from "../../../lib/demo-cohort";
+import {
+  BOOLEAN_BLOCK_SIGNALS,
+  MODEL_ALLOWLIST_POLICY_ID,
+  type GovernanceTask
+} from "../../../lib/governance-signals";
 
 type AgentRecord = {
   id: string;
@@ -108,6 +113,20 @@ function AgentFabricConsoleInner() {
   const [spans, setSpans] = useState<TraceSpan[]>([]);
   const [running, setRunning] = useState<string | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
+
+  // --- Governance pre-flight panel state ---
+  const [govAgentId, setGovAgentId] = useState<string>("");
+  // policyId -> whether to simulate a violation of that policy.
+  const [govViolations, setGovViolations] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [govResult, setGovResult] = useState<{
+    decision: "allow" | "block";
+    blockingViolations: { policyId: string; reason: string }[];
+    appliesPolicies: { id: string }[];
+  } | null>(null);
+  const [govBusy, setGovBusy] = useState(false);
+  const [govError, setGovError] = useState<string | null>(null);
 
   const updatePersonaFilter = useCallback(
     (nextPersonaId: string | null) => {
@@ -248,6 +267,70 @@ function AgentFabricConsoleInner() {
     }
     return map;
   }, [policies]);
+
+  // Signal metadata keyed by policy id, from the shared source of truth the
+  // evaluator itself uses -- so this form can't advertise a signal the gate
+  // doesn't check.
+  const signalByPolicyId = useMemo(() => {
+    const map = new Map<string, (typeof BOOLEAN_BLOCK_SIGNALS)[number]>();
+    for (const s of BOOLEAN_BLOCK_SIGNALS) map.set(s.policyId, s);
+    return map;
+  }, []);
+
+  // Enforced-block policies applicable to the selected agent -- these are the
+  // only ones the pre-flight gate can actually block on.
+  const govBlockPolicies = useMemo(() => {
+    if (!govAgentId) return [] as PolicyRecord[];
+    return (policiesByAgent.get(govAgentId) ?? []).filter(
+      (p) => p.enforcement === "block" && p.status === "enforced"
+    );
+  }, [govAgentId, policiesByAgent]);
+
+  // Default the picker to the Care Router (the canonical example) once agents
+  // load, without clobbering a user's choice.
+  useEffect(() => {
+    if (govAgentId || agents.length === 0) return;
+    const hasRouter = agents.some((a) => a.id === "care-router-claude");
+    setGovAgentId(hasRouter ? "care-router-claude" : agents[0].id);
+  }, [agents, govAgentId]);
+
+  const runGovEvaluate = useCallback(async () => {
+    if (!govAgentId) return;
+    setGovBusy(true);
+    setGovError(null);
+    try {
+      const task: GovernanceTask = {};
+      for (const p of govBlockPolicies) {
+        const violate = govViolations[p.id] === true;
+        if (p.id === MODEL_ALLOWLIST_POLICY_ID) {
+          // String+regex signal: an off-allowlist model when "violating",
+          // an approved Claude model otherwise.
+          task.requestedModel = violate
+            ? "gpt-4o"
+            : "claude-sonnet-4-5-20250929";
+          continue;
+        }
+        const spec = signalByPolicyId.get(p.id);
+        if (!spec) continue;
+        // Set the signal explicitly to the violating value or its opposite,
+        // so the request states intent rather than relying on omission.
+        task[spec.signal] = violate ? spec.violatingValue : !spec.violatingValue;
+      }
+      const r = await fetch("/api/agent-fabric/governance/evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId: govAgentId, task })
+      });
+      if (!r.ok) throw new Error(`evaluate failed: ${r.status}`);
+      const d = await r.json();
+      setGovResult(d.result ?? null);
+    } catch (err) {
+      setGovError((err as Error).message);
+      setGovResult(null);
+    } finally {
+      setGovBusy(false);
+    }
+  }, [govAgentId, govBlockPolicies, govViolations, signalByPolicyId]);
 
   // When ?personaId= is set, scope the recent-tasks chip row to
   // tasks whose spans carry the matching attributes.personaId.
@@ -464,6 +547,195 @@ function AgentFabricConsoleInner() {
           <p style={{ marginTop: "0.5rem", color: "var(--alert, #b00020)" }}>
             {runError}
           </p>
+        )}
+      </section>
+
+      <section className="card" style={{ marginBottom: "1.5rem" }}>
+        <p className="eyebrow">Governance pre-flight</p>
+        <p style={{ marginTop: "0.4rem" }}>
+          Exercise the same pre-flight gate the Care Router runs before it
+          accepts a task — for <em>any</em> agent on the fabric. Pick an agent,
+          toggle whether the inbound task would violate each of its
+          enforced-block policies, and evaluate. The gate blocks only on an
+          explicitly-violating signal, so an all-compliant task is allowed.
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "0.6rem",
+            marginTop: "0.8rem"
+          }}
+        >
+          <label htmlFor="gov-agent" style={{ fontWeight: 600 }}>
+            Agent
+          </label>
+          <select
+            id="gov-agent"
+            value={govAgentId}
+            onChange={(e) => {
+              setGovAgentId(e.target.value);
+              setGovViolations({});
+              setGovResult(null);
+              setGovError(null);
+            }}
+            style={{
+              padding: "0.4rem 0.6rem",
+              borderRadius: "0.4rem",
+              border: "1px solid var(--border, #ccc)",
+              fontSize: "0.9rem",
+              minWidth: "22rem",
+              maxWidth: "100%"
+            }}
+          >
+            {agents.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ marginTop: "0.9rem" }}>
+          {govBlockPolicies.length === 0 ? (
+            <p style={{ color: "var(--muted)", fontSize: "0.88rem" }}>
+              This agent carries no enforced-block policies — the gate has
+              nothing to block on, so any task is allowed. (It may still be on
+              audit / rate-limit / redact policies; those don&apos;t block.)
+            </p>
+          ) : (
+            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {govBlockPolicies.map((p) => {
+                const isModel = p.id === MODEL_ALLOWLIST_POLICY_ID;
+                const spec = signalByPolicyId.get(p.id);
+                const hint = isModel
+                  ? "Requests an off-allow-list model (gpt-4o)"
+                  : spec?.violationHint ?? "Violates this policy";
+                const checked = govViolations[p.id] === true;
+                return (
+                  <li
+                    key={p.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "0.55rem",
+                      padding: "0.4rem 0",
+                      borderBottom: "1px solid var(--border, #eee)"
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      id={`gov-${p.id}`}
+                      checked={checked}
+                      onChange={(e) =>
+                        setGovViolations((prev) => ({
+                          ...prev,
+                          [p.id]: e.target.checked
+                        }))
+                      }
+                      style={{ marginTop: "0.2rem" }}
+                    />
+                    <label
+                      htmlFor={`gov-${p.id}`}
+                      style={{ fontSize: "0.86rem", cursor: "pointer" }}
+                    >
+                      <strong>{p.name}</strong>{" "}
+                      <code style={{ fontSize: "0.76rem" }}>{p.id}</code>
+                      <br />
+                      <span style={{ color: "var(--muted)" }}>
+                        Simulate violation: {hint}
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+            marginTop: "0.9rem",
+            flexWrap: "wrap"
+          }}
+        >
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={govBusy || !govAgentId}
+            onClick={runGovEvaluate}
+            style={{ fontSize: "0.85rem" }}
+          >
+            {govBusy ? "Evaluating…" : "Evaluate pre-flight"}
+          </button>
+          {Object.values(govViolations).some(Boolean) && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={govBusy}
+              onClick={() => setGovViolations({})}
+              style={{ fontSize: "0.82rem" }}
+            >
+              Reset to all-compliant
+            </button>
+          )}
+        </div>
+
+        {govError && (
+          <p style={{ marginTop: "0.6rem", color: "var(--alert, #b00020)" }}>
+            {govError}
+          </p>
+        )}
+
+        {govResult && (
+          <div style={{ marginTop: "0.9rem" }}>
+            <span
+              style={{
+                display: "inline-block",
+                padding: "0.2rem 0.6rem",
+                borderRadius: "0.35rem",
+                fontSize: "0.8rem",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                background:
+                  govResult.decision === "allow"
+                    ? "rgba(34,139,34,0.14)"
+                    : "rgba(176,0,32,0.12)",
+                color: govResult.decision === "allow" ? "#1b6b1b" : "#b00020",
+                border:
+                  govResult.decision === "allow"
+                    ? "1px solid rgba(34,139,34,0.45)"
+                    : "1px solid rgba(176,0,32,0.4)"
+              }}
+            >
+              {govResult.decision === "allow" ? "✓ Allowed" : "✕ Blocked"}
+            </span>
+            <span
+              style={{
+                marginLeft: "0.6rem",
+                color: "var(--muted)",
+                fontSize: "0.82rem"
+              }}
+            >
+              {govResult.appliesPolicies.length} policies apply ·{" "}
+              {govResult.blockingViolations.length} blocking violation
+              {govResult.blockingViolations.length === 1 ? "" : "s"}
+            </span>
+            {govResult.blockingViolations.length > 0 && (
+              <ul style={{ marginTop: "0.5rem", paddingLeft: "1.2rem" }}>
+                {govResult.blockingViolations.map((v) => (
+                  <li key={v.policyId} style={{ fontSize: "0.84rem" }}>
+                    <code>{v.policyId}</code> — {v.reason}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </section>
 
