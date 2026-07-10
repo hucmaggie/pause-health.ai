@@ -4,7 +4,7 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Multi-Agent Control Plane",
   description:
-    "Pause-Health.ai's multi-agent architecture — Agentforce inbound lead generation, prospecting & nurture, qualification, intake, and engagement, the Anthropic Claude Care Router, the Pause MCP server, and the MuleSoft integration plane — orchestrated, monitored, and governed by a MuleSoft Agent Fabric control plane.",
+    "Pause-Health.ai's multi-agent architecture — Agentforce inbound lead generation, prospecting & nurture, qualification, intake, and engagement, the Anthropic Claude Care Router, the Pause MCP server, the MuleSoft integration plane, and a PHI-separated commercial plane (pipeline + account management) — orchestrated, monitored, and governed by a MuleSoft Agent Fabric control plane.",
   path: "/proposal/agent-fabric",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Pause multi-agent control plane — investor brief."
@@ -66,6 +66,20 @@ const agents = [
     tier: "integration",
     detail:
       "Three-tier API-Led Connectivity on Anypoint. The single ground-truth substrate every agent reads from and writes to. JupyterHealth + DBDP + wearables stitched into one FHIR R5 plane."
+  },
+  {
+    name: "Agentforce Pipeline Management",
+    role: "Commercial plane · B2B pipeline (PHI-separated)",
+    tier: "commercial-operations",
+    detail:
+      "Pause's own go-to-market, not a patient-facing agent. Works the B2B opportunity pipeline for provider-organization, health-system, and employer deals in Sales Cloud — stage progression, deal health, next-best-action — and rolls up committed/best-case/pipeline forecasts where every figure traces back to a CRM record. Runs on the commercial plane only: it cannot read patient PHI, which is also why it's off the HIPAA audit policy."
+  },
+  {
+    name: "Agentforce Account Management",
+    role: "Commercial plane · customer success (PHI-separated)",
+    tier: "commercial-operations",
+    detail:
+      "Manages signed provider-org and employer accounts post-close: health scoring, renewal and QBR drafts, churn-risk and expansion signals. Never commits a contract or pricing change without a human account owner. Like pipeline management, it runs strictly on the commercial CRM plane and never touches patient PHI."
   }
 ];
 
@@ -99,7 +113,7 @@ const fabricCapabilities = [
   {
     title: "Policy enforcement",
     detail:
-      "The policy catalog spans: model allow-list (Claude Sonnet / Opus only), no autonomous prescribing, mandatory red-flag screen, mandatory rationale, deterministic fallback on API failure, MCP tool allow-list, FHIR-R5-only substrate, mTLS for system-to-system, HIPAA audit log on every turn, plus the patient-lifecycle guards on the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement agents (inbound opt-in + source required and identity-resolution-before-create, contact-consent required, human approval before any message is sent, a lead-nurture cadence cap that suppresses on conversion/opt-out, a qualification rubric that requires rationale on every decision and forbids protected-class criteria with reviewable disqualifications, quiet-hours + channel preference, and an engagement frequency cap). Block / audit / rate-limit / redact enforcement modes."
+      "The policy catalog spans: model allow-list (Claude Sonnet / Opus only), no autonomous prescribing, mandatory red-flag screen, mandatory rationale, deterministic fallback on API failure, MCP tool allow-list, FHIR-R5-only substrate, mTLS for system-to-system, HIPAA audit log on every turn, plus the patient-lifecycle guards on the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement agents (inbound opt-in + source required and identity-resolution-before-create, contact-consent required, human approval before any message is sent, a lead-nurture cadence cap that suppresses on conversion/opt-out, a qualification rubric that requires rationale on every decision and forbids protected-class criteria with reviewable disqualifications, quiet-hours + channel preference, and an engagement frequency cap) — plus the commercial-plane guards on Pipeline Management and Account Management (a hard PHI-separation block so commercial agents never read patient data, forecast-figures-must-trace-to-CRM, and human-owner-before-any-contract-change). Block / audit / rate-limit / redact enforcement modes."
   },
   {
     title: "End-to-end trace observability",
@@ -156,7 +170,7 @@ const phases = [
     name: "Phase 0 — Multi-agent prototype",
     duration: "Today",
     detail:
-      "Eight agents registered on the mocked Agent Fabric — the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement lifecycle agents bracketing Agentforce intake, the Care Router, the Pause MCP server, and the MuleSoft integration plane. End-to-end A2A handoff Agentforce → Care Router. MCP tool surface. /demo/agent-fabric console for monitoring. Live in this repo."
+      "Ten agents registered on the mocked Agent Fabric — the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement lifecycle agents bracketing Agentforce intake, the Care Router, the Pause MCP server, and the MuleSoft integration plane, plus the PHI-separated commercial-plane Pipeline Management and Account Management agents. End-to-end A2A handoff Agentforce → Care Router. MCP tool surface. /demo/agent-fabric console for monitoring. Live in this repo."
   },
   {
     name: "Phase 1 — Real Claude routing",
@@ -206,7 +220,7 @@ export default function AgentFabricInvestorPage() {
     <ProposalShell
       eyebrow="Investor brief · Multi-agent control plane"
       title="Four agents, two open protocols, one governed control plane"
-      subtitle="Pause-Health.ai composes Agentforce (inbound lead generation, prospecting & nurture, qualification, intake, and engagement), Anthropic Claude (clinical routing), the Pause MCP server (data-plane tools), and MuleSoft (integration plane) into a single multi-agent system — orchestrated, monitored, secured, and governed by a MuleSoft Agent Fabric control plane."
+      subtitle="Pause-Health.ai composes Agentforce (inbound lead generation, prospecting & nurture, qualification, intake, and engagement, plus a PHI-separated commercial plane for pipeline & account management), Anthropic Claude (clinical routing), the Pause MCP server (data-plane tools), and MuleSoft (integration plane) into a single multi-agent system — orchestrated, monitored, secured, and governed by a MuleSoft Agent Fabric control plane."
     >
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">The agents on the fabric</p>

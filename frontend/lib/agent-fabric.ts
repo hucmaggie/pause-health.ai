@@ -53,7 +53,8 @@ export type AgentRecord = {
     | "data-grounding"
     | "patient-acquisition"
     | "lead-qualification"
-    | "patient-engagement";
+    | "patient-engagement"
+    | "commercial-operations";
 };
 
 export type PolicyRecord = {
@@ -250,6 +251,40 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "patient-engagement"
+  },
+  {
+    id: "pipeline-management-agent",
+    name: "Agentforce Pipeline Management · Provider-Org Deals",
+    kind: "agentforce",
+    protocol: "a2a",
+    endpoint: "salesforce://agentforce/pause-pipeline@v1",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Manages the B2B opportunity pipeline for provider-organization, health-system, and employer deals in Sales Cloud",
+      "Tracks stage progression, deal health, and next-best-action; flags stalled or at-risk opportunities",
+      "Rolls up committed / best-case / pipeline forecasts — every figure traces back to CRM opportunity records, never fabricated",
+      "Operates only on the commercial CRM plane; has no access to patient PHI or the clinical plane"
+    ],
+    provider: "Salesforce",
+    governanceTier: "commercial-operations"
+  },
+  {
+    id: "account-management-agent",
+    name: "Agentforce Account Management · Customer Success",
+    kind: "agentforce",
+    protocol: "a2a",
+    endpoint: "salesforce://agentforce/pause-accounts@v1",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Manages signed provider-organization and employer accounts post-close: health scoring, renewals, and expansion",
+      "Surfaces usage / adoption signals and drafts renewal & QBR materials for the account team's review",
+      "Flags churn risk and expansion opportunities; never commits a contract or pricing change without a human account owner",
+      "Operates only on the commercial CRM plane; has no access to patient PHI or the clinical plane"
+    ],
+    provider: "Salesforce",
+    governanceTier: "commercial-operations"
   }
 ];
 
@@ -487,6 +522,33 @@ const POLICIES: PolicyRecord[] = [
       "Every disqualification is logged with its rationale and surfaced for human review. A lead is never permanently excluded on an automated decision alone.",
     appliesTo: ["qualification-agent"],
     enforcement: "audit",
+    status: "enforced"
+  },
+  {
+    id: "policy.commercial.no-phi-in-commercial-plane",
+    name: "Commercial plane is PHI-free",
+    description:
+      "Commercial-operations agents (pipeline, account management) run on Sales Cloud commercial data only. They may not read, join, or derive patient PHI — the commercial plane and the clinical/PHI plane are strictly separated, and any cross-plane read is blocked. (This is also why these agents are NOT on the HIPAA audit policy: they never touch PHI.)",
+    appliesTo: ["pipeline-management-agent", "account-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.commercial.forecast-integrity",
+    name: "Forecast figures must trace to CRM",
+    description:
+      "Every forecast roll-up must derive from committed / best-case / pipeline CRM opportunity records. The agent may not fabricate or inflate pipeline; unsourced or synthetic figures are rejected.",
+    appliesTo: ["pipeline-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.commercial.human-owner-before-contract-change",
+    name: "Human owner before any contract change",
+    description:
+      "No renewal, pricing, or contract change is committed without a human account owner's approval. The agent drafts and recommends; a person commits.",
+    appliesTo: ["account-management-agent"],
+    enforcement: "block",
     status: "enforced"
   }
 ];
@@ -834,6 +896,119 @@ function store(): FabricStore {
       durationMs: 1820,
       status: "ok",
       attributes: { capturedFields: 6, redFlag: false, convertedFromInboundLead: true }
+    }
+  );
+
+  // A fourth illustrative trace on the COMMERCIAL plane (Pause's own
+  // B2B go-to-market), deliberately separate from the patient-care
+  // traces above: the Pipeline Management agent works a provider-org
+  // opportunity through to close-won, then hands the new customer to
+  // the Account Management agent for onboarding + health scoring. Every
+  // span carries phiAccessed:false — the commercial plane never touches
+  // patient PHI. Seed data.
+  const c0 = Date.now() - 1000 * 60 * 12;
+  const commercialTaskId = "task-seed-commercial-001";
+  const pipelineName = "Agentforce Pipeline Management · Provider-Org Deals";
+  const accountName = "Agentforce Account Management · Customer Success";
+  s.traces.push(
+    {
+      id: "span-comm-001",
+      taskId: commercialTaskId,
+      agentId: "pipeline-management-agent",
+      agentName: pipelineName,
+      operation: "pipeline.opportunity.review",
+      protocol: "rest",
+      startedAt: new Date(c0).toISOString(),
+      finishedAt: new Date(c0 + 520).toISOString(),
+      durationMs: 520,
+      status: "ok",
+      attributes: {
+        opportunity: "Northwell Menopause Program",
+        stage: "Proposal",
+        dealHealth: "at-risk",
+        nextBestAction: "schedule executive review",
+        phiAccessed: false
+      }
+    },
+    {
+      id: "span-comm-002",
+      taskId: commercialTaskId,
+      parentSpanId: "span-comm-001",
+      agentId: "pipeline-management-agent",
+      agentName: pipelineName,
+      operation: "pipeline.forecast.rollup",
+      protocol: "rest",
+      startedAt: new Date(c0 + 520).toISOString(),
+      finishedAt: new Date(c0 + 980).toISOString(),
+      durationMs: 460,
+      status: "ok",
+      attributes: {
+        committed: 4,
+        bestCase: 7,
+        pipelineCount: 14,
+        sourcedFromCrm: true,
+        phiAccessed: false
+      }
+    },
+    {
+      id: "span-comm-003",
+      taskId: commercialTaskId,
+      parentSpanId: "span-comm-002",
+      agentId: "pipeline-management-agent",
+      agentName: pipelineName,
+      operation: "pipeline.opportunity.close-won",
+      protocol: "rest",
+      startedAt: new Date(c0 + 980).toISOString(),
+      finishedAt: new Date(c0 + 1240).toISOString(),
+      durationMs: 260,
+      status: "ok",
+      attributes: {
+        opportunity: "Northwell Menopause Program",
+        stage: "Closed Won",
+        planSeats: 1200,
+        phiAccessed: false
+      }
+    },
+    {
+      id: "span-comm-004",
+      taskId: commercialTaskId,
+      parentSpanId: "span-comm-003",
+      agentId: "account-management-agent",
+      agentName: accountName,
+      operation: "account.onboard",
+      protocol: "a2a",
+      startedAt: new Date(c0 + 1240).toISOString(),
+      finishedAt: new Date(c0 + 1680).toISOString(),
+      durationMs: 440,
+      status: "ok",
+      attributes: {
+        account: "Northwell Menopause Program",
+        planSeats: 1200,
+        phiAccessed: false
+      }
+    },
+    {
+      id: "span-comm-005",
+      taskId: commercialTaskId,
+      parentSpanId: "span-comm-004",
+      agentId: "account-management-agent",
+      agentName: accountName,
+      operation: "account.renewal.draft",
+      protocol: "rest",
+      startedAt: new Date(c0 + 1680).toISOString(),
+      finishedAt: new Date(c0 + 2080).toISOString(),
+      durationMs: 400,
+      status: "ok",
+      attributes: {
+        account: "Northwell Menopause Program",
+        healthScore: 78,
+        churnRisk: "low",
+        expansionSignal: true,
+        renewalDraft: true,
+        humanOwnerApprovalRequired: true,
+        committed: false,
+        phiAccessed: false
+      }
     }
   );
 })();

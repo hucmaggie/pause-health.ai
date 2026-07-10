@@ -329,6 +329,72 @@ describe("Lead qualification · Qualification agent", () => {
   });
 });
 
+describe("Commercial plane · Pipeline + Account Management agents", () => {
+  it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
+    for (const id of ["pipeline-management-agent", "account-management-agent"]) {
+      const a = getAgent(id);
+      expect(a, id).toBeDefined();
+      expect(a!.kind).toBe("agentforce");
+      expect(a!.provider).toBe("Salesforce");
+      expect(a!.status).toBe("prototype");
+      expect(a!.governanceTier).toBe("commercial-operations");
+    }
+  });
+
+  it("both carry the hard PHI-separation block", () => {
+    for (const id of ["pipeline-management-agent", "account-management-agent"]) {
+      const ids = getPoliciesForAgent(id).map((p) => p.id);
+      expect(ids, id).toContain("policy.commercial.no-phi-in-commercial-plane");
+    }
+    const phiSep = listPolicies().find(
+      (p) => p.id === "policy.commercial.no-phi-in-commercial-plane"
+    );
+    expect(phiSep!.enforcement).toBe("block");
+    expect(phiSep!.status).toBe("enforced");
+  });
+
+  it("keeps commercial agents OFF the HIPAA audit policy (they never touch PHI)", () => {
+    // This is an intentional honesty signal, not an omission: the commercial
+    // plane is not PHI-scoped, so it is not on the HIPAA-named audit policy.
+    for (const id of ["pipeline-management-agent", "account-management-agent"]) {
+      const ids = getPoliciesForAgent(id).map((p) => p.id);
+      expect(ids, id).not.toContain("policy.audit.hipaa-log-every-turn");
+    }
+    // ...whereas every clinical/patient-plane agent IS on it.
+    expect(getPoliciesForAgent("agentforce-intake").map((p) => p.id)).toContain(
+      "policy.audit.hipaa-log-every-turn"
+    );
+  });
+
+  it("splits the function-specific policies correctly (forecast → pipeline, contract → account)", () => {
+    const pipeline = getPoliciesForAgent("pipeline-management-agent").map((p) => p.id);
+    const account = getPoliciesForAgent("account-management-agent").map((p) => p.id);
+    expect(pipeline).toContain("policy.commercial.forecast-integrity");
+    expect(pipeline).not.toContain("policy.commercial.human-owner-before-contract-change");
+    expect(account).toContain("policy.commercial.human-owner-before-contract-change");
+    expect(account).not.toContain("policy.commercial.forecast-integrity");
+  });
+
+  it("seeds a commercial pipeline→close-won→account trace with PHI never accessed", () => {
+    const spans = listTraces({ taskId: "task-seed-commercial-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(5);
+    expect(spans[0].agentId).toBe("pipeline-management-agent");
+    expect(spans.map((s) => s.agentId)).toContain("account-management-agent");
+
+    // Every commercial span asserts it did not touch PHI.
+    for (const s of spans) {
+      expect(s.attributes?.phiAccessed, s.operation).toBe(false);
+    }
+
+    // Forecast is CRM-sourced; the renewal draft is not auto-committed.
+    const forecast = spans.find((s) => s.operation === "pipeline.forecast.rollup");
+    expect(forecast?.attributes?.sourcedFromCrm).toBe(true);
+    const renewal = spans.find((s) => s.operation === "account.renewal.draft");
+    expect(renewal?.attributes?.committed).toBe(false);
+    expect(renewal?.attributes?.humanOwnerApprovalRequired).toBe(true);
+  });
+});
+
 describe("Referential integrity · registry ⇄ policy catalog", () => {
   it("every policy's appliesTo names a real registered agent", () => {
     const agentIds = new Set(listAgents().map((a) => a.id));
