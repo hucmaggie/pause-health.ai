@@ -50,7 +50,9 @@ export type AgentRecord = {
     | "clinical-decision"
     | "data-plane"
     | "integration"
-    | "data-grounding";
+    | "data-grounding"
+    | "patient-acquisition"
+    | "patient-engagement";
 };
 
 export type PolicyRecord = {
@@ -178,6 +180,40 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "data-grounding"
+  },
+  {
+    id: "prospecting-agent",
+    name: "Agentforce Prospecting Agent · Menopause Outreach",
+    kind: "agentforce",
+    protocol: "a2a",
+    endpoint: "salesforce://agentforce/pause-prospecting@v1",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Consumes Data 360 population segments as prospect audiences (e.g., the 40-60 vasomotor-burden cohort)",
+      "Drafts consent-aware outreach (email / SMS) via Marketing Cloud for human review — never sends autonomously",
+      "Suppresses prospects without an active contact consent in the Data 360 consent ledger",
+      "Hands a qualified, consented prospect to the Patient Intake agent via Google A2A"
+    ],
+    provider: "Salesforce",
+    governanceTier: "patient-acquisition"
+  },
+  {
+    id: "engagement-agent",
+    name: "Agentforce Engagement Agent · Care Continuity",
+    kind: "agentforce",
+    protocol: "a2a",
+    endpoint: "salesforce://agentforce/pause-engagement@v1",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Re-engages enrolled patients with symptom check-ins and care-plan adherence nudges",
+      "Schedules follow-up touchpoints from the Care Router's pathway output",
+      "Respects quiet-hours, channel preference, and frequency caps sourced from Data 360",
+      "Escalates disengagement or emerging-risk signals back to the Care Router"
+    ],
+    provider: "Salesforce",
+    governanceTier: "patient-engagement"
   }
 ];
 
@@ -210,7 +246,9 @@ const POLICIES: PolicyRecord[] = [
       "care-router-claude",
       "pause-mcp",
       "mulesoft-ingest",
-      "salesforce-data-360"
+      "salesforce-data-360",
+      "prospecting-agent",
+      "engagement-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -322,6 +360,42 @@ const POLICIES: PolicyRecord[] = [
     appliesTo: ["salesforce-data-360"],
     enforcement: "block",
     status: "enforced"
+  },
+  {
+    id: "policy.marketing.consent-to-contact-required",
+    name: "Contact consent required for outreach",
+    description:
+      "Prospecting and engagement agents may only contact an individual who carries an active contact/marketing consent in the Data 360 consent ledger. Individuals without consent are suppressed from every audience before a message is ever drafted.",
+    appliesTo: ["prospecting-agent", "engagement-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.marketing.human-approval-before-send",
+    name: "Human approval before any patient message",
+    description:
+      "Outreach and engagement messages are drafted for human review. No message is delivered to a prospect or patient without a human-in-the-loop approval — the prototype never sends autonomously.",
+    appliesTo: ["prospecting-agent", "engagement-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.engagement.quiet-hours-and-channel-preference",
+    name: "Quiet-hours + channel preference honored",
+    description:
+      "Engagement touches must fall inside the patient's quiet-hours window and use a channel the patient has opted into. Touches outside the window or on an unpreferred channel are blocked.",
+    appliesTo: ["engagement-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.engagement.frequency-cap",
+    name: "Engagement frequency cap",
+    description:
+      "No more than the configured number of engagement touches per patient per rolling window. Additional touches are rate-limited until the window resets.",
+    appliesTo: ["engagement-agent"],
+    enforcement: "rate-limit",
+    status: "enforced"
   }
 ];
 
@@ -396,6 +470,108 @@ function store(): FabricStore {
       durationMs: 350,
       status: "ok",
       attributes: { entries: 5, mulesoftCorrelationId: "mule-corr-9d3b2a" }
+    }
+  );
+
+  // A second illustrative trace showing the patient-lifecycle agents
+  // (Prospecting + Engagement) in one end-to-end flow: a Data 360
+  // segment produces a consented prospect, the Prospecting Agent drafts
+  // outreach (human-approval-gated, never auto-sent), the prospect
+  // converts into a real intake + Care Router decision, and the
+  // Engagement Agent schedules the follow-up cadence from that pathway.
+  // Like the trace above, this is seed data — production populates the
+  // ring buffer from the persistent log store.
+  const g0 = Date.now() - 1000 * 60 * 9;
+  const growthTaskId = "task-seed-growth-lifecycle-001";
+  s.traces.push(
+    {
+      id: "span-growth-001",
+      taskId: growthTaskId,
+      agentId: "prospecting-agent",
+      agentName: "Agentforce Prospecting Agent · Menopause Outreach",
+      operation: "prospect.audience.qualify",
+      protocol: "rest",
+      startedAt: new Date(g0).toISOString(),
+      finishedAt: new Date(g0 + 640).toISOString(),
+      durationMs: 640,
+      status: "ok",
+      attributes: {
+        segment: "vasomotor-burden-40-60",
+        audienceSize: 214,
+        consentSuppressed: 37,
+        source: "salesforce-data-360"
+      }
+    },
+    {
+      id: "span-growth-002",
+      taskId: growthTaskId,
+      parentSpanId: "span-growth-001",
+      agentId: "prospecting-agent",
+      agentName: "Agentforce Prospecting Agent · Menopause Outreach",
+      operation: "prospect.outreach.draft",
+      protocol: "rest",
+      startedAt: new Date(g0 + 640).toISOString(),
+      finishedAt: new Date(g0 + 1180).toISOString(),
+      durationMs: 540,
+      status: "ok",
+      attributes: {
+        channel: "email",
+        template: "menopause-education-v1",
+        humanApprovalRequired: true,
+        sent: false
+      }
+    },
+    {
+      id: "span-growth-003",
+      taskId: growthTaskId,
+      parentSpanId: "span-growth-002",
+      agentId: "agentforce-intake",
+      agentName: "Agentforce Service Agent · Patient Intake",
+      operation: "intake.complete",
+      protocol: "a2a",
+      startedAt: new Date(g0 + 1180).toISOString(),
+      finishedAt: new Date(g0 + 3010).toISOString(),
+      durationMs: 1830,
+      status: "ok",
+      attributes: { capturedFields: 6, redFlag: false, convertedFromProspect: true }
+    },
+    {
+      id: "span-growth-004",
+      taskId: growthTaskId,
+      parentSpanId: "span-growth-003",
+      agentId: "care-router-claude",
+      agentName: "Pause Care Router · Claude Sonnet 4.5",
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(g0 + 3010).toISOString(),
+      finishedAt: new Date(g0 + 5220).toISOString(),
+      durationMs: 2210,
+      status: "ok",
+      attributes: {
+        pathway: "mscp-virtual-visit",
+        provider: "anthropic",
+        model: "claude-sonnet-4-5-20250929"
+      }
+    },
+    {
+      id: "span-growth-005",
+      taskId: growthTaskId,
+      parentSpanId: "span-growth-004",
+      agentId: "engagement-agent",
+      agentName: "Agentforce Engagement Agent · Care Continuity",
+      operation: "engagement.followup.schedule",
+      protocol: "rest",
+      startedAt: new Date(g0 + 5220).toISOString(),
+      finishedAt: new Date(g0 + 5900).toISOString(),
+      durationMs: 680,
+      status: "ok",
+      attributes: {
+        pathway: "mscp-virtual-visit",
+        cadenceDays: 14,
+        channel: "sms",
+        quietHoursRespected: true,
+        humanApprovalRequired: true
+      }
     }
   );
 })();

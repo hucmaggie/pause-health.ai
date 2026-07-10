@@ -113,6 +113,74 @@ describe("Registry policies derive from the policy catalog (single source of tru
   });
 });
 
+describe("Patient-lifecycle agents · Prospecting + Engagement", () => {
+  it("registers both lifecycle agents as prototype Agentforce agents", () => {
+    const prospecting = getAgent("prospecting-agent");
+    const engagement = getAgent("engagement-agent");
+    expect(prospecting).toBeDefined();
+    expect(engagement).toBeDefined();
+
+    expect(prospecting!.kind).toBe("agentforce");
+    expect(prospecting!.protocol).toBe("a2a");
+    expect(prospecting!.provider).toBe("Salesforce");
+    expect(prospecting!.status).toBe("prototype");
+    expect(prospecting!.governanceTier).toBe("patient-acquisition");
+
+    expect(engagement!.kind).toBe("agentforce");
+    expect(engagement!.governanceTier).toBe("patient-engagement");
+    expect(engagement!.status).toBe("prototype");
+  });
+
+  it("gates outreach on contact-consent and human approval (no autonomous send)", () => {
+    for (const id of ["prospecting-agent", "engagement-agent"]) {
+      const ids = getPoliciesForAgent(id).map((p) => p.id);
+      expect(ids).toContain("policy.marketing.consent-to-contact-required");
+      expect(ids).toContain("policy.marketing.human-approval-before-send");
+      // Every lifecycle agent turn is still HIPAA-audited.
+      expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    }
+  });
+
+  it("applies quiet-hours + frequency-cap only to the engagement agent", () => {
+    const engagement = getPoliciesForAgent("engagement-agent").map((p) => p.id);
+    expect(engagement).toContain(
+      "policy.engagement.quiet-hours-and-channel-preference"
+    );
+    expect(engagement).toContain("policy.engagement.frequency-cap");
+
+    const prospecting = getPoliciesForAgent("prospecting-agent").map((p) => p.id);
+    expect(prospecting).not.toContain(
+      "policy.engagement.quiet-hours-and-channel-preference"
+    );
+    expect(prospecting).not.toContain("policy.engagement.frequency-cap");
+  });
+
+  it("the human-approval policy is an enforced block (the prototype never sends)", () => {
+    const policy = listPolicies().find(
+      (p) => p.id === "policy.marketing.human-approval-before-send"
+    );
+    expect(policy).toBeDefined();
+    expect(policy!.enforcement).toBe("block");
+    expect(policy!.status).toBe("enforced");
+  });
+
+  it("seeds a growth→intake→routing→engagement lifecycle trace so both agents are visible in the console", () => {
+    const spans = listTraces({ taskId: "task-seed-growth-lifecycle-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(5);
+    const agentIds = spans.map((s) => s.agentId);
+    expect(agentIds).toContain("prospecting-agent");
+    expect(agentIds).toContain("engagement-agent");
+    // Ordered by startedAt: prospecting qualifies the audience first,
+    // engagement schedules the follow-up last.
+    expect(spans[0].agentId).toBe("prospecting-agent");
+    expect(spans[spans.length - 1].agentId).toBe("engagement-agent");
+    // Honesty invariant: the drafted outreach is never auto-sent.
+    const draft = spans.find((s) => s.operation === "prospect.outreach.draft");
+    expect(draft?.attributes?.sent).toBe(false);
+    expect(draft?.attributes?.humanApprovalRequired).toBe(true);
+  });
+});
+
 describe("Referential integrity · registry ⇄ policy catalog", () => {
   it("every policy's appliesTo names a real registered agent", () => {
     const agentIds = new Set(listAgents().map((a) => a.id));

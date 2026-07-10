@@ -4,13 +4,20 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Multi-Agent Control Plane",
   description:
-    "Pause-Health.ai's multi-agent architecture — Agentforce intake, Anthropic Claude Care Router, Pause MCP server, and MuleSoft integration plane — orchestrated, monitored, and governed by a MuleSoft Agent Fabric control plane.",
+    "Pause-Health.ai's multi-agent architecture — Agentforce prospecting, intake, and engagement, the Anthropic Claude Care Router, the Pause MCP server, and the MuleSoft integration plane — orchestrated, monitored, and governed by a MuleSoft Agent Fabric control plane.",
   path: "/proposal/agent-fabric",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Pause multi-agent control plane — investor brief."
 });
 
 const agents = [
+  {
+    name: "Agentforce Prospecting Agent",
+    role: "Patient acquisition (top of funnel)",
+    tier: "patient-acquisition",
+    detail:
+      "Turns Data 360 population segments (e.g., the 40-60 vasomotor-burden cohort) into consented prospect audiences, drafts consent-aware outreach via Marketing Cloud for human review — never auto-sent — and hands a qualified prospect to the intake agent over A2A. Suppresses anyone lacking contact consent."
+  },
   {
     name: "Agentforce Service Agent",
     role: "Patient-facing intake (front door)",
@@ -24,6 +31,13 @@ const agents = [
     tier: "clinical-decision",
     detail:
       "Takes the structured intake over A2A, reasons over symptoms + cycle + safety screen + age band, and returns one of six care pathways with rationale and red-flag flags. Falls back to a deterministic Pause policy engine when ANTHROPIC_API_KEY is unset or the API call fails."
+  },
+  {
+    name: "Agentforce Engagement Agent",
+    role: "Care continuity (post-routing)",
+    tier: "patient-engagement",
+    detail:
+      "Picks up the Care Router's pathway output and schedules the follow-up cadence — symptom check-ins and adherence nudges — honoring quiet-hours, channel preference, and frequency caps sourced from Data 360, and escalating disengagement or emerging-risk signals back to the router."
   },
   {
     name: "Pause MCP Server",
@@ -71,7 +85,7 @@ const fabricCapabilities = [
   {
     title: "Policy enforcement",
     detail:
-      "Twelve policies are catalogued today: model allow-list (Claude Sonnet / Opus only), no autonomous prescribing, mandatory red-flag screen, mandatory rationale, deterministic fallback on API failure, MCP tool allow-list, FHIR-R5-only substrate, mTLS for system-to-system, HIPAA audit log on every turn. Block / audit / rate-limit / redact enforcement modes."
+      "The policy catalog spans: model allow-list (Claude Sonnet / Opus only), no autonomous prescribing, mandatory red-flag screen, mandatory rationale, deterministic fallback on API failure, MCP tool allow-list, FHIR-R5-only substrate, mTLS for system-to-system, HIPAA audit log on every turn, plus the patient-lifecycle guards on the Prospecting and Engagement agents (contact-consent required, human approval before any message is sent, quiet-hours + channel preference, and an engagement frequency cap). Block / audit / rate-limit / redact enforcement modes."
   },
   {
     title: "End-to-end trace observability",
@@ -128,7 +142,7 @@ const phases = [
     name: "Phase 0 — Multi-agent prototype",
     duration: "Today",
     detail:
-      "Four agents registered on the mocked Agent Fabric. End-to-end A2A handoff Agentforce → Care Router. MCP tool surface. /demo/agent-fabric console for monitoring. Live in this repo."
+      "Six agents registered on the mocked Agent Fabric — the Prospecting and Engagement lifecycle agents bracketing Agentforce intake, the Care Router, the Pause MCP server, and the MuleSoft integration plane. End-to-end A2A handoff Agentforce → Care Router. MCP tool surface. /demo/agent-fabric console for monitoring. Live in this repo."
   },
   {
     name: "Phase 1 — Real Claude routing",
@@ -178,10 +192,10 @@ export default function AgentFabricInvestorPage() {
     <ProposalShell
       eyebrow="Investor brief · Multi-agent control plane"
       title="Four agents, two open protocols, one governed control plane"
-      subtitle="Pause-Health.ai composes Agentforce (intake), Anthropic Claude (clinical routing), the Pause MCP server (data-plane tools), and MuleSoft (integration plane) into a single multi-agent system — orchestrated, monitored, secured, and governed by a MuleSoft Agent Fabric control plane."
+      subtitle="Pause-Health.ai composes Agentforce (prospecting, intake, and engagement), Anthropic Claude (clinical routing), the Pause MCP server (data-plane tools), and MuleSoft (integration plane) into a single multi-agent system — orchestrated, monitored, secured, and governed by a MuleSoft Agent Fabric control plane."
     >
       <section style={{ marginTop: "1.5rem" }}>
-        <p className="eyebrow">The four agents</p>
+        <p className="eyebrow">The agents on the fabric</p>
         <div className="card-grid" style={{ marginTop: "0.6rem" }}>
           {agents.map((a) => (
             <article key={a.name} className="card">
