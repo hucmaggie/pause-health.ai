@@ -33,6 +33,7 @@ import {
   MODEL_ALLOWLIST_POLICY_ID,
   type GovernanceTask
 } from "./governance-signals";
+import type { GovernanceTier } from "./governance-tiers";
 
 export type { GovernanceTask };
 
@@ -52,16 +53,7 @@ export type AgentRecord = {
   capabilities: string[];
   policies: string[];
   provider: string;
-  governanceTier:
-    | "patient-facing"
-    | "clinical-decision"
-    | "data-plane"
-    | "integration"
-    | "data-grounding"
-    | "patient-acquisition"
-    | "lead-qualification"
-    | "patient-engagement"
-    | "commercial-operations";
+  governanceTier: GovernanceTier;
 };
 
 export type PolicyRecord = {

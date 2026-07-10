@@ -15,6 +15,13 @@ import {
   MODEL_ALLOWLIST_POLICY_ID,
   type GovernanceTask
 } from "../../../lib/governance-signals";
+import {
+  GOVERNANCE_PLANES,
+  PLANES_IN_ORDER,
+  planeForTier,
+  tierLabel,
+  type GovernancePlane
+} from "../../../lib/governance-tiers";
 
 type AgentRecord = {
   id: string;
@@ -268,6 +275,18 @@ function AgentFabricConsoleInner() {
     return map;
   }, [policies]);
 
+  // Group the registry by plane (patient/clinical, platform, commercial) so
+  // the PHI boundary is visible instead of a flat list of raw tier slugs.
+  const agentsByPlane = useMemo(() => {
+    const map = new Map<GovernancePlane | "other", AgentRecord[]>();
+    for (const a of agents) {
+      const plane = planeForTier(a.governanceTier) ?? "other";
+      if (!map.has(plane)) map.set(plane, []);
+      map.get(plane)!.push(a);
+    }
+    return map;
+  }, [agents]);
+
   // Signal metadata keyed by policy id, from the shared source of truth the
   // evaluator itself uses -- so this form can't advertise a signal the gate
   // doesn't check.
@@ -331,6 +350,54 @@ function AgentFabricConsoleInner() {
       setGovBusy(false);
     }
   }, [govAgentId, govBlockPolicies, govViolations, signalByPolicyId]);
+
+  const renderAgentCard = (a: AgentRecord) => (
+    <article key={a.id} className="card">
+      <h3 style={{ marginBottom: "0.2rem" }}>{a.name}</h3>
+      <p
+        style={{
+          color: "var(--brand)",
+          fontWeight: 600,
+          fontSize: "0.82rem"
+        }}
+      >
+        {a.protocol.toUpperCase()} · {a.kind} · v{a.version}
+      </p>
+      <p style={{ fontSize: "0.85rem" }}>
+        <code>{a.endpoint}</code>
+      </p>
+      <p style={{ marginTop: "0.6rem", fontSize: "0.85rem" }}>
+        <strong>Tier:</strong> {tierLabel(a.governanceTier)}
+      </p>
+      <p style={{ fontSize: "0.85rem" }}>
+        <strong>Provider:</strong> {a.provider}
+      </p>
+      <details style={{ marginTop: "0.6rem" }}>
+        <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+          Capabilities
+        </summary>
+        <ul style={{ marginTop: "0.4rem", paddingLeft: "1.2rem" }}>
+          {a.capabilities.map((c) => (
+            <li key={c} style={{ fontSize: "0.85rem" }}>
+              {c}
+            </li>
+          ))}
+        </ul>
+      </details>
+      <details style={{ marginTop: "0.4rem" }}>
+        <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+          Policies applied ({(policiesByAgent.get(a.id) ?? []).length})
+        </summary>
+        <ul style={{ marginTop: "0.4rem", paddingLeft: "1.2rem" }}>
+          {(policiesByAgent.get(a.id) ?? []).map((p) => (
+            <li key={p.id} style={{ fontSize: "0.85rem" }}>
+              <code>{p.id}</code> — {p.enforcement} ({p.status})
+            </li>
+          ))}
+        </ul>
+      </details>
+    </article>
+  );
 
   // When ?personaId= is set, scope the recent-tasks chip row to
   // tasks whose spans carry the matching attributes.personaId.
@@ -464,55 +531,52 @@ function AgentFabricConsoleInner() {
 
       <section style={{ marginBottom: "1.5rem" }}>
         <p className="eyebrow">Agent Registry</p>
-        <div className="card-grid" style={{ marginTop: "0.6rem" }}>
-          {agents.map((a) => (
-            <article key={a.id} className="card">
-              <h3 style={{ marginBottom: "0.2rem" }}>{a.name}</h3>
+        <p style={{ marginTop: "0.4rem", color: "var(--muted)", fontSize: "0.88rem" }}>
+          Grouped by plane. The patient/clinical plane and the commercial plane
+          are the PHI boundary — the platform plane is the shared data +
+          integration substrate that serves the patient plane.
+        </p>
+        {PLANES_IN_ORDER.filter(
+          (plane) => (agentsByPlane.get(plane) ?? []).length > 0
+        ).map((plane) => {
+          const planeAgents = agentsByPlane.get(plane) ?? [];
+          const meta = GOVERNANCE_PLANES[plane];
+          return (
+            <div key={plane} style={{ marginTop: "1.1rem" }}>
+              <h3 style={{ margin: "0 0 0.1rem" }}>
+                {meta.label}{" "}
+                <span
+                  style={{
+                    color: "var(--muted)",
+                    fontWeight: 500,
+                    fontSize: "0.82rem"
+                  }}
+                >
+                  · {planeAgents.length} agent{planeAgents.length === 1 ? "" : "s"}
+                </span>
+              </h3>
               <p
                 style={{
-                  color: "var(--brand)",
-                  fontWeight: 600,
-                  fontSize: "0.82rem"
+                  color: "var(--muted)",
+                  fontSize: "0.84rem",
+                  margin: "0 0 0.6rem",
+                  maxWidth: "72ch"
                 }}
               >
-                {a.protocol.toUpperCase()} · {a.kind} · v{a.version}
+                {meta.description}
               </p>
-              <p style={{ fontSize: "0.85rem" }}>
-                <code>{a.endpoint}</code>
-              </p>
-              <p style={{ marginTop: "0.6rem", fontSize: "0.85rem" }}>
-                <strong>Tier:</strong> {a.governanceTier}
-              </p>
-              <p style={{ fontSize: "0.85rem" }}>
-                <strong>Provider:</strong> {a.provider}
-              </p>
-              <details style={{ marginTop: "0.6rem" }}>
-                <summary style={{ cursor: "pointer", fontWeight: 600 }}>
-                  Capabilities
-                </summary>
-                <ul style={{ marginTop: "0.4rem", paddingLeft: "1.2rem" }}>
-                  {a.capabilities.map((c) => (
-                    <li key={c} style={{ fontSize: "0.85rem" }}>
-                      {c}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-              <details style={{ marginTop: "0.4rem" }}>
-                <summary style={{ cursor: "pointer", fontWeight: 600 }}>
-                  Policies applied ({(policiesByAgent.get(a.id) ?? []).length})
-                </summary>
-                <ul style={{ marginTop: "0.4rem", paddingLeft: "1.2rem" }}>
-                  {(policiesByAgent.get(a.id) ?? []).map((p) => (
-                    <li key={p.id} style={{ fontSize: "0.85rem" }}>
-                      <code>{p.id}</code> — {p.enforcement} ({p.status})
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            </article>
-          ))}
-        </div>
+              <div className="card-grid">{planeAgents.map(renderAgentCard)}</div>
+            </div>
+          );
+        })}
+        {(agentsByPlane.get("other") ?? []).length > 0 && (
+          <div style={{ marginTop: "1.1rem" }}>
+            <h3 style={{ margin: "0 0 0.6rem" }}>Other</h3>
+            <div className="card-grid">
+              {(agentsByPlane.get("other") ?? []).map(renderAgentCard)}
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="card" style={{ marginBottom: "1.5rem" }}>

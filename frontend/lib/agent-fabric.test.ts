@@ -16,6 +16,11 @@ import {
   BOOLEAN_BLOCK_SIGNALS,
   MODEL_ALLOWLIST_POLICY_ID
 } from "./governance-signals";
+import {
+  GOVERNANCE_PLANES,
+  GOVERNANCE_TIERS,
+  planeForTier
+} from "./governance-tiers";
 
 /**
  * Tests for lib/agent-fabric.ts -- the in-memory mock of the
@@ -422,6 +427,21 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
           `agent ${a.id} carries unknown policy "${pid}"`
         ).toBe(true);
       }
+    }
+  });
+
+  it("every registered agent's governance tier maps to a known plane + label", () => {
+    // The console groups the registry by plane; an agent whose tier isn't in
+    // GOVERNANCE_TIERS would fall into the defensive "Other" bucket and render
+    // a raw slug. This keeps the tier metadata exhaustive against the registry.
+    for (const a of listAgents()) {
+      const plane = planeForTier(a.governanceTier);
+      expect(
+        plane,
+        `agent ${a.id} has tier "${a.governanceTier}" with no plane mapping`
+      ).toBeDefined();
+      expect(GOVERNANCE_PLANES[plane!]).toBeDefined();
+      expect(GOVERNANCE_TIERS[a.governanceTier].label.length).toBeGreaterThan(0);
     }
   });
 
