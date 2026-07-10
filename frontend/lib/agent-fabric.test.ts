@@ -155,6 +155,22 @@ describe("Patient-lifecycle agents · Prospecting + Engagement", () => {
     expect(prospecting).not.toContain("policy.engagement.frequency-cap");
   });
 
+  it("gives the Prospecting & Nurture agent a lead-nurture cadence cap (rate-limited, prospecting only)", () => {
+    const prospecting = getPoliciesForAgent("prospecting-agent").map((p) => p.id);
+    expect(prospecting).toContain("policy.marketing.nurture-cadence-cap");
+    // The nurture cadence cap is a prospecting-side concern; the enrolled-
+    // patient frequency cap stays on the engagement agent.
+    const engagement = getPoliciesForAgent("engagement-agent").map((p) => p.id);
+    expect(engagement).not.toContain("policy.marketing.nurture-cadence-cap");
+
+    const policy = listPolicies().find(
+      (p) => p.id === "policy.marketing.nurture-cadence-cap"
+    );
+    expect(policy).toBeDefined();
+    expect(policy!.enforcement).toBe("rate-limit");
+    expect(policy!.status).toBe("enforced");
+  });
+
   it("the human-approval policy is an enforced block (the prototype never sends)", () => {
     const policy = listPolicies().find(
       (p) => p.id === "policy.marketing.human-approval-before-send"
@@ -178,6 +194,15 @@ describe("Patient-lifecycle agents · Prospecting + Engagement", () => {
     const draft = spans.find((s) => s.operation === "prospect.outreach.draft");
     expect(draft?.attributes?.sent).toBe(false);
     expect(draft?.attributes?.humanApprovalRequired).toBe(true);
+
+    // The nurture step is visible in the trace: a scored, cadence-driven
+    // touch that is likewise human-approval-gated and unsent.
+    const nurture = spans.find((s) => s.operation === "prospect.nurture.advance");
+    expect(nurture).toBeDefined();
+    expect(nurture!.agentId).toBe("prospecting-agent");
+    expect(typeof nurture!.attributes?.leadScore).toBe("number");
+    expect(nurture!.attributes?.sent).toBe(false);
+    expect(nurture!.attributes?.humanApprovalRequired).toBe(true);
   });
 });
 

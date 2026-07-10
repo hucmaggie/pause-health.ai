@@ -12,11 +12,11 @@ export const metadata = pageMetadata({
 
 const agents = [
   {
-    name: "Agentforce Prospecting Agent",
-    role: "Patient acquisition (top of funnel)",
+    name: "Agentforce Prospecting & Nurture Agent",
+    role: "Acquisition + lead nurture (top of funnel)",
     tier: "patient-acquisition",
     detail:
-      "Turns Data 360 population segments (e.g., the 40-60 vasomotor-burden cohort) into consented prospect audiences, drafts consent-aware outreach via Marketing Cloud for human review — never auto-sent — and hands a qualified prospect to the intake agent over A2A. Suppresses anyone lacking contact consent."
+      "Turns Data 360 population segments (e.g., the 40-60 vasomotor-burden cohort) into consented prospect audiences, then scores and warms leads across a multi-touch nurture cadence — drafting each outreach and nurture touch via Marketing Cloud for human review, never auto-sent. Suppresses anyone lacking contact consent, drops a prospect from every sequence the instant they convert or opt out, and hands a sufficiently-warmed prospect to the intake agent over A2A."
   },
   {
     name: "Agentforce Service Agent",
@@ -85,7 +85,7 @@ const fabricCapabilities = [
   {
     title: "Policy enforcement",
     detail:
-      "The policy catalog spans: model allow-list (Claude Sonnet / Opus only), no autonomous prescribing, mandatory red-flag screen, mandatory rationale, deterministic fallback on API failure, MCP tool allow-list, FHIR-R5-only substrate, mTLS for system-to-system, HIPAA audit log on every turn, plus the patient-lifecycle guards on the Prospecting and Engagement agents (contact-consent required, human approval before any message is sent, quiet-hours + channel preference, and an engagement frequency cap). Block / audit / rate-limit / redact enforcement modes."
+      "The policy catalog spans: model allow-list (Claude Sonnet / Opus only), no autonomous prescribing, mandatory red-flag screen, mandatory rationale, deterministic fallback on API failure, MCP tool allow-list, FHIR-R5-only substrate, mTLS for system-to-system, HIPAA audit log on every turn, plus the patient-lifecycle guards on the Prospecting & Nurture and Engagement agents (contact-consent required, human approval before any message is sent, a lead-nurture cadence cap that suppresses on conversion/opt-out, quiet-hours + channel preference, and an engagement frequency cap). Block / audit / rate-limit / redact enforcement modes."
   },
   {
     title: "End-to-end trace observability",

@@ -183,17 +183,18 @@ const REGISTRY: AgentSeed[] = [
   },
   {
     id: "prospecting-agent",
-    name: "Agentforce Prospecting Agent · Menopause Outreach",
+    name: "Agentforce Prospecting & Nurture Agent · Menopause Outreach",
     kind: "agentforce",
     protocol: "a2a",
     endpoint: "salesforce://agentforce/pause-prospecting@v1",
-    version: "1.0.0",
+    version: "1.1.0",
     status: "prototype",
     capabilities: [
       "Consumes Data 360 population segments as prospect audiences (e.g., the 40-60 vasomotor-burden cohort)",
-      "Drafts consent-aware outreach (email / SMS) via Marketing Cloud for human review — never sends autonomously",
-      "Suppresses prospects without an active contact consent in the Data 360 consent ledger",
-      "Hands a qualified, consented prospect to the Patient Intake agent via Google A2A"
+      "Scores and warms leads across a multi-touch nurture cadence, advancing only prospects who engage",
+      "Drafts consent-aware outreach and nurture touches (email / SMS) via Marketing Cloud for human review — never sends autonomously",
+      "Suppresses prospects without contact consent, and drops anyone from active sequences the moment they convert or opt out",
+      "Hands a qualified, sufficiently-warmed prospect to the Patient Intake agent via Google A2A"
     ],
     provider: "Salesforce",
     governanceTier: "patient-acquisition"
@@ -380,6 +381,15 @@ const POLICIES: PolicyRecord[] = [
     status: "enforced"
   },
   {
+    id: "policy.marketing.nurture-cadence-cap",
+    name: "Lead-nurture cadence cap + convert/opt-out suppression",
+    description:
+      "Prospect nurture sequences are capped in length and cadence (no more than the configured number of touches per rolling window). A prospect is removed from every active nurture sequence the moment they convert to intake, unsubscribe, or revoke contact consent — no post-conversion nurture noise. Excess touches are rate-limited until the window resets.",
+    appliesTo: ["prospecting-agent"],
+    enforcement: "rate-limit",
+    status: "enforced"
+  },
+  {
     id: "policy.engagement.quiet-hours-and-channel-preference",
     name: "Quiet-hours + channel preference honored",
     description:
@@ -474,21 +484,23 @@ function store(): FabricStore {
   );
 
   // A second illustrative trace showing the patient-lifecycle agents
-  // (Prospecting + Engagement) in one end-to-end flow: a Data 360
-  // segment produces a consented prospect, the Prospecting Agent drafts
-  // outreach (human-approval-gated, never auto-sent), the prospect
-  // converts into a real intake + Care Router decision, and the
-  // Engagement Agent schedules the follow-up cadence from that pathway.
-  // Like the trace above, this is seed data — production populates the
-  // ring buffer from the persistent log store.
+  // (Prospecting & Nurture + Engagement) in one end-to-end flow: a Data
+  // 360 segment produces a consented prospect, the Prospecting & Nurture
+  // agent drafts outreach and advances a multi-touch nurture cadence
+  // (human-approval-gated, never auto-sent), the warmed prospect converts
+  // into a real intake + Care Router decision, and the Engagement Agent
+  // schedules the follow-up cadence from that pathway. Like the trace
+  // above, this is seed data — production populates the ring buffer from
+  // the persistent log store.
   const g0 = Date.now() - 1000 * 60 * 9;
   const growthTaskId = "task-seed-growth-lifecycle-001";
+  const prospectingName = "Agentforce Prospecting & Nurture Agent · Menopause Outreach";
   s.traces.push(
     {
       id: "span-growth-001",
       taskId: growthTaskId,
       agentId: "prospecting-agent",
-      agentName: "Agentforce Prospecting Agent · Menopause Outreach",
+      agentName: prospectingName,
       operation: "prospect.audience.qualify",
       protocol: "rest",
       startedAt: new Date(g0).toISOString(),
@@ -507,7 +519,7 @@ function store(): FabricStore {
       taskId: growthTaskId,
       parentSpanId: "span-growth-001",
       agentId: "prospecting-agent",
-      agentName: "Agentforce Prospecting Agent · Menopause Outreach",
+      agentName: prospectingName,
       operation: "prospect.outreach.draft",
       protocol: "rest",
       startedAt: new Date(g0 + 640).toISOString(),
@@ -517,6 +529,8 @@ function store(): FabricStore {
       attributes: {
         channel: "email",
         template: "menopause-education-v1",
+        nurtureSequence: "menopause-education",
+        touch: 1,
         humanApprovalRequired: true,
         sent: false
       }
@@ -525,26 +539,53 @@ function store(): FabricStore {
       id: "span-growth-003",
       taskId: growthTaskId,
       parentSpanId: "span-growth-002",
-      agentId: "agentforce-intake",
-      agentName: "Agentforce Service Agent · Patient Intake",
-      operation: "intake.complete",
-      protocol: "a2a",
+      agentId: "prospecting-agent",
+      agentName: prospectingName,
+      operation: "prospect.nurture.advance",
+      protocol: "rest",
       startedAt: new Date(g0 + 1180).toISOString(),
-      finishedAt: new Date(g0 + 3010).toISOString(),
-      durationMs: 1830,
+      finishedAt: new Date(g0 + 1700).toISOString(),
+      durationMs: 520,
       status: "ok",
-      attributes: { capturedFields: 6, redFlag: false, convertedFromProspect: true }
+      attributes: {
+        nurtureSequence: "menopause-education",
+        touch: 2,
+        leadScore: 72,
+        scoreDelta: 18,
+        cadenceDays: 4,
+        humanApprovalRequired: true,
+        sent: false
+      }
     },
     {
       id: "span-growth-004",
       taskId: growthTaskId,
       parentSpanId: "span-growth-003",
+      agentId: "agentforce-intake",
+      agentName: "Agentforce Service Agent · Patient Intake",
+      operation: "intake.complete",
+      protocol: "a2a",
+      startedAt: new Date(g0 + 1700).toISOString(),
+      finishedAt: new Date(g0 + 3530).toISOString(),
+      durationMs: 1830,
+      status: "ok",
+      attributes: {
+        capturedFields: 6,
+        redFlag: false,
+        convertedFromProspect: true,
+        nurtureTouches: 2
+      }
+    },
+    {
+      id: "span-growth-005",
+      taskId: growthTaskId,
+      parentSpanId: "span-growth-004",
       agentId: "care-router-claude",
       agentName: "Pause Care Router · Claude Sonnet 4.5",
       operation: "a2a.tasks/send",
       protocol: "a2a",
-      startedAt: new Date(g0 + 3010).toISOString(),
-      finishedAt: new Date(g0 + 5220).toISOString(),
+      startedAt: new Date(g0 + 3530).toISOString(),
+      finishedAt: new Date(g0 + 5740).toISOString(),
       durationMs: 2210,
       status: "ok",
       attributes: {
@@ -554,15 +595,15 @@ function store(): FabricStore {
       }
     },
     {
-      id: "span-growth-005",
+      id: "span-growth-006",
       taskId: growthTaskId,
-      parentSpanId: "span-growth-004",
+      parentSpanId: "span-growth-005",
       agentId: "engagement-agent",
       agentName: "Agentforce Engagement Agent · Care Continuity",
       operation: "engagement.followup.schedule",
       protocol: "rest",
-      startedAt: new Date(g0 + 5220).toISOString(),
-      finishedAt: new Date(g0 + 5900).toISOString(),
+      startedAt: new Date(g0 + 5740).toISOString(),
+      finishedAt: new Date(g0 + 6420).toISOString(),
       durationMs: 680,
       status: "ok",
       attributes: {
