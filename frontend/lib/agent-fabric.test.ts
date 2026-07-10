@@ -454,7 +454,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-historical-001",
       "task-seed-growth-lifecycle-001",
       "task-seed-inbound-lead-001",
-      "task-seed-commercial-001"
+      "task-seed-commercial-001",
+      "task-seed-mcp-bridge-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });
@@ -780,6 +781,95 @@ describe("evaluateGovernance · lifecycle + commercial pre-flight", () => {
       task: { accessesPhi: true, hasRedFlagScreen: true, hasRationaleField: true }
     });
     expect(out.decision).toBe("allow");
+  });
+});
+
+describe("MCP Bridge · A2A ↔ MCP egress surface", () => {
+  it("registers the mcp-bridge agent on the platform plane", () => {
+    const bridge = getAgent("mcp-bridge");
+    expect(bridge).toBeDefined();
+    expect(bridge!.kind).toBe("mcp-bridge");
+    expect(bridge!.protocol).toBe("mcp");
+    expect(bridge!.provider).toBe("Pause-Health.ai");
+    expect(bridge!.status).toBe("prototype");
+    expect(bridge!.governanceTier).toBe("integration");
+    expect(planeForTier(bridge!.governanceTier)).toBe("platform");
+  });
+
+  it("carries the three enforced-block egress policies + the HIPAA audit", () => {
+    const ids = getPoliciesForAgent("mcp-bridge").map((p) => p.id);
+    expect(ids).toContain("policy.mcp-bridge.remote-allowlist");
+    expect(ids).toContain("policy.mcp-bridge.tool-allowlist");
+    expect(ids).toContain("policy.mcp-bridge.no-cross-origin-bearer");
+    // The bridge brokers patient-context tool calls, so it IS audited.
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    for (const id of [
+      "policy.mcp-bridge.remote-allowlist",
+      "policy.mcp-bridge.tool-allowlist",
+      "policy.mcp-bridge.no-cross-origin-bearer"
+    ]) {
+      const p = listPolicies().find((x) => x.id === id)!;
+      expect(p.enforcement, id).toBe("block");
+      expect(p.status, id).toBe("enforced");
+    }
+  });
+
+  it("blocks an unlisted remote, an unlisted tool, or a cross-origin bearer", () => {
+    const out = evaluateGovernance({
+      agentId: "mcp-bridge",
+      task: {
+        connectsToAllowlistedRemote: false,
+        usesUnlistedMcpTool: true,
+        forwardsBearerCrossOrigin: true
+      }
+    });
+    expect(out.decision).toBe("block");
+    const ids = out.blockingViolations.map((v) => v.policyId);
+    expect(ids).toContain("policy.mcp-bridge.remote-allowlist");
+    expect(ids).toContain("policy.mcp-bridge.tool-allowlist");
+    expect(ids).toContain("policy.mcp-bridge.no-cross-origin-bearer");
+  });
+
+  it("allows a compliant bridge call (and when signals are absent)", () => {
+    expect(
+      evaluateGovernance({
+        agentId: "mcp-bridge",
+        task: {
+          connectsToAllowlistedRemote: true,
+          usesUnlistedMcpTool: false,
+          forwardsBearerCrossOrigin: false
+        }
+      }).decision
+    ).toBe("allow");
+    expect(
+      evaluateGovernance({ agentId: "mcp-bridge", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a trace where the bridge fails over to loopback and the server runs the tool", () => {
+    const spans = listTraces({ taskId: "task-seed-mcp-bridge-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(5);
+    const bridgeSpans = spans.filter((s) => s.agentId === "mcp-bridge");
+    expect(bridgeSpans.length).toBe(2);
+    // First attempt is the cross-origin external remote and it fails without
+    // forwarding the bearer; the loopback attempt then succeeds.
+    const external = bridgeSpans.find(
+      (s) => s.attributes?.remoteId === "external-partner-directory"
+    );
+    const loopback = bridgeSpans.find(
+      (s) => s.attributes?.remoteId === "loopback"
+    );
+    expect(external?.status).toBe("error");
+    expect(external?.attributes?.bearerForwarded).toBe(false);
+    expect(loopback?.status).toBe("ok");
+    expect(loopback?.attributes?.bearerForwarded).toBe(true);
+    // The tool ultimately executes on the Pause MCP Server, parented to the
+    // successful loopback bridge span.
+    const serverSpan = spans.find(
+      (s) => s.agentId === "pause-mcp" && s.operation === "mcp.find_menopause_providers"
+    );
+    expect(serverSpan).toBeDefined();
+    expect(serverSpan!.parentSpanId).toBe(loopback!.id);
   });
 });
 

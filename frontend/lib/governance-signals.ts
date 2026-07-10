@@ -29,6 +29,9 @@ export type GovernanceTask = {
   // Integration / data substrate (Pause MCP, MuleSoft)
   usesUnlistedMcpTool?: boolean;
   payloadIsFhirR5?: boolean;
+  // MCP Bridge (A2A ↔ MCP egress host)
+  connectsToAllowlistedRemote?: boolean;
+  forwardsBearerCrossOrigin?: boolean;
   // Data 360 grounding & activation
   bulkIngestsPhi?: boolean;
   hasAiDecisionSupportConsent?: boolean;
@@ -118,6 +121,29 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violatingValue: false,
     violationHint: "Clinical payload is not FHIR R5",
     reason: "Clinical payload crossing the MuleSoft tiers was not FHIR R5"
+  },
+  {
+    policyId: "policy.mcp-bridge.remote-allowlist",
+    signal: "connectsToAllowlistedRemote",
+    violatingValue: false,
+    violationHint: "Connects to an unlisted MCP remote",
+    reason:
+      "MCP Bridge attempted to connect to a remote that is neither the loopback nor in PAUSE_MCP_HOST_REMOTES"
+  },
+  {
+    policyId: "policy.mcp-bridge.tool-allowlist",
+    signal: "usesUnlistedMcpTool",
+    violatingValue: true,
+    violationHint: "Invokes an unlisted tool through the bridge",
+    reason: "MCP Bridge invoked a tool outside the declared Pause allow-list"
+  },
+  {
+    policyId: "policy.mcp-bridge.no-cross-origin-bearer",
+    signal: "forwardsBearerCrossOrigin",
+    violatingValue: true,
+    violationHint: "Forwards a bearer to a cross-origin remote",
+    reason:
+      "MCP Bridge attempted to forward an inbound bearer token to a cross-origin external MCP server"
   },
   {
     policyId: "policy.data360.zero-copy-federation",

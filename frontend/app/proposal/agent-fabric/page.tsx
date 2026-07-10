@@ -75,6 +75,13 @@ const agents: { name: string; role: string; tier: GovernanceTier; detail: string
       "Three-tier API-Led Connectivity on Anypoint. The single ground-truth substrate every agent reads from and writes to. JupyterHealth + DBDP + wearables stitched into one FHIR R5 plane."
   },
   {
+    name: "Pause MCP Bridge",
+    role: "A2A ↔ MCP egress (platform)",
+    tier: "integration",
+    detail:
+      "The outbound complement to the Pause MCP Server: a per-request MCP host that lets fabric agents call EXTERNAL MCP tool servers, not just expose Pause's own. The Care Router uses it to resolve providers through find_menopause_providers over an ordered remote list — same-origin loopback first, then allow-listed partners in PAUSE_MCP_HOST_REMOTES — returning the first success and falling back to the direct call if every remote errors, so routing never regresses. An inbound bearer is forwarded only to the same-origin loopback, never cross-origin. Env-gated and off by default."
+  },
+  {
     name: "Salesforce Data 360 (grounding)",
     role: "Unified patient memory",
     tier: "data-grounding",
@@ -127,7 +134,7 @@ const fabricCapabilities = [
   {
     title: "Policy enforcement",
     detail:
-      "The policy catalog spans: model allow-list (Claude Sonnet / Opus only), no autonomous prescribing, mandatory red-flag screen, mandatory rationale, deterministic fallback on API failure, MCP tool allow-list, FHIR-R5-only substrate, mTLS for system-to-system, HIPAA audit log on every turn, plus the patient-lifecycle guards on the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement agents (inbound opt-in + source required and identity-resolution-before-create, contact-consent required, human approval before any message is sent, a lead-nurture cadence cap that suppresses on conversion/opt-out, a qualification rubric that requires rationale on every decision and forbids protected-class criteria with reviewable disqualifications, quiet-hours + channel preference, and an engagement frequency cap) — plus the commercial-plane guards on Pipeline Management and Account Management (a hard PHI-separation block so commercial agents never read patient data, forecast-figures-must-trace-to-CRM, and human-owner-before-any-contract-change). Block / audit / rate-limit / redact enforcement modes."
+      "The policy catalog spans: model allow-list (Claude Sonnet / Opus only), no autonomous prescribing, mandatory red-flag screen, mandatory rationale, deterministic fallback on API failure, MCP tool allow-list (plus the MCP Bridge's egress guards — a remote allow-list, an egress-side tool allow-list, and a no-cross-origin-bearer rule so an inbound token never leaks to an external MCP server), FHIR-R5-only substrate, mTLS for system-to-system, HIPAA audit log on every turn, plus the patient-lifecycle guards on the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement agents (inbound opt-in + source required and identity-resolution-before-create, contact-consent required, human approval before any message is sent, a lead-nurture cadence cap that suppresses on conversion/opt-out, a qualification rubric that requires rationale on every decision and forbids protected-class criteria with reviewable disqualifications, quiet-hours + channel preference, and an engagement frequency cap) — plus the commercial-plane guards on Pipeline Management and Account Management (a hard PHI-separation block so commercial agents never read patient data, forecast-figures-must-trace-to-CRM, and human-owner-before-any-contract-change). Block / audit / rate-limit / redact enforcement modes."
   },
   {
     title: "End-to-end trace observability",
@@ -184,7 +191,7 @@ const phases = [
     name: "Phase 0 — Multi-agent prototype",
     duration: "Today",
     detail:
-      "Eleven agents registered on the mocked Agent Fabric across three planes — the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement lifecycle agents bracketing Agentforce intake and the Care Router on the patient/clinical plane; the Pause MCP server, MuleSoft integration plane, and Data 360 grounding on the platform substrate; and the PHI-separated commercial-plane Pipeline Management and Account Management agents. End-to-end A2A handoff Agentforce → Care Router. MCP tool surface. /demo/agent-fabric console for monitoring. Live in this repo."
+      "Twelve agents registered on the mocked Agent Fabric across three planes — the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement lifecycle agents bracketing Agentforce intake and the Care Router on the patient/clinical plane; the Pause MCP server, the MCP Bridge (A2A ↔ MCP egress), the MuleSoft integration plane, and Data 360 grounding on the platform substrate; and the PHI-separated commercial-plane Pipeline Management and Account Management agents. End-to-end A2A handoff Agentforce → Care Router. MCP tool surface. /demo/agent-fabric console for monitoring. Live in this repo."
   },
   {
     name: "Phase 1 — Real Claude routing",
@@ -233,7 +240,7 @@ export default function AgentFabricInvestorPage() {
   return (
     <ProposalShell
       eyebrow="Investor brief · Multi-agent control plane"
-      title="Eleven agents across three planes, two open protocols, one governed control plane"
+      title="Twelve agents across three planes, two open protocols, one governed control plane"
       subtitle="Pause-Health.ai composes Agentforce (inbound lead generation, prospecting & nurture, qualification, intake, and engagement, plus a PHI-separated commercial plane for pipeline & account management), Anthropic Claude (clinical routing), the Pause MCP server (data-plane tools), MuleSoft (integration plane), and Data 360 (grounding) into a single multi-agent system — orchestrated, monitored, secured, and governed by a MuleSoft Agent Fabric control plane."
     >
       <section style={{ marginTop: "1.5rem" }}>

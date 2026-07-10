@@ -44,6 +44,7 @@ export type AgentRecord = {
     | "agentforce"
     | "anthropic-claude"
     | "mcp-server"
+    | "mcp-bridge"
     | "mulesoft-process"
     | "salesforce-data-360";
   protocol: "a2a" | "mcp" | "rest";
@@ -147,6 +148,28 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Pause-Health.ai",
     governanceTier: "data-plane"
+  },
+  {
+    id: "mcp-bridge",
+    name: "Pause MCP Bridge · A2A ↔ MCP egress",
+    kind: "mcp-bridge",
+    protocol: "mcp",
+    // Not a wire endpoint: the bridge is a per-request MCP host constructed
+    // in-process by the Care Router (lib/mcp/host.ts). Its remotes resolve
+    // from env: the same-origin loopback (/api/mcp) plus allow-listed
+    // externals in PAUSE_MCP_HOST_REMOTES.
+    endpoint: "pause://agent-fabric/mcp-bridge → {loopback /api/mcp, PAUSE_MCP_HOST_REMOTES[]}",
+    version: "0.1.0",
+    status: "prototype",
+    capabilities: [
+      "Bridges fabric agents (A2A) onto external MCP tool servers via a per-request MCP host — the outbound complement to the inbound Pause MCP Server",
+      "Fans out a tool call across an ordered remote list (same-origin loopback first, then allow-listed externals) and returns the first success",
+      "Forwards an inbound bearer token ONLY to the same-origin loopback remote — never to a cross-origin external MCP server",
+      "Falls back to the direct Experience-API call when no remote is configured or every remote errors, so routing never regresses",
+      "Env-gated (PAUSE_MCP_HOST_ENABLED); off by default in the prototype"
+    ],
+    provider: "Pause-Health.ai",
+    governanceTier: "integration"
   },
   {
     id: "mulesoft-ingest",
@@ -320,7 +343,8 @@ const POLICIES: PolicyRecord[] = [
       "prospecting-agent",
       "engagement-agent",
       "inbound-lead-agent",
-      "qualification-agent"
+      "qualification-agent",
+      "mcp-bridge"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -367,6 +391,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "Only the four declared Pause MCP tools are callable. Any other tool invocation is rejected at the MCP server boundary.",
     appliesTo: ["pause-mcp"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.mcp-bridge.remote-allowlist",
+    name: "MCP Bridge remote allow-list",
+    description:
+      "The bridge may only connect to the same-origin loopback MCP server and the remotes explicitly declared in PAUSE_MCP_HOST_REMOTES. An arbitrary or unlisted remote URL is refused before any tool call is made.",
+    appliesTo: ["mcp-bridge"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.mcp-bridge.tool-allowlist",
+    name: "MCP Bridge egress tool allow-list",
+    description:
+      "Only declared Pause tool names may be invoked through the bridge. This mirrors the server-side allow-list on the egress (client) side, so a compromised or misconfigured remote can't be coaxed into running an unlisted tool.",
+    appliesTo: ["mcp-bridge"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.mcp-bridge.no-cross-origin-bearer",
+    name: "No cross-origin bearer forwarding",
+    description:
+      "An inbound bearer token is forwarded ONLY to the same-origin loopback remote, never to a cross-origin external MCP server. Credentials must not leak across the trust boundary. (Enforced in lib/mcp/host.ts today.)",
+    appliesTo: ["mcp-bridge"],
     enforcement: "block",
     status: "enforced"
   },
@@ -1008,6 +1059,110 @@ function store(): FabricStore {
         committed: false,
         phiAccessed: false
       }
+    }
+  );
+
+  // A trace showing the MCP Bridge in action: an intake hands off to the
+  // Care Router, which resolves providers by calling find_menopause_providers
+  // THROUGH the bridge rather than the directory directly. The bridge tries
+  // its ordered remote list — a configured external partner directory first
+  // errors (unreachable), then the same-origin loopback (the Pause MCP Server)
+  // succeeds; the bearer is forwarded only to that loopback. The tool then
+  // executes on the Pause MCP Server. Seed data; production populates the ring
+  // buffer from the persistent log store.
+  const b0 = Date.now() - 1000 * 60 * 2;
+  const bridgeTaskId = "task-seed-mcp-bridge-001";
+  const bridgeName = "Pause MCP Bridge · A2A ↔ MCP egress";
+  s.traces.push(
+    {
+      id: "span-bridge-001",
+      taskId: bridgeTaskId,
+      agentId: "agentforce-intake",
+      agentName: "Agentforce Service Agent · Patient Intake",
+      operation: "intake.complete",
+      protocol: "rest",
+      startedAt: new Date(b0).toISOString(),
+      finishedAt: new Date(b0 + 1500).toISOString(),
+      durationMs: 1500,
+      status: "ok",
+      attributes: { capturedFields: 6, redFlag: false }
+    },
+    {
+      id: "span-bridge-002",
+      taskId: bridgeTaskId,
+      parentSpanId: "span-bridge-001",
+      agentId: "care-router-claude",
+      agentName: "Pause Care Router · Claude Sonnet 4.5",
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(b0 + 1500).toISOString(),
+      finishedAt: new Date(b0 + 3900).toISOString(),
+      durationMs: 2400,
+      status: "ok",
+      attributes: {
+        pathway: "mscp-virtual-visit",
+        provider: "anthropic",
+        model: "claude-sonnet-4-5-20250929",
+        policiesEvaluated: 4,
+        mcpHostEnabled: true,
+        mcpHostRemoteCount: 2
+      }
+    },
+    {
+      id: "span-bridge-003",
+      taskId: bridgeTaskId,
+      parentSpanId: "span-bridge-002",
+      agentId: "mcp-bridge",
+      agentName: bridgeName,
+      operation: "mcp.bridge.find_menopause_providers",
+      protocol: "mcp",
+      startedAt: new Date(b0 + 3900).toISOString(),
+      finishedAt: new Date(b0 + 4020).toISOString(),
+      durationMs: 120,
+      status: "error",
+      attributes: {
+        tool: "find_menopause_providers",
+        remoteId: "external-partner-directory",
+        crossOrigin: true,
+        bearerForwarded: false,
+        ok: false,
+        error: "remote unreachable"
+      }
+    },
+    {
+      id: "span-bridge-004",
+      taskId: bridgeTaskId,
+      parentSpanId: "span-bridge-002",
+      agentId: "mcp-bridge",
+      agentName: bridgeName,
+      operation: "mcp.bridge.find_menopause_providers",
+      protocol: "mcp",
+      startedAt: new Date(b0 + 4020).toISOString(),
+      finishedAt: new Date(b0 + 4180).toISOString(),
+      durationMs: 160,
+      status: "ok",
+      attributes: {
+        tool: "find_menopause_providers",
+        remoteId: "loopback",
+        crossOrigin: false,
+        bearerForwarded: true,
+        toolAllowlisted: true,
+        ok: true
+      }
+    },
+    {
+      id: "span-bridge-005",
+      taskId: bridgeTaskId,
+      parentSpanId: "span-bridge-004",
+      agentId: "pause-mcp",
+      agentName: "Pause MCP Server",
+      operation: "mcp.find_menopause_providers",
+      protocol: "mcp",
+      startedAt: new Date(b0 + 4180).toISOString(),
+      finishedAt: new Date(b0 + 4520).toISOString(),
+      durationMs: 340,
+      status: "ok",
+      attributes: { providers: 3, mulesoftCorrelationId: "mule-corr-7c1f5e" }
     }
   );
 })();

@@ -257,6 +257,29 @@ export async function POST(req: Request) {
     }
   });
 
+  // Record each MCP host tool-call attempt as a first-class `mcp` span
+  // attributed to the MCP Bridge and parented to this A2A span, so the
+  // bridge is observable in the Agent Fabric console as its own agent --
+  // not only as attributes folded into the Care Router span. Empty when
+  // the direct-call (non-host) path served the request.
+  for (const attempt of hostAttempts) {
+    recordInstantSpan({
+      taskId,
+      parentSpanId: span.id,
+      agentId: "mcp-bridge",
+      operation: "mcp.bridge.find_menopause_providers",
+      protocol: "mcp",
+      status: attempt.ok ? "ok" : "error",
+      attributes: {
+        tool: "find_menopause_providers",
+        remoteId: attempt.remoteId,
+        ok: attempt.ok,
+        ...(attempt.error ? { error: attempt.error } : {}),
+        ...(personaId ? { personaId } : {})
+      }
+    });
+  }
+
   const completed: A2ATask = {
     id: taskId,
     sessionId,
