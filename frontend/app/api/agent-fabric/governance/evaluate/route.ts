@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { evaluateGovernance } from "../../../../../lib/agent-fabric";
+import {
+  evaluateGovernance,
+  type GovernanceTask
+} from "../../../../../lib/agent-fabric";
 
 /**
  * Mocked MuleSoft Agent Fabric: Pre-flight Governance Evaluator.
@@ -17,15 +20,16 @@ import { evaluateGovernance } from "../../../../../lib/agent-fabric";
  * Used by /demo/agent-fabric's "Run test case" button to show what
  * the gate looks like in isolation. The Care Router invokes the same
  * evaluator in-process on every inbound A2A task.
+ *
+ * The task shape is the shared GovernanceTask so this route stays in
+ * lockstep with what evaluateGovernance() actually checks (Care Router
+ * signals plus the lifecycle + commercial-plane signals). Every field is
+ * optional; unknown fields are ignored.
  */
 export async function POST(req: Request) {
   type Body = {
     agentId?: string;
-    task?: {
-      hasRedFlagScreen?: boolean;
-      requestedModel?: string;
-      hasRationaleField?: boolean;
-    };
+    task?: GovernanceTask;
   };
   let body: Body;
   try {

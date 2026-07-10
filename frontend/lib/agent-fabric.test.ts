@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  evaluableBlockPolicyIds,
   evaluateGovernance,
   getAgent,
   getPoliciesForAgent,
@@ -544,6 +545,173 @@ describe("evaluateGovernance · Care Router pre-flight", () => {
     // No policies apply to a ghost agent -> nothing to violate.
     // Documented behavior: governance is opt-in by agent id.
     expect(out.appliesPolicies).toEqual([]);
+    expect(out.decision).toBe("allow");
+  });
+});
+
+describe("Governance enforcement coverage · no advertised-but-unevaluated blocks", () => {
+  it("every enforced-block policy in the catalog is actually evaluated", () => {
+    const evaluable = new Set(evaluableBlockPolicyIds());
+    const enforcedBlocks = listPolicies().filter(
+      (p) => p.enforcement === "block" && p.status === "enforced"
+    );
+    // Sanity: there ARE enforced blocks to check.
+    expect(enforcedBlocks.length).toBeGreaterThan(0);
+    for (const p of enforcedBlocks) {
+      expect(
+        evaluable.has(p.id),
+        `${p.id} is an enforced block policy but has no pre-flight evaluator check`
+      ).toBe(true);
+    }
+  });
+
+  it("every evaluator check maps to a real enforced-block policy", () => {
+    const byId = new Map(listPolicies().map((p) => [p.id, p]));
+    for (const id of evaluableBlockPolicyIds()) {
+      const p = byId.get(id);
+      expect(p, `${id} has an evaluator check but no catalog policy`).toBeDefined();
+      expect(p!.enforcement).toBe("block");
+      expect(p!.status).toBe("enforced");
+    }
+  });
+});
+
+describe("evaluateGovernance · lifecycle + commercial pre-flight", () => {
+  it("blocks a Care Router action that commits a clinical action without a clinician", () => {
+    const out = evaluateGovernance({
+      agentId: "care-router-claude",
+      task: {
+        hasRedFlagScreen: true,
+        hasRationaleField: true,
+        commitsClinicalActionWithoutClinician: true
+      }
+    });
+    expect(out.decision).toBe("block");
+    expect(out.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.clinical.no-prescribing"
+    );
+  });
+
+  it("blocks integration/data-substrate violations (MCP tool + non-FHIR payload)", () => {
+    const mcp = evaluateGovernance({
+      agentId: "pause-mcp",
+      task: { usesUnlistedMcpTool: true, payloadIsFhirR5: false }
+    });
+    expect(mcp.decision).toBe("block");
+    const ids = mcp.blockingViolations.map((v) => v.policyId);
+    expect(ids).toContain("policy.mcp.tools-allowlisted");
+    expect(ids).toContain("policy.data.fhir-r5-only");
+  });
+
+  it("blocks Data 360 violations (bulk PHI ingest, missing consent, off-allowlist activation)", () => {
+    const out = evaluateGovernance({
+      agentId: "salesforce-data-360",
+      task: {
+        bulkIngestsPhi: true,
+        hasAiDecisionSupportConsent: false,
+        segmentActivationChannelAllowlisted: false
+      }
+    });
+    expect(out.decision).toBe("block");
+    const ids = out.blockingViolations.map((v) => v.policyId);
+    expect(ids).toContain("policy.data360.zero-copy-federation");
+    expect(ids).toContain("policy.data360.consent-required-before-grounding");
+    expect(ids).toContain("policy.data360.segment-activation-allowlist");
+  });
+
+  it("blocks a patient-facing intake payload carrying free-text PII", () => {
+    const out = evaluateGovernance({
+      agentId: "agentforce-intake",
+      task: { containsFreeTextPii: true }
+    });
+    expect(out.decision).toBe("block");
+    expect(out.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.phi.no-free-text-pii"
+    );
+    // Structured-only payload passes.
+    expect(
+      evaluateGovernance({
+        agentId: "agentforce-intake",
+        task: { containsFreeTextPii: false }
+      }).decision
+    ).toBe("allow");
+  });
+
+  it("blocks a prospecting task that would send without approval or without consent", () => {
+    const out = evaluateGovernance({
+      agentId: "prospecting-agent",
+      task: { autonomousSend: true, hasContactConsent: false }
+    });
+    expect(out.decision).toBe("block");
+    const ids = out.blockingViolations.map((v) => v.policyId);
+    expect(ids).toContain("policy.marketing.human-approval-before-send");
+    expect(ids).toContain("policy.marketing.consent-to-contact-required");
+  });
+
+  it("allows a prospecting task when the signals are compliant (and when absent)", () => {
+    expect(
+      evaluateGovernance({
+        agentId: "prospecting-agent",
+        task: { autonomousSend: false, hasContactConsent: true }
+      }).decision
+    ).toBe("allow");
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "prospecting-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("blocks an inbound lead missing opt-in/source or identity resolution", () => {
+    const out = evaluateGovernance({
+      agentId: "inbound-lead-agent",
+      task: { hasLeadOptInAndSource: false, identityResolved: false }
+    });
+    expect(out.decision).toBe("block");
+    const ids = out.blockingViolations.map((v) => v.policyId);
+    expect(ids).toContain("policy.lead.explicit-optin-and-source-required");
+    expect(ids).toContain("policy.lead.identity-resolution-before-create");
+  });
+
+  it("blocks a qualification decision with protected-class criteria or no rationale", () => {
+    const out = evaluateGovernance({
+      agentId: "qualification-agent",
+      task: { usesProtectedClassCriteria: true, hasRationaleField: false }
+    });
+    expect(out.decision).toBe("block");
+    const ids = out.blockingViolations.map((v) => v.policyId);
+    expect(ids).toContain("policy.qualification.no-protected-class-criteria");
+    expect(ids).toContain("policy.qualification.rationale-required");
+  });
+
+  it("blocks a commercial agent that touches PHI or fabricates a forecast", () => {
+    const pipeline = evaluateGovernance({
+      agentId: "pipeline-management-agent",
+      task: { accessesPhi: true, forecastSourcedFromCrm: false }
+    });
+    expect(pipeline.decision).toBe("block");
+    const ids = pipeline.blockingViolations.map((v) => v.policyId);
+    expect(ids).toContain("policy.commercial.no-phi-in-commercial-plane");
+    expect(ids).toContain("policy.commercial.forecast-integrity");
+  });
+
+  it("blocks an account contract change without a human owner", () => {
+    const out = evaluateGovernance({
+      agentId: "account-management-agent",
+      task: { commitsContractChangeWithoutHumanOwner: true }
+    });
+    expect(out.decision).toBe("block");
+    expect(out.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.commercial.human-owner-before-contract-change"
+    );
+  });
+
+  it("does not cross-apply another plane's signals (commercial signal ignored for the Care Router)", () => {
+    // The Care Router has no commercial policies, so a commercial-violating
+    // signal is simply irrelevant to it.
+    const out = evaluateGovernance({
+      agentId: "care-router-claude",
+      task: { accessesPhi: true, hasRedFlagScreen: true, hasRationaleField: true }
+    });
     expect(out.decision).toBe("allow");
   });
 });

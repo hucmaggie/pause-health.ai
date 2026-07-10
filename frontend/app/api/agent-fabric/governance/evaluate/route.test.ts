@@ -74,6 +74,26 @@ describe("POST /api/agent-fabric/governance/evaluate", () => {
     expect(json.error).toMatch(/Invalid JSON/i);
   });
 
+  it("passes lifecycle/commercial signals through to the evaluator", async () => {
+    // Pins that the shared GovernanceTask fields (beyond the Care Router's
+    // three) actually reach evaluateGovernance across the HTTP boundary.
+    const res = await POST(
+      post({
+        agentId: "account-management-agent",
+        task: { accessesPhi: true, commitsContractChangeWithoutHumanOwner: true }
+      })
+    );
+    const json = await res.json();
+    expect(json.result.decision).toBe("block");
+    const ids = json.result.blockingViolations.map(
+      (v: { policyId: string }) => v.policyId
+    );
+    expect(ids).toContain("policy.commercial.no-phi-in-commercial-plane");
+    expect(ids).toContain(
+      "policy.commercial.human-owner-before-contract-change"
+    );
+  });
+
   it("an unknown agent has no applicable policies and allows", async () => {
     const res = await POST(post({ agentId: "ghost-agent", task: {} }));
     const json = await res.json();

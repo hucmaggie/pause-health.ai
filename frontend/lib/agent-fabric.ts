@@ -1083,17 +1083,155 @@ export function listRecentTaskIds(limit = 10): string[] {
 }
 
 /**
- * Pre-flight governance gate. Called by the Care Router before it
- * accepts an A2A task. Returns the list of policies that apply, and
- * whether any "block" policies are unsatisfied by the incoming task.
+ * The signals a caller can present about an inbound task so the pre-flight
+ * gate can evaluate the enforced-block policies. Every field is optional and,
+ * by convention, a policy fires ONLY when its signal is explicitly present and
+ * violating -- never when the signal is absent -- so partial fixtures (and the
+ * /demo evaluator form) don't trip a gate merely by omitting a field.
+ */
+export type GovernanceTask = {
+  // Patient-facing intake (data plane)
+  containsFreeTextPii?: boolean;
+  // Care Router (clinical decision)
+  hasRedFlagScreen?: boolean;
+  requestedModel?: string;
+  hasRationaleField?: boolean;
+  commitsClinicalActionWithoutClinician?: boolean;
+  // Integration / data substrate (Pause MCP, MuleSoft)
+  usesUnlistedMcpTool?: boolean;
+  payloadIsFhirR5?: boolean;
+  // Data 360 grounding & activation
+  bulkIngestsPhi?: boolean;
+  hasAiDecisionSupportConsent?: boolean;
+  segmentActivationChannelAllowlisted?: boolean;
+  // Patient-lifecycle acquisition/engagement (prospecting, engagement, inbound)
+  hasContactConsent?: boolean;
+  autonomousSend?: boolean;
+  respectsQuietHoursAndChannel?: boolean;
+  hasLeadOptInAndSource?: boolean;
+  identityResolved?: boolean;
+  // Qualification
+  usesProtectedClassCriteria?: boolean;
+  // Commercial plane (pipeline, account management)
+  accessesPhi?: boolean;
+  forecastSourcedFromCrm?: boolean;
+  commitsContractChangeWithoutHumanOwner?: boolean;
+};
+
+/**
+ * Per-policy pre-flight checks for EVERY enforced-block policy in the catalog.
+ * Each returns a human-readable reason when the task violates the policy, or
+ * null otherwise, using the "explicitly-violating-only" convention above.
+ *
+ * Every enforced block policy MUST have an entry here: a block policy with no
+ * check would be advertised-but-never-evaluated -- the exact advertised-vs-
+ * actual drift this table exists to prevent. That invariant is guarded by a
+ * test (see agent-fabric.test.ts) via evaluableBlockPolicyIds().
+ */
+const BLOCK_POLICY_CHECKS: Record<
+  string,
+  (task: GovernanceTask) => string | null
+> = {
+  "policy.phi.no-free-text-pii": (t) =>
+    t.containsFreeTextPii === true
+      ? "Intake payload carried free-text PII; only structured fields are permitted"
+      : null,
+  "policy.intake.red-flag-mandatory": (t) =>
+    t.hasRedFlagScreen === false
+      ? "Task did not include a red-flag screen field"
+      : null,
+  "policy.model.anthropic-claude-sonnet-allowlisted": (t) =>
+    t.requestedModel && !/^claude-(sonnet|opus)-/i.test(t.requestedModel)
+      ? `Requested model "${t.requestedModel}" is not on the approved list`
+      : null,
+  "policy.clinical.rationale-required": (t) =>
+    t.hasRationaleField === false
+      ? "Task did not carry a rationale field; every routing decision must include human-readable rationale"
+      : null,
+  "policy.clinical.no-prescribing": (t) =>
+    t.commitsClinicalActionWithoutClinician === true
+      ? "Attempted to write a prescription/order or commit a clinical action without a human clinician"
+      : null,
+  "policy.mcp.tools-allowlisted": (t) =>
+    t.usesUnlistedMcpTool === true
+      ? "Invoked an MCP tool outside the declared Pause tool allow-list"
+      : null,
+  "policy.data.fhir-r5-only": (t) =>
+    t.payloadIsFhirR5 === false
+      ? "Clinical payload crossing the MuleSoft tiers was not FHIR R5"
+      : null,
+  "policy.data360.zero-copy-federation": (t) =>
+    t.bulkIngestsPhi === true
+      ? "Attempted a bulk PHI ingestion into Salesforce instead of zero-copy federation"
+      : null,
+  "policy.data360.consent-required-before-grounding": (t) =>
+    t.hasAiDecisionSupportConsent === false
+      ? "Grounding call lacked an active 'ai-decision-support' consent in the Data 360 consent ledger"
+      : null,
+  "policy.data360.segment-activation-allowlist": (t) =>
+    t.segmentActivationChannelAllowlisted === false
+      ? "Segment activation targeted a channel outside the approved downstream allow-list"
+      : null,
+  "policy.qualification.rationale-required": (t) =>
+    t.hasRationaleField === false
+      ? "Qualification decision did not carry a human-readable rationale"
+      : null,
+  "policy.qualification.no-protected-class-criteria": (t) =>
+    t.usesProtectedClassCriteria === true
+      ? "Qualification used a protected-class attribute as a criterion"
+      : null,
+  "policy.marketing.consent-to-contact-required": (t) =>
+    t.hasContactConsent === false
+      ? "Target lacks an active contact consent in the Data 360 consent ledger"
+      : null,
+  "policy.marketing.human-approval-before-send": (t) =>
+    t.autonomousSend === true
+      ? "Attempted to send a prospect/patient message without human approval"
+      : null,
+  "policy.engagement.quiet-hours-and-channel-preference": (t) =>
+    t.respectsQuietHoursAndChannel === false
+      ? "Engagement touch fell outside quiet-hours or used a channel the patient didn't opt into"
+      : null,
+  "policy.lead.explicit-optin-and-source-required": (t) =>
+    t.hasLeadOptInAndSource === false
+      ? "Inbound lead lacked an explicit opt-in and/or a recorded acquisition source"
+      : null,
+  "policy.lead.identity-resolution-before-create": (t) =>
+    t.identityResolved === false
+      ? "Inbound lead was not resolved against Data 360 Identity Resolution before creation"
+      : null,
+  "policy.commercial.no-phi-in-commercial-plane": (t) =>
+    t.accessesPhi === true
+      ? "Commercial-plane agent attempted to read patient PHI"
+      : null,
+  "policy.commercial.forecast-integrity": (t) =>
+    t.forecastSourcedFromCrm === false
+      ? "Forecast figures were not sourced from CRM opportunity records"
+      : null,
+  "policy.commercial.human-owner-before-contract-change": (t) =>
+    t.commitsContractChangeWithoutHumanOwner === true
+      ? "Attempted a contract/pricing change without a human account owner"
+      : null
+};
+
+/**
+ * The set of block-policy ids the pre-flight evaluator actually checks.
+ * Exported so a test can assert every enforced-block policy in the catalog is
+ * genuinely evaluated (not advertised-only).
+ */
+export function evaluableBlockPolicyIds(): string[] {
+  return Object.keys(BLOCK_POLICY_CHECKS);
+}
+
+/**
+ * Pre-flight governance gate. Called by the Care Router before it accepts an
+ * A2A task, and by the /api/agent-fabric/governance/evaluate route for any
+ * agent. Returns the policies that apply and any enforced-block policies the
+ * incoming task violates.
  */
 export function evaluateGovernance(opts: {
   agentId: string;
-  task: {
-    hasRedFlagScreen?: boolean;
-    requestedModel?: string;
-    hasRationaleField?: boolean;
-  };
+  task: GovernanceTask;
 }): {
   appliesPolicies: PolicyRecord[];
   blockingViolations: { policyId: string; reason: string }[];
@@ -1104,42 +1242,10 @@ export function evaluateGovernance(opts: {
 
   for (const p of policies) {
     if (p.status !== "enforced" || p.enforcement !== "block") continue;
-    if (
-      p.id === "policy.intake.red-flag-mandatory" &&
-      opts.task.hasRedFlagScreen === false
-    ) {
-      blockingViolations.push({
-        policyId: p.id,
-        reason: "Task did not include a red-flag screen field"
-      });
-    }
-    if (
-      p.id === "policy.model.anthropic-claude-sonnet-allowlisted" &&
-      opts.task.requestedModel &&
-      !/^claude-(sonnet|opus)-/i.test(opts.task.requestedModel)
-    ) {
-      blockingViolations.push({
-        policyId: p.id,
-        reason: `Requested model "${opts.task.requestedModel}" is not on the approved list`
-      });
-    }
-    // Mirrors the red-flag check: block only when the signal is
-    // explicitly false, never when it's absent, so partial fixtures
-    // (and the /demo "Run test case" form) don't trip the gate just by
-    // omitting the field. This makes policy.clinical.rationale-required
-    // actually enforceable -- hasRationaleField was previously accepted
-    // by the API + type but never evaluated, so an "enforced" block
-    // policy could not fire.
-    if (
-      p.id === "policy.clinical.rationale-required" &&
-      opts.task.hasRationaleField === false
-    ) {
-      blockingViolations.push({
-        policyId: p.id,
-        reason:
-          "Task did not carry a rationale field; every routing decision must include human-readable rationale"
-      });
-    }
+    const check = BLOCK_POLICY_CHECKS[p.id];
+    if (!check) continue;
+    const reason = check(opts.task);
+    if (reason) blockingViolations.push({ policyId: p.id, reason });
   }
 
   return {
