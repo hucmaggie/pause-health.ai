@@ -273,6 +273,62 @@ describe("Inbound acquisition · Inbound Lead Generation agent", () => {
   });
 });
 
+describe("Lead qualification · Qualification agent", () => {
+  it("registers as a prototype Agentforce agent on its own lead-qualification tier", () => {
+    const q = getAgent("qualification-agent");
+    expect(q).toBeDefined();
+    expect(q!.kind).toBe("agentforce");
+    expect(q!.protocol).toBe("a2a");
+    expect(q!.provider).toBe("Salesforce");
+    expect(q!.status).toBe("prototype");
+    expect(q!.governanceTier).toBe("lead-qualification");
+  });
+
+  it("requires rationale, forbids protected-class criteria, and keeps disqualifications reviewable", () => {
+    const ids = getPoliciesForAgent("qualification-agent").map((p) => p.id);
+    expect(ids).toContain("policy.qualification.rationale-required");
+    expect(ids).toContain("policy.qualification.no-protected-class-criteria");
+    expect(ids).toContain("policy.qualification.human-review-on-disqualify");
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+  });
+
+  it("enforces rationale + no-protected-class as blocks and disqualify-review as an audit", () => {
+    const byId = (id: string) => listPolicies().find((p) => p.id === id)!;
+    expect(byId("policy.qualification.rationale-required").enforcement).toBe(
+      "block"
+    );
+    expect(
+      byId("policy.qualification.no-protected-class-criteria").enforcement
+    ).toBe("block");
+    const review = byId("policy.qualification.human-review-on-disqualify");
+    expect(review.enforcement).toBe("audit");
+    expect(review.status).toBe("enforced");
+  });
+
+  it("is the gate before intake on BOTH the inbound and outbound seeded traces", () => {
+    for (const taskId of [
+      "task-seed-inbound-lead-001",
+      "task-seed-growth-lifecycle-001"
+    ]) {
+      const spans = listTraces({ taskId });
+      const decide = spans.find((s) => s.operation === "qualification.decide");
+      expect(decide, taskId).toBeDefined();
+      expect(decide!.agentId).toBe("qualification-agent");
+      expect(decide!.attributes?.decision).toBe("qualified");
+      // Honesty invariant: qualification never used a protected-class attribute.
+      expect(decide!.attributes?.protectedClassUsed).toBe(false);
+      expect(typeof decide!.attributes?.rationale).toBe("string");
+
+      // The qualification decision precedes the intake.complete span.
+      const decideIdx = spans.findIndex(
+        (s) => s.operation === "qualification.decide"
+      );
+      const intakeIdx = spans.findIndex((s) => s.operation === "intake.complete");
+      expect(intakeIdx).toBeGreaterThan(decideIdx);
+    }
+  });
+});
+
 describe("Referential integrity · registry ⇄ policy catalog", () => {
   it("every policy's appliesTo names a real registered agent", () => {
     const agentIds = new Set(listAgents().map((a) => a.id));

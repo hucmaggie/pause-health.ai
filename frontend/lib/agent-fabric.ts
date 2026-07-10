@@ -52,6 +52,7 @@ export type AgentRecord = {
     | "integration"
     | "data-grounding"
     | "patient-acquisition"
+    | "lead-qualification"
     | "patient-engagement";
 };
 
@@ -194,7 +195,7 @@ const REGISTRY: AgentSeed[] = [
       "Scores and warms leads across a multi-touch nurture cadence, advancing only prospects who engage",
       "Drafts consent-aware outreach and nurture touches (email / SMS) via Marketing Cloud for human review — never sends autonomously",
       "Suppresses prospects without contact consent, and drops anyone from active sequences the moment they convert or opt out",
-      "Hands a qualified, sufficiently-warmed prospect to the Patient Intake agent via Google A2A"
+      "Hands a sufficiently-warmed prospect onward for qualification and intake via Google A2A"
     ],
     provider: "Salesforce",
     governanceTier: "patient-acquisition"
@@ -209,12 +210,29 @@ const REGISTRY: AgentSeed[] = [
     status: "prototype",
     capabilities: [
       "Captures inbound interest from the marketing site, Agentforce web chat, and content/symptom-check forms",
-      "Qualifies visitors against the menopause-care ICP (age band, symptom signals, geography / insurance fit) and scores readiness",
-      "Creates a consented lead in Data 360 with acquisition-source attribution, resolved against existing patients/prospects to avoid duplicates",
-      "Routes a ready lead to Patient Intake and a not-yet-ready lead into the Prospecting & Nurture cadence — both over Google A2A"
+      "Runs a first-pass ICP screen (age band, symptom signals, geography / insurance fit) and scores initial readiness",
+      "Creates an opt-in-consented lead in Data 360 with acquisition-source attribution, resolved against existing patients/prospects to avoid duplicates",
+      "Hands the captured lead to the Qualification agent for the authoritative qualified/disqualified call — over Google A2A"
     ],
     provider: "Salesforce",
     governanceTier: "patient-acquisition"
+  },
+  {
+    id: "qualification-agent",
+    name: "Agentforce Qualification · Lead Scoring & Routing",
+    kind: "agentforce",
+    protocol: "a2a",
+    endpoint: "salesforce://agentforce/pause-qualification@v1",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Applies a consistent qualification rubric (menopause-care fit + eligibility + expressed intent/readiness) to inbound and outbound leads alike",
+      "Produces a qualified / disqualified decision with human-readable rationale on every lead",
+      "Routes qualified-and-ready leads to Patient Intake and qualified-but-warming leads into the Prospecting & Nurture cadence, over Google A2A",
+      "Excludes protected-class attributes from qualification criteria; disqualifications are logged for human review"
+    ],
+    provider: "Salesforce",
+    governanceTier: "lead-qualification"
   },
   {
     id: "engagement-agent",
@@ -267,7 +285,8 @@ const POLICIES: PolicyRecord[] = [
       "salesforce-data-360",
       "prospecting-agent",
       "engagement-agent",
-      "inbound-lead-agent"
+      "inbound-lead-agent",
+      "qualification-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -442,6 +461,33 @@ const POLICIES: PolicyRecord[] = [
     appliesTo: ["inbound-lead-agent"],
     enforcement: "block",
     status: "enforced"
+  },
+  {
+    id: "policy.qualification.rationale-required",
+    name: "Qualification rationale required",
+    description:
+      "Every qualification decision — qualified OR disqualified — must carry a human-readable rationale naming the criteria that drove it. Decisions without rationale are rejected and re-issued.",
+    appliesTo: ["qualification-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.qualification.no-protected-class-criteria",
+    name: "No protected-class qualification criteria",
+    description:
+      "Qualification may not use protected-class attributes (race, ethnicity, disability, sexual orientation, and the like) as criteria. Only care-fit, clinical eligibility, consent status, and expressed intent are permitted inputs.",
+    appliesTo: ["qualification-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.qualification.human-review-on-disqualify",
+    name: "Disqualifications are reviewable",
+    description:
+      "Every disqualification is logged with its rationale and surfaced for human review. A lead is never permanently excluded on an automated decision alone.",
+    appliesTo: ["qualification-agent"],
+    enforcement: "audit",
+    status: "enforced"
   }
 ];
 
@@ -597,12 +643,32 @@ function store(): FabricStore {
       id: "span-growth-004",
       taskId: growthTaskId,
       parentSpanId: "span-growth-003",
+      agentId: "qualification-agent",
+      agentName: "Agentforce Qualification · Lead Scoring & Routing",
+      operation: "qualification.decide",
+      protocol: "a2a",
+      startedAt: new Date(g0 + 1700).toISOString(),
+      finishedAt: new Date(g0 + 2140).toISOString(),
+      durationMs: 440,
+      status: "ok",
+      attributes: {
+        decision: "qualified",
+        score: 88,
+        rationale: "ICP fit + expressed intent after 2 nurture touches; consent on file",
+        protectedClassUsed: false,
+        route: "intake"
+      }
+    },
+    {
+      id: "span-growth-005",
+      taskId: growthTaskId,
+      parentSpanId: "span-growth-004",
       agentId: "agentforce-intake",
       agentName: "Agentforce Service Agent · Patient Intake",
       operation: "intake.complete",
       protocol: "a2a",
-      startedAt: new Date(g0 + 1700).toISOString(),
-      finishedAt: new Date(g0 + 3530).toISOString(),
+      startedAt: new Date(g0 + 2140).toISOString(),
+      finishedAt: new Date(g0 + 3970).toISOString(),
       durationMs: 1830,
       status: "ok",
       attributes: {
@@ -613,15 +679,15 @@ function store(): FabricStore {
       }
     },
     {
-      id: "span-growth-005",
+      id: "span-growth-006",
       taskId: growthTaskId,
-      parentSpanId: "span-growth-004",
+      parentSpanId: "span-growth-005",
       agentId: "care-router-claude",
       agentName: "Pause Care Router · Claude Sonnet 4.5",
       operation: "a2a.tasks/send",
       protocol: "a2a",
-      startedAt: new Date(g0 + 3530).toISOString(),
-      finishedAt: new Date(g0 + 5740).toISOString(),
+      startedAt: new Date(g0 + 3970).toISOString(),
+      finishedAt: new Date(g0 + 6180).toISOString(),
       durationMs: 2210,
       status: "ok",
       attributes: {
@@ -631,15 +697,15 @@ function store(): FabricStore {
       }
     },
     {
-      id: "span-growth-006",
+      id: "span-growth-007",
       taskId: growthTaskId,
-      parentSpanId: "span-growth-005",
+      parentSpanId: "span-growth-006",
       agentId: "engagement-agent",
       agentName: "Agentforce Engagement Agent · Care Continuity",
       operation: "engagement.followup.schedule",
       protocol: "rest",
-      startedAt: new Date(g0 + 5740).toISOString(),
-      finishedAt: new Date(g0 + 6420).toISOString(),
+      startedAt: new Date(g0 + 6180).toISOString(),
+      finishedAt: new Date(g0 + 6860).toISOString(),
       durationMs: 680,
       status: "ok",
       attributes: {
@@ -731,7 +797,7 @@ function store(): FabricStore {
       durationMs: 240,
       status: "ok",
       attributes: {
-        destination: "agentforce-intake",
+        destination: "qualification-agent",
         readiness: "ready"
       }
     },
@@ -739,12 +805,32 @@ function store(): FabricStore {
       id: "span-inbound-005",
       taskId: inboundTaskId,
       parentSpanId: "span-inbound-004",
+      agentId: "qualification-agent",
+      agentName: "Agentforce Qualification · Lead Scoring & Routing",
+      operation: "qualification.decide",
+      protocol: "a2a",
+      startedAt: new Date(i0 + 1360).toISOString(),
+      finishedAt: new Date(i0 + 1760).toISOString(),
+      durationMs: 400,
+      status: "ok",
+      attributes: {
+        decision: "qualified",
+        score: 84,
+        rationale: "ICP fit (age band 46-50 + vasomotor signal) with active opt-in; ready to convert",
+        protectedClassUsed: false,
+        route: "intake"
+      }
+    },
+    {
+      id: "span-inbound-006",
+      taskId: inboundTaskId,
+      parentSpanId: "span-inbound-005",
       agentId: "agentforce-intake",
       agentName: "Agentforce Service Agent · Patient Intake",
       operation: "intake.complete",
       protocol: "a2a",
-      startedAt: new Date(i0 + 1360).toISOString(),
-      finishedAt: new Date(i0 + 3180).toISOString(),
+      startedAt: new Date(i0 + 1760).toISOString(),
+      finishedAt: new Date(i0 + 3580).toISOString(),
       durationMs: 1820,
       status: "ok",
       attributes: { capturedFields: 6, redFlag: false, convertedFromInboundLead: true }
