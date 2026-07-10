@@ -206,6 +206,73 @@ describe("Patient-lifecycle agents · Prospecting + Engagement", () => {
   });
 });
 
+describe("Inbound acquisition · Inbound Lead Generation agent", () => {
+  it("registers as a prototype Agentforce agent on the acquisition tier", () => {
+    const inbound = getAgent("inbound-lead-agent");
+    expect(inbound).toBeDefined();
+    expect(inbound!.kind).toBe("agentforce");
+    expect(inbound!.protocol).toBe("a2a");
+    expect(inbound!.provider).toBe("Salesforce");
+    expect(inbound!.status).toBe("prototype");
+    // Inbound lead gen is the inbound sibling of outbound prospecting;
+    // both sit on the patient-acquisition tier.
+    expect(inbound!.governanceTier).toBe("patient-acquisition");
+  });
+
+  it("gates lead capture on explicit opt-in + source and identity resolution", () => {
+    const ids = getPoliciesForAgent("inbound-lead-agent").map((p) => p.id);
+    expect(ids).toContain("policy.lead.explicit-optin-and-source-required");
+    expect(ids).toContain("policy.lead.identity-resolution-before-create");
+    // Still HIPAA-audited like every other agent turn.
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+  });
+
+  it("both inbound-lead policies are enforced blocks", () => {
+    for (const id of [
+      "policy.lead.explicit-optin-and-source-required",
+      "policy.lead.identity-resolution-before-create"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement).toBe("block");
+      expect(policy!.status).toBe("enforced");
+    }
+  });
+
+  it("does NOT carry the outbound nurture/marketing policies (inbound is a different funnel)", () => {
+    const ids = getPoliciesForAgent("inbound-lead-agent").map((p) => p.id);
+    expect(ids).not.toContain("policy.marketing.nurture-cadence-cap");
+    expect(ids).not.toContain("policy.marketing.consent-to-contact-required");
+  });
+
+  it("seeds an inbound capture→qualify→resolve→handoff trace ending in intake", () => {
+    const spans = listTraces({ taskId: "task-seed-inbound-lead-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(5);
+
+    // First three spans are the inbound agent's own capture/qualify/resolve.
+    expect(spans[0].agentId).toBe("inbound-lead-agent");
+    expect(spans[0].operation).toBe("lead.capture");
+    expect(spans.map((s) => s.operation)).toEqual(
+      expect.arrayContaining([
+        "lead.capture",
+        "lead.qualify",
+        "lead.identity.resolve",
+        "lead.route.handoff"
+      ])
+    );
+
+    // Honesty invariants: consent captured, deduped (create, not merge),
+    // and the ready lead lands in intake.
+    const capture = spans.find((s) => s.operation === "lead.capture");
+    expect(capture?.attributes?.consentOptIn).toBe(true);
+    const resolve = spans.find((s) => s.operation === "lead.identity.resolve");
+    expect(resolve?.attributes?.matched).toBe(false);
+    const last = spans[spans.length - 1];
+    expect(last.agentId).toBe("agentforce-intake");
+    expect(last.attributes?.convertedFromInboundLead).toBe(true);
+  });
+});
+
 describe("Referential integrity · registry ⇄ policy catalog", () => {
   it("every policy's appliesTo names a real registered agent", () => {
     const agentIds = new Set(listAgents().map((a) => a.id));

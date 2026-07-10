@@ -200,6 +200,23 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "patient-acquisition"
   },
   {
+    id: "inbound-lead-agent",
+    name: "Agentforce Inbound Lead Generation · Site & Chat",
+    kind: "agentforce",
+    protocol: "a2a",
+    endpoint: "salesforce://agentforce/pause-inbound-leads@v1",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Captures inbound interest from the marketing site, Agentforce web chat, and content/symptom-check forms",
+      "Qualifies visitors against the menopause-care ICP (age band, symptom signals, geography / insurance fit) and scores readiness",
+      "Creates a consented lead in Data 360 with acquisition-source attribution, resolved against existing patients/prospects to avoid duplicates",
+      "Routes a ready lead to Patient Intake and a not-yet-ready lead into the Prospecting & Nurture cadence — both over Google A2A"
+    ],
+    provider: "Salesforce",
+    governanceTier: "patient-acquisition"
+  },
+  {
     id: "engagement-agent",
     name: "Agentforce Engagement Agent · Care Continuity",
     kind: "agentforce",
@@ -249,7 +266,8 @@ const POLICIES: PolicyRecord[] = [
       "mulesoft-ingest",
       "salesforce-data-360",
       "prospecting-agent",
-      "engagement-agent"
+      "engagement-agent",
+      "inbound-lead-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -405,6 +423,24 @@ const POLICIES: PolicyRecord[] = [
       "No more than the configured number of engagement touches per patient per rolling window. Additional touches are rate-limited until the window resets.",
     appliesTo: ["engagement-agent"],
     enforcement: "rate-limit",
+    status: "enforced"
+  },
+  {
+    id: "policy.lead.explicit-optin-and-source-required",
+    name: "Inbound lead needs explicit opt-in + source",
+    description:
+      "An inbound lead may only be persisted with an explicit, timestamped opt-in consent and a recorded acquisition source (site, web chat, or form). Anonymous or un-consented captures are discarded at the boundary and never stored.",
+    appliesTo: ["inbound-lead-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.lead.identity-resolution-before-create",
+    name: "Identity resolution before lead creation",
+    description:
+      "Every inbound lead is resolved against Data 360 Identity Resolution before a record is created, so a returning patient or an existing prospect is merged rather than duplicated. Creation is blocked until the resolution step runs.",
+    appliesTo: ["inbound-lead-agent"],
+    enforcement: "block",
     status: "enforced"
   }
 ];
@@ -613,6 +649,105 @@ function store(): FabricStore {
         quietHoursRespected: true,
         humanApprovalRequired: true
       }
+    }
+  );
+
+  // A third illustrative trace showing the INBOUND acquisition path
+  // (the complement to the outbound prospecting flow above): a visitor
+  // arrives via Agentforce web chat, the Inbound Lead Generation agent
+  // captures an opt-in-consented lead, qualifies it against the
+  // menopause-care ICP, resolves it against Data 360 Identity Resolution
+  // (no duplicate), and — because the lead is ready — hands it straight
+  // to Patient Intake over A2A. A not-yet-ready lead would instead be
+  // enrolled into the Prospecting & Nurture cadence. Seed data.
+  const i0 = Date.now() - 1000 * 60 * 6;
+  const inboundTaskId = "task-seed-inbound-lead-001";
+  const inboundName = "Agentforce Inbound Lead Generation · Site & Chat";
+  s.traces.push(
+    {
+      id: "span-inbound-001",
+      taskId: inboundTaskId,
+      agentId: "inbound-lead-agent",
+      agentName: inboundName,
+      operation: "lead.capture",
+      protocol: "rest",
+      startedAt: new Date(i0).toISOString(),
+      finishedAt: new Date(i0 + 300).toISOString(),
+      durationMs: 300,
+      status: "ok",
+      attributes: {
+        source: "web-chat",
+        consentOptIn: true,
+        consentAt: new Date(i0).toISOString()
+      }
+    },
+    {
+      id: "span-inbound-002",
+      taskId: inboundTaskId,
+      parentSpanId: "span-inbound-001",
+      agentId: "inbound-lead-agent",
+      agentName: inboundName,
+      operation: "lead.qualify",
+      protocol: "rest",
+      startedAt: new Date(i0 + 300).toISOString(),
+      finishedAt: new Date(i0 + 780).toISOString(),
+      durationMs: 480,
+      status: "ok",
+      attributes: {
+        icpMatch: true,
+        ageBand: "46-50",
+        leadScore: 81,
+        readiness: "ready"
+      }
+    },
+    {
+      id: "span-inbound-003",
+      taskId: inboundTaskId,
+      parentSpanId: "span-inbound-002",
+      agentId: "inbound-lead-agent",
+      agentName: inboundName,
+      operation: "lead.identity.resolve",
+      protocol: "rest",
+      startedAt: new Date(i0 + 780).toISOString(),
+      finishedAt: new Date(i0 + 1120).toISOString(),
+      durationMs: 340,
+      status: "ok",
+      attributes: {
+        matched: false,
+        action: "create",
+        source: "salesforce-data-360"
+      }
+    },
+    {
+      id: "span-inbound-004",
+      taskId: inboundTaskId,
+      parentSpanId: "span-inbound-003",
+      agentId: "inbound-lead-agent",
+      agentName: inboundName,
+      operation: "lead.route.handoff",
+      protocol: "a2a",
+      startedAt: new Date(i0 + 1120).toISOString(),
+      finishedAt: new Date(i0 + 1360).toISOString(),
+      durationMs: 240,
+      status: "ok",
+      attributes: {
+        destination: "agentforce-intake",
+        readiness: "ready"
+      }
+    },
+    {
+      id: "span-inbound-005",
+      taskId: inboundTaskId,
+      parentSpanId: "span-inbound-004",
+      agentId: "agentforce-intake",
+      agentName: "Agentforce Service Agent · Patient Intake",
+      operation: "intake.complete",
+      protocol: "a2a",
+      startedAt: new Date(i0 + 1360).toISOString(),
+      finishedAt: new Date(i0 + 3180).toISOString(),
+      durationMs: 1820,
+      status: "ok",
+      attributes: { capturedFields: 6, redFlag: false, convertedFromInboundLead: true }
     }
   );
 })();
