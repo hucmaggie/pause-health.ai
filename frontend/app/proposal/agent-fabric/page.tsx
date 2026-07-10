@@ -1,5 +1,12 @@
 import { ProposalShell } from "../../../components/proposal-shell";
 import { pageMetadata } from "../../../lib/page-metadata";
+import {
+  GOVERNANCE_PLANES,
+  PLANES_IN_ORDER,
+  planeForTier,
+  tierLabel,
+  type GovernanceTier
+} from "../../../lib/governance-tiers";
 
 export const metadata = pageMetadata({
   title: "Investor Brief · Multi-Agent Control Plane",
@@ -10,7 +17,7 @@ export const metadata = pageMetadata({
   ogImageAlt: "Pause multi-agent control plane — investor brief."
 });
 
-const agents = [
+const agents: { name: string; role: string; tier: GovernanceTier; detail: string }[] = [
   {
     name: "Agentforce Inbound Lead Generation",
     role: "Inbound acquisition (site & chat)",
@@ -66,6 +73,13 @@ const agents = [
     tier: "integration",
     detail:
       "Three-tier API-Led Connectivity on Anypoint. The single ground-truth substrate every agent reads from and writes to. JupyterHealth + DBDP + wearables stitched into one FHIR R5 plane."
+  },
+  {
+    name: "Salesforce Data 360 (grounding)",
+    role: "Unified patient memory",
+    tier: "data-grounding",
+    detail:
+      "Federates JupyterHealth, the customer's EHR, and the DBDP feature store via a zero-copy Iceberg connector — no bulk PHI is copied into Salesforce. Grounds the Care Router on a consented, unified patient view before every routing decision: grounding calls require an active ai-decision-support consent, and segments activate only to allow-listed downstream channels."
   },
   {
     name: "Agentforce Pipeline Management",
@@ -170,7 +184,7 @@ const phases = [
     name: "Phase 0 — Multi-agent prototype",
     duration: "Today",
     detail:
-      "Ten agents registered on the mocked Agent Fabric — the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement lifecycle agents bracketing Agentforce intake, the Care Router, the Pause MCP server, and the MuleSoft integration plane, plus the PHI-separated commercial-plane Pipeline Management and Account Management agents. End-to-end A2A handoff Agentforce → Care Router. MCP tool surface. /demo/agent-fabric console for monitoring. Live in this repo."
+      "Eleven agents registered on the mocked Agent Fabric across three planes — the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement lifecycle agents bracketing Agentforce intake and the Care Router on the patient/clinical plane; the Pause MCP server, MuleSoft integration plane, and Data 360 grounding on the platform substrate; and the PHI-separated commercial-plane Pipeline Management and Account Management agents. End-to-end A2A handoff Agentforce → Care Router. MCP tool surface. /demo/agent-fabric console for monitoring. Live in this repo."
   },
   {
     name: "Phase 1 — Real Claude routing",
@@ -219,28 +233,67 @@ export default function AgentFabricInvestorPage() {
   return (
     <ProposalShell
       eyebrow="Investor brief · Multi-agent control plane"
-      title="Four agents, two open protocols, one governed control plane"
-      subtitle="Pause-Health.ai composes Agentforce (inbound lead generation, prospecting & nurture, qualification, intake, and engagement, plus a PHI-separated commercial plane for pipeline & account management), Anthropic Claude (clinical routing), the Pause MCP server (data-plane tools), and MuleSoft (integration plane) into a single multi-agent system — orchestrated, monitored, secured, and governed by a MuleSoft Agent Fabric control plane."
+      title="Eleven agents across three planes, two open protocols, one governed control plane"
+      subtitle="Pause-Health.ai composes Agentforce (inbound lead generation, prospecting & nurture, qualification, intake, and engagement, plus a PHI-separated commercial plane for pipeline & account management), Anthropic Claude (clinical routing), the Pause MCP server (data-plane tools), MuleSoft (integration plane), and Data 360 (grounding) into a single multi-agent system — orchestrated, monitored, secured, and governed by a MuleSoft Agent Fabric control plane."
     >
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">The agents on the fabric</p>
-        <div className="card-grid" style={{ marginTop: "0.6rem" }}>
-          {agents.map((a) => (
-            <article key={a.name} className="card">
-              <h3>{a.name}</h3>
+        <p style={{ marginTop: "0.4rem", color: "var(--muted)" }}>
+          Grouped by plane. The patient/clinical and commercial planes are the
+          PHI boundary — the platform plane is the shared data + integration
+          substrate that serves the patient plane.
+        </p>
+        {PLANES_IN_ORDER.filter((plane) =>
+          agents.some((a) => planeForTier(a.tier) === plane)
+        ).map((plane) => {
+          const meta = GOVERNANCE_PLANES[plane];
+          const planeAgents = agents.filter(
+            (a) => planeForTier(a.tier) === plane
+          );
+          return (
+            <div key={plane} style={{ marginTop: "1.25rem" }}>
+              <h3 style={{ margin: "0 0 0.15rem" }}>
+                {meta.label}{" "}
+                <span
+                  style={{
+                    color: "var(--muted)",
+                    fontWeight: 500,
+                    fontSize: "0.85rem"
+                  }}
+                >
+                  · {planeAgents.length} agents
+                </span>
+              </h3>
               <p
                 style={{
-                  color: "var(--brand)",
-                  fontWeight: 600,
-                  marginBottom: "0.4rem"
+                  color: "var(--muted)",
+                  fontSize: "0.9rem",
+                  margin: "0 0 0.7rem",
+                  maxWidth: "74ch"
                 }}
               >
-                {a.role} · {a.tier}
+                {meta.description}
               </p>
-              <p>{a.detail}</p>
-            </article>
-          ))}
-        </div>
+              <div className="card-grid">
+                {planeAgents.map((a) => (
+                  <article key={a.name} className="card">
+                    <h3>{a.name}</h3>
+                    <p
+                      style={{
+                        color: "var(--brand)",
+                        fontWeight: 600,
+                        marginBottom: "0.4rem"
+                      }}
+                    >
+                      {a.role} · {tierLabel(a.tier)}
+                    </p>
+                    <p>{a.detail}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </section>
 
       <section style={{ marginTop: "1.5rem" }}>
