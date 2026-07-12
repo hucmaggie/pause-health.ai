@@ -97,6 +97,8 @@ const MENOPAUSE_SYMPTOMS = new Set([
   "cognition",
   "gsm",
   "weight_gain",
+  "osteoporosis",
+  "high_cholesterol",
   "bleeding"
 ]);
 
