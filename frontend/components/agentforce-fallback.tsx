@@ -154,6 +154,7 @@ const SCRIPT: IntakeStep[] = [
       { value: "mood", label: "Mood changes / anxiety" },
       { value: "cognition", label: "Brain fog / memory" },
       { value: "gsm", label: "Vaginal / urinary symptoms" },
+      { value: "weight_gain", label: "Weight gain / metabolism changes" },
       { value: "bleeding", label: "Unexpected bleeding" },
       { value: "other", label: "Something else" }
     ]
