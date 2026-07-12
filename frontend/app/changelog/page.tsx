@@ -34,6 +34,15 @@ const weeks: ChangelogWeek[] = [
       "The patient-acquisition agents — Inbound Lead Generation, Qualification, and Prospecting & Nurture — were registry seeds with illustrative traces. This week they became runnable A2A endpoints that actually hand off down the funnel and into the existing Intake → Care Router flow, as one governed, traced pipeline you can fire from the intake demo.",
     entries: [
       {
+        title: "Intake: added osteoporosis and high cholesterol as menopause symptoms",
+        summary:
+          "Added 'Osteoporosis / bone density loss' and 'High cholesterol' to the scripted intake symptom picker (after weight gain), and added osteoporosis + high_cholesterol to the acquisition funnel's recognized-symptom set so leads flagging either still screen as in-ICP. Both route through the Care Router on the normal severity-based pathway — no red-flag special case. Tests + lint clean.",
+        commits: [
+          { sha: "7a1fadc", label: "intake: add osteoporosis and high cholesterol as menopause symptoms" }
+        ],
+        status: "shipped"
+      },
+      {
         title: "Intake: added weight gain as a perimenopause symptom",
         summary:
           "Added 'Weight gain / metabolism changes' to the scripted intake symptom picker (between vaginal/urinary symptoms and unexpected bleeding), and added weight_gain to the acquisition funnel's recognized-symptom set so a weight-gain lead still screens as in-ICP. It routes through the Care Router on the normal severity-based pathway — no red-flag special case. Tests + lint clean.",
