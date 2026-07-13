@@ -28,6 +28,32 @@ type ChangelogWeek = {
 
 const weeks: ChangelogWeek[] = [
   {
+    range: "Week of July 12, 2026",
+    headline: "The Care Router's live-Claude path goes green — and the chat can invoke it",
+    intro:
+      "With ANTHROPIC_API_KEY finally set in production, the Care Router's live Claude Sonnet 4.5 path was still silently falling back to the deterministic engine — the model's JSON was being rejected before it could be used, and nothing in the trace said why. Two changes fixed that and made it observable, then the live Agentforce intake chat got an explicit handoff so a completed conversation can actually route to the Claude-backed Care Router as one continuous trace.",
+    entries: [
+      {
+        title: "Intake: routed a completed Agentforce chat intake to the Care Router",
+        summary:
+          "The live Agentforce Embedded Messaging chat on /demo/intake never handed off to the Pause Care Router. Because the V2 SDK exposes no dependable end-of-conversation event on this deployment (only onEmbeddedMessagingReady / onEmbeddedMessagingInitError are confirmed to fire — trusting an unverified 'closed' event would repeat the prechatAPI no-op-Proxy mistake), a new <ChatToCareRouterHandoff/> renders an explicit 'Complete intake → route to Care Router' affordance beneath the chat. It POSTs the selected persona's deterministic intake to the existing /api/intake/route-to-care-router handoff and renders the live decision inline (pathway, acuity, provider/model/via, and any fallbackReason) with a deep link to the multi-agent trace. An optional origin — sanitized to a strict ^[a-z0-9-]{1,40}$ slug so no free text or PHI leaks — is threaded through the handoff and stamped on every span in the parented tree (intake → Data 360 identity/grounding → care-router → mcp-bridge), so the chat-originated route reads origin=agentforce-chat and stays one continuous task in the viewer, distinct from the /demo/routing button. 793 frontend tests green (+7); lint + build clean.",
+        commits: [
+          { sha: "b10054f", label: "intake: route completed agentforce chat intake to the care router" }
+        ],
+        status: "shipped"
+      },
+      {
+        title: "Care Router: hardened the Claude response parsing and surfaced the fallback reason",
+        summary:
+          "Once the production key was live, the Care Router's Claude call was firing (a ~6s span, vs ~250ms when the key was absent) but still landing on the deterministic fallback: the model wraps its JSON in markdown fences or a lead-in sentence, so a bare JSON.parse threw and the catch swallowed it — and the 800-token cap risked truncating the JSON outright. Added extractJsonObject() to strip code fences and pull the first balanced {…} object, normalized the returned pathway, and raised max_tokens to 1500. Crucially, the scripted-fallback path now records a non-clinical fallbackReason attribute on the care-router trace span (the leading 'Claude API call failed (…)' / 'ANTHROPIC_API_KEY not set…' sentence only — no patient text), present only on fallback and absent on a live claude-api success, so a fallback's cause is visible in the Agent Fabric trace viewer instead of invisible. Verified live on production: the care-router span now reads provider=anthropic / via=claude-api with no fallbackReason. 786 frontend tests green; lint + build clean.",
+        commits: [
+          { sha: "a217be1", label: "care router: harden Claude response parsing + surface fallback reason" }
+        ],
+        status: "shipped"
+      }
+    ]
+  },
+  {
     range: "Week of July 5, 2026",
     headline: "The acquisition funnel gets wired into the intake agent",
     intro:
