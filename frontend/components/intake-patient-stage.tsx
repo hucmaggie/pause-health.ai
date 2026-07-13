@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AgentforceEmbed } from "./agentforce-embed";
+import { ChatToCareRouterHandoff } from "./chat-to-care-router-handoff";
 import { PreBriefPanel } from "./pre-brief-panel";
 import type { AgentforceConfig } from "../lib/agentforce";
 import {
@@ -260,6 +261,16 @@ function IntakePatientStageInner({ agentforceConfig }: Props) {
           return Object.keys(fields).length > 0 ? fields : null;
         })()}
       />
+
+      {/*
+       * End-of-intake handoff. The Embedded Messaging V2 SDK doesn't
+       * dependably emit a "conversation complete" event (see
+       * chat-to-care-router-handoff.tsx for the full rationale), so we
+       * surface an explicit affordance that routes the selected persona's
+       * structured intake to the Claude Care Router and shows the live
+       * decision + trace link inline.
+       */}
+      <ChatToCareRouterHandoff persona={selectedPersona} />
     </>
   );
 }

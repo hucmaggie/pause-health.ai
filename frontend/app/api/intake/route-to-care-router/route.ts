@@ -54,6 +54,14 @@ export async function POST(req: Request) {
      * filter just stays empty on analytics; nothing else branches.
      */
     personaId?: string;
+    /**
+     * Optional short origin tag (e.g. "agentforce-chat") identifying
+     * the surface that completed the intake. Stamped on every span so
+     * the trace viewer can tell a chat-originated handoff from the
+     * /demo/routing "Run Care Router" button. Sanitized to a strict
+     * slug so no free text / PHI can ride in on this attribute.
+     */
+    origin?: string;
   };
   let body: Body;
   try {
@@ -69,6 +77,11 @@ export async function POST(req: Request) {
     typeof body.personaId === "string" && body.personaId.length > 0
       ? body.personaId
       : undefined;
+  // Strict slug so this attribute can never carry free text / PHI.
+  const origin =
+    typeof body.origin === "string" && /^[a-z0-9-]{1,40}$/.test(body.origin)
+      ? body.origin
+      : undefined;
 
   const intakeSpan = recordInstantSpan({
     taskId,
@@ -82,7 +95,8 @@ export async function POST(req: Request) {
       primarySymptom: intake.primarySymptom,
       severity: intake.severity,
       patientZipProvided: Boolean(intake.patientZip),
-      ...(personaId ? { personaId } : {})
+      ...(personaId ? { personaId } : {}),
+      ...(origin ? { origin } : {})
     }
   });
 
@@ -127,7 +141,8 @@ export async function POST(req: Request) {
       matchedSources: identity.matchedSources,
       resolutionRuleset: identity.resolutionRuleset,
       durationMs: idFinishedAt - idStartedAt,
-      ...(personaId ? { personaId } : {})
+      ...(personaId ? { personaId } : {}),
+      ...(origin ? { origin } : {})
     }
   });
 
@@ -162,7 +177,8 @@ export async function POST(req: Request) {
       patientPercentileBasis: grounding.cohortComparison.basis,
       lastClinicianContactDaysAgo: grounding.lastClinicianContact.daysAgo,
       durationMs: groundingFinishedAt - groundingStartedAt,
-      ...(personaId ? { personaId } : {})
+      ...(personaId ? { personaId } : {}),
+      ...(origin ? { origin } : {})
     }
   });
 
@@ -180,7 +196,8 @@ export async function POST(req: Request) {
       ),
       metadata: {
         parentSpanId: intakeSpan.id,
-        ...(personaId ? { personaId } : {})
+        ...(personaId ? { personaId } : {}),
+        ...(origin ? { origin } : {})
       }
     });
 
@@ -222,7 +239,11 @@ export async function POST(req: Request) {
       operation: "a2a.tasks/send.transport-error",
       protocol: "a2a",
       status: "error",
-      attributes: { error: (err as Error).message }
+      attributes: {
+        error: (err as Error).message,
+        ...(personaId ? { personaId } : {}),
+        ...(origin ? { origin } : {})
+      }
     });
     return NextResponse.json(
       {

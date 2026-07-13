@@ -100,6 +100,14 @@ export async function POST(req: Request) {
     typeof params.metadata?.personaId === "string"
       ? (params.metadata.personaId as string)
       : undefined;
+  // Optional origin slug threaded by the intake handoff (e.g.
+  // "agentforce-chat") so the Care Router + MCP-bridge spans carry the
+  // same origin as the upstream intake span, making the whole task's
+  // provenance legible in one place. Non-demo callers omit it.
+  const origin =
+    typeof params.metadata?.origin === "string"
+      ? (params.metadata.origin as string)
+      : undefined;
 
   // Accept a data part tagged either type:"data" (Pause's own agents +
   // early A2A spec) or kind:"data" (current A2A spec) so a spec-current
@@ -136,7 +144,8 @@ export async function POST(req: Request) {
       attributes: {
         violations: governance.blockingViolations,
         policiesEvaluated: governance.appliesPolicies.length,
-        ...(personaId ? { personaId } : {})
+        ...(personaId ? { personaId } : {}),
+        ...(origin ? { origin } : {})
       }
     });
     const failed: A2ATask = {
@@ -262,7 +271,8 @@ export async function POST(req: Request) {
       mcpHostEnabled: useMcpHost,
       mcpHostRemoteCount: host?.listRemotes().length ?? 0,
       mcpHostAttempts: hostAttempts,
-      ...(personaId ? { personaId } : {})
+      ...(personaId ? { personaId } : {}),
+      ...(origin ? { origin } : {})
     }
   });
 
@@ -284,7 +294,8 @@ export async function POST(req: Request) {
         remoteId: attempt.remoteId,
         ok: attempt.ok,
         ...(attempt.error ? { error: attempt.error } : {}),
-        ...(personaId ? { personaId } : {})
+        ...(personaId ? { personaId } : {}),
+        ...(origin ? { origin } : {})
       }
     });
   }

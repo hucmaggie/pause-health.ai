@@ -148,6 +148,35 @@ describe("POST /api/intake/route-to-care-router", () => {
     ).toBe(true);
   });
 
+  it("threads an optional origin slug onto the emitted spans", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => a2aOk("echoed"))
+    );
+    const json = await (
+      await post({ intake: INTAKE, origin: "agentforce-chat" })
+    ).json();
+    const spans = listTraces({ taskId: json.taskId });
+    const intake = spans.find((s) => s.operation === "intake.complete");
+    expect(intake?.attributes?.origin).toBe("agentforce-chat");
+    // Stamped on every span the handoff owns, not just the root.
+    expect(
+      spans.every((s) => s.attributes?.origin === "agentforce-chat")
+    ).toBe(true);
+  });
+
+  it("drops a non-slug origin so no free text / PHI can ride in", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => a2aOk("echoed"))
+    );
+    const json = await (
+      await post({ intake: INTAKE, origin: "Jane Doe, 92614, hot flashes" })
+    ).json();
+    const spans = listTraces({ taskId: json.taskId });
+    expect(spans.every((s) => s.attributes?.origin === undefined)).toBe(true);
+  });
+
   it("returns 502 and records a transport-error span when the A2A call fails", async () => {
     vi.stubGlobal(
       "fetch",
