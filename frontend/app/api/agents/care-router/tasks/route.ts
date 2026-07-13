@@ -211,6 +211,15 @@ export async function POST(req: Request) {
       provider: decision.modelProvenance.provider,
       model: decision.modelProvenance.model,
       via: decision.modelProvenance.via,
+      // Present ONLY on a scripted-fallback decision: the leading
+      // (non-clinical) diagnostic sentence explaining why the live Claude
+      // call was not used ("Claude API call failed (…)" / "ANTHROPIC_API_KEY
+      // not set…"). Absent on a successful claude-api decision, so an
+      // operator can tell at a glance whether the live path succeeded and,
+      // if not, why — without exposing any patient-derived clinical text.
+      ...(decision.fallbackReason
+        ? { fallbackReason: decision.fallbackReason }
+        : {}),
       policiesEvaluated: governance.appliesPolicies.length,
       durationMs: finishedAt - startedAt,
       ageBand: intake.ageBand,

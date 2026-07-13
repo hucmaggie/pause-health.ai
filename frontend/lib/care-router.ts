@@ -119,6 +119,16 @@ export type RoutingDecision = {
     model: string;
     via: "claude-api" | "scripted-fallback";
   };
+  /**
+   * Short, non-clinical diagnostic explaining WHY the deterministic
+   * scripted engine was used instead of a live Claude decision. Present
+   * only when `modelProvenance.via === "scripted-fallback"` — carries just
+   * the leading diagnostic sentence (e.g. "Claude API call failed (…)" or
+   * "ANTHROPIC_API_KEY not set…"), never patient-derived clinical text, so
+   * it is safe to record as a trace-span attribute. Undefined on a
+   * successful `claude-api` decision.
+   */
+  fallbackReason?: string;
   /** Data 360 signals that influenced the decision (when grounding present). */
   groundingUsed?: {
     insightsCited: string[];
@@ -572,13 +582,76 @@ export function scriptedRoute(
 }
 
 /**
+ * Extract the first balanced top-level JSON object from a model text
+ * response, tolerating the shapes a well-behaved model still produces
+ * despite an explicit "bare JSON only" instruction:
+ *
+ *   - ```json … ``` or ``` … ``` markdown code fences,
+ *   - leading/trailing prose ("Here is the decision: { … }. Hope that helps."),
+ *   - surrounding whitespace / newlines.
+ *
+ * Braces inside JSON string literals are ignored so a rationale string
+ * containing "{" or "}" can't unbalance the scan. Throws a clear error
+ * when no balanced object is found (e.g. a truncated / empty response),
+ * which callers turn into a scripted fallback.
+ */
+export function extractJsonObject(text: string): string {
+  if (typeof text !== "string") {
+    throw new Error("Claude response text was not a string");
+  }
+  let s = text.trim();
+
+  // Prefer the contents of the first fenced code block when present.
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence && fence[1].trim().length > 0) {
+    s = fence[1].trim();
+  }
+
+  const start = s.indexOf("{");
+  if (start === -1) {
+    throw new Error("no JSON object found in Claude response");
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < s.length; i++) {
+    const ch = s[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === "\\") {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+    } else if (ch === "{") {
+      depth++;
+    } else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        return s.slice(start, i + 1);
+      }
+    }
+  }
+
+  throw new Error("no balanced JSON object found in Claude response (possibly truncated)");
+}
+
+/**
  * Real Anthropic SDK call. Loaded dynamically so the package only
  * resolves when ANTHROPIC_API_KEY is set -- keeps build time light
  * and avoids breaking environments without the dep installed.
  *
  * The model is instructed to return strict JSON matching the
  * RoutingDecision shape; on any parsing or transport error we fall
- * back to scriptedRoute() and tag provenance accordingly.
+ * back to scriptedRoute() and tag provenance accordingly. When we fall
+ * back, we stamp a non-clinical `fallbackReason` on the decision so the
+ * trace span can show WHY the live call was discarded.
  */
 export async function claudeRoute(
   intake: IntakeRecord,
@@ -587,12 +660,12 @@ export async function claudeRoute(
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     const scripted = scriptedRoute(intake, grounding);
+    const reason =
+      "ANTHROPIC_API_KEY not set; using deterministic Pause policy engine.";
     return {
       ...scripted,
-      rationale: [
-        "ANTHROPIC_API_KEY not set; using deterministic Pause policy engine.",
-        ...scripted.rationale
-      ]
+      fallbackReason: reason,
+      rationale: [reason, ...scripted.rationale]
     };
   }
 
@@ -621,6 +694,7 @@ export async function claudeRoute(
       "  - Note 'days since MSCP contact' when >365 days in your rationale.",
       "Reply with a single JSON object matching this exact TypeScript type:",
       "  { pathway: CarePathway; rationale: string[]; redFlagsTriggered: string[] }",
+      "Keep each rationale entry to one concise sentence (aim for 3-5 entries).",
       "Do not include any prose outside the JSON. Do not include code fences."
     ].join("\n");
 
@@ -632,7 +706,10 @@ export async function claudeRoute(
 
     const resp = await client.messages.create({
       model,
-      max_tokens: 800,
+      // 800 tokens truncated the JSON mid-output for grounded cases with
+      // several rationale bullets, so the response wouldn't parse and the
+      // decision silently fell back to scripted. 1500 leaves ample headroom.
+      max_tokens: 1500,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }]
     });
@@ -642,24 +719,30 @@ export async function claudeRoute(
     ) as { type: "text"; text: string } | undefined;
     if (!textPart) throw new Error("Claude response had no text content");
 
-    const parsed = JSON.parse(textPart.text) as {
+    // Tolerate code fences / surrounding prose: extract the first balanced
+    // top-level JSON object before parsing.
+    const parsed = JSON.parse(extractJsonObject(textPart.text)) as {
       pathway: CarePathway;
       rationale: string[];
       redFlagsTriggered: string[];
     };
 
-    if (!(parsed.pathway in PATHWAY_LABELS)) {
+    const pathway = (
+      typeof parsed.pathway === "string" ? parsed.pathway.trim() : parsed.pathway
+    ) as CarePathway;
+
+    if (!(pathway in PATHWAY_LABELS)) {
       throw new Error(`Claude returned unknown pathway: ${parsed.pathway}`);
     }
 
     const groundingExtras = groundingRationale(grounding);
     return {
-      pathway: parsed.pathway,
-      pathwayLabel: PATHWAY_LABELS[parsed.pathway],
-      acuity: PATHWAY_ACUITY[parsed.pathway],
+      pathway,
+      pathwayLabel: PATHWAY_LABELS[pathway],
+      acuity: PATHWAY_ACUITY[pathway],
       rationale: parsed.rationale,
       redFlagsTriggered: parsed.redFlagsTriggered ?? [],
-      recommendedTargetResponse: PATHWAY_TARGETS[parsed.pathway],
+      recommendedTargetResponse: PATHWAY_TARGETS[pathway],
       modelProvenance: {
         provider: "anthropic",
         model,
@@ -675,29 +758,30 @@ export async function claudeRoute(
     };
   } catch (err) {
     const scripted = scriptedRoute(intake, grounding);
+    const reason = `Claude API call failed (${(err as Error).message}); using deterministic Pause policy engine.`;
     return {
       ...scripted,
-      rationale: [
-        `Claude API call failed (${(err as Error).message}); using deterministic Pause policy engine.`,
-        ...scripted.rationale
-      ]
+      fallbackReason: reason,
+      rationale: [reason, ...scripted.rationale]
     };
   }
 }
 
 /**
- * Public entry point for the API route. Picks between the real Claude
- * call and the scripted fallback based on env. The returned decision
- * always includes modelProvenance so the Agent Fabric trace viewer can
- * show which path was taken.
+ * Public entry point for the API route. Always goes through
+ * claudeRoute(), which itself short-circuits to the deterministic
+ * scripted engine (without importing the Anthropic SDK) when
+ * ANTHROPIC_API_KEY is absent. Routing this way means every
+ * scripted-fallback path — missing key OR a discarded live call —
+ * carries a `fallbackReason`, and the returned decision always
+ * includes modelProvenance so the Agent Fabric trace viewer can show
+ * which path was taken and, on fallback, why.
  */
 export async function route(
   intake: IntakeRecord,
   grounding?: Data360GroundingHint,
   opts: RouteOptions = {}
 ): Promise<RoutingDecision> {
-  const decision = process.env.ANTHROPIC_API_KEY
-    ? await claudeRoute(intake, grounding)
-    : scriptedRoute(intake, grounding);
+  const decision = await claudeRoute(intake, grounding);
   return attachRecommendedProviders(decision, intake, opts);
 }

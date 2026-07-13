@@ -1,5 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
+
+// Controllable mock for the dynamically-imported Anthropic SDK so we can
+// exercise a successful live `claude-api` decision (fallbackReason absent)
+// without a real network call. Fallback tests leave ANTHROPIC_API_KEY unset,
+// so claudeRoute short-circuits before this mock is ever invoked.
+const { createMock } = vi.hoisted(() => ({ createMock: vi.fn() }));
+vi.mock("@anthropic-ai/sdk", () => ({
+  default: class {
+    messages = { create: createMock };
+  }
+}));
 
 /**
  * Tests for the /api/agents/care-router/tasks A2A endpoint.
@@ -347,6 +358,29 @@ describe("POST /api/agents/care-router/tasks · metadata + grounding passthrough
     expect(violations).toContain("policy.intake.red-flag-mandatory");
   });
 
+  it("records a fallbackReason span attribute on the scripted-fallback path", async () => {
+    // No ANTHROPIC_API_KEY (deleted in beforeEach) -> scripted fallback,
+    // whose leading diagnostic sentence is surfaced as `fallbackReason`.
+    const res = await POST(
+      rpcRequest(validTaskBody({ id: "task-fallback-reason-001" }))
+    );
+    const task = (await res.json()).result;
+    const decision = task.artifacts[0].parts[0].data;
+    expect(decision.modelProvenance.via).toBe("scripted-fallback");
+
+    const { listTraces } = await import("../../../../../lib/agent-fabric");
+    const spans = listTraces({ taskId: "task-fallback-reason-001" });
+    expect(spans).toHaveLength(1);
+    expect(spans[0].attributes?.via).toBe("scripted-fallback");
+    expect(spans[0].attributes?.fallbackReason).toMatch(
+      /ANTHROPIC_API_KEY not set/
+    );
+    // Guard: the span must NOT carry the full clinical rationale.
+    expect(String(spans[0].attributes?.fallbackReason)).not.toMatch(
+      /menopause specialist/i
+    );
+  });
+
   it("threads metadata.parentSpanId and metadata.personaId onto the recorded span", async () => {
     const body = validTaskBody({
       id: "task-meta-passthrough-001",
@@ -368,5 +402,56 @@ describe("POST /api/agents/care-router/tasks · metadata + grounding passthrough
     expect(spans).toHaveLength(1);
     expect(spans[0].parentSpanId).toBe("span-upstream-abc123");
     expect(spans[0].attributes?.personaId).toBe("anika-patel");
+  });
+});
+
+describe("POST /api/agents/care-router/tasks · live claude-api decision (mocked SDK)", () => {
+  const ORIGINAL_KEY = process.env.ANTHROPIC_API_KEY;
+  const ORIGINAL_MODEL = process.env.PAUSE_CARE_ROUTER_MODEL;
+
+  beforeEach(() => {
+    process.env.ANTHROPIC_API_KEY = "sk-test-key";
+    // Keep the default allow-listed model so governance permits the task.
+    delete process.env.PAUSE_CARE_ROUTER_MODEL;
+    createMock.mockReset();
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_KEY === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = ORIGINAL_KEY;
+    if (ORIGINAL_MODEL === undefined) delete process.env.PAUSE_CARE_ROUTER_MODEL;
+    else process.env.PAUSE_CARE_ROUTER_MODEL = ORIGINAL_MODEL;
+  });
+
+  it("omits the fallbackReason span attribute when the live call succeeds", async () => {
+    createMock.mockResolvedValue({
+      content: [
+        {
+          type: "text",
+          text:
+            "```json\n" +
+            JSON.stringify({
+              pathway: "mscp-virtual-visit",
+              rationale: ["Moderate vasomotor symptoms; virtual MSCP consult."],
+              redFlagsTriggered: []
+            }) +
+            "\n```"
+        }
+      ]
+    });
+
+    const res = await POST(
+      rpcRequest(validTaskBody({ id: "task-claude-api-001" }))
+    );
+    const task = (await res.json()).result;
+    const decision = task.artifacts[0].parts[0].data;
+    expect(decision.modelProvenance.provider).toBe("anthropic");
+    expect(decision.modelProvenance.via).toBe("claude-api");
+
+    const { listTraces } = await import("../../../../../lib/agent-fabric");
+    const spans = listTraces({ taskId: "task-claude-api-001" });
+    expect(spans).toHaveLength(1);
+    expect(spans[0].attributes?.via).toBe("claude-api");
+    expect(spans[0].attributes?.fallbackReason).toBeUndefined();
   });
 });

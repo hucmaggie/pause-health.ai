@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   attachRecommendedProviders,
   claudeRoute,
+  extractJsonObject,
   route,
   scriptedRoute,
   type Data360GroundingHint,
@@ -10,6 +11,20 @@ import {
 } from "./care-router";
 import type { ProviderRecord } from "./mulesoft-mocks";
 import { getGroundingContext } from "./data-360";
+
+// Controllable mock for the dynamically-imported Anthropic SDK. `create`
+// is what claudeRoute() invokes; each live-path test sets its resolved
+// value (a text content block) or makes it reject to prove the fallback.
+const { createMock } = vi.hoisted(() => ({ createMock: vi.fn() }));
+vi.mock("@anthropic-ai/sdk", () => ({
+  default: class {
+    messages = { create: createMock };
+  }
+}));
+
+function claudeTextResponse(text: string) {
+  return { content: [{ type: "text", text }] };
+}
 
 /**
  * Tests for lib/care-router.ts.
@@ -654,5 +669,173 @@ describe("claudeRoute · fallback path", () => {
     });
     expect(out.pathway).toBe("urgent-gynecology");
     expect(out.redFlagsTriggered).toHaveLength(1);
+  });
+
+  it("stamps a fallbackReason on the missing-key fallback", async () => {
+    const out = await claudeRoute({ ...baseIntake, severity: "moderate" });
+    expect(out.modelProvenance.via).toBe("scripted-fallback");
+    expect(out.fallbackReason).toMatch(/ANTHROPIC_API_KEY not set/);
+    // The reason is ONLY the leading diagnostic sentence, not the whole
+    // clinical rationale.
+    expect(out.fallbackReason).not.toMatch(/menopause specialist/i);
+  });
+});
+
+describe("extractJsonObject", () => {
+  const obj = {
+    pathway: "mscp-virtual-visit",
+    rationale: ["Moderate symptoms suit a virtual MSCP visit."],
+    redFlagsTriggered: []
+  };
+  const bare = JSON.stringify(obj);
+
+  it("returns bare JSON unchanged (round-trips through JSON.parse)", () => {
+    expect(JSON.parse(extractJsonObject(bare))).toEqual(obj);
+  });
+
+  it("strips ```json fenced blocks", () => {
+    const fenced = "```json\n" + bare + "\n```";
+    expect(JSON.parse(extractJsonObject(fenced))).toEqual(obj);
+  });
+
+  it("strips bare ``` fenced blocks (no language tag)", () => {
+    const fenced = "```\n" + bare + "\n```";
+    expect(JSON.parse(extractJsonObject(fenced))).toEqual(obj);
+  });
+
+  it("extracts the object from surrounding prose", () => {
+    const prose =
+      "Here is the routing decision you asked for:\n\n" +
+      bare +
+      "\n\nHappy to explain the reasoning further.";
+    expect(JSON.parse(extractJsonObject(prose))).toEqual(obj);
+  });
+
+  it("ignores braces inside string literals", () => {
+    const tricky = JSON.stringify({
+      pathway: "self-care-tracking",
+      rationale: ["Use the tracker { and log } daily."],
+      redFlagsTriggered: []
+    });
+    expect(JSON.parse(extractJsonObject(tricky))).toEqual({
+      pathway: "self-care-tracking",
+      rationale: ["Use the tracker { and log } daily."],
+      redFlagsTriggered: []
+    });
+  });
+
+  it("throws on a truncated (unbalanced) object", () => {
+    const truncated = '{"pathway":"mscp-virtual-visit","rationale":["It was tru';
+    expect(() => extractJsonObject(truncated)).toThrow();
+  });
+
+  it("throws when there is no JSON object at all", () => {
+    expect(() => extractJsonObject("I could not decide.")).toThrow();
+  });
+});
+
+describe("claudeRoute · live path (mocked SDK)", () => {
+  const ORIGINAL_KEY = process.env.ANTHROPIC_API_KEY;
+
+  beforeEach(() => {
+    process.env.ANTHROPIC_API_KEY = "sk-test-key";
+    createMock.mockReset();
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_KEY === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = ORIGINAL_KEY;
+  });
+
+  it("parses a ```json fenced response into a claude-api decision", async () => {
+    createMock.mockResolvedValue(
+      claudeTextResponse(
+        "```json\n" +
+          JSON.stringify({
+            pathway: "mscp-virtual-visit",
+            rationale: ["Moderate vasomotor symptoms; virtual MSCP consult."],
+            redFlagsTriggered: []
+          }) +
+          "\n```"
+      )
+    );
+    const out = await claudeRoute({ ...baseIntake, severity: "moderate" });
+    expect(out.modelProvenance.provider).toBe("anthropic");
+    expect(out.modelProvenance.via).toBe("claude-api");
+    expect(out.pathway).toBe("mscp-virtual-visit");
+    expect(out.fallbackReason).toBeUndefined();
+  });
+
+  it("parses a response wrapped in prose into a claude-api decision", async () => {
+    createMock.mockResolvedValue(
+      claudeTextResponse(
+        "Sure — here's my recommendation:\n" +
+          JSON.stringify({
+            pathway: "mscp-in-person",
+            rationale: ["Severe symptoms warrant in-person evaluation."],
+            redFlagsTriggered: []
+          }) +
+          "\nLet me know if you need anything else."
+      )
+    );
+    const out = await claudeRoute({ ...baseIntake, severity: "severe" });
+    expect(out.modelProvenance.via).toBe("claude-api");
+    expect(out.pathway).toBe("mscp-in-person");
+    expect(out.fallbackReason).toBeUndefined();
+  });
+
+  it("normalizes a whitespace-padded pathway before the label lookup", async () => {
+    createMock.mockResolvedValue(
+      claudeTextResponse(
+        JSON.stringify({
+          pathway: "  urgent-gynecology\n",
+          rationale: ["Unexpected bleeding requires prompt review."],
+          redFlagsTriggered: []
+        })
+      )
+    );
+    const out = await claudeRoute({
+      ...baseIntake,
+      primarySymptom: "bleeding"
+    });
+    expect(out.modelProvenance.via).toBe("claude-api");
+    expect(out.pathway).toBe("urgent-gynecology");
+    expect(out.pathwayLabel).toBe("Urgent gynecology review");
+  });
+
+  it("falls back with a populated fallbackReason when the SDK throws", async () => {
+    createMock.mockRejectedValue(new Error("HTTP 529 overloaded"));
+    const out = await claudeRoute({ ...baseIntake, severity: "moderate" });
+    expect(out.modelProvenance.provider).toBe("pause-scripted");
+    expect(out.modelProvenance.via).toBe("scripted-fallback");
+    expect(out.fallbackReason).toMatch(/Claude API call failed/);
+    expect(out.fallbackReason).toMatch(/HTTP 529 overloaded/);
+    // Deterministic decision is preserved.
+    expect(out.pathway).toBe("mscp-virtual-visit");
+  });
+
+  it("falls back with a fallbackReason when the JSON is truncated", async () => {
+    createMock.mockResolvedValue(
+      claudeTextResponse('{"pathway":"mscp-virtual-visit","rationale":["trunc')
+    );
+    const out = await claudeRoute({ ...baseIntake, severity: "moderate" });
+    expect(out.modelProvenance.via).toBe("scripted-fallback");
+    expect(out.fallbackReason).toMatch(/Claude API call failed/);
+  });
+
+  it("requests max_tokens of at least 1500 to avoid truncation", async () => {
+    createMock.mockResolvedValue(
+      claudeTextResponse(
+        JSON.stringify({
+          pathway: "self-care-tracking",
+          rationale: ["Mild symptoms; structured self-care."],
+          redFlagsTriggered: []
+        })
+      )
+    );
+    await claudeRoute({ ...baseIntake, severity: "mild" });
+    expect(createMock).toHaveBeenCalledTimes(1);
+    const args = createMock.mock.calls[0][0] as { max_tokens: number };
+    expect(args.max_tokens).toBeGreaterThanOrEqual(1500);
   });
 });
