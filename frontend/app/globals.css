@@ -1,13 +1,28 @@
 :root {
+  /* Layered surface scale: page bg -> card -> raised panel, with a
+     dedicated hairline tone for borders on raised elements. The
+     -2 / -3 steps were referenced by page.tsx / changelog / roadmap
+     before they existed (they silently resolved to transparent /
+     invalid); defining them here makes those planes read distinctly. */
   --bg: #190b16;
   --surface: #2a1423;
+  --surface-2: #351b2d;
+  --surface-3: #47273f;
   --text: #ffeaf5;
   --muted: #d8a6c4;
   --line: #593048;
+  --line-strong: #6e3c59;
   --brand: #ff5da8;
   --brand-dark: #e04792;
-  --card-shadow: 0 12px 30px rgba(1, 6, 20, 0.25);
-  --card-shadow-hover: 0 16px 36px rgba(1, 6, 20, 0.32);
+  --brand-soft: rgba(255, 93, 168, 0.12);
+  --radius-sm: 0.55rem;
+  --radius: 0.9rem;
+  --radius-lg: 1.1rem;
+  /* Softer, layered shadows; the hover variant carries a gentle
+     brand tint so elevation reads as on-brand rather than heavy. */
+  --card-shadow: 0 1px 2px rgba(1, 6, 20, 0.2), 0 10px 28px rgba(1, 6, 20, 0.28);
+  --card-shadow-hover: 0 2px 4px rgba(1, 6, 20, 0.24),
+    0 18px 40px rgba(1, 6, 20, 0.34), 0 8px 22px rgba(255, 93, 168, 0.13);
   --interactive-transition: 160ms ease;
 }
 
@@ -20,8 +35,15 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
-  background-image: radial-gradient(circle at 20% -10%, #5b1d42 0, transparent 35%),
-    radial-gradient(circle at 85% 0%, #44205f 0, transparent 28%);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* Very subtle top glow only — kept restrained so the surface reads
+     confident, not editorial/flashy. */
+  background-image: radial-gradient(circle at 18% -12%, rgba(91, 29, 66, 0.55) 0, transparent 34%),
+    radial-gradient(circle at 86% -4%, rgba(68, 32, 95, 0.4) 0, transparent 26%);
+  background-repeat: no-repeat;
 }
 
 a {
@@ -48,6 +70,53 @@ p {
   margin: 0;
 }
 
+/* Elegance through weight / size / spacing rather than a display
+   typeface: tighter tracking on large headings, comfortable line
+   heights, and balanced wrapping so headlines don't leave orphans. */
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
+
+h1 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+}
+
+h2 {
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+
+h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Numbers in stats/metrics use tabular, lining figures so columns of
+   values line up and don't jitter as they change. */
+.metric-list strong,
+.analytics-card-value,
+.analytics-target-value,
+.proposal-stat-value,
+.risk-band-value,
+.risk-band-index strong,
+.pre-brief-pill-value,
+.grounding-insight-value,
+.grounding-obs-value {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
 .container {
   width: min(1080px, calc(100% - 2rem));
   margin: 0 auto;
@@ -57,9 +126,11 @@ p {
   position: sticky;
   top: 0;
   z-index: 50;
-  backdrop-filter: blur(10px);
-  background: rgba(25, 11, 22, 0.78);
+  backdrop-filter: blur(12px) saturate(1.1);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  background: rgba(25, 11, 22, 0.72);
   border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02);
 }
 
 .site-header-row {
@@ -292,24 +363,27 @@ p {
 }
 
 .hero {
-  padding: 3rem 0 1.5rem;
+  padding: 3.25rem 0 1.5rem;
 }
 
 .hero h1 {
-  font-size: clamp(1.8rem, 4vw, 2.8rem);
-  line-height: 1.1;
-  margin-bottom: 0.75rem;
+  font-size: clamp(1.9rem, 4.2vw, 2.95rem);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  margin-bottom: 0.85rem;
 }
 
 .hero p {
   color: var(--muted);
-  max-width: 70ch;
+  max-width: 68ch;
+  font-size: 1.05rem;
+  line-height: 1.6;
 }
 
 .eyebrow {
   color: #ff8fc1;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   font-size: 0.75rem;
   font-weight: 700;
   margin-bottom: 0.65rem;
@@ -318,15 +392,36 @@ p {
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 0.9rem;
+  border-radius: var(--radius);
   padding: 1rem;
   box-shadow: var(--card-shadow);
-  transition: box-shadow var(--interactive-transition), border-color var(--interactive-transition);
+  transition: box-shadow var(--interactive-transition), border-color var(--interactive-transition),
+    transform var(--interactive-transition);
 }
 
 .card:hover {
   box-shadow: var(--card-shadow-hover);
-  border-color: #744660;
+  border-color: var(--line-strong);
+}
+
+/* Interactive cards (links / buttons wrapped in .card) earn a small
+   lift + a stronger brand-tinted border on hover so the affordance is
+   unmistakable; static content cards only get the shadow/border shift
+   above. */
+a.card,
+button.card {
+  cursor: pointer;
+}
+
+a.card:hover,
+button.card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 93, 168, 0.5);
+}
+
+a.card:active,
+button.card:active {
+  transform: translateY(0);
 }
 
 .card h3 {
@@ -348,7 +443,7 @@ p {
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-  gap: 1rem;
+  gap: 1.15rem;
   align-items: start;
 }
 
@@ -723,26 +818,40 @@ th {
 
 .btn {
   display: inline-block;
-  border-radius: 0.6rem;
+  border-radius: var(--radius-sm);
   border: 1px solid transparent;
-  padding: 0.6rem 0.9rem;
+  padding: 0.6rem 0.95rem;
   font-weight: 600;
+  letter-spacing: 0.005em;
+  cursor: pointer;
   transition: background-color var(--interactive-transition), color var(--interactive-transition),
-    border-color var(--interactive-transition), transform var(--interactive-transition);
+    border-color var(--interactive-transition), transform var(--interactive-transition),
+    box-shadow var(--interactive-transition);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.btn:active {
+  transform: translateY(1px);
 }
 
 .btn-primary {
   background: var(--brand);
-  color: white;
+  color: #2a0a1b;
+  box-shadow: 0 1px 2px rgba(1, 6, 20, 0.25);
 }
 
 .btn-primary:hover {
   background: var(--brand-dark);
-  color: #fff;
+  color: #2a0a1b;
+  box-shadow: 0 4px 14px rgba(255, 93, 168, 0.28);
 }
 
 .btn-secondary {
-  background: var(--surface);
+  background: var(--surface-2);
   border-color: var(--line);
   color: var(--text);
 }
@@ -750,6 +859,7 @@ th {
 .btn-secondary:hover {
   border-color: var(--brand);
   color: #ffd3e8;
+  background: var(--surface);
 }
 
 .demo-nav {
@@ -761,9 +871,9 @@ th {
 
 .demo-nav a {
   border: 1px solid var(--line);
-  border-radius: 0.6rem;
+  border-radius: var(--radius-sm);
   padding: 0.35rem 0.65rem;
-  background: var(--surface);
+  background: var(--surface-2);
   color: var(--muted);
   font-weight: 600;
   box-shadow: inset 0 0 0 0 transparent;
@@ -772,7 +882,7 @@ th {
 .demo-nav a:hover {
   color: #ffd3e8;
   border-color: var(--brand);
-  background: #341a2c;
+  background: var(--surface-3);
 }
 
 @media (max-width: 900px) {
@@ -1000,6 +1110,27 @@ th {
 @media (prefers-reduced-motion: reduce) {
   .toast {
     animation: none;
+  }
+
+  /* Respect the user's motion preference everywhere: neutralize
+     transitions, transforms and animations site-wide while keeping
+     focus outlines and color changes intact. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .card:hover,
+  a.card:hover,
+  button.card:hover,
+  .btn:active,
+  .site-logo:hover,
+  .site-footer-social a:hover {
+    transform: none;
   }
 }
 
