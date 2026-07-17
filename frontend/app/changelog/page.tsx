@@ -34,6 +34,15 @@ const weeks: ChangelogWeek[] = [
       "With ANTHROPIC_API_KEY finally set in production, the Care Router's live Claude Sonnet 4.5 path was still silently falling back to the deterministic engine — the model's JSON was being rejected before it could be used, and nothing in the trace said why. Two changes fixed that and made it observable, then the live Agentforce intake chat got an explicit handoff so a completed conversation can actually route to the Claude-backed Care Router as one continuous trace.",
     entries: [
       {
+        title: "Home: promoted the Care Router card to a \u201clive\u201d status pill",
+        summary:
+          "With the Care Router's live Claude Sonnet 4.5 path confirmed working in production (provider: anthropic / via: claude-api), the homepage's 'Anthropic-backed Care Router agent' card graduated from 'partial' to a new, distinct 'live' status. Added a `live` variant to StatusPillStatus (label 'Today \u00b7 live', rendered TODAY \u00b7 LIVE) backed by a saturated emerald --live tone in globals.css \u2014 visually distinct from the mint tone that prototype/partial share, so 'genuinely live in production' reads at a glance while the graceful scripted fallback still exists. Purely additive: audited every StatusPill consumer (homepage, changelog, ~25 proposal/marketing pages) and none needed changes. 793 frontend tests green; lint + build clean.",
+        commits: [
+          { sha: "dd435cc", label: "home: promote the Care Router card to a \u201clive\u201d status pill" }
+        ],
+        status: "shipped"
+      },
+      {
         title: "Intake: routed a completed Agentforce chat intake to the Care Router",
         summary:
           "The live Agentforce Embedded Messaging chat on /demo/intake never handed off to the Pause Care Router. Because the V2 SDK exposes no dependable end-of-conversation event on this deployment (only onEmbeddedMessagingReady / onEmbeddedMessagingInitError are confirmed to fire — trusting an unverified 'closed' event would repeat the prechatAPI no-op-Proxy mistake), a new <ChatToCareRouterHandoff/> renders an explicit 'Complete intake → route to Care Router' affordance beneath the chat. It POSTs the selected persona's deterministic intake to the existing /api/intake/route-to-care-router handoff and renders the live decision inline (pathway, acuity, provider/model/via, and any fallbackReason) with a deep link to the multi-agent trace. An optional origin — sanitized to a strict ^[a-z0-9-]{1,40}$ slug so no free text or PHI leaks — is threaded through the handoff and stamped on every span in the parented tree (intake → Data 360 identity/grounding → care-router → mcp-bridge), so the chat-originated route reads origin=agentforce-chat and stays one continuous task in the viewer, distinct from the /demo/routing button. 793 frontend tests green (+7); lint + build clean.",
