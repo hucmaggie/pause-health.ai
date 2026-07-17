@@ -1923,6 +1923,30 @@ th {
   box-shadow: 0 0 0 0.15rem rgba(126, 235, 191, 0.22);
 }
 
+/*
+ * The "live" tone is a more saturated, confident emerald than the
+ * mint "real" tone above. It is reserved for a real external service
+ * (e.g. the Claude Sonnet path) that is confirmed working in
+ * production today, so it must read as brighter and more assertive
+ * than the prototype-stage "real" green while staying in the same
+ * success family. The dot carries a slightly wider glow to signal a
+ * genuinely-live signal.
+ */
+.pre-brief-source-badge--live {
+  background: rgba(52, 211, 153, 0.16);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.5);
+}
+
+.pre-brief-source-badge--live::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: #34d399;
+  box-shadow: 0 0 0 0.18rem rgba(52, 211, 153, 0.28);
+}
+
 .pre-brief-source-badge--mock {
   background: rgba(255, 200, 110, 0.1);
   color: #ffd28a;

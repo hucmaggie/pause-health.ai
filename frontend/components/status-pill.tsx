@@ -7,13 +7,17 @@
  * "Designed" means on /proposal/strategy reads the same thing on
  * /proposal/agentforce.
  *
- * Three tones, distinguished by what kind of honesty signal the pill
+ * Four tones, distinguished by what kind of honesty signal the pill
  * is carrying:
  *
- *   - "real"  (green, dotted)  -> a prototype-stage capability that is
+ *   - "real"  (mint, dotted)   -> a prototype-stage capability that is
  *                                 verifiable in code today
  *                                 (Shipped / Wired in prototype /
  *                                 Today \u00b7 partial)
+ *   - "live"  (emerald, dotted)-> a real external service that is
+ *                                 confirmed working in production
+ *                                 today, and still degrades
+ *                                 gracefully (Today \u00b7 live)
  *   - "mock"  (amber, dotted)  -> a capability that is committed but
  *                                 not yet wired
  *                                 (Designed / Planned / Future)
@@ -29,11 +33,12 @@
  * cleanly as three distinct categories.
  *
  * Visual styling lives in `globals.css` under
- * `.pre-brief-source-badge` / `--real` / `--mock` / `--info`.
+ * `.pre-brief-source-badge` / `--real` / `--live` / `--mock` / `--info`.
  */
 
 export type StatusPillStatus =
   | "shipped"
+  | "live"
   | "prototype"
   | "partial"
   | "designed"
@@ -47,6 +52,7 @@ export type StatusPillStatus =
 
 export const STATUS_PILL_LABEL: Record<StatusPillStatus, string> = {
   shipped: "Shipped",
+  live: "Today · live",
   prototype: "Wired in prototype",
   partial: "Today · partial",
   designed: "Designed",
@@ -59,8 +65,9 @@ export const STATUS_PILL_LABEL: Record<StatusPillStatus, string> = {
   illustrative: "Illustrative composite"
 };
 
-const STATUS_PILL_TONE: Record<StatusPillStatus, "real" | "mock" | "info"> = {
+const STATUS_PILL_TONE: Record<StatusPillStatus, "real" | "mock" | "info" | "live"> = {
   shipped: "real",
+  live: "live",
   prototype: "real",
   partial: "real",
   designed: "mock",

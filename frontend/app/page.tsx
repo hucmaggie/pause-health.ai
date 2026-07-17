@@ -48,8 +48,10 @@ type LiveSurface = {
 // Each "live today" card points to a working demo page. The pill
 // distinguishes "prototype" (visible behavior, real code, single-org
 // scope) from "partial" (real Salesforce / Anthropic backed but
-// degrades gracefully when env vars are absent). Keep the list to
-// four so the strip stays scan-able above the fold.
+// degrades gracefully when env vars are absent) from "live" (a real
+// external service that is confirmed working in production today AND
+// still degrades gracefully when env vars are absent). Keep the list
+// to four so the strip stays scan-able above the fold.
 const LIVE_SURFACES: LiveSurface[] = [
   {
     href: "/demo/intake",
@@ -69,8 +71,8 @@ const LIVE_SURFACES: LiveSurface[] = [
     href: "/demo/routing",
     label: "Anthropic-backed Care Router agent",
     blurb:
-      "Live policy + LLM decision that emits one of six canonical pathways (self-care, MSCP virtual / in-person, behavioral health, urgent gyn, ED). A2A endpoint, traced end to end. Backed by 100 unit tests pinning the decision tree, the Data 360 grounding promotion rules, and the governance gate.",
-    status: "partial"
+      "Live policy + Claude Sonnet 4.5 decision (provider: anthropic / via: claude-api, confirmed in production) that emits one of six canonical pathways (self-care, MSCP virtual / in-person, behavioral health, urgent gyn, ED). A2A endpoint, traced end to end, with a graceful scripted fallback. Backed by 100 unit tests pinning the decision tree, the Data 360 grounding promotion rules, and the governance gate.",
+    status: "live"
   },
   {
     href: "/demo/agent-fabric",
