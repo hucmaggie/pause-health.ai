@@ -339,6 +339,84 @@ describe("Lead qualification · Qualification agent", () => {
   });
 });
 
+describe("Validated-instrument assessment · Assessment agent", () => {
+  it("registers as a prototype Agentforce agent on the patient-facing tier", () => {
+    const a = getAgent("assessment-agent");
+    expect(a).toBeDefined();
+    expect(a!.kind).toBe("agentforce");
+    expect(a!.protocol).toBe("a2a");
+    expect(a!.provider).toBe("Salesforce");
+    expect(a!.status).toBe("prototype");
+    // The Assessment Agent is a clinical, patient-facing agent on the
+    // patient-care plane (reuses the intake agent's tier).
+    expect(a!.governanceTier).toBe("patient-facing");
+    expect(planeForTier(a!.governanceTier)).toBe("patient-care");
+    expect(a!.endpoint).toBe("/api/agents/assessment");
+  });
+
+  it("carries the validated-instrument block plus the reused PHI/red-flag/audit policies", () => {
+    const ids = getPoliciesForAgent("assessment-agent").map((p) => p.id);
+    expect(ids).toContain("policy.assessment.validated-instrument-only");
+    expect(ids).toContain("policy.phi.no-free-text-pii");
+    expect(ids).toContain("policy.intake.red-flag-mandatory");
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+  });
+
+  it("the validated-instrument policy is an enforced block", () => {
+    const policy = listPolicies().find(
+      (p) => p.id === "policy.assessment.validated-instrument-only"
+    );
+    expect(policy).toBeDefined();
+    expect(policy!.enforcement).toBe("block");
+    expect(policy!.status).toBe("enforced");
+  });
+
+  it("blocks an off-allowlist instrument and allows an allow-listed one", () => {
+    const blocked = evaluateGovernance({
+      agentId: "assessment-agent",
+      task: {
+        administersValidatedInstrumentOnly: false,
+        containsFreeTextPii: false,
+        hasRedFlagScreen: true
+      }
+    });
+    expect(blocked.decision).toBe("block");
+    expect(blocked.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.assessment.validated-instrument-only"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "assessment-agent",
+      task: {
+        administersValidatedInstrumentOnly: true,
+        containsFreeTextPii: false,
+        hasRedFlagScreen: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "assessment-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds an assessment→intake→routing trace where a real score feeds severity", () => {
+    const spans = listTraces({ taskId: "task-seed-assessment-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(3);
+    expect(spans[0].agentId).toBe("assessment-agent");
+    expect(spans[0].operation).toBe("assessment.score");
+    // The scored severity feeds the intake, which routes to the Care Router.
+    const score = spans.find((s) => s.operation === "assessment.score");
+    expect(score?.attributes?.validatedInstrument).toBe(true);
+    expect(score?.attributes?.scoringMethod).toBe("deterministic");
+    const intake = spans.find((s) => s.operation === "intake.complete");
+    expect(intake?.attributes?.severity).toBe(score?.attributes?.normalizedSeverity);
+    expect(intake?.attributes?.severitySource).toBe("assessment:mrs");
+    const last = spans[spans.length - 1];
+    expect(last.agentId).toBe("care-router-claude");
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -455,7 +533,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-growth-lifecycle-001",
       "task-seed-inbound-lead-001",
       "task-seed-commercial-001",
-      "task-seed-mcp-bridge-001"
+      "task-seed-mcp-bridge-001",
+      "task-seed-assessment-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });

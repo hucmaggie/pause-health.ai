@@ -1160,7 +1160,7 @@ export default function AgentFabricConsole() {
   return (
     <DemoShell
       title="Multi-agent control plane"
-      subtitle="Live view of every Pause-Health.ai agent currently registered on a (mocked) MuleSoft Agent Fabric: the Agentforce Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement agents that bracket the patient lifecycle, Agentforce intake, the Anthropic Claude-backed Care Router, the Pause MCP server, the MCP Bridge that lets fabric agents call external MCP servers, the MuleSoft Process API, and — on a strictly PHI-separated commercial plane — the Pipeline Management and Account Management agents. Every A2A handoff and tool call lands here as a trace span so you can govern, monitor, and audit the multi-agent system in one place."
+      subtitle="Live view of every Pause-Health.ai agent currently registered on a (mocked) MuleSoft Agent Fabric: the Agentforce Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement agents that bracket the patient lifecycle, Agentforce intake, the Assessment Agent that deterministically scores validated instruments (MRS, Greene, PHQ-9, ISI) into an intake severity, the Anthropic Claude-backed Care Router, the Pause MCP server, the MCP Bridge that lets fabric agents call external MCP servers, the MuleSoft Process API, and — on a strictly PHI-separated commercial plane — the Pipeline Management and Account Management agents. Every A2A handoff and tool call lands here as a trace span so you can govern, monitor, and audit the multi-agent system in one place."
       eyebrow="Prototype · Agent Fabric Console"
       backHref="/demo/intake"
       backLabel="← Back to Intake"

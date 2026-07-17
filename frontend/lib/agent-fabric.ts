@@ -313,6 +313,27 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "commercial-operations"
+  },
+  {
+    id: "assessment-agent",
+    name: "Agentforce Assessment Agent · Validated Instruments",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health —
+    // Assessments" agent: POST /api/agents/assessment/tasks (card at
+    // /.well-known/agent.json). Scoring is deterministic real math (no LLM).
+    endpoint: "/api/agents/assessment",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Administers and deterministically scores validated menopause & mental-health instruments (MRS, Greene Climacteric Scale, PHQ-9, ISI) — real cutoff-based math, no LLM",
+      "Returns per-instrument subscores, a total, and a severity band normalized onto IntakeRecord's mild/moderate/severe vocabulary",
+      "Screens red-flag items (e.g. PHQ-9 item 9 self-harm ideation) and escalates them explicitly",
+      "Feeds the scored severity into IntakeRecord.severity so the Care Router decision is backed by a validated instrument rather than a self-report",
+      "Refuses to administer or score any instrument outside the validated allow-list"
+    ],
+    provider: "Salesforce",
+    governanceTier: "patient-facing"
   }
 ];
 
@@ -322,7 +343,7 @@ const POLICIES: PolicyRecord[] = [
     name: "No free-text PII in intake",
     description:
       "Patient-facing intake agents may not capture or persist free-text PII (full names, SSNs, addresses). Structured fields only.",
-    appliesTo: ["agentforce-intake"],
+    appliesTo: ["agentforce-intake", "assessment-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -331,7 +352,7 @@ const POLICIES: PolicyRecord[] = [
     name: "Red-flag screen is non-optional",
     description:
       "Every intake task must include the standardized red-flag screening question. Tasks without it are rejected by the Care Router.",
-    appliesTo: ["agentforce-intake", "care-router-claude"],
+    appliesTo: ["agentforce-intake", "care-router-claude", "assessment-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -350,9 +371,19 @@ const POLICIES: PolicyRecord[] = [
       "engagement-agent",
       "inbound-lead-agent",
       "qualification-agent",
-      "mcp-bridge"
+      "mcp-bridge",
+      "assessment-agent"
     ],
     enforcement: "audit",
+    status: "enforced"
+  },
+  {
+    id: "policy.assessment.validated-instrument-only",
+    name: "Validated instruments only",
+    description:
+      "The Assessment Agent may only administer and score instruments on the validated allow-list (Menopause Rating Scale, Greene Climacteric Scale, PHQ-9, Insomnia Severity Index). A request to administer or score anything else is rejected before any scoring runs — no ad-hoc or unvalidated questionnaire feeds an intake severity signal.",
+    appliesTo: ["assessment-agent"],
+    enforcement: "block",
     status: "enforced"
   },
   {
@@ -1169,6 +1200,81 @@ function store(): FabricStore {
       durationMs: 340,
       status: "ok",
       attributes: { providers: 3, mulesoftCorrelationId: "mule-corr-7c1f5e" }
+    }
+  );
+
+  // A trace showing the Assessment Agent upgrading the intake → Care
+  // Router spine: the agent administers and DETERMINISTICALLY scores a
+  // validated instrument (here the MRS, total 21/44 → "severe"), the
+  // scored severity feeds IntakeRecord.severity, and the enriched intake
+  // hands off to the Care Router — so the routing decision is backed by a
+  // real instrument score rather than a self-reported band. Scoring is
+  // real math, not an LLM. Seed data; production populates the ring buffer
+  // from the persistent log store.
+  const a0 = Date.now() - 1000 * 60 * 3;
+  const assessmentTaskId = "task-seed-assessment-001";
+  const assessmentName = "Agentforce Assessment Agent · Validated Instruments";
+  s.traces.push(
+    {
+      id: "span-assess-001",
+      taskId: assessmentTaskId,
+      agentId: "assessment-agent",
+      agentName: assessmentName,
+      operation: "assessment.score",
+      protocol: "rest",
+      startedAt: new Date(a0).toISOString(),
+      finishedAt: new Date(a0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        instrument: "mrs",
+        instrumentName: "Menopause Rating Scale (MRS)",
+        total: 21,
+        maxTotal: 44,
+        severityBand: "severe",
+        normalizedSeverity: "severe",
+        redFlag: false,
+        validatedInstrument: true,
+        scoringMethod: "deterministic"
+      }
+    },
+    {
+      id: "span-assess-002",
+      taskId: assessmentTaskId,
+      parentSpanId: "span-assess-001",
+      agentId: "agentforce-intake",
+      agentName: "Agentforce Service Agent · Patient Intake",
+      operation: "intake.complete",
+      protocol: "a2a",
+      startedAt: new Date(a0 + 40).toISOString(),
+      finishedAt: new Date(a0 + 1600).toISOString(),
+      durationMs: 1560,
+      status: "ok",
+      attributes: {
+        capturedFields: 5,
+        redFlag: false,
+        severity: "severe",
+        severitySource: "assessment:mrs"
+      }
+    },
+    {
+      id: "span-assess-003",
+      taskId: assessmentTaskId,
+      parentSpanId: "span-assess-002",
+      agentId: "care-router-claude",
+      agentName: "Pause Care Router · Claude Sonnet 4.5",
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(a0 + 1600).toISOString(),
+      finishedAt: new Date(a0 + 3900).toISOString(),
+      durationMs: 2300,
+      status: "ok",
+      attributes: {
+        pathway: "mscp-in-person",
+        provider: "anthropic",
+        model: "claude-sonnet-4-5-20250929",
+        severityFromAssessment: "severe"
+      }
     }
   );
 })();

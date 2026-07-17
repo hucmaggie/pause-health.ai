@@ -44,6 +44,8 @@ export type GovernanceTask = {
   identityResolved?: boolean;
   // Qualification
   usesProtectedClassCriteria?: boolean;
+  // Assessment (validated-instrument scoring)
+  administersValidatedInstrumentOnly?: boolean;
   // Commercial plane (pipeline, account management)
   accessesPhi?: boolean;
   forecastSourcedFromCrm?: boolean;
@@ -182,6 +184,14 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violatingValue: true,
     violationHint: "Uses a protected-class attribute as a criterion",
     reason: "Qualification used a protected-class attribute as a criterion"
+  },
+  {
+    policyId: "policy.assessment.validated-instrument-only",
+    signal: "administersValidatedInstrumentOnly",
+    violatingValue: false,
+    violationHint: "Administers an instrument outside the validated allow-list",
+    reason:
+      "Attempted to administer/score an instrument outside the validated allow-list (MRS, Greene, PHQ-9, ISI)"
   },
   {
     policyId: "policy.marketing.consent-to-contact-required",

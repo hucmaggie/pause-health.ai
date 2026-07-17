@@ -7,6 +7,12 @@ import {
 import type { IntakeRecord } from "../../../../lib/care-router";
 import { recordInstantSpan } from "../../../../lib/agent-fabric";
 import {
+  assessmentToIntakeSignal,
+  isAllowlistedInstrument,
+  scoreAssessment,
+  type AssessmentResponse
+} from "../../../../lib/assessments";
+import {
   DEMO_DATA360_PATIENT_ID,
   getGroundingContext,
   resolveIdentity
@@ -62,6 +68,14 @@ export async function POST(req: Request) {
      * slug so no free text / PHI can ride in on this attribute.
      */
     origin?: string;
+    /**
+     * Optional validated-instrument assessment. When present and on the
+     * allow-list, the Assessment Agent's deterministic score drives
+     * IntakeRecord.severity (and the red-flag screen) — so the Care Router
+     * decision is backed by a real instrument score rather than a
+     * self-reported band. Additive: absent = today's behavior, unchanged.
+     */
+    assessment?: AssessmentResponse;
   };
   let body: Body;
   try {
@@ -70,7 +84,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const intake = body.intake ?? {};
   const sessionId = body.sessionId ?? newTaskId("session");
   const taskId = newTaskId("intake-to-router");
   const personaId =
@@ -83,8 +96,60 @@ export async function POST(req: Request) {
       ? body.origin
       : undefined;
 
+  // Optional validated-instrument scoring. When a body.assessment for an
+  // allow-listed instrument is present, the Assessment Agent's deterministic
+  // score drives IntakeRecord.severity (and the red-flag screen) before the
+  // intake hands off — a real score behind the routing decision. Best-effort:
+  // a malformed assessment must never break intake routing.
+  let intake: IntakeRecord = body.intake ?? {};
+  let assessmentSpanId: string | undefined;
+  let assessmentMeta: Record<string, unknown> | undefined;
+  if (body.assessment && isAllowlistedInstrument(body.assessment.instrument)) {
+    try {
+      const result = scoreAssessment(body.assessment);
+      const signal = assessmentToIntakeSignal(result);
+      intake = {
+        ...intake,
+        severity: signal.severity,
+        redFlagsAcknowledged: signal.redFlagsAcknowledged
+      };
+      const assessmentSpan = recordInstantSpan({
+        taskId,
+        agentId: "assessment-agent",
+        operation: "assessment.score",
+        protocol: "rest",
+        attributes: {
+          instrument: result.instrument,
+          instrumentName: result.instrumentName,
+          total: result.total,
+          maxTotal: result.maxTotal,
+          severityBand: result.severityBand,
+          normalizedSeverity: result.normalizedSeverity,
+          redFlag: result.redFlags.length > 0,
+          validatedInstrument: true,
+          scoringMethod: "deterministic",
+          ...(personaId ? { personaId } : {}),
+          ...(origin ? { origin } : {})
+        }
+      });
+      assessmentSpanId = assessmentSpan.id;
+      assessmentMeta = {
+        instrument: result.instrument,
+        total: result.total,
+        maxTotal: result.maxTotal,
+        severityBand: result.severityBand,
+        normalizedSeverity: signal.severity,
+        redFlag: result.redFlags.length > 0,
+        severityDrivenByAssessment: true
+      };
+    } catch {
+      // Best-effort: leave the intake untouched on a malformed assessment.
+    }
+  }
+
   const intakeSpan = recordInstantSpan({
     taskId,
+    parentSpanId: assessmentSpanId,
     agentId: "agentforce-intake",
     operation: "intake.complete",
     protocol: "rest",
@@ -219,12 +284,14 @@ export async function POST(req: Request) {
         _data360UnifiedPatientId: identity.unifiedPatientId,
         _data360IdentitySource: identitySource,
         _data360GroundingSource: groundingSource,
-        _salesforceConfigured: isSalesforceConfigured()
+        _salesforceConfigured: isSalesforceConfigured(),
+        ...(assessmentMeta ? { _assessment: assessmentMeta } : {})
       },
       taskId,
       sessionId,
       task,
       decision,
+      ...(assessmentMeta ? { assessment: assessmentMeta } : {}),
       data360: {
         source: { identity: identitySource, grounding: groundingSource },
         identity,
