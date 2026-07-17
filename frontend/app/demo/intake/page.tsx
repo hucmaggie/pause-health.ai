@@ -1,6 +1,7 @@
 import { AcquisitionFunnelPanel } from "../../../components/acquisition-funnel-panel";
 import { AgentforceFallback } from "../../../components/agentforce-fallback";
 import { AgentforceVoiceButton } from "../../../components/agentforce-voice-button";
+import { AssessmentPanel } from "../../../components/assessment-panel";
 import { DemoShell } from "../../../components/demo-shell";
 import { IntakePatientStage } from "../../../components/intake-patient-stage";
 import { PersonaJourneyFooter } from "../../../components/persona-journey-footer";
@@ -50,6 +51,8 @@ export default function IntakeDemoPage() {
       </section>
 
       <AcquisitionFunnelPanel />
+
+      <AssessmentPanel />
 
       <section className="demo-grid">
         <article className="card">
