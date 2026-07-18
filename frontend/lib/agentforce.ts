@@ -134,5 +134,193 @@ export const AGENTFORCE_COPY = {
   fallbackBadge: "Prototype experience",
   productionBadge: "Live agent",
   fallbackNote:
-    "This public prototype shows the intake flow without a connected Salesforce org. Provider deployments run on a live Agentforce Service Agent backed by Service Cloud."
+    "This public prototype shows the intake flow without a connected Salesforce org. Provider deployments run on a live Agentforce Service Agent backed by Service Cloud.",
+  loadingLabel: "Loading the live Pause Intake agent…",
+  connectingLabel: "Connecting to Salesforce Agentforce Service Cloud…",
+  // Shown when init() succeeded but onEmbeddedMessagingReady never fired
+  // within AGENTFORCE_READY_TIMEOUT_MS. Deliberately honest: the component
+  // cannot read the cross-origin fetch/frame failures directly, so it names
+  // the two org-side causes in likelihood order and points the operator at
+  // the DevTools Console strings that disambiguate them.
+  slowLead:
+    "Still connecting to Salesforce Agentforce — the chat launcher hasn't appeared yet. init() succeeded, but the SDK never fired onEmbeddedMessagingReady. That is almost always an org-side configuration issue, not a bug on this page.",
+  slowCauseBootstrap:
+    "The bootstrap.min.js script may not have finished loading — check the Network tab for a 404 or a blocked request on the deployment's /assets/js/bootstrap.min.js.",
+  slowCauseUnpublished:
+    "The Embedded Service deployment {deployment} may not have been re-Published after its last change. A stale published config loads but never signals ready. Re-Publish it (Setup → Embedded Service Deployments) and wait ~5–15 min for CDN propagation.",
+  slowCauseCors:
+    "This page's origin ({origin}) may be missing from the Experience site's CORS allow-list and Trusted Sites for Frames (the frame-ancestors CSP). Add it in Experience Builder → Settings → Security & Privacy, then re-Publish the site.",
+  slowDevtools:
+    'To confirm which one it is, open DevTools → Console on this page and look for "CORS policy", "frame-ancestors", or "Error loading configuration settings" — whichever appears pinpoints the cause above.',
+  bootstrapLoadFailed:
+    "Failed to load Salesforce Embedded Messaging bootstrap from {url}.",
+  initErrorFallback:
+    "Salesforce Embedded Messaging dispatched an initialization error.",
+  genericLoadFailure:
+    "The live agent could not load. Please refresh, or contact your Pause-Health.ai administrator."
 } as const;
+
+/**
+ * DevTools Console substrings an operator should grep for when the launcher
+ * fails to appear. Each maps 1:1 to a known Salesforce failure mode
+ * documented in docs/PHASE_3_RUNBOOK.md.
+ */
+export const AGENTFORCE_CONSOLE_SIGNATURES = [
+  "CORS policy",
+  "frame-ancestors",
+  "Error loading configuration settings"
+] as const;
+
+/**
+ * Shape of the `detail` payload the V2 SDK attaches to its error
+ * CustomEvents (onEmbeddedMessagingInitError / onEmbeddedMessagingBootstrapError).
+ * The SDK is not strongly typed on the window, so every field is `unknown`
+ * and coerced defensively — we never trust its shape.
+ */
+export type AgentforceErrorDetail =
+  | {
+      message?: unknown;
+      code?: unknown;
+      reason?: unknown;
+      error?: unknown;
+    }
+  | null
+  | undefined;
+
+export type AgentforceSurfacedError = {
+  message: string;
+  code: string | null;
+};
+
+function coerceDiagnosticString(value: unknown): string | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  return null;
+}
+
+/**
+ * Turn a raw SDK error-event `detail` into a specific, user-facing message
+ * plus an optional error code. Reads `detail.message` (the field the SDK
+ * populates most often), then `detail.reason`, then a nested `detail.error`
+ * object, and finally falls back to a supplied generic string. Pure so the
+ * embed's error path is unit-testable away from the DOM.
+ */
+export function describeAgentforceError(
+  detail: AgentforceErrorDetail,
+  fallbackMessage: string
+): AgentforceSurfacedError {
+  if (!detail || typeof detail !== "object") {
+    return { message: fallbackMessage, code: null };
+  }
+  const nested =
+    detail.error && typeof detail.error === "object"
+      ? (detail.error as { message?: unknown; code?: unknown })
+      : null;
+  const message =
+    coerceDiagnosticString(detail.message) ??
+    coerceDiagnosticString(detail.reason) ??
+    (nested ? coerceDiagnosticString(nested.message) : null) ??
+    fallbackMessage;
+  const code =
+    coerceDiagnosticString(detail.code) ??
+    (nested ? coerceDiagnosticString(nested.code) : null);
+  return { message, code };
+}
+
+/** Render an AgentforceSurfacedError as a single display string. */
+export function formatAgentforceError(
+  surfaced: AgentforceSurfacedError
+): string {
+  return surfaced.code
+    ? `${surfaced.message} (code: ${surfaced.code})`
+    : surfaced.message;
+}
+
+/** Extract just the host from a URL, or null if it can't be parsed. */
+export function hostFromUrl(url: string | null | undefined): string | null {
+  if (!url || typeof url !== "string") return null;
+  try {
+    return new URL(url).host;
+  } catch {
+    return null;
+  }
+}
+
+export type AgentforceSlowDiagnostic = {
+  lead: string;
+  /** Likely causes in descending order of probability. */
+  causes: string[];
+  devtoolsHint: string;
+};
+
+/**
+ * Build the enriched, ranked-cause hint shown when the ready watchdog fires.
+ * Order: (optional) bootstrap-didn't-load, then stale/unpublished deployment,
+ * then missing CORS / Trusted-Sites-for-Frames origin.
+ */
+export function buildAgentforceSlowDiagnostic(params: {
+  deploymentApiName: string;
+  origin: string;
+  bootstrapLoaded: boolean;
+}): AgentforceSlowDiagnostic {
+  const deployment = params.deploymentApiName || "(unknown deployment)";
+  const origin = params.origin || "this origin";
+  const causes: string[] = [];
+  if (!params.bootstrapLoaded) {
+    causes.push(AGENTFORCE_COPY.slowCauseBootstrap);
+  }
+  causes.push(AGENTFORCE_COPY.slowCauseUnpublished.replace("{deployment}", deployment));
+  causes.push(AGENTFORCE_COPY.slowCauseCors.replace("{origin}", origin));
+  return {
+    lead: AGENTFORCE_COPY.slowLead,
+    causes,
+    devtoolsHint: AGENTFORCE_COPY.slowDevtools
+  };
+}
+
+/**
+ * The single structured object logged via console.warn when the launcher
+ * times out, so an operator has one line to copy. Intentionally logs only
+ * public deployment metadata (host names + deployment api name + this page's
+ * origin) — never the full config or any secret.
+ */
+export type AgentforceTimeoutDiagnostic = {
+  event: "agentforce-launcher-timeout";
+  deploymentApiName: string;
+  siteUrlHost: string | null;
+  scrt2Host: string | null;
+  origin: string;
+  elapsedMs: number;
+  bootstrapLoaded: boolean;
+  likelyCauses: string[];
+  checkConsoleFor: readonly string[];
+};
+
+export function buildAgentforceTimeoutDiagnostic(params: {
+  config: AgentforceConfig;
+  origin: string;
+  elapsedMs: number;
+  bootstrapLoaded: boolean;
+}): AgentforceTimeoutDiagnostic {
+  const { config, origin, elapsedMs, bootstrapLoaded } = params;
+  return {
+    event: "agentforce-launcher-timeout",
+    deploymentApiName: config.deploymentApiName,
+    siteUrlHost: hostFromUrl(config.siteUrl),
+    scrt2Host: hostFromUrl(config.scrt2Url),
+    origin,
+    elapsedMs,
+    bootstrapLoaded,
+    likelyCauses: buildAgentforceSlowDiagnostic({
+      deploymentApiName: config.deploymentApiName,
+      origin,
+      bootstrapLoaded
+    }).causes,
+    checkConsoleFor: AGENTFORCE_CONSOLE_SIGNATURES
+  };
+}

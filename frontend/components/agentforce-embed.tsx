@@ -5,6 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import {
   AGENTFORCE_COPY,
   AGENTFORCE_READY_TIMEOUT_MS,
+  buildAgentforceSlowDiagnostic,
+  buildAgentforceTimeoutDiagnostic,
+  describeAgentforceError,
+  formatAgentforceError,
   sanitizePrechatFields,
   type AgentforceConfig
 } from "../lib/agentforce";
@@ -112,9 +116,23 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
   // actionable hint instead of an indefinite "Connecting…" spinner.
   const [slowToReady, setSlowToReady] = useState(false);
   const readyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Whether bootstrap.min.js actually loaded (script `load` vs `error`, or the
+  // global already being present). Feeds the timeout diagnostic so we can rank
+  // "script never loaded" above the org-side causes when it applies.
+  const scriptLoadedRef = useRef(false);
+  const [bootstrapLoaded, setBootstrapLoaded] = useState(false);
+  // Wall-clock start of init(), used to report the real elapsed time in the
+  // structured console diagnostic rather than assuming the timeout constant.
+  const initStartedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (initializedRef.current) return;
+
+    const markBootstrapLoaded = () => {
+      if (scriptLoadedRef.current) return;
+      scriptLoadedRef.current = true;
+      setBootstrapLoaded(true);
+    };
 
     const clearReadyTimer = () => {
       if (readyTimerRef.current !== null) {
@@ -125,6 +143,24 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
     const startReadyTimer = () => {
       if (readyTimerRef.current !== null) return;
       readyTimerRef.current = setTimeout(() => {
+        const elapsedMs =
+          initStartedAtRef.current !== null
+            ? Date.now() - initStartedAtRef.current
+            : AGENTFORCE_READY_TIMEOUT_MS;
+        const origin =
+          typeof window !== "undefined" ? window.location.origin : "";
+        // One structured line an operator can copy. Only public deployment
+        // metadata (hosts + deployment api name + this page's origin) — never
+        // the full config or any secret.
+        console.warn(
+          "[agentforce] launcher did not appear within the ready timeout",
+          buildAgentforceTimeoutDiagnostic({
+            config,
+            origin,
+            elapsedMs,
+            bootstrapLoaded: scriptLoadedRef.current
+          })
+        );
         setSlowToReady(true);
       }, AGENTFORCE_READY_TIMEOUT_MS);
     };
@@ -159,25 +195,42 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
       applyPrechatFields();
       setStatus("ready");
     };
-    const onInitError = (event: Event) => {
+    // Both the init and bootstrap error events carry a `detail` payload in the
+    // V2 SDK. Surface its actual message + any error code instead of a generic
+    // string, and stop the ready watchdog since we already know it failed.
+    const handleSdkError = (event: Event, source: string) => {
       clearReadyTimer();
-      const detail = (event as CustomEvent<{ message?: string }>).detail;
-      const msg =
-        (detail && typeof detail.message === "string" && detail.message) ||
-        "Salesforce Embedded Messaging dispatched onEmbeddedMessagingInitError.";
+      const detail = (event as CustomEvent).detail as
+        | Record<string, unknown>
+        | null
+        | undefined;
+      const surfaced = describeAgentforceError(
+        detail,
+        `Salesforce Embedded Messaging dispatched ${source}.`
+      );
       setStatus("error");
-      setErrorMessage(msg);
+      setErrorMessage(formatAgentforceError(surfaced));
     };
+    const onInitError = (event: Event) =>
+      handleSdkError(event, "onEmbeddedMessagingInitError");
+    const onBootstrapError = (event: Event) =>
+      handleSdkError(event, "onEmbeddedMessagingBootstrapError");
 
     window.addEventListener("onEmbeddedMessagingReady", onReady);
     window.addEventListener(
       "onEmbeddedMessagingInitError",
       onInitError as EventListener
     );
+    window.addEventListener(
+      "onEmbeddedMessagingBootstrapError",
+      onBootstrapError as EventListener
+    );
 
     const tryInit = () => {
       const bootstrap = window.embeddedservice_bootstrap;
       if (!bootstrap) return false;
+      // The global being present means bootstrap.min.js executed.
+      markBootstrapLoaded();
       try {
         bootstrap.settings.language = config.language;
         // Floating launcher mode is what the V2 deployment is configured for;
@@ -193,6 +246,7 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
         setStatus("initializing");
         // init() resolved synchronously; the launcher appears only once the
         // SDK fires onEmbeddedMessagingReady. Start the watchdog now.
+        initStartedAtRef.current = Date.now();
         startReadyTimer();
         return true;
       } catch (err) {
@@ -209,6 +263,10 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
       window.removeEventListener(
         "onEmbeddedMessagingInitError",
         onInitError as EventListener
+      );
+      window.removeEventListener(
+        "onEmbeddedMessagingBootstrapError",
+        onBootstrapError as EventListener
       );
     };
 
@@ -232,12 +290,17 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
     script.async = true;
     script.dataset.agentforceBootstrap = config.deploymentApiName;
     script.addEventListener("load", () => {
+      markBootstrapLoaded();
       tryInit();
     });
     script.addEventListener("error", () => {
+      clearReadyTimer();
       setStatus("error");
       setErrorMessage(
-        `Failed to load Salesforce Embedded Messaging bootstrap from ${config.bootstrapScriptUrl}.`
+        AGENTFORCE_COPY.bootstrapLoadFailed.replace(
+          "{url}",
+          config.bootstrapScriptUrl
+        )
       );
     });
     document.body.appendChild(script);
@@ -249,6 +312,12 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
   const prechatFieldCount = sanitizedPrechat
     ? Object.keys(sanitizedPrechat).length
     : 0;
+
+  const slowDiagnostic = buildAgentforceSlowDiagnostic({
+    deploymentApiName: config.deploymentApiName,
+    origin: typeof window !== "undefined" ? window.location.origin : "",
+    bootstrapLoaded
+  });
 
   return (
     <article className="card agentforce-shell" aria-label="Pause Intake Assistant">
@@ -268,22 +337,26 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
       <div className="agentforce-launcher-callout" aria-live="polite">
         {status === "loading" && (
           <p style={{ color: "var(--muted)", margin: 0 }}>
-            Loading the live Pause Intake agent…
+            {AGENTFORCE_COPY.loadingLabel}
           </p>
         )}
         {status === "initializing" && !slowToReady && (
           <p style={{ color: "var(--muted)", margin: 0 }}>
-            Connecting to Salesforce Agentforce Service Cloud…
+            {AGENTFORCE_COPY.connectingLabel}
           </p>
         )}
         {status === "initializing" && slowToReady && (
-          <p role="status" style={{ color: "var(--muted)", margin: 0 }}>
-            Still connecting to Salesforce Agentforce… the chat launcher
-            hasn&apos;t appeared yet. If this persists, confirm the Embedded
-            Service deployment{" "}
-            <strong>{config.deploymentApiName}</strong> is Published and that
-            this site&apos;s domain is on its allow-list — then refresh.
-          </p>
+          <div role="status" style={{ color: "var(--muted)", margin: 0 }}>
+            <p style={{ margin: 0 }}>{slowDiagnostic.lead}</p>
+            <ol style={{ margin: "0.5rem 0 0", paddingLeft: "1.2rem" }}>
+              {slowDiagnostic.causes.map((cause) => (
+                <li key={cause} style={{ marginTop: "0.25rem" }}>
+                  {cause}
+                </li>
+              ))}
+            </ol>
+            <p style={{ margin: "0.5rem 0 0" }}>{slowDiagnostic.devtoolsHint}</p>
+          </div>
         )}
         {status === "ready" && (
           <>
@@ -343,8 +416,7 @@ export function AgentforceEmbed({ config, prechatFields }: AgentforceEmbedProps)
         )}
         {status === "error" && (
           <p role="alert" style={{ color: "#ffb6c8", margin: 0 }}>
-            {errorMessage ??
-              "The live agent could not load. Please refresh, or contact your Pause-Health.ai administrator."}
+            {errorMessage ?? AGENTFORCE_COPY.genericLoadFailure}
           </p>
         )}
       </div>
