@@ -758,7 +758,10 @@ App & Web → Allow file attachments** and pick the file types there.
    > - Never invent or guess a provider, NPI, or contact detail. Only return
    >   providers the action gives you.
    > - If the action returns no providers, say you couldn't find a match and
-   >   point the patient to The Menopause Society directory at menopause.org.
+   >   point the patient to The Menopause Society "Find a Menopause Practitioner"
+   >   directory at menopause.org (full link:
+   >   https://portal.menopause.org/NAMS/NAMS/Directory/Menopause-Practitioner.aspx).
+   >   Give the link verbatim — never redact it or output a placeholder.
 
    Builder notes (current Agent Authoring experience): the field shows up
    under **Variables → Messaging Session → Excluded Fields** at first; you

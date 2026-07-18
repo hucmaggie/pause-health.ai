@@ -145,8 +145,10 @@ builder. (Deactivate first if the builder requires it — see Step 5.)
    > • `certified-remote` — say there are no providers in their immediate area, so
    >   these are menopause-certified specialists elsewhere who offer telehealth.
    > • `certified-national` — top menopause specialists nationally (no ZIP given).
-   > • `none` — point the patient to The Menopause Society "Find a Practitioner"
-   >   directory.
+   > • `none` — point the patient to The Menopause Society "Find a Menopause
+   >   Practitioner" directory at menopause.org (full link:
+   >   https://portal.menopause.org/NAMS/NAMS/Directory/Menopause-Practitioner.aspx).
+   >   Give the link verbatim — do not abbreviate or redact it.
 
 4. **Example utterances** for the topic classifier: "which healthcare
    professional?", "find a provider that specializes in menopause", "who should
@@ -202,6 +204,7 @@ that to the `zip` input instead of asking.)
 | Agent still deflects | Topic not activated, or classifier didn't match | Re-activate; add more example utterances; tighten the classification description |
 | Works in Builder Preview but live embed deflects | Cached pre-activation MIAW session pinned to the old version | Start a fresh session — incognito window, or chat ⋮ → End Chat then hard-reload. Not a permissions issue. |
 | Action runs but agent invents providers | Instructions not enforced | Re-paste the "Never invent providers — only return what the action gives you" instruction |
+| Agent replies with `URL_Redacted` where the directory link should be | **Agentforce Trusted URL Allowlisting** (Winter '26 / release 258 security feature): any URL the agent generates or shares that is not on the org's Trusted URLs list is blocked and replaced with the literal token `URL_Redacted`. This is NOT the Einstein Trust Layer Data Masking tab (that has no "URL" entity and can be off), NOT a placeholder in the instruction, and NOT our code (`URL_Redacted` exists nowhere in the repo — it's a platform token). | **Setup → Trusted URLs** → add `https://portal.menopause.org`, `https://menopause.org`, and `https://www.menopause.org` (org-wide allowlist), then re-test in a **fresh** session. Confirm what was redacted at **Setup → Trusted URLs and Browser Policy Violations** (last ~7 days). Scoped alternative: add the tag `#DisableURLRedaction#` to the "Find a Provider" topic (or agent) description to disable redaction for that scope — but allowlisting the specific domains is safer than disabling the guardrail. |
 | No local results for a ZIP | That ZIP prefix has no provider in the directory | Expected with the demo fixture; run `provider_ingest` against the national NPPES file for full coverage |
 | Agent never has the ZIP | prechat is a no-op (known) | Agent asks the patient for it (Step 4) |
 
@@ -256,8 +259,11 @@ provider directory via the findMenopauseProviders action. Do not give generic
 5. Only return providers the action gives you. Never invent or guess a provider,
    NPI, or contact detail.
 6. If the action returns no providers (matchType none), say you couldn't find a
-   match and point the patient to The Menopause Society provider directory at
-   menopause.org.
+   match and point the patient to The Menopause Society "Find a Menopause
+   Practitioner" directory at menopause.org — full link:
+   https://portal.menopause.org/NAMS/NAMS/Directory/Menopause-Practitioner.aspx
+   Provide the link verbatim; never abbreviate, redact, or replace it with a
+   placeholder such as "URL_Redacted".
 ```
 
 **Example utterances** (for the topic classifier)
