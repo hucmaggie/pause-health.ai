@@ -60,6 +60,10 @@ export type GovernanceTask = {
   planTracesToTemplate?: boolean;
   // Clinical summary (after-visit summary + clinician handoff)
   summaryTracesToSourceRecords?: boolean;
+  // Patient education & health coaching (evidence-sourced education + coaching)
+  educationTracesToEvidenceSource?: boolean;
+  staysWithinEducationScope?: boolean;
+  coachingOutreachHasConsent?: boolean;
   // Medication adherence (nudge-only refill/adherence prompts)
   refillRequiresHumanApproval?: boolean;
   // Referral management (cosign-gated outbound referrals)
@@ -279,6 +283,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A summary asserts a fact/record absent from the assembled context",
     reason:
       "The after-visit summary / clinician handoff did not trace to the source records the context was assembled from (a fabricated / off-context assertion, or none at all); every summary must trace to a defined source record and may not fabricate a clinical fact"
+  },
+  {
+    policyId: "policy.education.evidence-sourced",
+    signal: "educationTracesToEvidenceSource",
+    violatingValue: false,
+    violationHint: "An education module doesn't derive from a defined evidence source",
+    reason:
+      "The education/coaching content did not trace to a defined evidence-sourced education module (an off-catalog / fabricated topic); every education module must trace to a defined evidence source"
+  },
+  {
+    policyId: "policy.education.no-medical-advice",
+    signal: "staysWithinEducationScope",
+    violatingValue: false,
+    violationHint: "Strays into diagnosis, medication dosing, or individualized medical advice",
+    reason:
+      "The coaching content strayed beyond general education into diagnosis, medication dosing, or individualized medical advice; the agent may only deliver general, evidence-sourced education and lifestyle coaching"
+  },
+  {
+    policyId: "policy.education.consent-before-outreach",
+    signal: "coachingOutreachHasConsent",
+    violatingValue: false,
+    violationHint: "Pushes coaching outreach without the patient's consent",
+    reason:
+      "Attempted a coaching outreach push without the patient's consent; any coaching push is consent-gated and human-approval-gated — the agent may only draft consent-gated coaching for human review"
   },
   {
     policyId: "policy.medication.no-autonomous-refill",

@@ -597,6 +597,35 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "whole-person-care"
+  },
+  {
+    id: "patient-education-agent",
+    name: "Pause Patient Education & Health Coaching · Claude Sonnet 4.5",
+    kind: "anthropic-claude",
+    protocol: "a2a",
+    // Runnable A2A stand-in for a patient-facing education & coaching agent:
+    // POST /api/agents/patient-education/tasks (card at /.well-known/agent.json).
+    // A patient-ENGAGEMENT agent (not a clinical decision): it turns
+    // already-produced signals (intake symptoms/severity, assessment, care-plan
+    // focus areas, care gaps) into evidence-sourced education + motivational
+    // coaching. Module SELECTION is DETERMINISTIC (a defined evidence-sourced
+    // catalog), and the coaching message is a live Claude call with a
+    // deterministic scripted fallback — the FOURTH live-Claude agent, same model
+    // + allow-list as the Care Router / Care Plan / Clinical Summary. It is
+    // distinct from the Care Plan agent (clinician-authored plan) and Medication
+    // Adherence agent (refill nudges); it only educates and coaches.
+    endpoint: "/api/agents/patient-education",
+    version: "0.1.0",
+    status: "prototype",
+    capabilities: [
+      "Delivers personalized, evidence-sourced menopause/midlife health education + lifestyle coaching (bone health, cardiovascular risk, sleep hygiene, vasomotor self-management, mood/stress, nutrition, physical activity) — a patient-engagement agent distinct from the clinician-authored Care Plan and the refill-focused Medication Adherence agents",
+      "Module SELECTION is DETERMINISTIC (a pure function of the intake symptoms/severity + upstream care-plan focus areas + detected care gaps; no randomness, no clock) — the same context always yields the same curriculum",
+      "Every education module references a defined evidence-sourced catalog id AND carries a (synthetic) source label — never a fabricated topic; enforced at the Agent Fabric governance boundary (policy.education.evidence-sourced)",
+      "Writes a warm, motivational coaching message with live Anthropic Claude — the FOURTH live-Claude agent — falling back to a DETERMINISTIC scripted message (with a recorded fallbackReason) when ANTHROPIC_API_KEY is unset or the API call fails",
+      "Stays strictly within general education scope — never a diagnosis, medication dose, or individualized medical advice (policy.education.no-medical-advice) — and any coaching push is consent-gated + human-approval-gated (policy.education.consent-before-outreach). Runs against ILLUSTRATIVE synthetic education modules + source labels — clearly labeled; NOT a certified patient-education engine"
+    ],
+    provider: "Anthropic + Pause-Health.ai",
+    governanceTier: "patient-engagement"
   }
 ];
 
@@ -645,7 +674,8 @@ const POLICIES: PolicyRecord[] = [
       "member-service-agent",
       "prior-authorization-agent",
       "clinical-summary-agent",
-      "sdoh-screening-agent"
+      "sdoh-screening-agent",
+      "patient-education-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -732,6 +762,33 @@ const POLICIES: PolicyRecord[] = [
     status: "enforced"
   },
   {
+    id: "policy.education.evidence-sourced",
+    name: "Education must trace to a defined evidence source",
+    description:
+      "Every education module the Patient Education & Health Coaching Agent delivers must trace to a defined evidence-sourced module in the education catalog — it may not act on a fabricated / off-catalog topic, and every module must carry a source label. A module that doesn't trace to a defined evidence source is rejected before any coaching is written or returned, so the agent can never invent a health-education topic. (In the prototype the education modules + their source labels — The Menopause Society, USPSTF, NAMS/ACOG-style — are clearly-labeled illustrative synthetics, not a certified patient-education engine; in production this is the customer's governed, clinically-reviewed education library.)",
+    appliesTo: ["patient-education-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.education.no-medical-advice",
+    name: "General education only — no diagnosis, dosing, or individualized medical advice",
+    description:
+      "The Patient Education & Health Coaching Agent may deliver only general, evidence-sourced education and lifestyle coaching. It may NOT diagnose, prescribe or dose medication, or give individualized medical advice beyond general education. A task that asserts it will cross into diagnosis, medication dosing, or individualized medical advice is rejected before any coaching is written — the agent stays strictly within education scope and defers clinical decisions to a clinician.",
+    appliesTo: ["patient-education-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.education.consent-before-outreach",
+    name: "Patient consent required before a coaching outreach push",
+    description:
+      "The Patient Education & Health Coaching Agent may draft coaching content only with the patient's explicit consent to coaching outreach — a coaching push without consent is rejected before any draft is prepared for action, and the agent never autonomously sends a message. Every coaching outreach is a consent-gated, human-approval-gated DRAFT, never an autonomous send. Mirrors the SDOH Screening Agent's consent-before-referral policy.",
+    appliesTo: ["patient-education-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
     id: "policy.medication.no-autonomous-refill",
     name: "No autonomous medication refill",
     description:
@@ -745,7 +802,12 @@ const POLICIES: PolicyRecord[] = [
     name: "Model allow-list",
     description:
       "Only models on the customer's approved list may serve clinical-decision agents. Default allow-list: claude-sonnet-4-5, claude-opus-4-7. Other models are blocked at policy evaluation time.",
-    appliesTo: ["care-router-claude", "care-plan-agent", "clinical-summary-agent"],
+    appliesTo: [
+      "care-router-claude",
+      "care-plan-agent",
+      "clinical-summary-agent",
+      "patient-education-agent"
+    ],
     enforcement: "block",
     status: "enforced"
   },
@@ -2697,6 +2759,128 @@ function store(): FabricStore {
         requiresHumanEscalation: true,
         phiAccessed: true,
         synthetic: true
+      }
+    }
+  );
+
+  // A trace showing the Patient Education & Health Coaching Agent working
+  // downstream of the lifecycle: it turns already-produced signals (intake
+  // vasomotor symptoms + a postmenopausal status + a bone-density care gap) into
+  // an evidence-sourced education curriculum, then writes a warm, motivational
+  // coaching message. Module SELECTION is DETERMINISTIC (a pure function of the
+  // inputs against a defined evidence-sourced catalog — every module traces to a
+  // catalog id AND carries a source label, never a fabricated topic), and this
+  // seeded example shows the DETERMINISTIC scripted-fallback path (via:
+  // scripted-fallback, with a fallbackReason) so it doesn't imply a live Claude
+  // call happened at seed time; at run time the phrasing is a live Claude call
+  // (the FOURTH live-Claude agent) with the same scripted fallback. The coaching
+  // draft is consent-gated + human-approval-gated (never auto-sent), stays
+  // strictly within general education scope (no diagnosis/dosing/individualized
+  // medical advice), and is handed to the Engagement Agent for delivery. It
+  // touches the patient's clinical context, so every span sets phiAccessed:true.
+  // The education modules + source labels are ILLUSTRATIVE synthetics, not a
+  // certified patient-education engine. Seed data; production populates the ring
+  // buffer from the persistent log store.
+  const ed0 = Date.now() - 1000 * 60 * 3;
+  const educationTaskId = "task-seed-patient-education-001";
+  const educationName =
+    "Agentforce Patient Education & Health Coaching · Menopause/Midlife";
+  s.traces.push(
+    {
+      id: "span-education-001",
+      taskId: educationTaskId,
+      agentId: "patient-education-agent",
+      agentName: educationName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ed0).toISOString(),
+      finishedAt: new Date(ed0 + 60).toISOString(),
+      durationMs: 60,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-education-002",
+      taskId: educationTaskId,
+      parentSpanId: "span-education-001",
+      agentId: "patient-education-agent",
+      agentName: educationName,
+      operation: "patient-education.curate",
+      protocol: "a2a",
+      startedAt: new Date(ed0 + 60).toISOString(),
+      finishedAt: new Date(ed0 + 90).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        modulesSelected: 6,
+        modules: [
+          "education.vasomotor",
+          "education.sleep-hygiene",
+          "education.bone-health",
+          "education.cardiovascular",
+          "education.nutrition",
+          "education.physical-activity"
+        ],
+        // The honesty invariants: every module traces to a defined evidence
+        // source, and the curriculum stays strictly within education scope.
+        educationTracesToEvidenceSource: true,
+        staysWithinEducationScope: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-education-003",
+      taskId: educationTaskId,
+      parentSpanId: "span-education-002",
+      agentId: "patient-education-agent",
+      agentName: educationName,
+      operation: "patient-education.coach",
+      protocol: "a2a",
+      startedAt: new Date(ed0 + 90).toISOString(),
+      finishedAt: new Date(ed0 + 110).toISOString(),
+      durationMs: 20,
+      status: "ok",
+      attributes: {
+        provider: "pause-scripted",
+        model: "pause-patient-education-coach@1.0",
+        via: "scripted-fallback",
+        // Present ONLY on a scripted-fallback composition — the non-clinical
+        // diagnostic explaining why the live Claude call was not used. This
+        // seeded example is deterministic on purpose (no live call at seed time).
+        fallbackReason:
+          "ANTHROPIC_API_KEY not set; using deterministic Pause patient-education coach.",
+        // The honesty invariants: consent-gated, human-approval-gated, general
+        // education only, and never auto-sent.
+        coachingOutreachHasConsent: true,
+        staysWithinEducationScope: true,
+        requiresHumanApproval: true,
+        sent: false,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-education-004",
+      taskId: educationTaskId,
+      parentSpanId: "span-education-001",
+      agentId: "engagement-agent",
+      agentName: "Agentforce Engagement Agent · Care Continuity",
+      operation: "engagement.outreach.handoff",
+      protocol: "a2a",
+      startedAt: new Date(ed0 + 110).toISOString(),
+      finishedAt: new Date(ed0 + 470).toISOString(),
+      durationMs: 360,
+      status: "ok",
+      attributes: {
+        coachingDraftsHandedOff: 1,
+        channel: "secure-message",
+        coachingOutreachHasConsent: true,
+        humanApprovalRequired: true,
+        sent: false
       }
     }
   );

@@ -8,6 +8,7 @@ import { CarePlanPanel } from "../../../components/care-plan-panel";
 import { ClinicalSummaryPanel } from "../../../components/clinical-summary-panel";
 import { DemoShell } from "../../../components/demo-shell";
 import { IntakePatientStage } from "../../../components/intake-patient-stage";
+import { PatientEducationPanel } from "../../../components/patient-education-panel";
 import { PersonaJourneyFooter } from "../../../components/persona-journey-footer";
 import { SchedulingPanel } from "../../../components/scheduling-panel";
 import { SdohScreeningPanel } from "../../../components/sdoh-screening-panel";
@@ -69,6 +70,8 @@ export default function IntakeDemoPage() {
       <ClinicalSummaryPanel />
 
       <SdohScreeningPanel />
+
+      <PatientEducationPanel />
 
       <CareGapPanel />
 

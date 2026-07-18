@@ -17,6 +17,11 @@ import {
   summarizeClinical
 } from "../../../../lib/clinical-summary";
 import {
+  buildEducationCurriculum,
+  coachEducation,
+  educationContextFromIntake
+} from "../../../../lib/patient-education";
+import {
   assessmentToIntakeSignal,
   isAllowlistedInstrument,
   scoreAssessment,
@@ -154,6 +159,24 @@ export async function POST(req: Request) {
      * Set `clinicalSummary: false` to opt out explicitly.
      */
     clinicalSummary?: boolean;
+    /**
+     * Optional patient education & health coaching. When requested (education:
+     * true or an object), after the Care Router returns a pathway (and any care
+     * plan) the Patient Education & Health Coaching Agent DETERMINISTICALLY
+     * selects an evidence-sourced education curriculum from the intake + upstream
+     * signals and coaches the patient (live-Claude, scripted-fallback), attaching
+     * it to the trace + response meta. General education only, consent-gated.
+     * Strictly additive: absent = today's behavior unchanged. Set
+     * `education: false` to opt out explicitly.
+     */
+    education?:
+      | boolean
+      | {
+          carePlanFocusAreas?: string[];
+          careGapMeasures?: string[];
+          onHrt?: boolean;
+          hasCoachingConsent?: boolean;
+        };
     /**
      * Optional health-related social needs (SDOH) screening. When present, the
      * SDOH Screening Agent DETERMINISTICALLY screens the patient with a
@@ -735,6 +758,85 @@ export async function POST(req: Request) {
       }
     }
 
+    // Optional patient education & health coaching (additive). When requested,
+    // the Patient Education Agent DETERMINISTICALLY selects an evidence-sourced
+    // curriculum from the intake + upstream Care Plan focus areas / care gaps and
+    // coaches the patient (live-Claude, scripted-fallback). It touches clinical
+    // context, so its spans set phiAccessed:true, and every coaching draft is
+    // consent-gated + human-approval-gated (never auto-sent). Best-effort +
+    // strictly additive: a failure here must never break the routing response,
+    // and absent = today's behavior unchanged.
+    let educationMeta: Record<string, unknown> | undefined;
+    const educationOptedOut = body.education === false;
+    const educationReq =
+      body.education && typeof body.education === "object" ? body.education : undefined;
+    const wantsEducation = !educationOptedOut && Boolean(body.education);
+    if (wantsEducation) {
+      try {
+        const curriculum = buildEducationCurriculum(
+          educationContextFromIntake(intake, {
+            onHrt: educationReq?.onHrt ?? carePlanReq?.onHrt,
+            ...(educationReq?.carePlanFocusAreas
+              ? { carePlanFocusAreas: educationReq.carePlanFocusAreas }
+              : {}),
+            ...(educationReq?.careGapMeasures
+              ? { careGapMeasures: educationReq.careGapMeasures }
+              : {})
+          })
+        );
+        const coachingOutreachHasConsent = educationReq?.hasCoachingConsent !== false;
+        const curateSpan = recordInstantSpan({
+          taskId,
+          parentSpanId: intakeSpan.id,
+          agentId: "patient-education-agent",
+          operation: "patient-education.curate",
+          protocol: "a2a",
+          attributes: {
+            modulesSelected: curriculum.moduleIds.length,
+            modules: curriculum.moduleIds,
+            focusAreas: curriculum.focusAreas,
+            educationTracesToEvidenceSource: true,
+            staysWithinEducationScope: true,
+            phiAccessed: true,
+            synthetic: true,
+            ...(personaId ? { personaId } : {}),
+            ...(origin ? { origin } : {})
+          }
+        });
+        const coaching = await coachEducation(curriculum);
+        recordInstantSpan({
+          taskId,
+          parentSpanId: curateSpan.id,
+          agentId: "patient-education-agent",
+          operation: "patient-education.coach",
+          protocol: "a2a",
+          attributes: {
+            provider: coaching.modelProvenance.provider,
+            model: coaching.modelProvenance.model,
+            via: coaching.via,
+            ...(coaching.fallbackReason ? { fallbackReason: coaching.fallbackReason } : {}),
+            coachingOutreachHasConsent,
+            staysWithinEducationScope: true,
+            requiresHumanApproval: true,
+            sent: false,
+            phiAccessed: true,
+            ...(personaId ? { personaId } : {}),
+            ...(origin ? { origin } : {})
+          }
+        });
+        educationMeta = {
+          moduleIds: curriculum.moduleIds,
+          focusAreas: curriculum.focusAreas,
+          coachingMessage: coaching.coachingMessage,
+          coachingVia: coaching.via,
+          ...(coaching.fallbackReason ? { fallbackReason: coaching.fallbackReason } : {}),
+          educationAfterRouting: true
+        };
+      } catch {
+        // Best-effort: leave routing untouched on a patient-education failure.
+      }
+    }
+
     return NextResponse.json({
       meta: {
         _note:
@@ -753,7 +855,8 @@ export async function POST(req: Request) {
         ...(sdohMeta ? { _sdoh: sdohMeta } : {}),
         ...(schedulingMeta ? { _scheduling: schedulingMeta } : {}),
         ...(carePlanMeta ? { _carePlan: carePlanMeta } : {}),
-        ...(clinicalSummaryMeta ? { _clinicalSummary: clinicalSummaryMeta } : {})
+        ...(clinicalSummaryMeta ? { _clinicalSummary: clinicalSummaryMeta } : {}),
+        ...(educationMeta ? { _education: educationMeta } : {})
       },
       taskId,
       sessionId,
@@ -765,6 +868,7 @@ export async function POST(req: Request) {
       ...(schedulingMeta ? { scheduling: schedulingMeta } : {}),
       ...(carePlanMeta ? { carePlan: carePlanMeta } : {}),
       ...(clinicalSummaryMeta ? { clinicalSummary: clinicalSummaryMeta } : {}),
+      ...(educationMeta ? { education: educationMeta } : {}),
       data360: {
         source: { identity: identitySource, grounding: groundingSource },
         identity,

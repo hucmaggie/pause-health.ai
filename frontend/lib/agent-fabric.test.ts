@@ -418,13 +418,13 @@ describe("Validated-instrument assessment · Assessment agent", () => {
 });
 
 describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
-  it("brings the registry to twenty-three agents", () => {
+  it("brings the registry to twenty-four agents", () => {
     // Sanity count guard: the funnel + intake + assessment + benefits +
     // scheduling + care-gap-closure + care-plan + medication-adherence +
     // referral-management + member-service + prior-authorization +
-    // clinical-summary + sdoh-screening agents, the Care Router, the platform
-    // substrate, and the commercial plane.
-    expect(listAgents()).toHaveLength(23);
+    // clinical-summary + sdoh-screening + patient-education agents, the Care
+    // Router, the platform substrate, and the commercial plane.
+    expect(listAgents()).toHaveLength(24);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -1368,6 +1368,149 @@ describe("SDOH Screening · whole-person-care social-needs + community-referral 
   });
 });
 
+describe("Patient Education & Health Coaching · evidence-sourced education + live-Claude coaching agent", () => {
+  it("registers as a prototype live-Claude agent on the patient-engagement tier", () => {
+    const e = getAgent("patient-education-agent");
+    expect(e).toBeDefined();
+    // The FOURTH live-Claude agent (kind anthropic-claude, like the Care Router
+    // / Care Plan / Clinical Summary reference agents).
+    expect(e!.kind).toBe("anthropic-claude");
+    expect(e!.protocol).toBe("a2a");
+    expect(e!.provider).toBe("Anthropic + Pause-Health.ai");
+    expect(e!.status).toBe("prototype");
+    // Reuses the patient-engagement tier (patient-care plane) — patient-facing
+    // education + coaching, not a clinical decision.
+    expect(e!.governanceTier).toBe("patient-engagement");
+    expect(planeForTier(e!.governanceTier)).toBe("patient-care");
+    expect(e!.endpoint).toBe("/api/agents/patient-education");
+  });
+
+  it("carries the three education blocks plus the reused model + HIPAA-audit policies (patient-plane)", () => {
+    const ids = getPoliciesForAgent("patient-education-agent").map((p) => p.id);
+    expect(ids).toContain("policy.education.evidence-sourced");
+    expect(ids).toContain("policy.education.no-medical-advice");
+    expect(ids).toContain("policy.education.consent-before-outreach");
+    // Reused by extending appliesTo — honors the model allow-list on the live
+    // Claude call, and is on the HIPAA-audit policy (it is patient-touching).
+    expect(ids).toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT on any commercial-plane-only policy (it touches PHI).
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("all three education policies are enforced blocks", () => {
+    for (const id of [
+      "policy.education.evidence-sourced",
+      "policy.education.no-medical-advice",
+      "policy.education.consent-before-outreach"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement, id).toBe("block");
+      expect(policy!.status, id).toBe("enforced");
+    }
+  });
+
+  it("blocks a fabricated topic, out-of-scope advice, and a no-consent push; allows a well-formed task", () => {
+    // Off-catalog / fabricated education topic.
+    const offCatalog = evaluateGovernance({
+      agentId: "patient-education-agent",
+      task: {
+        educationTracesToEvidenceSource: false,
+        staysWithinEducationScope: true,
+        coachingOutreachHasConsent: true,
+        requestedModel: "claude-sonnet-4-5-20250929"
+      }
+    });
+    expect(offCatalog.decision).toBe("block");
+    expect(offCatalog.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.education.evidence-sourced"
+    );
+
+    // Strays into diagnosis / dosing / individualized medical advice.
+    const outOfScope = evaluateGovernance({
+      agentId: "patient-education-agent",
+      task: {
+        educationTracesToEvidenceSource: true,
+        staysWithinEducationScope: false,
+        coachingOutreachHasConsent: true
+      }
+    });
+    expect(outOfScope.decision).toBe("block");
+    expect(outOfScope.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.education.no-medical-advice"
+    );
+
+    // Coaching push without consent.
+    const noConsent = evaluateGovernance({
+      agentId: "patient-education-agent",
+      task: {
+        educationTracesToEvidenceSource: true,
+        staysWithinEducationScope: true,
+        coachingOutreachHasConsent: false
+      }
+    });
+    expect(noConsent.decision).toBe("block");
+    expect(noConsent.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.education.consent-before-outreach"
+    );
+
+    // Model allow-list is enforced just like the Care Router / Care Plan.
+    const offModel = evaluateGovernance({
+      agentId: "patient-education-agent",
+      task: {
+        educationTracesToEvidenceSource: true,
+        staysWithinEducationScope: true,
+        coachingOutreachHasConsent: true,
+        requestedModel: "gpt-4o"
+      }
+    });
+    expect(offModel.decision).toBe("block");
+    expect(offModel.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.model.anthropic-claude-sonnet-allowlisted"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "patient-education-agent",
+      task: {
+        educationTracesToEvidenceSource: true,
+        staysWithinEducationScope: true,
+        coachingOutreachHasConsent: true,
+        requestedModel: "claude-sonnet-4-5-20250929"
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "patient-education-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a curate→coach trace showing a deterministic scripted-fallback coaching, every span phiAccessed", () => {
+    const spans = listTraces({ taskId: "task-seed-patient-education-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(3);
+    const curate = spans.find((s) => s.operation === "patient-education.curate");
+    expect(curate?.agentId).toBe("patient-education-agent");
+    expect(curate?.attributes?.educationTracesToEvidenceSource).toBe(true);
+    expect(curate?.attributes?.staysWithinEducationScope).toBe(true);
+    const coach = spans.find((s) => s.operation === "patient-education.coach");
+    expect(coach?.agentId).toBe("patient-education-agent");
+    // Seeded example is deterministic: scripted-fallback with a fallbackReason,
+    // so it doesn't imply a live Claude call happened at seed time.
+    expect(coach?.attributes?.via).toBe("scripted-fallback");
+    expect(typeof coach?.attributes?.fallbackReason).toBe("string");
+    expect(coach?.attributes?.coachingOutreachHasConsent).toBe(true);
+    expect(coach?.attributes?.sent).toBe(false);
+    // The coaching content touches the patient's clinical context.
+    for (const s of spans) {
+      if (s.agentId === "patient-education-agent") {
+        expect(s.attributes?.phiAccessed, s.operation).toBe(true);
+      }
+    }
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -1494,7 +1637,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-referral-001",
       "task-seed-member-service-001",
       "task-seed-prior-authorization-001",
-      "task-seed-clinical-summary-001"
+      "task-seed-clinical-summary-001",
+      "task-seed-patient-education-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });

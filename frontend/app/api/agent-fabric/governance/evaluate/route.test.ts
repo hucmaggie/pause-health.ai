@@ -94,6 +94,29 @@ describe("POST /api/agent-fabric/governance/evaluate", () => {
     );
   });
 
+  it("passes the patient-education signals through to the evaluator", async () => {
+    // Pins that the new patient-education GovernanceTask fields reach
+    // evaluateGovernance across the HTTP boundary.
+    const res = await POST(
+      post({
+        agentId: "patient-education-agent",
+        task: {
+          educationTracesToEvidenceSource: false,
+          staysWithinEducationScope: false,
+          coachingOutreachHasConsent: false
+        }
+      })
+    );
+    const json = await res.json();
+    expect(json.result.decision).toBe("block");
+    const ids = json.result.blockingViolations.map(
+      (v: { policyId: string }) => v.policyId
+    );
+    expect(ids).toContain("policy.education.evidence-sourced");
+    expect(ids).toContain("policy.education.no-medical-advice");
+    expect(ids).toContain("policy.education.consent-before-outreach");
+  });
+
   it("an unknown agent has no applicable policies and allows", async () => {
     const res = await POST(post({ agentId: "ghost-agent", task: {} }));
     const json = await res.json();
