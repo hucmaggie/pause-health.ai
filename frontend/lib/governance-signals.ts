@@ -66,6 +66,10 @@ export type GovernanceTask = {
   coachingOutreachHasConsent?: boolean;
   // Medication adherence (nudge-only refill/adherence prompts)
   refillRequiresHumanApproval?: boolean;
+  // Remote patient monitoring & symptom-trend tracking (longitudinal readings)
+  readingsTraceToSource?: boolean;
+  escalationRoutedToHuman?: boolean;
+  monitoringHasConsent?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -315,6 +319,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Submits/orders a refill without human approval",
     reason:
       "Attempted to autonomously submit/order a medication refill without human approval; the agent may only draft a nudge — a refill requires a human-in-the-loop"
+  },
+  {
+    policyId: "policy.rpm.reading-source-integrity",
+    signal: "readingsTraceToSource",
+    violatingValue: false,
+    violationHint: "A monitoring reading doesn't trace to a device/self-report source",
+    reason:
+      "A longitudinal monitoring reading did not trace to a device/self-report source (a fabricated / off-source reading, or an off-catalog metric); every reading must trace to a recognized source and a defined monitored metric — the agent may not act on fabricated readings"
+  },
+  {
+    policyId: "policy.rpm.no-autonomous-escalation",
+    signal: "escalationRoutedToHuman",
+    violatingValue: false,
+    violationHint: "Acts on a trend autonomously instead of routing to a clinician",
+    reason:
+      "Attempted to act on a worsening / red-flag trend autonomously; every escalation must be routed to a human clinician for review (routedTo:'clinician-review') — the agent may never take an autonomous clinical action (auto-ordering, auto-medication, auto-titration)"
+  },
+  {
+    policyId: "policy.rpm.consent-to-monitor",
+    signal: "monitoringHasConsent",
+    violatingValue: false,
+    violationHint: "Monitors / reaches out without the patient's monitoring consent",
+    reason:
+      "Attempted longitudinal monitoring / trend outreach without the patient's consent to be monitored; remote monitoring is consent-gated — the agent may only monitor a patient who has consented"
   },
   {
     policyId: "policy.referral.clinician-cosign",

@@ -10,6 +10,7 @@ import { DemoShell } from "../../../components/demo-shell";
 import { IntakePatientStage } from "../../../components/intake-patient-stage";
 import { PatientEducationPanel } from "../../../components/patient-education-panel";
 import { PersonaJourneyFooter } from "../../../components/persona-journey-footer";
+import { RemoteMonitoringPanel } from "../../../components/remote-monitoring-panel";
 import { SchedulingPanel } from "../../../components/scheduling-panel";
 import { SdohScreeningPanel } from "../../../components/sdoh-screening-panel";
 import { getAgentforceConfig } from "../../../lib/agentforce";
@@ -74,6 +75,8 @@ export default function IntakeDemoPage() {
       <PatientEducationPanel />
 
       <CareGapPanel />
+
+      <RemoteMonitoringPanel />
 
       <section className="demo-grid">
         <article className="card">

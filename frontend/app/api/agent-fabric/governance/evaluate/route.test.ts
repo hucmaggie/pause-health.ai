@@ -117,6 +117,29 @@ describe("POST /api/agent-fabric/governance/evaluate", () => {
     expect(ids).toContain("policy.education.consent-before-outreach");
   });
 
+  it("passes the remote-monitoring signals through to the evaluator", async () => {
+    // Pins that the new remote-patient-monitoring GovernanceTask fields reach
+    // evaluateGovernance across the HTTP boundary.
+    const res = await POST(
+      post({
+        agentId: "remote-monitoring-agent",
+        task: {
+          readingsTraceToSource: false,
+          escalationRoutedToHuman: false,
+          monitoringHasConsent: false
+        }
+      })
+    );
+    const json = await res.json();
+    expect(json.result.decision).toBe("block");
+    const ids = json.result.blockingViolations.map(
+      (v: { policyId: string }) => v.policyId
+    );
+    expect(ids).toContain("policy.rpm.reading-source-integrity");
+    expect(ids).toContain("policy.rpm.no-autonomous-escalation");
+    expect(ids).toContain("policy.rpm.consent-to-monitor");
+  });
+
   it("an unknown agent has no applicable policies and allows", async () => {
     const res = await POST(post({ agentId: "ghost-agent", task: {} }));
     const json = await res.json();

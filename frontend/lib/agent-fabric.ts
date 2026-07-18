@@ -626,6 +626,38 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Anthropic + Pause-Health.ai",
     governanceTier: "patient-engagement"
+  },
+  {
+    id: "remote-monitoring-agent",
+    name: "Remote Patient Monitoring & Symptom-Trend Tracking Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health" /
+    // Health Cloud remote-patient-monitoring analog: POST
+    // /api/agents/remote-monitoring/tasks (card at /.well-known/agent.json).
+    // It ingests LONGITUDINAL (time-series) self-reported or wearable/device
+    // readings for a menopause/midlife patient, DETERMINISTICALLY classifies
+    // each metric's trend over the reading window (improving / stable /
+    // worsening) by comparing a recent window against a baseline window, applies
+    // (synthetic) red-flag thresholds, and ROUTES worsening / red-flag trends to
+    // a human clinician for review — it NEVER takes an autonomous clinical
+    // action. It complements Care Gap Closure (preventive-measure gaps),
+    // Medication Adherence (refill nudges), Patient Education (coaching), and
+    // Clinical Summary (after-visit narrative): this one is longitudinal
+    // monitoring + trend detection + clinician-routed escalation. The monitored
+    // metrics + thresholds are ILLUSTRATIVE synthetics, NOT a certified RPM device.
+    endpoint: "/api/agents/remote-monitoring",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Ingests longitudinal (time-series) menopause/midlife symptom + vital readings — self-reported or from wearables/devices (hot-flash frequency, sleep duration, mood score, resting heart rate, weight) — the 'Agentforce for Health' remote-patient-monitoring analog",
+      "Trend detection is DETERMINISTIC (a pure function of the readings' own timestamps + values against per-metric bands; no randomness, no clock) — it compares a recent window against a baseline window to classify each metric improving / stable / worsening, and applies a (synthetic) red-flag threshold to the most-recent value",
+      "Every reading must trace to a device/self-report source AND a defined monitored metric — a fabricated / off-source reading is blocked at the Agent Fabric governance boundary (policy.rpm.reading-source-integrity)",
+      "Worsening / red-flag trends are ROUTED to a human clinician for review (routedTo:'clinician-review'), each citing the metric + rule that triggered it — the agent NEVER takes an autonomous clinical action (policy.rpm.no-autonomous-escalation), and longitudinal monitoring is consent-gated (policy.rpm.consent-to-monitor)",
+      "Runs against ILLUSTRATIVE synthetic metrics + thresholds — clearly labeled; NOT a certified remote-monitoring device"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -675,7 +707,8 @@ const POLICIES: PolicyRecord[] = [
       "prior-authorization-agent",
       "clinical-summary-agent",
       "sdoh-screening-agent",
-      "patient-education-agent"
+      "patient-education-agent",
+      "remote-monitoring-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -794,6 +827,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Medication Adherence Agent may draft a refill/adherence nudge but may NOT autonomously submit or order a medication refill. Any refill action that lacks a human-in-the-loop approval is rejected before it can be committed — the agent only ever nudges a human to refill; a clinician/pharmacist orders the refill. (In the prototype the medication catalog + days-supply/refill intervals are clearly-labeled illustrative synthetics, not a certified pharmacy / e-prescribing system; in production this is the customer's governed Health Cloud MedicationRequest / e-prescribing workflow.)",
     appliesTo: ["medication-adherence-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.rpm.reading-source-integrity",
+    name: "Monitoring readings must trace to a device/self-report source",
+    description:
+      "Every longitudinal reading the Remote Patient Monitoring Agent ingests must trace to a recognized device/self-report source (self-report, wearable, device, clinic-device) AND a defined monitored metric — it may not act on a fabricated / off-source reading. A reading that doesn't trace to a source (or references an off-catalog metric) is rejected before any trend is detected or escalated, so the agent can never trend or escalate on invented data. (In the prototype the monitored metrics + thresholds are clearly-labeled illustrative synthetics, not a certified remote-monitoring device; in production this is the customer's governed device-integration / RPM feed.)",
+    appliesTo: ["remote-monitoring-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.rpm.no-autonomous-escalation",
+    name: "No autonomous clinical escalation/action — route to a clinician",
+    description:
+      "The Remote Patient Monitoring Agent may detect a worsening / red-flag trend but may NOT act on it autonomously — every escalation must be routed to a human clinician for review (routedTo:'clinician-review'). Any escalation asserted as an autonomous clinical action (auto-ordering, auto-medication, auto-titration) is rejected before it can leave the fabric — the agent only ever monitors and routes; a clinician reviews and acts. Mirrors the Medication Adherence Agent's no-autonomous-refill posture.",
+    appliesTo: ["remote-monitoring-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.rpm.consent-to-monitor",
+    name: "Patient consent required before longitudinal monitoring",
+    description:
+      "The Remote Patient Monitoring Agent may ingest longitudinal readings and route trend-based escalations only for a patient who has consented to be monitored — monitoring / trend outreach without the patient's monitoring consent is rejected before any assessment is acted on, and the agent never monitors a patient who hasn't opted in. Every monitoring run is consent-gated. Mirrors the SDOH Screening Agent's consent-before-referral policy.",
+    appliesTo: ["remote-monitoring-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -2881,6 +2941,121 @@ function store(): FabricStore {
         coachingOutreachHasConsent: true,
         humanApprovalRequired: true,
         sent: false
+      }
+    }
+  );
+
+  // A trace showing the Remote Patient Monitoring & Symptom-Trend Tracking Agent
+  // ingesting a longitudinal reading set (hot-flash frequency, sleep, mood,
+  // resting HR — self-reported + wearable, every reading tracing to a source),
+  // DETERMINISTICALLY detecting per-metric trends over the reading window, and
+  // ROUTING the worsening trends (hot-flash frequency climbing, sleep declining)
+  // to a human clinician for review — never taking an autonomous clinical action.
+  // Trend detection is a pure function of the readings' own timestamps + values
+  // (no randomness, no clock). It touches the patient's clinical/monitoring
+  // context, so every span sets phiAccessed:true. The monitored metrics +
+  // thresholds are ILLUSTRATIVE synthetics, not a certified remote-monitoring
+  // device. Seed data; production populates the ring buffer from the persistent
+  // log store.
+  const rm0 = Date.now() - 1000 * 60 * 2;
+  const rpmTaskId = "task-seed-remote-monitoring-001";
+  const rpmName = "Remote Patient Monitoring & Symptom-Trend Tracking Agent";
+  s.traces.push(
+    {
+      id: "span-rpm-001",
+      taskId: rpmTaskId,
+      agentId: "remote-monitoring-agent",
+      agentName: rpmName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(rm0).toISOString(),
+      finishedAt: new Date(rm0 + 60).toISOString(),
+      durationMs: 60,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-rpm-002",
+      taskId: rpmTaskId,
+      parentSpanId: "span-rpm-001",
+      agentId: "remote-monitoring-agent",
+      agentName: rpmName,
+      operation: "rpm.ingest",
+      protocol: "a2a",
+      startedAt: new Date(rm0 + 60).toISOString(),
+      finishedAt: new Date(rm0 + 90).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        readingsIngested: 16,
+        metrics: [
+          "metric.hot-flash-frequency",
+          "metric.sleep-hours",
+          "metric.mood-score",
+          "metric.resting-heart-rate"
+        ],
+        sources: ["self-report", "wearable"],
+        // The honesty invariants: every reading traces to a source, and
+        // monitoring is consent-gated.
+        readingsTraceToSource: true,
+        monitoringHasConsent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-rpm-003",
+      taskId: rpmTaskId,
+      parentSpanId: "span-rpm-002",
+      agentId: "remote-monitoring-agent",
+      agentName: rpmName,
+      operation: "rpm.detect-trends",
+      protocol: "a2a",
+      startedAt: new Date(rm0 + 90).toISOString(),
+      finishedAt: new Date(rm0 + 120).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        metricsMonitored: 4,
+        trends: {
+          "metric.hot-flash-frequency": "worsening",
+          "metric.sleep-hours": "worsening",
+          "metric.mood-score": "improving",
+          "metric.resting-heart-rate": "stable"
+        },
+        escalationsRaised: 2,
+        overallStatus: "escalate",
+        // The honesty invariant: escalations are routed to a human clinician.
+        escalationRoutedToHuman: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-rpm-004",
+      taskId: rpmTaskId,
+      parentSpanId: "span-rpm-003",
+      agentId: "remote-monitoring-agent",
+      agentName: rpmName,
+      operation: "rpm.route-to-clinician",
+      protocol: "a2a",
+      startedAt: new Date(rm0 + 120).toISOString(),
+      finishedAt: new Date(rm0 + 300).toISOString(),
+      durationMs: 180,
+      status: "ok",
+      attributes: {
+        escalationsRouted: 2,
+        metrics: ["metric.hot-flash-frequency", "metric.sleep-hours"],
+        triggeringRules: ["rule.worsening-trend"],
+        routedTo: "clinician-review",
+        // The honesty invariant: never an autonomous clinical action.
+        autonomousAction: false,
+        escalationRoutedToHuman: true,
+        phiAccessed: true,
+        synthetic: true
       }
     }
   );

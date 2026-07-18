@@ -418,13 +418,14 @@ describe("Validated-instrument assessment · Assessment agent", () => {
 });
 
 describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
-  it("brings the registry to twenty-four agents", () => {
+  it("brings the registry to twenty-five agents", () => {
     // Sanity count guard: the funnel + intake + assessment + benefits +
     // scheduling + care-gap-closure + care-plan + medication-adherence +
     // referral-management + member-service + prior-authorization +
-    // clinical-summary + sdoh-screening + patient-education agents, the Care
-    // Router, the platform substrate, and the commercial plane.
-    expect(listAgents()).toHaveLength(24);
+    // clinical-summary + sdoh-screening + patient-education +
+    // remote-monitoring agents, the Care Router, the platform substrate, and
+    // the commercial plane.
+    expect(listAgents()).toHaveLength(25);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -1511,6 +1512,125 @@ describe("Patient Education & Health Coaching · evidence-sourced education + li
   });
 });
 
+describe("Remote Patient Monitoring · longitudinal symptom-trend tracking + clinician-routed escalation agent", () => {
+  it("registers as a prototype Agentforce agent on the care-coordination tier", () => {
+    const r = getAgent("remote-monitoring-agent");
+    expect(r).toBeDefined();
+    expect(r!.kind).toBe("agentforce");
+    expect(r!.protocol).toBe("a2a");
+    expect(r!.provider).toBe("Salesforce");
+    expect(r!.status).toBe("prototype");
+    // Reuses the care-coordination tier (patient-care plane) — monitoring +
+    // coordinating a clinician escalation, not a new clinical decision.
+    expect(r!.governanceTier).toBe("care-coordination");
+    expect(planeForTier(r!.governanceTier)).toBe("patient-care");
+    expect(r!.endpoint).toBe("/api/agents/remote-monitoring");
+  });
+
+  it("carries the three RPM blocks plus the reused HIPAA-audit policy (patient-plane)", () => {
+    const ids = getPoliciesForAgent("remote-monitoring-agent").map((p) => p.id);
+    expect(ids).toContain("policy.rpm.reading-source-integrity");
+    expect(ids).toContain("policy.rpm.no-autonomous-escalation");
+    expect(ids).toContain("policy.rpm.consent-to-monitor");
+    // It touches patient monitoring/clinical context, so it IS HIPAA-audited.
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT a live-Claude agent (no model allow-list) and NOT commercial.
+    expect(ids).not.toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("all three RPM policies are enforced blocks", () => {
+    for (const id of [
+      "policy.rpm.reading-source-integrity",
+      "policy.rpm.no-autonomous-escalation",
+      "policy.rpm.consent-to-monitor"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement, id).toBe("block");
+      expect(policy!.status, id).toBe("enforced");
+    }
+  });
+
+  it("blocks a fabricated reading, an autonomous escalation, and a no-consent run; allows a well-formed task", () => {
+    // A reading that doesn't trace to a source / catalog metric.
+    const fabricated = evaluateGovernance({
+      agentId: "remote-monitoring-agent",
+      task: {
+        readingsTraceToSource: false,
+        escalationRoutedToHuman: true,
+        monitoringHasConsent: true
+      }
+    });
+    expect(fabricated.decision).toBe("block");
+    expect(fabricated.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.rpm.reading-source-integrity"
+    );
+
+    // An escalation acted on autonomously instead of routed to a clinician.
+    const autonomous = evaluateGovernance({
+      agentId: "remote-monitoring-agent",
+      task: {
+        readingsTraceToSource: true,
+        escalationRoutedToHuman: false,
+        monitoringHasConsent: true
+      }
+    });
+    expect(autonomous.decision).toBe("block");
+    expect(autonomous.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.rpm.no-autonomous-escalation"
+    );
+
+    // Monitoring without the patient's consent.
+    const noConsent = evaluateGovernance({
+      agentId: "remote-monitoring-agent",
+      task: {
+        readingsTraceToSource: true,
+        escalationRoutedToHuman: true,
+        monitoringHasConsent: false
+      }
+    });
+    expect(noConsent.decision).toBe("block");
+    expect(noConsent.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.rpm.consent-to-monitor"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "remote-monitoring-agent",
+      task: {
+        readingsTraceToSource: true,
+        escalationRoutedToHuman: true,
+        monitoringHasConsent: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "remote-monitoring-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds an ingest→detect-trends→route-to-clinician trace, every span phiAccessed", () => {
+    const spans = listTraces({ taskId: "task-seed-remote-monitoring-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(3);
+    const ingest = spans.find((s) => s.operation === "rpm.ingest");
+    expect(ingest?.agentId).toBe("remote-monitoring-agent");
+    expect(ingest?.attributes?.readingsTraceToSource).toBe(true);
+    expect(ingest?.attributes?.monitoringHasConsent).toBe(true);
+    const detect = spans.find((s) => s.operation === "rpm.detect-trends");
+    expect(detect?.attributes?.escalationRoutedToHuman).toBe(true);
+    expect(detect?.attributes?.overallStatus).toBe("escalate");
+    const route = spans.find((s) => s.operation === "rpm.route-to-clinician");
+    expect(route?.attributes?.routedTo).toBe("clinician-review");
+    expect(route?.attributes?.autonomousAction).toBe(false);
+    // The whole run touches the patient's monitoring/clinical context.
+    for (const s of spans) {
+      expect(s.attributes?.phiAccessed, s.operation).toBe(true);
+    }
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -1638,7 +1758,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-member-service-001",
       "task-seed-prior-authorization-001",
       "task-seed-clinical-summary-001",
-      "task-seed-patient-education-001"
+      "task-seed-patient-education-001",
+      "task-seed-remote-monitoring-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });
