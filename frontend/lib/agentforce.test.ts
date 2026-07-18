@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   AGENTFORCE_READY_TIMEOUT_MS,
+  firstNameFromInput,
   getAgentforceConfig,
+  intakeCompletionMessage,
+  intakeRedFlagMessage,
   isAgentforceConfigured,
-  sanitizePrechatFields
+  sanitizePrechatFields,
+  withNameAcknowledgment
 } from "./agentforce";
 
 describe("sanitizePrechatFields", () => {
@@ -96,6 +100,87 @@ describe("getAgentforceConfig", () => {
     );
     expect(cfg!.language).toBe("en_US");
     expect(isAgentforceConfigured()).toBe(true);
+  });
+});
+
+describe("firstNameFromInput", () => {
+  it("returns null for undefined, empty, or whitespace-only input", () => {
+    expect(firstNameFromInput(undefined)).toBeNull();
+    expect(firstNameFromInput("")).toBeNull();
+    expect(firstNameFromInput("   ")).toBeNull();
+  });
+
+  it("returns null for punctuation-only input", () => {
+    expect(firstNameFromInput("!!!")).toBeNull();
+    expect(firstNameFromInput(" ... ")).toBeNull();
+  });
+
+  it("title-cases a plainly lowercase name", () => {
+    expect(firstNameFromInput("maggie")).toBe("Maggie");
+  });
+
+  it("title-cases a plainly UPPERCASE name", () => {
+    expect(firstNameFromInput("MAGGIE")).toBe("Maggie");
+  });
+
+  it("keeps only the first whitespace-delimited token", () => {
+    expect(firstNameFromInput("Maggie Hu")).toBe("Maggie");
+  });
+
+  it("preserves an already-capitalized (mixed-case) name", () => {
+    expect(firstNameFromInput("Maggie")).toBe("Maggie");
+    expect(firstNameFromInput("McCabe")).toBe("McCabe");
+    expect(firstNameFromInput("O'Neil")).toBe("O'Neil");
+  });
+
+  it("handles initials gracefully by stripping surrounding punctuation", () => {
+    expect(firstNameFromInput("M.")).toBe("M");
+    expect(firstNameFromInput("maggie,")).toBe("Maggie");
+  });
+
+  it("trims leading/trailing whitespace before tokenizing", () => {
+    expect(firstNameFromInput("   maggie   ")).toBe("Maggie");
+    expect(firstNameFromInput("\tMaggie Hu\n")).toBe("Maggie");
+  });
+});
+
+describe("withNameAcknowledgment", () => {
+  it("prepends a warm acknowledgment when a name is present", () => {
+    expect(withNameAcknowledgment("What's your ZIP?", "Maggie")).toBe(
+      "Thanks, Maggie! What's your ZIP?"
+    );
+  });
+
+  it("returns the prompt unchanged when no name is available", () => {
+    expect(withNameAcknowledgment("What's your ZIP?", null)).toBe(
+      "What's your ZIP?"
+    );
+  });
+});
+
+describe("intakeCompletionMessage", () => {
+  it("addresses the patient by name when one is captured", () => {
+    expect(intakeCompletionMessage("Maggie")).toContain("Thanks, Maggie.");
+  });
+
+  it("falls back to the name-less copy when null", () => {
+    const msg = intakeCompletionMessage(null);
+    expect(msg.startsWith("Thanks. ")).toBe(true);
+    expect(msg).not.toContain("null");
+  });
+});
+
+describe("intakeRedFlagMessage", () => {
+  it("addresses the patient by name when one is captured", () => {
+    expect(intakeRedFlagMessage("Maggie")).toContain(
+      "Thank you for telling me, Maggie."
+    );
+  });
+
+  it("falls back to the name-less copy when null", () => {
+    const msg = intakeRedFlagMessage(null);
+    expect(msg.startsWith("Thank you for telling me. ")).toBe(true);
+    expect(msg).not.toContain("null");
   });
 });
 

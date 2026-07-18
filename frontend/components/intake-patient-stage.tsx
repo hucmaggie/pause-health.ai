@@ -238,20 +238,29 @@ function IntakePatientStageInner({ agentforceConfig }: Props) {
         // Re-keying on personaId forces a clean SDK remount, so each
         // patient switch starts a fresh conversation thread.
         //
-        // We hand the patient ZIP to the agent in-band via hidden prechat
-        // so the Find-a-Provider action geo-narrows without asking. This
-        // works again as of the V2 SDK fix (2026-06-14): prechatAPI is no
-        // longer the empty no-op Proxy — it validates field names against
-        // the registered list and transmits valid ones. Patient_Zip must be
-        // registered as a prechat field + mapped to the action's zip input
-        // (docs/AGENTFORCE_PROVIDER_ACTION_RUNBOOK.md, "Auto-passing the
-        // ZIP"); until then the SDK drops it and the agent simply asks. The
-        // rest of the dossier still renders visibly via PreBriefPanel above.
+        // We hand the patient's name, ZIP, and insurance to the agent in-band
+        // via hidden prechat so it can greet by name and the Find-a-Provider
+        // action geo-narrows without asking. This works again as of the V2 SDK
+        // fix (2026-06-14): prechatAPI is no longer the empty no-op Proxy — it
+        // validates field names against the registered list and transmits valid
+        // ones. The Salesforce-standard _firstName/_lastName fields are accepted
+        // automatically (no org registration); Patient_Zip/Patient_Insurance
+        // must be registered as prechat fields + mapped to the action inputs
+        // (docs/AGENTFORCE_PROVIDER_ACTION_RUNBOOK.md, "Auto-passing the ZIP" and
+        // "Greeting the patient by name"); until then the SDK drops the
+        // unregistered ones and the agent simply asks. The rest of the dossier
+        // still renders visibly via PreBriefPanel above.
         key={selectedId}
         config={agentforceConfig}
         prechatFields={(() => {
           if (!selectedPersona) return null;
           const fields: Record<string, string> = {};
+          if (selectedPersona.firstName) {
+            fields._firstName = selectedPersona.firstName;
+          }
+          if (selectedPersona.lastName) {
+            fields._lastName = selectedPersona.lastName;
+          }
           if (selectedPersona.patientZip) {
             fields.Patient_Zip = selectedPersona.patientZip;
           }

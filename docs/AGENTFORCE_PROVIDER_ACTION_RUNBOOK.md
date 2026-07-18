@@ -486,6 +486,41 @@ The Care Router and the AgentforceFallback fallback flow already use
 `patientInsurance` end-to-end today; the live agent inherits the same
 behavior the moment steps 5–6 + the prechat registration are done.
 
+## Greeting the patient by name
+
+The patient's name is now handed to the live agent in-band. `intake-patient-stage.tsx`
+forwards `_firstName` / `_lastName` (from the selected persona) as hidden prechat
+fields alongside `Patient_Zip` / `Patient_Insurance`. Unlike the `Pause_*__c`
+dossier fields, `_firstName` / `_lastName` are **Salesforce-standard** prechat
+fields — the SDK accepts them automatically, so there is **no MessagingSession
+field, permission set, routing-Flow variable, channel customParameter, or
+prechat-form registration to add.** They land as the messaging end user's
+identity with no org-side plumbing.
+
+What that in-band handoff does *not* do by itself is make the agent open the
+conversation with "Hi Anika". Passing `_firstName` populates the end user's
+identity, but the agent's welcome message is static copy until you tell it to
+reference that identity. To actually greet by name (org-side Agent Builder, not
+in repo):
+
+1. In **Agent Builder**, open the agent and edit its **welcome message** (or the
+   opening reasoning instruction) to reference the messaging end user's first
+   name — e.g.
+
+   > Greet the patient by their first name (the messaging end user's first name)
+   > if it is available; otherwise open warmly without a name. Then acknowledge
+   > what you already know about their menopause-care context rather than asking
+   > for their identity again.
+
+2. **Deactivate → Save → Activate** the agent so the new opening copy takes
+   effect (welcome-message changes don't apply to an already-active version
+   without the reactivate cycle).
+
+Until that org-side edit is made, the live agent still opens with its generic
+welcome copy even though `_firstName` is being handed in-band — the scripted
+`AgentforceFallback` already greets by the entered name today (see
+`firstNameFromInput` in `frontend/lib/agentforce.ts`).
+
 ## When the live MuleSoft API replaces the public endpoint
 
 Repoint the Named Credential `endpoint` at the gateway/CloudHub base and add the

@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { AGENTFORCE_COPY } from "../lib/agentforce";
+import {
+  AGENTFORCE_COPY,
+  firstNameFromInput,
+  intakeCompletionMessage,
+  intakeRedFlagMessage,
+  withNameAcknowledgment
+} from "../lib/agentforce";
 import {
   RecommendedProviders,
   type RecommendedProviderEntry
@@ -290,6 +296,13 @@ export function AgentforceFallback() {
 
       const labeled = summarizeField(step, rawAnswer);
 
+      // The name captured at step 0 personalizes later turns. On the name step
+      // itself it comes from this answer; afterwards from the stored value.
+      const patientName =
+        step.id === "preferredName"
+          ? firstNameFromInput(rawAnswer)
+          : firstNameFromInput(captured.preferredName);
+
       setCaptured((prev) => ({ ...prev, [step.id]: rawAnswer }));
       setMessages((prev) => {
         const patientTurn: AgentMessage = {
@@ -304,7 +317,12 @@ export function AgentforceFallback() {
               {
                 id: generateId("m"),
                 role: "agent",
-                text: nextStep.prompt
+                // Only acknowledge by name on the turn right after the name
+                // step; other transitions keep their prompt as-is.
+                text:
+                  step.id === "preferredName"
+                    ? withNameAcknowledgment(nextStep.prompt, patientName)
+                    : nextStep.prompt
               }
             ]
           : [
@@ -313,8 +331,8 @@ export function AgentforceFallback() {
                 role: "agent",
                 text:
                   rawAnswer === "yes"
-                    ? "Thank you for telling me. This intake will be flagged for the urgent gynecology pathway. Please call 911 if you are in immediate danger."
-                    : "Thanks. I've drafted your intake on the right. Your Pause-Health.ai care team will review and reach out within one business day."
+                    ? intakeRedFlagMessage(patientName)
+                    : intakeCompletionMessage(patientName)
               }
             ];
 
@@ -325,7 +343,7 @@ export function AgentforceFallback() {
       setTextDraft("");
       setErrorMessage(null);
     },
-    [stepIndex]
+    [stepIndex, captured.preferredName]
   );
 
   const onSubmitFreeText = useCallback(

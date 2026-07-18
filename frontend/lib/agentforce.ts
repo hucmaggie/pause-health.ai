@@ -115,6 +115,71 @@ export function sanitizePrechatFields(
 }
 
 /**
+ * Derive a display-safe first name from a patient's free-text answer to the
+ * intake assistant's opening "what name should I use for you?" question.
+ *
+ * Conservative by design — the scripted assistant only uses the result to
+ * address the patient more warmly, so we never want to invent or mangle a
+ * name. Behavior: trims, takes the first whitespace-delimited token, strips
+ * surrounding punctuation (so `"Maggie,"` or `M.` normalize), then Title-cases
+ * a token that was typed plainly all-lowercase or all-UPPERCASE. A token that
+ * is already mixed-case (e.g. `McCabe`, `O'Neil`) is preserved as typed.
+ * Returns null only for empty / whitespace / punctuation-only input, in which
+ * case callers fall back to the name-less copy.
+ */
+export function firstNameFromInput(raw: string | undefined): string | null {
+  if (typeof raw !== "string") return null;
+  const firstToken = raw.trim().split(/\s+/)[0] ?? "";
+  // Strip leading/trailing punctuation while preserving interior characters
+  // (hyphens, apostrophes) so names like "Mary-Jane" survive intact.
+  const token = firstToken
+    .replace(/^[^\p{L}\p{N}]+/u, "")
+    .replace(/[^\p{L}\p{N}]+$/u, "");
+  if (token.length === 0) return null;
+  const isAllAlpha = /^\p{L}+$/u.test(token);
+  const isPlainCase =
+    token === token.toLowerCase() || token === token.toUpperCase();
+  if (isAllAlpha && isPlainCase) {
+    return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
+  }
+  return token;
+}
+
+/**
+ * Prepend a brief, warm acknowledgment to the agent turn that immediately
+ * follows the name step (e.g. "Thanks, Maggie! " before the ZIP prompt). When
+ * no usable name was captured, returns the prompt unchanged so we never inject
+ * an empty or awkward token.
+ */
+export function withNameAcknowledgment(
+  prompt: string,
+  name: string | null
+): string {
+  return name ? `Thanks, ${name}! ${prompt}` : prompt;
+}
+
+/**
+ * Closing confirmation shown once the scripted intake completes without a red
+ * flag. Addresses the patient by name when one was captured, otherwise falls
+ * back to the original name-less copy.
+ */
+export function intakeCompletionMessage(name: string | null): string {
+  return name
+    ? `Thanks, ${name}. I've drafted your intake on the right. Your Pause-Health.ai care team will review and reach out within one business day.`
+    : "Thanks. I've drafted your intake on the right. Your Pause-Health.ai care team will review and reach out within one business day.";
+}
+
+/**
+ * Closing message shown when the patient reports a red-flag symptom on the
+ * final safety check. Personalized like intakeCompletionMessage.
+ */
+export function intakeRedFlagMessage(name: string | null): string {
+  return name
+    ? `Thank you for telling me, ${name}. This intake will be flagged for the urgent gynecology pathway. Please call 911 if you are in immediate danger.`
+    : "Thank you for telling me. This intake will be flagged for the urgent gynecology pathway. Please call 911 if you are in immediate danger.";
+}
+
+/**
  * How long to wait after init() before warning the user that the launcher
  * hasn't appeared. The most common production cause is a deployment that
  * hasn't been Published, or a host domain missing from the Embedded Service
