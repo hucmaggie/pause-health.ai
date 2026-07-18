@@ -140,6 +140,29 @@ describe("POST /api/agent-fabric/governance/evaluate", () => {
     expect(ids).toContain("policy.rpm.consent-to-monitor");
   });
 
+  it("passes the population-health signals through to the evaluator", async () => {
+    // Pins that the new population-health / risk-stratification GovernanceTask
+    // fields reach evaluateGovernance across the HTTP boundary.
+    const res = await POST(
+      post({
+        agentId: "population-health-agent",
+        task: {
+          riskScoreTracesToFactors: false,
+          excludesProtectedAttributes: false,
+          tierReviewedByHuman: false
+        }
+      })
+    );
+    const json = await res.json();
+    expect(json.result.decision).toBe("block");
+    const ids = json.result.blockingViolations.map(
+      (v: { policyId: string }) => v.policyId
+    );
+    expect(ids).toContain("policy.pophealth.transparent-risk-model");
+    expect(ids).toContain("policy.pophealth.no-protected-class-factors");
+    expect(ids).toContain("policy.pophealth.no-autonomous-care-decision");
+  });
+
   it("an unknown agent has no applicable policies and allows", async () => {
     const res = await POST(post({ agentId: "ghost-agent", task: {} }));
     const json = await res.json();

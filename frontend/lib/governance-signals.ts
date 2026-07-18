@@ -70,6 +70,10 @@ export type GovernanceTask = {
   readingsTraceToSource?: boolean;
   escalationRoutedToHuman?: boolean;
   monitoringHasConsent?: boolean;
+  // Population health & risk stratification (panel/cohort-level triage)
+  riskScoreTracesToFactors?: boolean;
+  excludesProtectedAttributes?: boolean;
+  tierReviewedByHuman?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -343,6 +347,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Monitors / reaches out without the patient's monitoring consent",
     reason:
       "Attempted longitudinal monitoring / trend outreach without the patient's consent to be monitored; remote monitoring is consent-gated — the agent may only monitor a patient who has consented"
+  },
+  {
+    policyId: "policy.pophealth.transparent-risk-model",
+    signal: "riskScoreTracesToFactors",
+    violatingValue: false,
+    violationHint: "A patient's risk tier doesn't trace to the documented risk-factor spec",
+    reason:
+      "A patient's risk tier did not trace to the documented risk-factor spec (an opaque / off-spec / black-box score, or a tier that doesn't follow from the factors); every patient's tier must be explainable by citing the defined risk factors — the agent may not stratify on an opaque score"
+  },
+  {
+    policyId: "policy.pophealth.no-protected-class-factors",
+    signal: "excludesProtectedAttributes",
+    violatingValue: false,
+    violationHint: "The risk model uses a protected-class attribute as a scoring factor",
+    reason:
+      "The risk model used a protected-class attribute (race, ethnicity, gender identity, religion, national origin, disability status, sexual orientation, marital status) as a scoring factor; the risk model may score only on permitted clinical / care-management factors — a fairness / responsible-AI requirement"
+  },
+  {
+    policyId: "policy.pophealth.no-autonomous-care-decision",
+    signal: "tierReviewedByHuman",
+    violatingValue: false,
+    violationHint: "A risk tier triggers an autonomous care action instead of human review",
+    reason:
+      "A risk tier triggered an autonomous care action instead of being routed for human / care-manager review; a risk tier is a prioritization signal only — every tier→action requires human review (routedTo:'care-manager-review'), the agent may never take an autonomous care decision"
   },
   {
     policyId: "policy.referral.clinician-cosign",

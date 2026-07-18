@@ -418,14 +418,14 @@ describe("Validated-instrument assessment · Assessment agent", () => {
 });
 
 describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
-  it("brings the registry to twenty-five agents", () => {
+  it("brings the registry to twenty-six agents", () => {
     // Sanity count guard: the funnel + intake + assessment + benefits +
     // scheduling + care-gap-closure + care-plan + medication-adherence +
     // referral-management + member-service + prior-authorization +
     // clinical-summary + sdoh-screening + patient-education +
-    // remote-monitoring agents, the Care Router, the platform substrate, and
-    // the commercial plane.
-    expect(listAgents()).toHaveLength(25);
+    // remote-monitoring + population-health agents, the Care Router, the
+    // platform substrate, and the commercial plane.
+    expect(listAgents()).toHaveLength(26);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -1631,6 +1631,125 @@ describe("Remote Patient Monitoring · longitudinal symptom-trend tracking + cli
   });
 });
 
+describe("Population Health · panel-level risk-stratification + prioritized-worklist agent", () => {
+  it("registers as a prototype Agentforce agent on the care-coordination tier", () => {
+    const p = getAgent("population-health-agent");
+    expect(p).toBeDefined();
+    expect(p!.kind).toBe("agentforce");
+    expect(p!.protocol).toBe("a2a");
+    expect(p!.provider).toBe("Salesforce");
+    expect(p!.status).toBe("prototype");
+    // Reuses the care-coordination tier (patient-care plane) — population health /
+    // care management fits it; it does NOT invent a new tier.
+    expect(p!.governanceTier).toBe("care-coordination");
+    expect(planeForTier(p!.governanceTier)).toBe("patient-care");
+    expect(p!.endpoint).toBe("/api/agents/population-health");
+  });
+
+  it("carries the three population-health blocks plus the reused HIPAA-audit policy (patient-plane)", () => {
+    const ids = getPoliciesForAgent("population-health-agent").map((p) => p.id);
+    expect(ids).toContain("policy.pophealth.transparent-risk-model");
+    expect(ids).toContain("policy.pophealth.no-protected-class-factors");
+    expect(ids).toContain("policy.pophealth.no-autonomous-care-decision");
+    // It reasons over panel-level PHI, so it IS HIPAA-audited.
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT a live-Claude agent (no model allow-list) and NOT commercial.
+    expect(ids).not.toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("all three population-health policies are enforced blocks", () => {
+    for (const id of [
+      "policy.pophealth.transparent-risk-model",
+      "policy.pophealth.no-protected-class-factors",
+      "policy.pophealth.no-autonomous-care-decision"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement, id).toBe("block");
+      expect(policy!.status, id).toBe("enforced");
+    }
+  });
+
+  it("blocks an opaque score, a protected-class factor, and an autonomous decision; allows a well-formed task", () => {
+    // A tier that doesn't trace to the documented risk-factor spec.
+    const opaque = evaluateGovernance({
+      agentId: "population-health-agent",
+      task: {
+        riskScoreTracesToFactors: false,
+        excludesProtectedAttributes: true,
+        tierReviewedByHuman: true
+      }
+    });
+    expect(opaque.decision).toBe("block");
+    expect(opaque.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.pophealth.transparent-risk-model"
+    );
+
+    // A protected-class attribute used as a scoring factor.
+    const protectedClass = evaluateGovernance({
+      agentId: "population-health-agent",
+      task: {
+        riskScoreTracesToFactors: true,
+        excludesProtectedAttributes: false,
+        tierReviewedByHuman: true
+      }
+    });
+    expect(protectedClass.decision).toBe("block");
+    expect(protectedClass.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.pophealth.no-protected-class-factors"
+    );
+
+    // A tier that triggers an autonomous care action instead of human review.
+    const autonomous = evaluateGovernance({
+      agentId: "population-health-agent",
+      task: {
+        riskScoreTracesToFactors: true,
+        excludesProtectedAttributes: true,
+        tierReviewedByHuman: false
+      }
+    });
+    expect(autonomous.decision).toBe("block");
+    expect(autonomous.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.pophealth.no-autonomous-care-decision"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "population-health-agent",
+      task: {
+        riskScoreTracesToFactors: true,
+        excludesProtectedAttributes: true,
+        tierReviewedByHuman: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "population-health-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds an ingest-panel→score→stratify→build-worklist trace, every span phiAccessed", () => {
+    const spans = listTraces({ taskId: "task-seed-population-health-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(4);
+    const ingest = spans.find((s) => s.operation === "pophealth.ingest-panel");
+    expect(ingest?.agentId).toBe("population-health-agent");
+    expect(ingest?.attributes?.excludesProtectedAttributes).toBe(true);
+    const score = spans.find((s) => s.operation === "pophealth.score");
+    expect(score?.attributes?.riskScoreTracesToFactors).toBe(true);
+    const stratify = spans.find((s) => s.operation === "pophealth.stratify");
+    expect(stratify?.attributes?.tierReviewedByHuman).toBe(true);
+    const worklist = spans.find((s) => s.operation === "pophealth.build-worklist");
+    expect(worklist?.attributes?.routedTo).toBe("care-manager-review");
+    expect(worklist?.attributes?.autonomousCareDecision).toBe(false);
+    // The whole run reasons over the panel's clinical/care-management context.
+    for (const s of spans) {
+      expect(s.attributes?.phiAccessed, s.operation).toBe(true);
+    }
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -1759,7 +1878,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-prior-authorization-001",
       "task-seed-clinical-summary-001",
       "task-seed-patient-education-001",
-      "task-seed-remote-monitoring-001"
+      "task-seed-remote-monitoring-001",
+      "task-seed-population-health-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });

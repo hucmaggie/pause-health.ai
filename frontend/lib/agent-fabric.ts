@@ -658,6 +658,39 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "population-health-agent",
+    name: "Population Health & Risk Stratification Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health" / Health
+    // Cloud population-health / risk-stratification analog: POST
+    // /api/agents/population-health/tasks (card at /.well-known/agent.json).
+    // Unlike every other patient-plane agent (which reasons over a SINGLE
+    // patient), this one reasons over a whole PANEL/COHORT at once: it ingests
+    // already-produced per-patient signals (intake severity, validated-assessment
+    // band, detected care gaps, positive SDOH domains, medication-adherence
+    // status, monitored-symptom trend), DETERMINISTICALLY stratifies each patient
+    // into a risk tier (low / rising / high) with a TRANSPARENT additive/weighted
+    // risk model, and emits a prioritized outreach worklist for a human care
+    // manager. It complements Care Gap Closure (single-patient preventive gaps),
+    // Remote Patient Monitoring (single-patient time-series), and Clinical Summary
+    // (single-patient) — this one is population-level prioritization / care-
+    // management triage. The factors + weights + cutoffs are ILLUSTRATIVE
+    // synthetics, NOT a certified risk-stratification model.
+    endpoint: "/api/agents/population-health",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Reasons over a whole PANEL/COHORT of menopause/midlife patients at once (a new granularity) — the 'Agentforce for Health' population-health / risk-stratification analog, distinct from every single-patient agent",
+      "Risk scoring is DETERMINISTIC and TRANSPARENT — a pure, additive/weighted function of a defined set of documented risk factors (intake severity, validated-assessment band, open care gaps, positive SDOH domains, medication non-adherence, worsening monitored trend), each with a weight; the same panel always yields the same tiers + worklist ordering (stable, documented tie-break; no randomness, no clock)",
+      "Every patient's tier is EXPLAINABLE by citing its contributing factors and traces to the documented risk-factor spec — an opaque / off-spec score is blocked at the Agent Fabric governance boundary (policy.pophealth.transparent-risk-model)",
+      "The risk model may NOT score on a protected-class attribute (race, ethnicity, gender identity, religion, etc.) — a fairness / responsible-AI requirement (policy.pophealth.no-protected-class-factors); and a risk tier is a prioritization signal only, never an autonomous care decision — every tier→action requires human / care-manager review (policy.pophealth.no-autonomous-care-decision)",
+      "Runs against ILLUSTRATIVE synthetic risk factors + weights + cutoffs and synthetic/de-identified patient references — clearly labeled; NOT a certified risk-stratification model"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -708,7 +741,8 @@ const POLICIES: PolicyRecord[] = [
       "clinical-summary-agent",
       "sdoh-screening-agent",
       "patient-education-agent",
-      "remote-monitoring-agent"
+      "remote-monitoring-agent",
+      "population-health-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -854,6 +888,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Remote Patient Monitoring Agent may ingest longitudinal readings and route trend-based escalations only for a patient who has consented to be monitored — monitoring / trend outreach without the patient's monitoring consent is rejected before any assessment is acted on, and the agent never monitors a patient who hasn't opted in. Every monitoring run is consent-gated. Mirrors the SDOH Screening Agent's consent-before-referral policy.",
     appliesTo: ["remote-monitoring-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.pophealth.transparent-risk-model",
+    name: "Risk stratification must trace to a transparent, documented risk model",
+    description:
+      "Every patient's risk tier the Population Health & Risk Stratification Agent assigns must trace to the documented risk-factor spec — a transparent, additive/weighted function of a defined set of risk factors, each explainable by citing its contributing factors. It may not stratify on an opaque / black-box / off-spec score. A tier that doesn't trace to the defined factors (an off-catalog factor, a score that doesn't sum from its factors, or a tier that doesn't follow from the cutoffs) is rejected before any worklist is acted on, so the agent can never prioritize a patient on an unexplainable score. (In the prototype the risk factors + weights + cutoffs are clearly-labeled illustrative synthetics, not a certified risk-adjustment model; in production this is the customer's governed, validated risk-stratification model.)",
+    appliesTo: ["population-health-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.pophealth.no-protected-class-factors",
+    name: "No protected-class attributes as risk factors (fairness / responsible-AI)",
+    description:
+      "The Population Health & Risk Stratification Agent's risk model may NOT use a protected-class attribute (race, ethnicity, gender identity, religion, national origin, disability status, sexual orientation, marital status) as a scoring factor — a fairness / responsible-AI requirement. A model that asserts a protected-class attribute was used as a scoring factor is rejected before any stratification is acted on; the model may score only on permitted clinical / care-management factors. This makes the risk stratification defensible against discriminatory-scoring concerns.",
+    appliesTo: ["population-health-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.pophealth.no-autonomous-care-decision",
+    name: "No autonomous care decision — a tier requires human review",
+    description:
+      "The Population Health & Risk Stratification Agent may assign a risk tier but may NOT let that tier autonomously trigger a care action — a risk tier is a prioritization signal only. Any tier→action asserted as autonomous (auto-enrollment in a program, an auto-committed outreach or intervention) is rejected before it can leave the fabric; every tier→action requires human / care-manager review (routedTo:'care-manager-review'). The agent only ever produces a prioritized worklist for a human; a care manager reviews and acts. Mirrors the Remote Patient Monitoring Agent's no-autonomous-escalation posture.",
+    appliesTo: ["population-health-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -3054,6 +3115,128 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous clinical action.
         autonomousAction: false,
         escalationRoutedToHuman: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+
+  // A trace showing the Population Health & Risk Stratification Agent ingesting a
+  // PANEL of already-produced per-patient signals, DETERMINISTICALLY scoring each
+  // patient with the transparent additive risk model, stratifying them into risk
+  // tiers (low / rising / high), and building a prioritized outreach worklist for
+  // a human care manager — never an autonomous care decision. Scoring is a pure
+  // function of the panel signals (no randomness, no clock). It reasons over the
+  // whole panel's clinical/care-management context, so every span sets
+  // phiAccessed:true. The risk factors + weights + cutoffs + patientRefs are
+  // ILLUSTRATIVE synthetics, not a certified risk-stratification model. Seed data;
+  // production populates the ring buffer from the persistent log store.
+  const ph0 = Date.now() - 1000 * 60 * 2;
+  const phTaskId = "task-seed-population-health-001";
+  const phName = "Population Health & Risk Stratification Agent";
+  s.traces.push(
+    {
+      id: "span-pophealth-001",
+      taskId: phTaskId,
+      agentId: "population-health-agent",
+      agentName: phName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ph0).toISOString(),
+      finishedAt: new Date(ph0 + 60).toISOString(),
+      durationMs: 60,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-pophealth-002",
+      taskId: phTaskId,
+      parentSpanId: "span-pophealth-001",
+      agentId: "population-health-agent",
+      agentName: phName,
+      operation: "pophealth.ingest-panel",
+      protocol: "a2a",
+      startedAt: new Date(ph0 + 60).toISOString(),
+      finishedAt: new Date(ph0 + 90).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        patientsIngested: 5,
+        scoringFactors: [
+          "factor.intake-severity",
+          "factor.assessment-band",
+          "factor.care-gaps",
+          "factor.sdoh-burden",
+          "factor.medication-nonadherence",
+          "factor.monitoring-trend"
+        ],
+        // The honesty invariant: the model scores on NO protected-class attribute.
+        excludesProtectedAttributes: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-pophealth-003",
+      taskId: phTaskId,
+      parentSpanId: "span-pophealth-002",
+      agentId: "population-health-agent",
+      agentName: phName,
+      operation: "pophealth.score",
+      protocol: "a2a",
+      startedAt: new Date(ph0 + 90).toISOString(),
+      finishedAt: new Date(ph0 + 120).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        patientsScored: 5,
+        // The honesty invariant: every tier traces to the documented factors.
+        riskScoreTracesToFactors: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-pophealth-004",
+      taskId: phTaskId,
+      parentSpanId: "span-pophealth-003",
+      agentId: "population-health-agent",
+      agentName: phName,
+      operation: "pophealth.stratify",
+      protocol: "a2a",
+      startedAt: new Date(ph0 + 120).toISOString(),
+      finishedAt: new Date(ph0 + 150).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        tierCounts: { high: 1, rising: 2, low: 2 },
+        riskScoreTracesToFactors: true,
+        tierReviewedByHuman: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-pophealth-005",
+      taskId: phTaskId,
+      parentSpanId: "span-pophealth-004",
+      agentId: "population-health-agent",
+      agentName: phName,
+      operation: "pophealth.build-worklist",
+      protocol: "a2a",
+      startedAt: new Date(ph0 + 150).toISOString(),
+      finishedAt: new Date(ph0 + 300).toISOString(),
+      durationMs: 150,
+      status: "ok",
+      attributes: {
+        worklistLength: 5,
+        routedTo: "care-manager-review",
+        // The honesty invariant: a tier never triggers an autonomous care action.
+        autonomousCareDecision: false,
+        tierReviewedByHuman: true,
         phiAccessed: true,
         synthetic: true
       }
