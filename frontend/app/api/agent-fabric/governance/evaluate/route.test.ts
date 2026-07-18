@@ -163,6 +163,29 @@ describe("POST /api/agent-fabric/governance/evaluate", () => {
     expect(ids).toContain("policy.pophealth.no-autonomous-care-decision");
   });
 
+  it("passes the consent-management signals through to the evaluator", async () => {
+    // Pins that the new consent & preferences management GovernanceTask fields
+    // reach evaluateGovernance across the HTTP boundary.
+    const res = await POST(
+      post({
+        agentId: "consent-management-agent",
+        task: {
+          consentTracesToRecord: false,
+          honorsRevocation: false,
+          respectsConsentScope: false
+        }
+      })
+    );
+    const json = await res.json();
+    expect(json.result.decision).toBe("block");
+    const ids = json.result.blockingViolations.map(
+      (v: { policyId: string }) => v.policyId
+    );
+    expect(ids).toContain("policy.consent.recorded-source");
+    expect(ids).toContain("policy.consent.honor-revocation");
+    expect(ids).toContain("policy.consent.no-scope-override");
+  });
+
   it("an unknown agent has no applicable policies and allows", async () => {
     const res = await POST(post({ agentId: "ghost-agent", task: {} }));
     const json = await res.json();

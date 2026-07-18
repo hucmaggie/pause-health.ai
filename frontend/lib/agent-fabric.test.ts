@@ -418,14 +418,15 @@ describe("Validated-instrument assessment · Assessment agent", () => {
 });
 
 describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
-  it("brings the registry to twenty-six agents", () => {
+  it("brings the registry to twenty-seven agents", () => {
     // Sanity count guard: the funnel + intake + assessment + benefits +
     // scheduling + care-gap-closure + care-plan + medication-adherence +
     // referral-management + member-service + prior-authorization +
     // clinical-summary + sdoh-screening + patient-education +
     // remote-monitoring + population-health agents, the Care Router, the
-    // platform substrate, and the commercial plane.
-    expect(listAgents()).toHaveLength(26);
+    // platform substrate (incl. the Consent & Preferences Management agent),
+    // and the commercial plane.
+    expect(listAgents()).toHaveLength(27);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -1750,6 +1751,123 @@ describe("Population Health · panel-level risk-stratification + prioritized-wor
   });
 });
 
+describe("Consent & Preferences Management · authoritative consent-ledger + decision agent", () => {
+  it("registers as a prototype MuleSoft-process agent on the data-plane tier (platform plane)", () => {
+    const c = getAgent("consent-management-agent");
+    expect(c).toBeDefined();
+    expect(c!.kind).toBe("mulesoft-process");
+    expect(c!.protocol).toBe("a2a");
+    expect(c!.provider).toBe("MuleSoft Anypoint");
+    expect(c!.status).toBe("prototype");
+    // Reuses the existing data-plane tier (platform plane) — a control-plane /
+    // data-substrate consent service; it does NOT invent a new tier.
+    expect(c!.governanceTier).toBe("data-plane");
+    expect(planeForTier(c!.governanceTier)).toBe("platform");
+    expect(c!.endpoint).toBe("/api/agents/consent-management");
+  });
+
+  it("carries the three consent blocks plus the reused HIPAA-audit policy (holds patient consent data)", () => {
+    const ids = getPoliciesForAgent("consent-management-agent").map((p) => p.id);
+    expect(ids).toContain("policy.consent.recorded-source");
+    expect(ids).toContain("policy.consent.honor-revocation");
+    expect(ids).toContain("policy.consent.no-scope-override");
+    // It holds patient consent data, so it IS HIPAA-audited even on the platform plane.
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT a live-Claude agent (no model allow-list) and NOT commercial.
+    expect(ids).not.toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("all three consent policies are enforced blocks", () => {
+    for (const id of [
+      "policy.consent.recorded-source",
+      "policy.consent.honor-revocation",
+      "policy.consent.no-scope-override"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement, id).toBe("block");
+      expect(policy!.status, id).toBe("enforced");
+    }
+  });
+
+  it("blocks an unrecorded consent, an allow-against-revoked, and a scope override; allows a well-formed task", () => {
+    // A consent state that doesn't trace to a recorded event/basis.
+    const unrecorded = evaluateGovernance({
+      agentId: "consent-management-agent",
+      task: {
+        consentTracesToRecord: false,
+        honorsRevocation: true,
+        respectsConsentScope: true
+      }
+    });
+    expect(unrecorded.decision).toBe("block");
+    expect(unrecorded.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.consent.recorded-source"
+    );
+
+    // A decision that would allow outreach against a revoked / expired scope.
+    const allowRevoked = evaluateGovernance({
+      agentId: "consent-management-agent",
+      task: {
+        consentTracesToRecord: true,
+        honorsRevocation: false,
+        respectsConsentScope: true
+      }
+    });
+    expect(allowRevoked.decision).toBe("block");
+    expect(allowRevoked.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.consent.honor-revocation"
+    );
+
+    // A decision that overrides a withheld / ungranted scope.
+    const scopeOverride = evaluateGovernance({
+      agentId: "consent-management-agent",
+      task: {
+        consentTracesToRecord: true,
+        honorsRevocation: true,
+        respectsConsentScope: false
+      }
+    });
+    expect(scopeOverride.decision).toBe("block");
+    expect(scopeOverride.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.consent.no-scope-override"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "consent-management-agent",
+      task: {
+        consentTracesToRecord: true,
+        honorsRevocation: true,
+        respectsConsentScope: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "consent-management-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a load-ledger→evaluate→decision trace, every span phiAccessed", () => {
+    const spans = listTraces({ taskId: "task-seed-consent-management-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(3);
+    const load = spans.find((s) => s.operation === "consent.load-ledger");
+    expect(load?.agentId).toBe("consent-management-agent");
+    expect(load?.attributes?.consentTracesToRecord).toBe(true);
+    const evaluate = spans.find((s) => s.operation === "consent.evaluate");
+    expect(evaluate?.attributes?.honorsRevocation).toBe(true);
+    const decision = spans.find((s) => s.operation === "consent.decision");
+    expect(decision?.attributes?.allowed).toBe(true);
+    expect(decision?.attributes?.respectsConsentScope).toBe(true);
+    // The whole run touches the patient's consent data.
+    for (const s of spans) {
+      expect(s.attributes?.phiAccessed, s.operation).toBe(true);
+    }
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -1879,7 +1997,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-clinical-summary-001",
       "task-seed-patient-education-001",
       "task-seed-remote-monitoring-001",
-      "task-seed-population-health-001"
+      "task-seed-population-health-001",
+      "task-seed-consent-management-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });

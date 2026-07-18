@@ -6,6 +6,7 @@ import { BenefitsPanel } from "../../../components/benefits-panel";
 import { CareGapPanel } from "../../../components/care-gap-panel";
 import { CarePlanPanel } from "../../../components/care-plan-panel";
 import { ClinicalSummaryPanel } from "../../../components/clinical-summary-panel";
+import { ConsentManagementPanel } from "../../../components/consent-management-panel";
 import { DemoShell } from "../../../components/demo-shell";
 import { IntakePatientStage } from "../../../components/intake-patient-stage";
 import { PatientEducationPanel } from "../../../components/patient-education-panel";
@@ -80,6 +81,8 @@ export default function IntakeDemoPage() {
       <RemoteMonitoringPanel />
 
       <PopulationHealthPanel />
+
+      <ConsentManagementPanel />
 
       <section className="demo-grid">
         <article className="card">

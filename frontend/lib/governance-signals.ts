@@ -74,6 +74,10 @@ export type GovernanceTask = {
   riskScoreTracesToFactors?: boolean;
   excludesProtectedAttributes?: boolean;
   tierReviewedByHuman?: boolean;
+  // Consent & preferences management (authoritative consent ledger + decisions)
+  consentTracesToRecord?: boolean;
+  honorsRevocation?: boolean;
+  respectsConsentScope?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -371,6 +375,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A risk tier triggers an autonomous care action instead of human review",
     reason:
       "A risk tier triggered an autonomous care action instead of being routed for human / care-manager review; a risk tier is a prioritization signal only — every tier→action requires human review (routedTo:'care-manager-review'), the agent may never take an autonomous care decision"
+  },
+  {
+    policyId: "policy.consent.recorded-source",
+    signal: "consentTracesToRecord",
+    violatingValue: false,
+    violationHint: "A consent state doesn't trace to a recorded consent event/basis",
+    reason:
+      "A consent state did not trace to a recorded consent event/basis (an asserted-but-unrecorded consent, an off-catalog scope, an unrecognized status, or a missing recorded source); every consent state must trace to a recorded event with a source — the authoritative consent ledger may not hold asserted, unrecorded consent"
+  },
+  {
+    policyId: "policy.consent.honor-revocation",
+    signal: "honorsRevocation",
+    violatingValue: false,
+    violationHint: "A decision ALLOWS outreach against a revoked / expired consent",
+    reason:
+      "A consent decision would ALLOW outreach / data-use against a scope whose consent is revoked or expired; a revocation (or expiry) must be honored immediately — the service may never allow a decision against a revoked / expired consent"
+  },
+  {
+    policyId: "policy.consent.no-scope-override",
+    signal: "respectsConsentScope",
+    violatingValue: false,
+    violationHint: "A decision overrides a withheld scope or a scope never granted",
+    reason:
+      "A consent decision would ALLOW against a scope the patient withheld, or a scope the patient never granted (no record); a decision may not override a withheld scope or borrow consent across scopes — an allow requires a granted, current consent record for that exact scope"
   },
   {
     policyId: "policy.referral.clinician-cosign",

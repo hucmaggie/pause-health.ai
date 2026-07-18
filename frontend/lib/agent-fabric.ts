@@ -691,6 +691,38 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "consent-management-agent",
+    name: "Consent & Preferences Management Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the MuleSoft control-plane / data-substrate
+    // consent service: POST /api/agents/consent-management/tasks (card at
+    // /.well-known/agent.json). Unlike every other agent (which CONSUMES consent
+    // — the SDOH, Patient Education, Remote Monitoring, Care Gap, and Engagement
+    // agents each check a "consent-before-*" gate), this one is the SOURCE OF
+    // TRUTH FOR consent: it holds, per patient, a consent LEDGER (a set of
+    // consent scopes, each with a status + recorded basis + optional expiry) and
+    // communication PREFERENCES (allowed channels, quiet hours, preferred
+    // language, frequency cap), and answers one DETERMINISTIC question via
+    // evaluateConsent — "may this patient be contacted / have data used for this
+    // scope over this channel at this time?" — citing the consent record it
+    // relied on. It is a control-plane / data-substrate service (platform plane),
+    // NOT a live-Claude agent. The scopes + sources + preferences are
+    // ILLUSTRATIVE synthetics, NOT a certified consent-management system.
+    endpoint: "/api/agents/consent-management",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "The AUTHORITATIVE consent ledger + communication-preference store the rest of the fabric's consent-before-outreach / consent-before-referral / consent-to-monitor gates logically defer to — the source of truth for consent, not a consumer of it",
+      "A DETERMINISTIC consent-decision function (evaluateConsent) that denies a withheld / revoked / expired / unrecorded scope, an unpermitted channel, a quiet-hours touch, or a frequency-cap breach and otherwise allows — a pure function of the ledger + the query's own atTime + priorTouches (no randomness, no clock), citing the consent record it relied on",
+      "Every consent state must trace to a recorded consent event/basis — an asserted-but-unrecorded consent is blocked at the Agent Fabric governance boundary (policy.consent.recorded-source)",
+      "A revoked / expired consent is honored immediately — a decision may never ALLOW against a revoked / expired scope (policy.consent.honor-revocation); and a decision may never override a withheld scope or borrow consent across scopes (policy.consent.no-scope-override)",
+      "Runs against an ILLUSTRATIVE synthetic consent ledger — scopes, recorded sources, preferences, and patient references clearly labeled; NOT a certified consent-management / preference-center system"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
   }
 ];
 
@@ -742,7 +774,8 @@ const POLICIES: PolicyRecord[] = [
       "sdoh-screening-agent",
       "patient-education-agent",
       "remote-monitoring-agent",
-      "population-health-agent"
+      "population-health-agent",
+      "consent-management-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -915,6 +948,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Population Health & Risk Stratification Agent may assign a risk tier but may NOT let that tier autonomously trigger a care action — a risk tier is a prioritization signal only. Any tier→action asserted as autonomous (auto-enrollment in a program, an auto-committed outreach or intervention) is rejected before it can leave the fabric; every tier→action requires human / care-manager review (routedTo:'care-manager-review'). The agent only ever produces a prioritized worklist for a human; a care manager reviews and acts. Mirrors the Remote Patient Monitoring Agent's no-autonomous-escalation posture.",
     appliesTo: ["population-health-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.consent.recorded-source",
+    name: "Every consent state must trace to a recorded consent event/basis",
+    description:
+      "Every consent state the Consent & Preferences Management Agent holds or acts on must trace to a recorded consent event/basis — a recognized scope + status, a timestamp, and a non-empty recorded source (patient-portal, signed-hipaa-authorization, care-plan-enrollment, unsubscribe-link, etc.). An asserted-but-unrecorded consent (an off-catalog scope, an unrecognized status, or a state with no recorded source) is rejected before any decision is acted on, so the authoritative ledger can never hold consent it can't evidence. (In the prototype the consent scopes + recorded sources are clearly-labeled illustrative synthetics, not a certified consent-management system; in production this is the customer's governed consent ledger / preference center with a signed audit trail.)",
+    appliesTo: ["consent-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.consent.honor-revocation",
+    name: "A revoked or expired consent must be honored immediately",
+    description:
+      "The Consent & Preferences Management Agent must honor a revocation — or an expiry — immediately: a consent decision may NEVER ALLOW outreach / data-use against a scope whose relied-on consent is revoked or expired. A decision that would allow against a revoked / expired scope is rejected before it can leave the fabric, so a patient who revokes (or whose authorization lapses) is never contacted against that scope. This is the load-bearing property the other agents' consent-before-outreach / consent-to-monitor gates depend on. Mirrors the Remote Patient Monitoring Agent's no-autonomous-escalation posture — the safe answer is enforced, not merely advised.",
+    appliesTo: ["consent-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.consent.no-scope-override",
+    name: "A decision may not override a scope's consent",
+    description:
+      "The Consent & Preferences Management Agent may NOT let a decision override a withheld scope, or borrow consent for a scope the patient never granted — an ALLOW requires a granted, current consent record for that EXACT scope. A decision that would allow against a withheld or ungranted scope is rejected before it can leave the fabric, so consent granted for one purpose can never be silently reused for another. Consent is per-scope and non-transferable; this keeps the authoritative ledger defensible against scope-creep concerns.",
+    appliesTo: ["consent-management-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -3237,6 +3297,106 @@ function store(): FabricStore {
         // The honesty invariant: a tier never triggers an autonomous care action.
         autonomousCareDecision: false,
         tierReviewedByHuman: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+
+  // A trace showing the Consent & Preferences Management Agent — the
+  // authoritative, cross-cutting consent service the rest of the fabric's
+  // consent gates defer to — loading a patient's consent LEDGER, evaluating a
+  // DETERMINISTIC consent decision for a scope + channel at an explicit time
+  // (evaluateConsent is a pure function of the ledger + the query's own atTime +
+  // priorTouches — no randomness, no clock), and returning a decision that cites
+  // the consent record it relied on. It holds patient consent data, so every
+  // span sets phiAccessed:true. The consent scopes + sources + preferences are
+  // ILLUSTRATIVE synthetics, not a certified consent-management system. Seed
+  // data; production populates the ring buffer from the persistent log store.
+  const cm0 = Date.now() - 1000 * 60 * 1;
+  const cmTaskId = "task-seed-consent-management-001";
+  const cmName = "Consent & Preferences Management Agent";
+  s.traces.push(
+    {
+      id: "span-consent-001",
+      taskId: cmTaskId,
+      agentId: "consent-management-agent",
+      agentName: cmName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(cm0).toISOString(),
+      finishedAt: new Date(cm0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-consent-002",
+      taskId: cmTaskId,
+      parentSpanId: "span-consent-001",
+      agentId: "consent-management-agent",
+      agentName: cmName,
+      operation: "consent.load-ledger",
+      protocol: "a2a",
+      startedAt: new Date(cm0 + 40).toISOString(),
+      finishedAt: new Date(cm0 + 70).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        patientRef: "consent-patient-001",
+        recordedScopes: 5,
+        // The honesty invariant: every consent state traces to a recorded basis.
+        consentTracesToRecord: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-consent-003",
+      taskId: cmTaskId,
+      parentSpanId: "span-consent-002",
+      agentId: "consent-management-agent",
+      agentName: cmName,
+      operation: "consent.evaluate",
+      protocol: "a2a",
+      startedAt: new Date(cm0 + 70).toISOString(),
+      finishedAt: new Date(cm0 + 100).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        scope: "contact-outreach",
+        channel: "sms",
+        atTime: "2026-03-01T15:00:00Z",
+        // The honesty invariants: a revocation/expiry is honored and no scope is
+        // overridden.
+        honorsRevocation: true,
+        respectsConsentScope: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-consent-004",
+      taskId: cmTaskId,
+      parentSpanId: "span-consent-003",
+      agentId: "consent-management-agent",
+      agentName: cmName,
+      operation: "consent.decision",
+      protocol: "a2a",
+      startedAt: new Date(cm0 + 100).toISOString(),
+      finishedAt: new Date(cm0 + 160).toISOString(),
+      durationMs: 60,
+      status: "ok",
+      attributes: {
+        scope: "contact-outreach",
+        channel: "sms",
+        allowed: true,
+        matchedConsentEventId: "consent-evt-contact-001",
+        honorsRevocation: true,
+        respectsConsentScope: true,
         phiAccessed: true,
         synthetic: true
       }
