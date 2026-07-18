@@ -19,6 +19,13 @@ import {
   type CoverageQuery
 } from "../../../../lib/benefits";
 import {
+  bookAppointment,
+  bookingSummary,
+  modalityForPathway,
+  type Modality,
+  type SchedulingRequest
+} from "../../../../lib/scheduling";
+import {
   DEMO_DATA360_PATIENT_ID,
   getGroundingContext,
   resolveIdentity
@@ -92,6 +99,24 @@ export async function POST(req: Request) {
      * Additive: absent = today's behavior, unchanged.
      */
     coverage?: { query?: CoverageQuery; memberId?: string } | false;
+    /**
+     * Optional appointment booking. When present, after the Care Router
+     * returns an MSCP pathway with recommended provider(s), the Appointment
+     * Scheduling Agent books the visit against a deterministic synthetic
+     * calendar and the booking summary is attached to the trace + response
+     * meta — closing the intake → routing → booking → engagement loop. The
+     * modality defaults to the pathway's (virtual → telehealth, in-person),
+     * and the provider defaults to the top recommendation unless a
+     * providerId is given. Additive: absent = today's behavior, unchanged.
+     */
+    scheduling?: {
+      book?: boolean;
+      providerId?: string;
+      providerName?: string;
+      modality?: Modality;
+      requestedDate?: string;
+      requestedSlotStart?: string;
+    } | false;
   };
   let body: Body;
   try {
@@ -342,6 +367,75 @@ export async function POST(req: Request) {
     const decision =
       decisionPart && decisionPart.type === "data" ? decisionPart.data : null;
 
+    // Optional booking step (additive). When scheduling is requested and the
+    // routing decision recommends MSCP provider(s), the Appointment
+    // Scheduling Agent books the visit against the deterministic synthetic
+    // calendar and the summary is attached to the trace + response meta —
+    // the intake → routing → booking → engagement close. Best-effort: a
+    // failure here must never break the routing response, and absent =
+    // today's behavior unchanged.
+    let schedulingMeta: Record<string, unknown> | undefined;
+    const schedulingOptedOut = body.scheduling === false;
+    const schedulingReq = body.scheduling || undefined;
+    const wantsBooking =
+      !schedulingOptedOut &&
+      Boolean(schedulingReq && (schedulingReq.book ?? true));
+    if (wantsBooking && decision && typeof decision === "object") {
+      try {
+        const d = decision as {
+          pathway?: string;
+          recommendedProviders?: {
+            modality?: "virtual" | "in-person";
+            providers?: Array<{ npi?: string; name?: string }>;
+          };
+        };
+        const topProvider = d.recommendedProviders?.providers?.[0];
+        const providerId = schedulingReq?.providerId || topProvider?.npi;
+        // Only book when we have a concrete provider to book with.
+        if (providerId) {
+          const modality: Modality =
+            schedulingReq?.modality ?? modalityForPathway(d.pathway);
+          const request: SchedulingRequest = {
+            providerId,
+            providerName: schedulingReq?.providerName || topProvider?.name,
+            modality,
+            ...(schedulingReq?.requestedSlotStart
+              ? { requestedSlotStart: schedulingReq.requestedSlotStart }
+              : {}),
+            ...(schedulingReq?.requestedDate
+              ? { requestedDate: schedulingReq.requestedDate }
+              : {})
+          };
+          const booking = bookAppointment(request);
+          const summary = bookingSummary(booking);
+          recordInstantSpan({
+            taskId,
+            parentSpanId: intakeSpan.id,
+            agentId: "appointment-scheduling-agent",
+            operation: "scheduling.book",
+            protocol: "rest",
+            attributes: {
+              providerId: summary.providerId,
+              providerName: summary.providerName,
+              modality: summary.modality,
+              serviceAppointmentId: summary.serviceAppointmentId,
+              slotStart: summary.slotStart,
+              slotEnd: summary.slotEnd,
+              status: summary.status,
+              requestedSlotIsFree: true,
+              slotWithinProviderAvailability: true,
+              synthetic: true,
+              ...(personaId ? { personaId } : {}),
+              ...(origin ? { origin } : {})
+            }
+          });
+          schedulingMeta = { ...summary, bookedAfterRouting: true, nextAgent: "engagement-agent" };
+        }
+      } catch {
+        // Best-effort: leave routing untouched on a scheduling failure.
+      }
+    }
+
     return NextResponse.json({
       meta: {
         _note:
@@ -356,7 +450,8 @@ export async function POST(req: Request) {
         _data360GroundingSource: groundingSource,
         _salesforceConfigured: isSalesforceConfigured(),
         ...(assessmentMeta ? { _assessment: assessmentMeta } : {}),
-        ...(coverageMeta ? { _coverage: coverageMeta } : {})
+        ...(coverageMeta ? { _coverage: coverageMeta } : {}),
+        ...(schedulingMeta ? { _scheduling: schedulingMeta } : {})
       },
       taskId,
       sessionId,
@@ -364,6 +459,7 @@ export async function POST(req: Request) {
       decision,
       ...(assessmentMeta ? { assessment: assessmentMeta } : {}),
       ...(coverageMeta ? { coverage: coverageMeta } : {}),
+      ...(schedulingMeta ? { scheduling: schedulingMeta } : {}),
       data360: {
         source: { identity: identitySource, grounding: groundingSource },
         identity,

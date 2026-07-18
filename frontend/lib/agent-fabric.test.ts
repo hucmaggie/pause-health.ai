@@ -418,10 +418,11 @@ describe("Validated-instrument assessment · Assessment agent", () => {
 });
 
 describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
-  it("brings the registry to fourteen agents", () => {
-    // Sanity count guard: the funnel + intake + assessment + benefits agents,
-    // the Care Router, the platform substrate, and the commercial plane.
-    expect(listAgents()).toHaveLength(14);
+  it("brings the registry to fifteen agents", () => {
+    // Sanity count guard: the funnel + intake + assessment + benefits +
+    // scheduling agents, the Care Router, the platform substrate, and the
+    // commercial plane.
+    expect(listAgents()).toHaveLength(15);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -502,6 +503,91 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     expect(intake?.attributes?.coverageVerified).toBe(true);
     const last = spans[spans.length - 1];
     expect(last.agentId).toBe("care-router-claude");
+  });
+});
+
+describe("Appointment Scheduling · Care-coordination agent", () => {
+  it("registers as a prototype Agentforce agent on its own care-coordination tier", () => {
+    const s = getAgent("appointment-scheduling-agent");
+    expect(s).toBeDefined();
+    expect(s!.kind).toBe("agentforce");
+    expect(s!.protocol).toBe("a2a");
+    expect(s!.provider).toBe("Salesforce");
+    expect(s!.status).toBe("prototype");
+    expect(s!.governanceTier).toBe("care-coordination");
+    // The scheduling agent is a care-coordination agent on the patient-care plane.
+    expect(planeForTier(s!.governanceTier)).toBe("patient-care");
+    expect(s!.endpoint).toBe("/api/agents/appointment-scheduling");
+  });
+
+  it("carries the two scheduling blocks plus the reused HIPAA-audit policy", () => {
+    const ids = getPoliciesForAgent("appointment-scheduling-agent").map(
+      (p) => p.id
+    );
+    expect(ids).toContain("policy.scheduling.no-double-book");
+    expect(ids).toContain("policy.scheduling.honor-provider-availability");
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT on any commercial-plane-only policy.
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("both scheduling policies are enforced blocks", () => {
+    for (const id of [
+      "policy.scheduling.no-double-book",
+      "policy.scheduling.honor-provider-availability"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement).toBe("block");
+      expect(policy!.status).toBe("enforced");
+    }
+  });
+
+  it("blocks a double-book or an out-of-availability slot, allows a free published slot", () => {
+    const doubleBook = evaluateGovernance({
+      agentId: "appointment-scheduling-agent",
+      task: { requestedSlotIsFree: false, slotWithinProviderAvailability: true }
+    });
+    expect(doubleBook.decision).toBe("block");
+    expect(doubleBook.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.scheduling.no-double-book"
+    );
+
+    const outOfAvail = evaluateGovernance({
+      agentId: "appointment-scheduling-agent",
+      task: { requestedSlotIsFree: true, slotWithinProviderAvailability: false }
+    });
+    expect(outOfAvail.decision).toBe("block");
+    expect(outOfAvail.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.scheduling.honor-provider-availability"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "appointment-scheduling-agent",
+      task: { requestedSlotIsFree: true, slotWithinProviderAvailability: true }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "appointment-scheduling-agent", task: {} })
+        .decision
+    ).toBe("allow");
+  });
+
+  it("seeds a router→booking→engagement trace that closes the loop", () => {
+    const spans = listTraces({ taskId: "task-seed-scheduling-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(3);
+    // Care Router recommendation first, engagement reminders last.
+    expect(spans[0].agentId).toBe("care-router-claude");
+    const book = spans.find((s) => s.operation === "scheduling.book");
+    expect(book?.agentId).toBe("appointment-scheduling-agent");
+    expect(book?.attributes?.synthetic).toBe(true);
+    expect(book?.attributes?.requestedSlotIsFree).toBe(true);
+    expect(book?.attributes?.slotWithinProviderAvailability).toBe(true);
+    const last = spans[spans.length - 1];
+    expect(last.agentId).toBe("engagement-agent");
+    expect(last.operation).toBe("engagement.reminder.schedule");
   });
 });
 
@@ -623,7 +709,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-commercial-001",
       "task-seed-mcp-bridge-001",
       "task-seed-assessment-001",
-      "task-seed-benefits-001"
+      "task-seed-benefits-001",
+      "task-seed-scheduling-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });

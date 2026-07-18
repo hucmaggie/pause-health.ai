@@ -11,7 +11,7 @@ import {
 export const metadata = pageMetadata({
   title: "Investor Brief · Multi-Agent Control Plane",
   description:
-    "Pause-Health.ai's multi-agent architecture — Agentforce inbound lead generation, prospecting & nurture, qualification, intake, and engagement, the Anthropic Claude Care Router, the Pause MCP server, the MuleSoft integration plane, and a PHI-separated commercial plane (pipeline + account management) — orchestrated, monitored, and governed by a MuleSoft Agent Fabric control plane.",
+    "Pause-Health.ai's multi-agent architecture — Agentforce inbound lead generation, prospecting & nurture, qualification, intake, appointment scheduling, and engagement, the Anthropic Claude Care Router, the Pause MCP server, the MuleSoft integration plane, and a PHI-separated commercial plane (pipeline + account management) — orchestrated, monitored, and governed by a MuleSoft Agent Fabric control plane.",
   path: "/proposal/agent-fabric",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Pause multi-agent control plane — investor brief."
@@ -68,11 +68,18 @@ const agents: { name: string; role: string; tier: GovernanceTier; detail: string
       "Takes the structured intake over A2A, reasons over symptoms + cycle + safety screen + age band, and returns one of six care pathways with rationale and red-flag flags. Falls back to a deterministic Pause policy engine when ANTHROPIC_API_KEY is unset or the API call fails."
   },
   {
+    name: "Agentforce Appointment Scheduling",
+    role: "Book / reschedule the MSCP visit (care coordination)",
+    tier: "care-coordination",
+    detail:
+      "The Salesforce 'Agentforce for Health — Book/Reschedule/Update Appointment' analog, and the step that closes the loop: it books (and can reschedule) the MSCP menopause-specialist visit the Care Router recommends, honoring the requested modality (telehealth / in-person) against a provider availability calendar, and returns a structured booking — a Salesforce ServiceAppointment id, the confirmed slot start/end, modality, provider, and status. In the prototype the calendar is a DETERMINISTIC synthetic (hashed provider + date → stable 30-minute business-hours slots, ~a third pre-booked), clearly labeled synthetic — not a real Salesforce Scheduler / ServiceAppointment write. Governance genuinely enforces the two invariants that matter: it never double-books an already-taken slot and only books within the provider's published availability. It then hands the booked appointment to the Engagement Agent for visit reminders — closing acquisition → intake → routing → booking → engagement."
+  },
+  {
     name: "Agentforce Engagement Agent",
     role: "Care continuity (post-routing)",
     tier: "patient-engagement",
     detail:
-      "Picks up the Care Router's pathway output and schedules the follow-up cadence — symptom check-ins and adherence nudges — honoring quiet-hours, channel preference, and frequency caps sourced from Data 360, and escalating disengagement or emerging-risk signals back to the router."
+      "Picks up the Care Router's pathway output and the booked appointment, and schedules the follow-up cadence — visit reminders, symptom check-ins, and adherence nudges — honoring quiet-hours, channel preference, and frequency caps sourced from Data 360, and escalating disengagement or emerging-risk signals back to the router."
   },
   {
     name: "Pause MCP Server",
@@ -148,7 +155,7 @@ const fabricCapabilities = [
   {
     title: "Policy enforcement",
     detail:
-      "The policy catalog spans: model allow-list (Claude Sonnet / Opus only), no autonomous prescribing, mandatory red-flag screen, mandatory rationale, deterministic fallback on API failure, a validated-instrument allow-list on the Assessment Agent (only MRS / Greene / PHQ-9 / ISI may be administered and scored into an intake severity), an eligibility-source-integrity block on the Benefits & Coverage Verification agent (every returned coverage result must trace to a payer/clearinghouse EBV response — the agent may not fabricate coverage without a source), MCP tool allow-list (plus the MCP Bridge's egress guards — a remote allow-list, an egress-side tool allow-list, and a no-cross-origin-bearer rule so an inbound token never leaks to an external MCP server), FHIR-R5-only substrate, mTLS for system-to-system, HIPAA audit log on every turn, plus the patient-lifecycle guards on the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement agents (inbound opt-in + source required and identity-resolution-before-create, contact-consent required, human approval before any message is sent, a lead-nurture cadence cap that suppresses on conversion/opt-out, a qualification rubric that requires rationale on every decision and forbids protected-class criteria with reviewable disqualifications, quiet-hours + channel preference, and an engagement frequency cap) — plus the commercial-plane guards on Pipeline Management and Account Management (a hard PHI-separation block so commercial agents never read patient data, forecast-figures-must-trace-to-CRM, and human-owner-before-any-contract-change). Block / audit / rate-limit / redact enforcement modes."
+      "The policy catalog spans: model allow-list (Claude Sonnet / Opus only), no autonomous prescribing, mandatory red-flag screen, mandatory rationale, deterministic fallback on API failure, a validated-instrument allow-list on the Assessment Agent (only MRS / Greene / PHQ-9 / ISI may be administered and scored into an intake severity), an eligibility-source-integrity block on the Benefits & Coverage Verification agent (every returned coverage result must trace to a payer/clearinghouse EBV response — the agent may not fabricate coverage without a source), two scheduling blocks on the Appointment Scheduling agent (no double-booking an already-taken slot, and book only within the provider's published availability), MCP tool allow-list (plus the MCP Bridge's egress guards — a remote allow-list, an egress-side tool allow-list, and a no-cross-origin-bearer rule so an inbound token never leaks to an external MCP server), FHIR-R5-only substrate, mTLS for system-to-system, HIPAA audit log on every turn, plus the patient-lifecycle guards on the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement agents (inbound opt-in + source required and identity-resolution-before-create, contact-consent required, human approval before any message is sent, a lead-nurture cadence cap that suppresses on conversion/opt-out, a qualification rubric that requires rationale on every decision and forbids protected-class criteria with reviewable disqualifications, quiet-hours + channel preference, and an engagement frequency cap) — plus the commercial-plane guards on Pipeline Management and Account Management (a hard PHI-separation block so commercial agents never read patient data, forecast-figures-must-trace-to-CRM, and human-owner-before-any-contract-change). Block / audit / rate-limit / redact enforcement modes."
   },
   {
     title: "End-to-end trace observability",
@@ -205,7 +212,7 @@ const phases = [
     name: "Phase 0 — Multi-agent prototype",
     duration: "Today",
     detail:
-      "Fourteen agents registered on the mocked Agent Fabric across three planes — the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement lifecycle agents bracketing Agentforce intake, the Assessment Agent that scores validated instruments into an intake severity, the Benefits & Coverage Verification (EBV) agent that runs a synthetic eligibility check before routing, and the Care Router on the patient/clinical plane; the Pause MCP server, the MCP Bridge (A2A ↔ MCP egress), the MuleSoft integration plane, and Data 360 grounding on the platform substrate; and the PHI-separated commercial-plane Pipeline Management and Account Management agents. End-to-end A2A handoff Agentforce → Care Router. MCP tool surface. /demo/agent-fabric console for monitoring. Live in this repo."
+      "Fifteen agents registered on the mocked Agent Fabric across three planes — the Inbound Lead Generation, Prospecting & Nurture, Qualification, and Engagement lifecycle agents bracketing Agentforce intake, the Assessment Agent that scores validated instruments into an intake severity, the Benefits & Coverage Verification (EBV) agent that runs a synthetic eligibility check before routing, the Care Router, and the Appointment Scheduling agent that books the recommended MSCP visit and hands it to engagement — on the patient/clinical plane; the Pause MCP server, the MCP Bridge (A2A ↔ MCP egress), the MuleSoft integration plane, and Data 360 grounding on the platform substrate; and the PHI-separated commercial-plane Pipeline Management and Account Management agents. End-to-end A2A handoff Agentforce → Care Router. MCP tool surface. /demo/agent-fabric console for monitoring. Live in this repo."
   },
   {
     name: "Phase 1 — Real Claude routing",
@@ -254,8 +261,8 @@ export default function AgentFabricInvestorPage() {
   return (
     <ProposalShell
       eyebrow="Investor brief · Multi-agent control plane"
-      title="Fourteen agents across three planes, two open protocols, one governed control plane"
-      subtitle="Pause-Health.ai composes Agentforce (inbound lead generation, prospecting & nurture, qualification, intake, validated-instrument assessment, benefits & coverage verification, and engagement, plus a PHI-separated commercial plane for pipeline & account management), Anthropic Claude (clinical routing), the Pause MCP server (data-plane tools), MuleSoft (integration plane), and Data 360 (grounding) into a single multi-agent system — orchestrated, monitored, secured, and governed by a MuleSoft Agent Fabric control plane."
+      title="Fifteen agents across three planes, two open protocols, one governed control plane"
+      subtitle="Pause-Health.ai composes Agentforce (inbound lead generation, prospecting & nurture, qualification, intake, validated-instrument assessment, benefits & coverage verification, appointment scheduling, and engagement, plus a PHI-separated commercial plane for pipeline & account management), Anthropic Claude (clinical routing), the Pause MCP server (data-plane tools), MuleSoft (integration plane), and Data 360 (grounding) into a single multi-agent system — orchestrated, monitored, secured, and governed by a MuleSoft Agent Fabric control plane."
     >
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">The agents on the fabric</p>

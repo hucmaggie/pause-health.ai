@@ -48,6 +48,9 @@ export type GovernanceTask = {
   administersValidatedInstrumentOnly?: boolean;
   // Benefits & coverage verification (EBV)
   eligibilityTracesToSource?: boolean;
+  // Appointment scheduling (care coordination)
+  requestedSlotIsFree?: boolean;
+  slotWithinProviderAvailability?: boolean;
   // Commercial plane (pipeline, account management)
   accessesPhi?: boolean;
   forecastSourcedFromCrm?: boolean;
@@ -202,6 +205,22 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Coverage result doesn't trace to a payer/clearinghouse EBV response",
     reason:
       "Returned coverage/eligibility result did not trace to a payer/clearinghouse EBV response (no source provenance); the agent may not fabricate coverage without a source"
+  },
+  {
+    policyId: "policy.scheduling.no-double-book",
+    signal: "requestedSlotIsFree",
+    violatingValue: false,
+    violationHint: "Requested appointment slot is already taken",
+    reason:
+      "Requested appointment slot is already taken; the scheduler will not double-book an already-booked slot"
+  },
+  {
+    policyId: "policy.scheduling.honor-provider-availability",
+    signal: "slotWithinProviderAvailability",
+    violatingValue: false,
+    violationHint: "Slot falls outside the provider's published availability",
+    reason:
+      "Requested appointment slot falls outside the provider's published availability; the scheduler only books published slots"
   },
   {
     policyId: "policy.marketing.consent-to-contact-required",

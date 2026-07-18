@@ -357,6 +357,31 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "benefits-verification"
+  },
+  {
+    id: "appointment-scheduling-agent",
+    name: "Agentforce Appointment Scheduling · Book/Reschedule (MSCP)",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health —
+    // Book/Reschedule/Update Appointment" agent: POST
+    // /api/agents/appointment-scheduling/tasks (card at
+    // /.well-known/agent.json). Bookings resolve against a DETERMINISTIC
+    // synthetic provider calendar — clearly labeled synthetic, no real
+    // Salesforce Scheduler / ServiceAppointment write.
+    endpoint: "/api/agents/appointment-scheduling",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Books (and reschedules) the MSCP menopause-specialist visit the Care Router recommends — the Salesforce 'Agentforce for Health — Book/Reschedule/Update Appointment' analog",
+      "Honors the requested modality (telehealth / in-person) against a deterministic synthetic provider availability calendar",
+      "Returns a structured booking: a synthetic ServiceAppointment id, the confirmed slot start/end, modality, provider, and status (booked / rescheduled)",
+      "Runs against a DETERMINISTIC MOCK calendar (hashed provider + date → stable open slots) — clearly labeled synthetic; not a real Salesforce Scheduler / ServiceAppointment write",
+      "Never double-books an already-taken slot and only books within the provider's published availability — both enforced at the Agent Fabric governance boundary",
+      "Hands the booked appointment to the Engagement Agent for visit reminders — closing the acquisition → intake → routing → booking → engagement loop"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -396,7 +421,8 @@ const POLICIES: PolicyRecord[] = [
       "qualification-agent",
       "mcp-bridge",
       "assessment-agent",
-      "benefits-verification-agent"
+      "benefits-verification-agent",
+      "appointment-scheduling-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -416,6 +442,24 @@ const POLICIES: PolicyRecord[] = [
     description:
       "Every coverage/eligibility result the Benefits Verification Agent returns must trace to a (mock) payer/clearinghouse EBV response — the agent may not fabricate coverage without a source. A returned result that carries no source provenance is rejected before it can drive a benefit estimate or precede routing. (In the prototype the EBV round-trip is a clearly-labeled deterministic synthetic; in production this is a real 270/271 or FHIR CoverageEligibilityResponse.)",
     appliesTo: ["benefits-verification-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.scheduling.no-double-book",
+    name: "No double-booking a taken slot",
+    description:
+      "The Appointment Scheduling Agent may not book a slot that is already taken on the provider's calendar. A request that targets an already-booked slot is rejected before any ServiceAppointment is written — the scheduler never double-books. (In the prototype the calendar is a clearly-labeled deterministic synthetic; in production this is a real Salesforce Scheduler / calendar availability check.)",
+    appliesTo: ["appointment-scheduling-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.scheduling.honor-provider-availability",
+    name: "Book only within published provider availability",
+    description:
+      "The Appointment Scheduling Agent may only book a slot that falls within the provider's published availability for the requested modality. A request for a time the provider does not publish (outside business hours, a non-offered modality, or a day with no availability) is rejected before any ServiceAppointment is written. (In the prototype availability is a deterministic synthetic calendar; in production this is the provider's real Salesforce Scheduler availability.)",
+    appliesTo: ["appointment-scheduling-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -1394,6 +1438,87 @@ function store(): FabricStore {
         provider: "anthropic",
         model: "claude-sonnet-4-5-20250929",
         coverageVerifiedBeforeRouting: true
+      }
+    }
+  );
+
+  // A trace showing the Appointment Scheduling Agent closing the loop:
+  // the Care Router recommends an MSCP telehealth visit, the scheduler
+  // books the first open slot on the provider's (DETERMINISTIC synthetic)
+  // calendar — honoring the requested modality, never double-booking, and
+  // only booking within published availability — and then hands the booked
+  // ServiceAppointment to the Engagement Agent for visit reminders. This is
+  // the acquisition → intake → routing → BOOKING → engagement close. The
+  // calendar is a MOCK, not a real Salesforce Scheduler write. Seed data;
+  // production populates the ring buffer from the persistent log store.
+  const sc0 = Date.now() - 1000 * 60 * 1;
+  const schedulingTaskId = "task-seed-scheduling-001";
+  const schedulingName =
+    "Agentforce Appointment Scheduling · Book/Reschedule (MSCP)";
+  s.traces.push(
+    {
+      id: "span-sched-001",
+      taskId: schedulingTaskId,
+      agentId: "care-router-claude",
+      agentName: "Pause Care Router · Claude Sonnet 4.5",
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(sc0).toISOString(),
+      finishedAt: new Date(sc0 + 2200).toISOString(),
+      durationMs: 2200,
+      status: "ok",
+      attributes: {
+        pathway: "mscp-virtual-visit",
+        provider: "anthropic",
+        model: "claude-sonnet-4-5-20250929",
+        recommendedProviders: 3,
+        modality: "telehealth"
+      }
+    },
+    {
+      id: "span-sched-002",
+      taskId: schedulingTaskId,
+      parentSpanId: "span-sched-001",
+      agentId: "appointment-scheduling-agent",
+      agentName: schedulingName,
+      operation: "scheduling.book",
+      protocol: "rest",
+      startedAt: new Date(sc0 + 2200).toISOString(),
+      finishedAt: new Date(sc0 + 2320).toISOString(),
+      durationMs: 120,
+      status: "ok",
+      attributes: {
+        providerId: "1720394857",
+        providerName: "Dr. Elena Vasquez, MD, MSCP",
+        modality: "telehealth",
+        serviceAppointmentId: "sa-seed-telehealth",
+        slotStart: "2026-02-02T09:30:00",
+        slotEnd: "2026-02-02T10:00:00",
+        status: "booked",
+        requestedSlotIsFree: true,
+        slotWithinProviderAvailability: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-sched-003",
+      taskId: schedulingTaskId,
+      parentSpanId: "span-sched-002",
+      agentId: "engagement-agent",
+      agentName: "Agentforce Engagement Agent · Care Continuity",
+      operation: "engagement.reminder.schedule",
+      protocol: "a2a",
+      startedAt: new Date(sc0 + 2320).toISOString(),
+      finishedAt: new Date(sc0 + 2900).toISOString(),
+      durationMs: 580,
+      status: "ok",
+      attributes: {
+        serviceAppointmentId: "sa-seed-telehealth",
+        remindersScheduled: 2,
+        cadence: "24h + 1h before visit",
+        channel: "sms",
+        quietHoursRespected: true,
+        humanApprovalRequired: true
       }
     }
   );
