@@ -46,6 +46,9 @@ export type GovernanceTask = {
   usesProtectedClassCriteria?: boolean;
   // Assessment (validated-instrument scoring)
   administersValidatedInstrumentOnly?: boolean;
+  // SDOH / HRSN screening (whole-person care)
+  usesValidatedSdohScreener?: boolean;
+  sdohReferralHasConsent?: boolean;
   // Benefits & coverage verification (EBV)
   eligibilityTracesToSource?: boolean;
   // Appointment scheduling (care coordination)
@@ -212,6 +215,22 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Administers an instrument outside the validated allow-list",
     reason:
       "Attempted to administer/score an instrument outside the validated allow-list (MRS, Greene, PHQ-9, ISI)"
+  },
+  {
+    policyId: "policy.sdoh.validated-screener-only",
+    signal: "usesValidatedSdohScreener",
+    violatingValue: false,
+    violationHint: "Administers an SDOH screener outside the validated allow-list",
+    reason:
+      "Attempted to administer/score an SDOH/HRSN screener outside the validated allow-list (the CMS AHC-HRSN core-domain screening tool)"
+  },
+  {
+    policyId: "policy.sdoh.consent-before-referral",
+    signal: "sdohReferralHasConsent",
+    violatingValue: false,
+    violationHint: "Drafts a community referral without the patient's consent",
+    reason:
+      "Attempted to draft a community-resource referral without the patient's explicit consent; a community referral requires patient consent and is never an autonomous enrollment — the agent may only draft a consent-gated referral for human action"
   },
   {
     policyId: "policy.benefits.eligibility-source-integrity",

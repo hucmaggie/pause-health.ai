@@ -571,6 +571,32 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "sdoh-screening-agent",
+    name: "Agentforce SDOH Screening Agent · Whole-Person Care",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health"
+    // Health-Related Social Needs screening + community-resource referral
+    // agent: POST /api/agents/sdoh-screening/tasks (card at
+    // /.well-known/agent.json). It screens a patient with a validated,
+    // public-domain instrument (the CMS AHC-HRSN core-domain tool), scoring is
+    // DETERMINISTIC real rule-based logic (no LLM), and it drafts CONSENT-GATED
+    // community-resource referrals — never an autonomous enrollment. The
+    // community-resource catalog is illustrative synthetic, NOT a live directory.
+    endpoint: "/api/agents/sdoh-screening",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Screens a patient for health-related social needs / social determinants of health with the CMS Accountable Health Communities HRSN core-domain screening tool (housing instability, food insecurity, transportation needs, utility needs, interpersonal safety) — the 'Agentforce for Health' whole-person-care analog",
+      "Screening is DETERMINISTIC real rule-based logic (no LLM): per-domain positive/negative determination, an overall count of positive social-need domains, and cutoff-based scoring (e.g. the HITS interpersonal-safety cutoff) — the same responses always screen identically",
+      "Escalates a positive interpersonal-safety screen to a human social worker as a mandatory red flag — mirroring the Assessment Agent's PHQ-9 item 9 handling",
+      "Drafts CONSENT-GATED community-resource referrals (211, local food bank, housing assistance, utility assistance, a domestic-violence hotline for safety), each referencing a defined resource-catalog id, human-approval-gated and never sent — NEVER an autonomous enrollment; a referral without patient consent is blocked at the Agent Fabric governance boundary",
+      "Refuses to administer any screener outside the validated allow-list, and keeps SDOH SEPARATE from clinical severity — a positive social need raises a care-coordination flag, not an intake clinical severity. Runs against ILLUSTRATIVE synthetic community resources — clearly labeled; NOT a live directory of real programs"
+    ],
+    provider: "Salesforce",
+    governanceTier: "whole-person-care"
   }
 ];
 
@@ -618,7 +644,8 @@ const POLICIES: PolicyRecord[] = [
       "referral-management-agent",
       "member-service-agent",
       "prior-authorization-agent",
-      "clinical-summary-agent"
+      "clinical-summary-agent",
+      "sdoh-screening-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -629,6 +656,24 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Assessment Agent may only administer and score instruments on the validated allow-list (Menopause Rating Scale, Greene Climacteric Scale, PHQ-9, Insomnia Severity Index). A request to administer or score anything else is rejected before any scoring runs — no ad-hoc or unvalidated questionnaire feeds an intake severity signal.",
     appliesTo: ["assessment-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.sdoh.validated-screener-only",
+    name: "Validated SDOH screeners only",
+    description:
+      "The SDOH Screening Agent may only administer and score screeners on the validated allow-list (the CMS Accountable Health Communities HRSN core-domain screening tool). A request to administer or score anything else is rejected before any screening runs — no ad-hoc or unvalidated social-needs questionnaire feeds a care-coordination flag. Mirrors the Assessment Agent's validated-instrument policy.",
+    appliesTo: ["sdoh-screening-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.sdoh.consent-before-referral",
+    name: "Patient consent required before a community referral",
+    description:
+      "The SDOH Screening Agent may draft a community-resource referral only with the patient's explicit consent — a community referral without consent is rejected before any draft is prepared for action, and the agent never autonomously enrolls a patient in a program. Every referral is a consent-gated, human-approval-gated DRAFT (211, food bank, housing/utility assistance, a domestic-violence hotline for the interpersonal-safety domain), never an autonomous enrollment. (In the prototype the community-resource catalog is a clearly-labeled illustrative synthetic, NOT a live directory of real programs; in production this is the customer's governed closed-loop referral network.)",
+    appliesTo: ["sdoh-screening-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -2498,6 +2543,159 @@ function store(): FabricStore {
         paHasClinicianApproval: true,
         paDocumentationComplete: true,
         submitted: false,
+        synthetic: true
+      }
+    }
+  );
+
+  // A trace showing the SDOH Screening Agent doing WHOLE-PERSON care alongside
+  // the clinical agents: it screens a patient with the validated CMS AHC-HRSN
+  // core-domain tool (DETERMINISTIC real rule-based logic, no LLM), here
+  // flagging food insecurity + a transportation barrier, then drafts
+  // CONSENT-GATED community-resource referrals (211 + food bank + transportation
+  // assistance) — each referencing a defined resource-catalog id,
+  // human-approval-gated, and never an autonomous enrollment. It touches the
+  // patient's social/clinical context, so every span sets phiAccessed:true. The
+  // community-resource catalog is an ILLUSTRATIVE synthetic, NOT a live
+  // directory. Seed data; production populates the ring buffer from the
+  // persistent log store.
+  const sd0 = Date.now() - 1000 * 60 * 5;
+  const sdohTaskId = "task-seed-sdoh-001";
+  const sdohName = "Agentforce SDOH Screening Agent · Whole-Person Care";
+  s.traces.push(
+    {
+      id: "span-sdoh-001",
+      taskId: sdohTaskId,
+      agentId: "sdoh-screening-agent",
+      agentName: sdohName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(sd0).toISOString(),
+      finishedAt: new Date(sd0 + 70).toISOString(),
+      durationMs: 70,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-sdoh-002",
+      taskId: sdohTaskId,
+      parentSpanId: "span-sdoh-001",
+      agentId: "sdoh-screening-agent",
+      agentName: sdohName,
+      operation: "sdoh.screen",
+      protocol: "a2a",
+      startedAt: new Date(sd0 + 70).toISOString(),
+      finishedAt: new Date(sd0 + 100).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        screener: "ahc-hrsn",
+        usesValidatedSdohScreener: true,
+        positiveDomainCount: 2,
+        positiveDomains: ["food", "transportation"],
+        safetyEscalation: false,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-sdoh-003",
+      taskId: sdohTaskId,
+      parentSpanId: "span-sdoh-002",
+      agentId: "sdoh-screening-agent",
+      agentName: sdohName,
+      operation: "sdoh.refer",
+      protocol: "a2a",
+      startedAt: new Date(sd0 + 100).toISOString(),
+      finishedAt: new Date(sd0 + 150).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        referralsDrafted: 3,
+        resources: [
+          "resource.food-bank",
+          "resource.transportation-assistance",
+          "resource.211-helpline"
+        ],
+        // The honesty invariants: consent-gated, human-approval-gated, and never
+        // an autonomous enrollment.
+        sdohReferralHasConsent: true,
+        requiresHumanApproval: true,
+        autonomousEnrollment: false,
+        sent: false,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+
+  // A second SDOH trace: the interpersonal-safety RED FLAG variant. A positive
+  // HITS interpersonal-safety screen is a mandatory escalation to a human social
+  // worker (mirroring the Assessment Agent's PHQ-9 item 9 handling); the agent
+  // records the escalation span and hands the confidential DV/safety referral to
+  // a human social worker — it never acts autonomously. Synthetic; phiAccessed.
+  const sd1 = Date.now() - 1000 * 60 * 4;
+  const sdohSafetyTaskId = "task-seed-sdoh-safety-001";
+  s.traces.push(
+    {
+      id: "span-sdoh-safety-001",
+      taskId: sdohSafetyTaskId,
+      agentId: "sdoh-screening-agent",
+      agentName: sdohName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(sd1).toISOString(),
+      finishedAt: new Date(sd1 + 70).toISOString(),
+      durationMs: 70,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-sdoh-safety-002",
+      taskId: sdohSafetyTaskId,
+      parentSpanId: "span-sdoh-safety-001",
+      agentId: "sdoh-screening-agent",
+      agentName: sdohName,
+      operation: "sdoh.screen",
+      protocol: "a2a",
+      startedAt: new Date(sd1 + 70).toISOString(),
+      finishedAt: new Date(sd1 + 100).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        screener: "ahc-hrsn",
+        usesValidatedSdohScreener: true,
+        positiveDomainCount: 1,
+        positiveDomains: ["safety"],
+        safetyEscalation: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-sdoh-safety-003",
+      taskId: sdohSafetyTaskId,
+      parentSpanId: "span-sdoh-safety-002",
+      agentId: "sdoh-screening-agent",
+      agentName: sdohName,
+      operation: "sdoh.safety.escalate",
+      protocol: "a2a",
+      startedAt: new Date(sd1 + 100).toISOString(),
+      finishedAt: new Date(sd1 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        redFlag: "ahc-hrsn-interpersonal-safety",
+        handoffTo: "social-worker",
+        // A positive interpersonal-safety screen is a mandatory human escalation.
+        requiresHumanEscalation: true,
+        phiAccessed: true,
         synthetic: true
       }
     }

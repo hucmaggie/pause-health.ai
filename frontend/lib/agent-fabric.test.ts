@@ -418,13 +418,13 @@ describe("Validated-instrument assessment · Assessment agent", () => {
 });
 
 describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
-  it("brings the registry to twenty-two agents", () => {
+  it("brings the registry to twenty-three agents", () => {
     // Sanity count guard: the funnel + intake + assessment + benefits +
     // scheduling + care-gap-closure + care-plan + medication-adherence +
     // referral-management + member-service + prior-authorization +
-    // clinical-summary agents, the Care Router, the platform substrate, and the
-    // commercial plane.
-    expect(listAgents()).toHaveLength(22);
+    // clinical-summary + sdoh-screening agents, the Care Router, the platform
+    // substrate, and the commercial plane.
+    expect(listAgents()).toHaveLength(23);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -1275,6 +1275,96 @@ describe("Clinical Summary · After-visit summary / clinician-handoff live-Claud
     // so it doesn't imply a live Claude call happened at seed time.
     expect(summarize?.attributes?.via).toBe("scripted-fallback");
     expect(typeof summarize?.attributes?.fallbackReason).toBe("string");
+  });
+});
+
+describe("SDOH Screening · whole-person-care social-needs + community-referral agent", () => {
+  it("registers as a prototype Agentforce agent on the new whole-person-care tier", () => {
+    const s = getAgent("sdoh-screening-agent");
+    expect(s).toBeDefined();
+    expect(s!.kind).toBe("agentforce");
+    expect(s!.protocol).toBe("a2a");
+    expect(s!.provider).toBe("Salesforce");
+    expect(s!.status).toBe("prototype");
+    // A NEW whole-person-care tier on the patient-care plane — screening +
+    // referral for social needs is distinct work from the clinical-decision
+    // and care-coordination agents.
+    expect(s!.governanceTier).toBe("whole-person-care");
+    expect(planeForTier(s!.governanceTier)).toBe("patient-care");
+    expect(GOVERNANCE_TIERS["whole-person-care"].label.length).toBeGreaterThan(0);
+    expect(s!.endpoint).toBe("/api/agents/sdoh-screening");
+  });
+
+  it("carries the two SDOH blocks plus the reused HIPAA-audit policy (patient-plane)", () => {
+    const ids = getPoliciesForAgent("sdoh-screening-agent").map((p) => p.id);
+    expect(ids).toContain("policy.sdoh.validated-screener-only");
+    expect(ids).toContain("policy.sdoh.consent-before-referral");
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT on any commercial-plane-only policy (it touches PHI).
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("both SDOH policies are enforced blocks", () => {
+    for (const id of [
+      "policy.sdoh.validated-screener-only",
+      "policy.sdoh.consent-before-referral"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement, id).toBe("block");
+      expect(policy!.status, id).toBe("enforced");
+    }
+  });
+
+  it("blocks an off-allow-list screener and a referral without consent; allows a validated, consented one", () => {
+    const offList = evaluateGovernance({
+      agentId: "sdoh-screening-agent",
+      task: { usesValidatedSdohScreener: false, sdohReferralHasConsent: true }
+    });
+    expect(offList.decision).toBe("block");
+    expect(offList.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.sdoh.validated-screener-only"
+    );
+
+    const noConsent = evaluateGovernance({
+      agentId: "sdoh-screening-agent",
+      task: { usesValidatedSdohScreener: true, sdohReferralHasConsent: false }
+    });
+    expect(noConsent.decision).toBe("block");
+    expect(noConsent.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.sdoh.consent-before-referral"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "sdoh-screening-agent",
+      task: { usesValidatedSdohScreener: true, sdohReferralHasConsent: true }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "sdoh-screening-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a screen→refer trace and a safety-escalation variant, every span phiAccessed", () => {
+    const spans = listTraces({ taskId: "task-seed-sdoh-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(3);
+    const screen = spans.find((s) => s.operation === "sdoh.screen");
+    expect(screen?.agentId).toBe("sdoh-screening-agent");
+    expect(screen?.attributes?.usesValidatedSdohScreener).toBe(true);
+    const refer = spans.find((s) => s.operation === "sdoh.refer");
+    expect(refer?.attributes?.autonomousEnrollment).toBe(false);
+    expect(refer?.attributes?.sent).toBe(false);
+    for (const s of spans) {
+      expect(s.attributes?.phiAccessed, s.operation).toBe(true);
+    }
+
+    const safety = listTraces({ taskId: "task-seed-sdoh-safety-001" });
+    const escalate = safety.find((s) => s.operation === "sdoh.safety.escalate");
+    expect(escalate?.agentId).toBe("sdoh-screening-agent");
+    expect(escalate?.attributes?.handoffTo).toBe("social-worker");
+    expect(escalate?.attributes?.requiresHumanEscalation).toBe(true);
   });
 });
 

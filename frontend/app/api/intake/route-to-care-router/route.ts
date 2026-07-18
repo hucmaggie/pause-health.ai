@@ -36,6 +36,14 @@ import {
   type SchedulingRequest
 } from "../../../../lib/scheduling";
 import {
+  draftCommunityReferralsForResult,
+  isAllowlistedSdohScreener,
+  screenSocialNeeds,
+  sdohToIntakeSignal,
+  type SdohScreener,
+  type SdohScreeningResponse
+} from "../../../../lib/sdoh";
+import {
   DEMO_DATA360_PATIENT_ID,
   getGroundingContext,
   resolveIdentity
@@ -146,6 +154,22 @@ export async function POST(req: Request) {
      * Set `clinicalSummary: false` to opt out explicitly.
      */
     clinicalSummary?: boolean;
+    /**
+     * Optional health-related social needs (SDOH) screening. When present, the
+     * SDOH Screening Agent DETERMINISTICALLY screens the patient with a
+     * validated instrument (the CMS AHC-HRSN core-domain tool), flags the
+     * positive social-need domains, escalates a positive interpersonal-safety
+     * screen to a human social worker, and drafts CONSENT-GATED community-resource
+     * referrals (never an autonomous enrollment). SDOH is SEPARATE from clinical
+     * severity — it raises a whole-person care-coordination flag, NOT an intake
+     * severity — so this composes WITHOUT changing the routing decision. Strictly
+     * additive: absent = today's behavior unchanged.
+     */
+    sdoh?: {
+      screener?: SdohScreener;
+      responses?: SdohScreeningResponse["responses"];
+      patientConsent?: boolean;
+    };
   };
   let body: Body;
   try {
@@ -271,9 +295,112 @@ export async function POST(req: Request) {
     }
   }
 
+  // Optional SDOH / HRSN screening (additive, whole-person care). When a
+  // body.sdoh for an allow-listed screener is present, the SDOH Screening Agent
+  // DETERMINISTICALLY screens the patient, escalates the interpersonal-safety
+  // red flag to a human social worker, and drafts CONSENT-GATED community-
+  // resource referrals — never an autonomous enrollment. SDOH is SEPARATE from
+  // clinical severity: it raises a care-coordination flag and NEVER mutates the
+  // intake severity, so the Care Router decision is unchanged. Best-effort +
+  // strictly additive: a malformed screening must never break intake routing.
+  let sdohSpanId: string | undefined;
+  let sdohMeta: Record<string, unknown> | undefined;
+  if (body.sdoh && isAllowlistedSdohScreener(body.sdoh.screener)) {
+    try {
+      const result = screenSocialNeeds({
+        screener: body.sdoh.screener,
+        responses: body.sdoh.responses ?? {}
+      });
+      const signal = sdohToIntakeSignal(result);
+      const patientConsent = body.sdoh.patientConsent === true;
+      const referrals = draftCommunityReferralsForResult(result, {
+        patientConsent
+      });
+      const sdohSpan = recordInstantSpan({
+        taskId,
+        parentSpanId: coverageSpanId ?? assessmentSpanId,
+        agentId: "sdoh-screening-agent",
+        operation: "sdoh.screen",
+        protocol: "rest",
+        attributes: {
+          screener: result.screener,
+          positiveDomainCount: result.positiveDomainCount,
+          positiveDomains: result.positiveDomains,
+          safetyEscalation: signal.safetyEscalation,
+          usesValidatedSdohScreener: true,
+          scoringMethod: "deterministic",
+          phiAccessed: true,
+          ...(personaId ? { personaId } : {}),
+          ...(origin ? { origin } : {})
+        }
+      });
+      sdohSpanId = sdohSpan.id;
+      // A positive interpersonal-safety screen is a mandatory human escalation.
+      if (result.redFlags.length > 0) {
+        recordInstantSpan({
+          taskId,
+          parentSpanId: sdohSpan.id,
+          agentId: "sdoh-screening-agent",
+          operation: "sdoh.safety.escalate",
+          protocol: "internal",
+          status: "error",
+          attributes: {
+            screener: result.screener,
+            redFlags: result.redFlags.map((f) => f.code),
+            handoffTo: "social-worker",
+            requiresHumanEscalation: true,
+            phiAccessed: true,
+            ...(personaId ? { personaId } : {}),
+            ...(origin ? { origin } : {})
+          }
+        });
+      }
+      for (const referral of referrals) {
+        recordInstantSpan({
+          taskId,
+          parentSpanId: sdohSpan.id,
+          agentId: "sdoh-screening-agent",
+          operation: "sdoh.refer",
+          protocol: "rest",
+          attributes: {
+            resourceId: referral.resourceId,
+            domain: referral.domain,
+            handoffTo: referral.handoffTo,
+            suppressedForNoConsent: referral.suppressedForNoConsent,
+            requiresHumanApproval: referral.requiresHumanApproval,
+            autonomousEnrollment: referral.autonomousEnrollment,
+            sent: referral.sent,
+            phiAccessed: true,
+            ...(personaId ? { personaId } : {}),
+            ...(origin ? { origin } : {})
+          }
+        });
+      }
+      sdohMeta = {
+        screener: result.screener,
+        positiveDomains: result.positiveDomains,
+        positiveDomainCount: result.positiveDomainCount,
+        safetyEscalation: signal.safetyEscalation,
+        referralsDrafted: referrals.length,
+        referrals: referrals.map((r) => ({
+          resourceId: r.resourceId,
+          resourceLabel: r.resourceLabel,
+          domain: r.domain,
+          suppressedForNoConsent: r.suppressedForNoConsent,
+          handoffTo: r.handoffTo
+        })),
+        // SDOH never drives clinical severity — it is whole-person care that
+        // composes alongside the routing decision without changing it.
+        sdohSeparateFromClinicalSeverity: true
+      };
+    } catch {
+      // Best-effort: leave intake routing untouched on a malformed screening.
+    }
+  }
+
   const intakeSpan = recordInstantSpan({
     taskId,
-    parentSpanId: coverageSpanId ?? assessmentSpanId,
+    parentSpanId: sdohSpanId ?? coverageSpanId ?? assessmentSpanId,
     agentId: "agentforce-intake",
     operation: "intake.complete",
     protocol: "rest",
@@ -623,6 +750,7 @@ export async function POST(req: Request) {
         _salesforceConfigured: isSalesforceConfigured(),
         ...(assessmentMeta ? { _assessment: assessmentMeta } : {}),
         ...(coverageMeta ? { _coverage: coverageMeta } : {}),
+        ...(sdohMeta ? { _sdoh: sdohMeta } : {}),
         ...(schedulingMeta ? { _scheduling: schedulingMeta } : {}),
         ...(carePlanMeta ? { _carePlan: carePlanMeta } : {}),
         ...(clinicalSummaryMeta ? { _clinicalSummary: clinicalSummaryMeta } : {})
@@ -633,6 +761,7 @@ export async function POST(req: Request) {
       decision,
       ...(assessmentMeta ? { assessment: assessmentMeta } : {}),
       ...(coverageMeta ? { coverage: coverageMeta } : {}),
+      ...(sdohMeta ? { sdoh: sdohMeta } : {}),
       ...(schedulingMeta ? { scheduling: schedulingMeta } : {}),
       ...(carePlanMeta ? { carePlan: carePlanMeta } : {}),
       ...(clinicalSummaryMeta ? { clinicalSummary: clinicalSummaryMeta } : {}),

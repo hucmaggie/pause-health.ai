@@ -14,6 +14,7 @@ export type GovernanceTier =
   | "benefits-verification"
   | "care-coordination"
   | "clinical-decision"
+  | "whole-person-care"
   | "data-plane"
   | "integration"
   | "data-grounding"
@@ -65,6 +66,7 @@ export const GOVERNANCE_TIERS: Record<
   },
   "care-coordination": { label: "Care coordination", plane: "patient-care" },
   "clinical-decision": { label: "Clinical decision", plane: "patient-care" },
+  "whole-person-care": { label: "Whole-person care", plane: "patient-care" },
   "patient-acquisition": { label: "Patient acquisition", plane: "patient-care" },
   "lead-qualification": { label: "Lead qualification", plane: "patient-care" },
   "patient-engagement": { label: "Patient engagement", plane: "patient-care" },
