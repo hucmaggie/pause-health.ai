@@ -431,6 +431,117 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Anthropic + Pause-Health.ai",
     governanceTier: "clinical-decision"
+  },
+  {
+    id: "medication-adherence-agent",
+    name: "Agentforce Medication Adherence · HRT/SSRI Refill & Adherence (Health Cloud)",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health" /
+    // Health Cloud MedicationRequest + MedicationTherapyReview agent: POST
+    // /api/agents/medication-adherence/tasks (card at /.well-known/agent.json).
+    // Adherence + refill-timing detection is DETERMINISTIC (a pure function of
+    // an explicit as-of date + per-med fill history); the medication catalog +
+    // days-supply/refill intervals are illustrative synthetics, NOT a certified
+    // pharmacy / e-prescribing system. CRITICAL: it can only NUDGE — it never
+    // autonomously submits/orders a refill (that requires human approval).
+    endpoint: "/api/agents/medication-adherence",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Tracks menopause-medication adherence + refill timing — transdermal/oral HRT (estradiol, oral progesterone) and an SSRI/SNRI for vasomotor symptoms / mood (paroxetine, venlafaxine) — the Salesforce 'Agentforce for Health' / Health Cloud MedicationRequest + MedicationTherapyReview analog",
+      "Detection is DETERMINISTIC (a pure function of an explicit as-of date + per-medication days-supply and last-fill; no randomness, no clock) — the same inputs always yield the same good / at-risk / lapsed adherence status and refill-due call",
+      "Drafts consent- and quiet-hours-aware refill/adherence nudges for each medication due or off-track (human-approval-gated, never auto-sent) and hands them to the Engagement Agent for delivery",
+      "CAN ONLY NUDGE: it may draft a refill/adherence reminder but must NEVER autonomously submit or order a refill — a refill without human approval is blocked at the Agent Fabric governance boundary",
+      "Flags adherence drop-off (a lapsed medication) to the care team, and runs against ILLUSTRATIVE synthetic medications + refill intervals — clearly labeled; NOT a certified pharmacy / e-prescribing system"
+    ],
+    provider: "Salesforce",
+    governanceTier: "patient-engagement"
+  },
+  {
+    id: "referral-management-agent",
+    name: "Agentforce Referral Management · Specialist Referrals (Health Cloud)",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health"
+    // Referrals ("Create Referral") agent: POST
+    // /api/agents/referral-management/tasks (card at /.well-known/agent.json).
+    // Triage is DETERMINISTIC (a pure function of the intake + routing context;
+    // no randomness, no clock); the specialty catalog + triage rules are
+    // illustrative synthetics, NOT a certified clinical referral engine.
+    // CRITICAL: it can only DRAFT — an outbound referral requires a clinician's
+    // sign-off before it is "sent" (that is a human-in-the-loop clinical action).
+    endpoint: "/api/agents/referral-management",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Triages and routes referrals to the adjacent specialists menopause commonly touches — cardiology / CVD risk, endocrinology, bone health, pelvic-floor PT, and behavioral health — from intake + Care Router routing signals — the Salesforce 'Agentforce for Health' Referrals ('Create Referral') analog",
+      "GENERALIZES the Care Router's behavioral-health-handoff into a full outbound-referral node: what the router expresses as one handoff pathway, this agent expresses as a catalog of cosign-gated referral drafts across the menopause care neighborhood",
+      "Triage is DETERMINISTIC (a pure function of the age/cycle/symptom/severity/red-flag context + risk flags; no randomness, no clock) — the same context always yields the same recommended referral(s)",
+      "Every recommended referral references a defined specialty-catalog id AND carries a documented reason — never a fabricated or reasonless referral; enforced at the Agent Fabric governance boundary",
+      "CAN ONLY DRAFT: it may draft and triage an outbound referral but must NEVER send it without a clinician's sign-off — a referral asserted as sent without a clinician cosign is blocked at the Agent Fabric governance boundary (policy.referral.clinician-cosign)",
+      "Runs against ILLUSTRATIVE synthetic specialties + triage rules — clearly labeled; NOT a certified clinical referral engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
+    id: "member-service-agent",
+    name: "Agentforce Member Service · Billing & Coverage (Patient Service)",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health" Claims &
+    // Coverage / patient-service agent: POST /api/agents/member-service/tasks
+    // (card at /.well-known/agent.json). It answers a member's BILLING &
+    // COVERAGE self-service questions grounded on DETERMINISTIC synthetic
+    // claim/EOB records (hashed member/claim keys → realistic figures; no
+    // randomness, no clock) and routes to a human with full billing context when
+    // out of scope. CRITICAL: a billing/claim answer must trace to a synthetic
+    // claim/EOB record — the agent may never fabricate claim data. Scoped to
+    // billing/coverage self-service so it stays distinct from the engagement
+    // agent. NOT a real claims / 835-ERA / payer system.
+    endpoint: "/api/agents/member-service",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Answers a member's BILLING & COVERAGE self-service questions — claim status, copay / patient responsibility, outstanding balance, and EOB explanation — the Salesforce 'Agentforce for Health' Claims & Coverage / patient-service analog",
+      "Grounds every answer on DETERMINISTIC synthetic claim/EOB records (hashed member/claim keys → realistic billed/allowed/plan-paid/patient-responsibility figures across submitted / adjudicated / paid / denied statuses; no randomness, no clock) — clearly labeled synthetic; not a real claims / 835-ERA remittance or FHIR ExplanationOfBenefit",
+      "Every billing/claim answer must trace to a specific synthetic claim/EOB record (a cited-claims block) — the agent may not fabricate claim data; enforced at the Agent Fabric governance boundary (policy.billing.claim-data-sourced)",
+      "Routes out-of-scope requests (clinical, prescription, or scheduling questions) to a human member-services specialist with a PII-safe billing context bundle — scoped to billing/coverage self-service so it stays distinct from the Engagement Agent",
+      "Captures no free-text PII (structured, claim-referenced answers only) and every turn is HIPAA-audited"
+    ],
+    provider: "Salesforce",
+    governanceTier: "patient-facing"
+  },
+  {
+    id: "prior-authorization-agent",
+    name: "Agentforce Prior Authorization · CareRequest + Utilization Management (Health Cloud)",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health" /
+    // Health Cloud CareRequest + Utilization Management agent: POST
+    // /api/agents/prior-authorization/tasks (card at /.well-known/agent.json).
+    // This is the HEAVIEST agent and the LEAST demo-honest of the set: real PA
+    // is a genuinely multi-system EDI/278 (or FHIR PAS) workflow against a
+    // payer's utilization-management system. Assembly is DETERMINISTIC (payer
+    // criteria + required-documentation checklist hashed from stable request
+    // keys; no randomness, no clock), and the criteria + doc checklists are
+    // ILLUSTRATIVE synthetics, NOT a certified utilization-management engine.
+    // TWO CRITICAL, governance-enforced honesty properties: (1) it must NOT
+    // autonomously submit a PA — a clinician must approve before submission; and
+    // (2) a PA submission must include the required supporting documentation.
+    endpoint: "/api/agents/prior-authorization",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Assembles a prior authorization for a PA-requiring menopause item — systemic HRT / compounded estradiol, a bone-density DEXA scan, or a specialized hormone lab panel — the Salesforce 'Agentforce for Health' / Health Cloud CareRequest + Utilization Management analog; the HEAVIEST agent and the LEAST demo-honest (real PA is a genuinely multi-system EDI/278 or FHIR PAS workflow), so the mock is labeled especially clearly",
+      "Pulls the (synthetic) clinical context, DETERMINISTICALLY matches the payer's medical-necessity criteria, and assembles the required supporting-documentation checklist (present vs missing) — every package references defined catalog criteria (no randomness, no clock); clearly labeled synthetic, NOT a real X12 278 / FHIR PAS EDI transaction or payer PA portal",
+      "MUST NOT autonomously submit a PA: it may only assemble a clinician-gated draft (requiresClinicianApproval:true, submitted:false) — a clinician must approve before submission, enforced at the Agent Fabric governance boundary (policy.pa.no-autonomous-submission)",
+      "Documentation integrity: a PA submission must include the required supporting documentation — a submission missing a required document is blocked at the Agent Fabric governance boundary (policy.pa.documentation-integrity), and the submit path refuses as defense in depth",
+      "Tracks a PA status (draft / ready-for-clinician / submitted / approved / denied) and runs against ILLUSTRATIVE synthetic payer criteria + document checklists — clearly labeled; NOT a certified utilization-management engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "clinical-decision"
   }
 ];
 
@@ -440,7 +551,7 @@ const POLICIES: PolicyRecord[] = [
     name: "No free-text PII in intake",
     description:
       "Patient-facing intake agents may not capture or persist free-text PII (full names, SSNs, addresses). Structured fields only.",
-    appliesTo: ["agentforce-intake", "assessment-agent"],
+    appliesTo: ["agentforce-intake", "assessment-agent", "member-service-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -473,7 +584,11 @@ const POLICIES: PolicyRecord[] = [
       "benefits-verification-agent",
       "appointment-scheduling-agent",
       "care-gap-closure-agent",
-      "care-plan-agent"
+      "care-plan-agent",
+      "medication-adherence-agent",
+      "referral-management-agent",
+      "member-service-agent",
+      "prior-authorization-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -533,6 +648,15 @@ const POLICIES: PolicyRecord[] = [
     status: "enforced"
   },
   {
+    id: "policy.medication.no-autonomous-refill",
+    name: "No autonomous medication refill",
+    description:
+      "The Medication Adherence Agent may draft a refill/adherence nudge but may NOT autonomously submit or order a medication refill. Any refill action that lacks a human-in-the-loop approval is rejected before it can be committed — the agent only ever nudges a human to refill; a clinician/pharmacist orders the refill. (In the prototype the medication catalog + days-supply/refill intervals are clearly-labeled illustrative synthetics, not a certified pharmacy / e-prescribing system; in production this is the customer's governed Health Cloud MedicationRequest / e-prescribing workflow.)",
+    appliesTo: ["medication-adherence-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
     id: "policy.model.anthropic-claude-sonnet-allowlisted",
     name: "Model allow-list",
     description:
@@ -545,8 +669,13 @@ const POLICIES: PolicyRecord[] = [
     id: "policy.clinical.no-prescribing",
     name: "No autonomous prescribing",
     description:
-      "Clinical-decision agents may recommend pathways but may not write prescriptions, order labs, or commit clinical actions without a human-in-the-loop clinician.",
-    appliesTo: ["care-router-claude", "care-plan-agent"],
+      "Clinical-decision agents may recommend pathways but may not write prescriptions, order labs, or commit clinical actions without a human-in-the-loop clinician. This also covers the Medication Adherence Agent: it may nudge a patient to refill but may not autonomously commit a refill order; and the Prior Authorization Agent: it may assemble a clinician-gated PA draft but may not autonomously submit a PA.",
+    appliesTo: [
+      "care-router-claude",
+      "care-plan-agent",
+      "medication-adherence-agent",
+      "prior-authorization-agent"
+    ],
     enforcement: "block",
     status: "enforced"
   },
@@ -554,8 +683,44 @@ const POLICIES: PolicyRecord[] = [
     id: "policy.clinical.rationale-required",
     name: "Rationale required on every decision",
     description:
-      "Every routing decision must include human-readable rationale. Decisions without rationale are rejected and re-issued to the model.",
-    appliesTo: ["care-router-claude", "care-plan-agent"],
+      "Every routing decision must include human-readable rationale. Decisions without rationale are rejected and re-issued to the model. This also covers the Referral Management Agent: every recommended outbound referral must carry a documented reason — a reasonless referral is rejected.",
+    appliesTo: ["care-router-claude", "care-plan-agent", "referral-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.referral.clinician-cosign",
+    name: "Clinician sign-off before an outbound referral is sent",
+    description:
+      "The Referral Management Agent may triage and draft an outbound referral but may NOT send it without a clinician's sign-off. A referral asserted as sent without a clinician cosign is rejected before it can leave the fabric — the agent only ever drafts a cosign-gated referral; a clinician reviews, signs, and sends it. (In the prototype the specialty catalog + triage are clearly-labeled illustrative synthetics, not a certified clinical referral engine; in production this is the customer's governed referral / order-entry workflow.)",
+    appliesTo: ["referral-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.billing.claim-data-sourced",
+    name: "Billing answers must trace to a claim/EOB record",
+    description:
+      "Every billing/claim answer the Member Service / Billing Agent returns must trace to a synthetic claim/EOB record — the agent may not fabricate claim data (a copay, balance, claim status, or EOB figure without a source). A caller-asserted billing answer that cites no claim record is rejected before it can be returned to a member, so the agent can never invent claim data. (In the prototype the claim/EOB records are clearly-labeled deterministic synthetics, not a real claims / 835-ERA remittance or FHIR ExplanationOfBenefit; in production this is the customer's governed claims / payer system of record.)",
+    appliesTo: ["member-service-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.pa.no-autonomous-submission",
+    name: "No autonomous prior-authorization submission",
+    description:
+      "The Prior Authorization Agent may assemble a prior authorization but may NOT autonomously submit it — a clinician must approve before submission. A PA submission asserted without a clinician's approval is rejected before it can leave the fabric; the agent only ever assembles a clinician-gated draft (requiresClinicianApproval:true, submitted:false), and a clinician reviews and submits it. (In the prototype the PA package is a clearly-labeled deterministic synthetic, NOT a real X12 278 / FHIR PAS EDI transaction or payer PA portal submission; in production this is the customer's governed utilization-management / CareRequest workflow.)",
+    appliesTo: ["prior-authorization-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.pa.documentation-integrity",
+    name: "A PA submission must include the required supporting documentation",
+    description:
+      "A prior authorization the Prior Authorization Agent submits must include the required supporting documentation for the item — a submission missing a required document is rejected before it can leave the fabric, so the agent can never file an incomplete PA. Assembling a DRAFT with missing documentation is allowed (the draft honestly lists what is still outstanding); only a submission must be documentation-complete. (In the prototype the required-documentation checklist is a clearly-labeled illustrative synthetic, NOT a certified utilization-management requirement; in production this is the payer's real documentation-requirements rules — e.g. Da Vinci DTR.)",
+    appliesTo: ["prior-authorization-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -659,7 +824,8 @@ const POLICIES: PolicyRecord[] = [
       "care-router-claude",
       "benefits-verification-agent",
       "care-gap-closure-agent",
-      "care-plan-agent"
+      "care-plan-agent",
+      "prior-authorization-agent"
     ],
     enforcement: "block",
     status: "enforced"
@@ -678,7 +844,12 @@ const POLICIES: PolicyRecord[] = [
     name: "Contact consent required for outreach",
     description:
       "Prospecting and engagement agents may only contact an individual who carries an active contact/marketing consent in the Data 360 consent ledger. Individuals without consent are suppressed from every audience before a message is ever drafted.",
-    appliesTo: ["prospecting-agent", "engagement-agent", "care-gap-closure-agent"],
+    appliesTo: [
+      "prospecting-agent",
+      "engagement-agent",
+      "care-gap-closure-agent",
+      "medication-adherence-agent"
+    ],
     enforcement: "block",
     status: "enforced"
   },
@@ -687,7 +858,12 @@ const POLICIES: PolicyRecord[] = [
     name: "Human approval before any patient message",
     description:
       "Outreach and engagement messages are drafted for human review. No message is delivered to a prospect or patient without a human-in-the-loop approval — the prototype never sends autonomously.",
-    appliesTo: ["prospecting-agent", "engagement-agent", "care-gap-closure-agent"],
+    appliesTo: [
+      "prospecting-agent",
+      "engagement-agent",
+      "care-gap-closure-agent",
+      "medication-adherence-agent"
+    ],
     enforcement: "block",
     status: "enforced"
   },
@@ -705,7 +881,11 @@ const POLICIES: PolicyRecord[] = [
     name: "Quiet-hours + channel preference honored",
     description:
       "Engagement touches must fall inside the patient's quiet-hours window and use a channel the patient has opted into. Touches outside the window or on an unpreferred channel are blocked.",
-    appliesTo: ["engagement-agent", "care-gap-closure-agent"],
+    appliesTo: [
+      "engagement-agent",
+      "care-gap-closure-agent",
+      "medication-adherence-agent"
+    ],
     enforcement: "block",
     status: "enforced"
   },
@@ -1788,6 +1968,415 @@ function store(): FabricStore {
         fallbackReason:
           "ANTHROPIC_API_KEY not set; using deterministic Pause care-plan summarizer.",
         nonPrescriptive: true
+      }
+    }
+  );
+
+  // A trace showing the Medication Adherence Agent working PROACTIVELY (like
+  // Care Gap Closure, not part of the reactive intake→router flow): it
+  // DETERMINISTICALLY assesses the patient's menopause medications against an
+  // explicit as-of date (here estradiol on-track, oral progesterone refill-due,
+  // paroxetine at-risk, venlafaxine lapsed), drafts consent- and
+  // quiet-hours-aware refill/adherence NUDGES for the ones due or off-track
+  // (human-approval-gated, never auto-sent, and explicitly nudge-only — it never
+  // autonomously orders a refill), flags the lapsed medication as an adherence
+  // drop-off to the care team, and hands the nudges to the Engagement Agent for
+  // delivery. The medications + refill intervals are ILLUSTRATIVE synthetics,
+  // not a certified pharmacy system. Seed data; production populates the ring
+  // buffer from the persistent log store.
+  const ma0 = Date.now() - 1000 * 60 * 10;
+  const medAdherenceTaskId = "task-seed-medication-adherence-001";
+  const medAdherenceName =
+    "Agentforce Medication Adherence · HRT/SSRI Refill & Adherence (Health Cloud)";
+  s.traces.push(
+    {
+      id: "span-medadh-001",
+      taskId: medAdherenceTaskId,
+      agentId: "medication-adherence-agent",
+      agentName: medAdherenceName,
+      operation: "medication.adherence.assess",
+      protocol: "rest",
+      startedAt: new Date(ma0).toISOString(),
+      finishedAt: new Date(ma0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        asOf: "2026-02-02",
+        medicationsAssessed: 4,
+        medications: [
+          "med.estradiol-transdermal",
+          "med.progesterone-oral",
+          "med.paroxetine-ssri",
+          "med.venlafaxine-snri"
+        ],
+        statuses: ["good", "good", "at-risk", "lapsed"],
+        refillsDue: 3,
+        dropOffs: 1,
+        // The honesty invariant: every refill action is human-approval-gated —
+        // the agent only ever nudges, never autonomously orders a refill.
+        refillRequiresHumanApproval: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-medadh-002",
+      taskId: medAdherenceTaskId,
+      parentSpanId: "span-medadh-001",
+      agentId: "medication-adherence-agent",
+      agentName: medAdherenceName,
+      operation: "medication.nudge.draft",
+      protocol: "rest",
+      startedAt: new Date(ma0 + 40).toISOString(),
+      finishedAt: new Date(ma0 + 100).toISOString(),
+      durationMs: 60,
+      status: "ok",
+      attributes: {
+        drug: "med.progesterone-oral",
+        status: "good",
+        refillDue: true,
+        channel: "sms",
+        quietHoursRespected: true,
+        humanApprovalRequired: true,
+        nudgeOnly: true,
+        suppressedForNoConsent: false,
+        sent: false
+      }
+    },
+    {
+      id: "span-medadh-003",
+      taskId: medAdherenceTaskId,
+      parentSpanId: "span-medadh-001",
+      agentId: "medication-adherence-agent",
+      agentName: medAdherenceName,
+      operation: "medication.nudge.draft",
+      protocol: "rest",
+      startedAt: new Date(ma0 + 100).toISOString(),
+      finishedAt: new Date(ma0 + 160).toISOString(),
+      durationMs: 60,
+      status: "ok",
+      attributes: {
+        drug: "med.venlafaxine-snri",
+        status: "lapsed",
+        refillDue: true,
+        channel: "sms",
+        quietHoursRespected: true,
+        humanApprovalRequired: true,
+        nudgeOnly: true,
+        suppressedForNoConsent: false,
+        sent: false
+      }
+    },
+    {
+      id: "span-medadh-004",
+      taskId: medAdherenceTaskId,
+      parentSpanId: "span-medadh-001",
+      agentId: "medication-adherence-agent",
+      agentName: medAdherenceName,
+      operation: "medication.dropoff.flag",
+      protocol: "rest",
+      startedAt: new Date(ma0 + 160).toISOString(),
+      finishedAt: new Date(ma0 + 220).toISOString(),
+      durationMs: 60,
+      status: "ok",
+      attributes: {
+        dropOffs: 1,
+        medications: ["med.venlafaxine-snri"],
+        routedTo: "care-team",
+        synthetic: true
+      }
+    },
+    {
+      id: "span-medadh-005",
+      taskId: medAdherenceTaskId,
+      parentSpanId: "span-medadh-001",
+      agentId: "engagement-agent",
+      agentName: "Agentforce Engagement Agent · Care Continuity",
+      operation: "engagement.outreach.handoff",
+      protocol: "a2a",
+      startedAt: new Date(ma0 + 220).toISOString(),
+      finishedAt: new Date(ma0 + 620).toISOString(),
+      durationMs: 400,
+      status: "ok",
+      attributes: {
+        nudgesHandedOff: 2,
+        channels: ["sms", "sms"],
+        humanApprovalRequired: true,
+        nudgeOnly: true,
+        sent: false
+      }
+    }
+  );
+
+  // A trace showing the Referral Management Agent working standalone (it
+  // complements the Care Router rather than sitting on the reactive
+  // intake→router spine): it DETERMINISTICALLY triages a patient's intake +
+  // routing signals into recommended specialist referrals (here behavioral
+  // health — generalizing the Care Router's behavioral-health handoff into a
+  // full outbound referral — and bone health from an osteoporosis-risk flag),
+  // each referencing a defined specialty-catalog id + a documented reason,
+  // drafts a cosign-gated referral request per recommendation (every one marked
+  // requiresClinicianCosign:true, status:"drafted", sent:false), and parks them
+  // on an await-cosign marker. The load-bearing honesty invariant: an outbound
+  // referral requires a clinician's sign-off before it is sent — the agent only
+  // ever drafts. The specialties + triage are ILLUSTRATIVE synthetics, not a
+  // certified referral engine. Seed data; production populates the ring buffer
+  // from the persistent log store.
+  const rf0 = Date.now() - 1000 * 60 * 11;
+  const referralTaskId = "task-seed-referral-001";
+  const referralName =
+    "Agentforce Referral Management · Specialist Referrals (Health Cloud)";
+  const referralTriageSpanId = "span-referral-001";
+  s.traces.push(
+    {
+      id: referralTriageSpanId,
+      taskId: referralTaskId,
+      agentId: "referral-management-agent",
+      agentName: referralName,
+      operation: "referral.triage",
+      protocol: "rest",
+      startedAt: new Date(rf0).toISOString(),
+      finishedAt: new Date(rf0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        referralsRecommended: 2,
+        specialties: ["referral.behavioral-health", "referral.bone-health"],
+        priorities: ["urgent", "routine"],
+        referralsTraceToSpecialty: true,
+        // The honesty invariant: every outbound referral is cosign-gated.
+        referralHasClinicianCosign: true,
+        generalizesCareRouterHandoff: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-referral-002",
+      taskId: referralTaskId,
+      parentSpanId: referralTriageSpanId,
+      agentId: "referral-management-agent",
+      agentName: referralName,
+      operation: "referral.draft",
+      protocol: "rest",
+      startedAt: new Date(rf0 + 40).toISOString(),
+      finishedAt: new Date(rf0 + 80).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        specialtyId: "referral.behavioral-health",
+        priority: "urgent",
+        requiresClinicianCosign: true,
+        status: "drafted",
+        sent: false
+      }
+    },
+    {
+      id: "span-referral-003",
+      taskId: referralTaskId,
+      parentSpanId: referralTriageSpanId,
+      agentId: "referral-management-agent",
+      agentName: referralName,
+      operation: "referral.draft",
+      protocol: "rest",
+      startedAt: new Date(rf0 + 80).toISOString(),
+      finishedAt: new Date(rf0 + 120).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        specialtyId: "referral.bone-health",
+        priority: "routine",
+        requiresClinicianCosign: true,
+        status: "drafted",
+        sent: false
+      }
+    },
+    {
+      id: "span-referral-004",
+      taskId: referralTaskId,
+      parentSpanId: referralTriageSpanId,
+      agentId: "referral-management-agent",
+      agentName: referralName,
+      operation: "referral.await-cosign",
+      protocol: "rest",
+      startedAt: new Date(rf0 + 120).toISOString(),
+      finishedAt: new Date(rf0 + 160).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        referralsAwaitingCosign: 2,
+        requiresClinicianCosign: true,
+        sent: false,
+        synthetic: true
+      }
+    }
+  );
+
+  // A trace showing the Member Service / Billing Agent working standalone as a
+  // patient-service node (the Salesforce "Agentforce for Health" Claims &
+  // Coverage analog): it looks up the member's DETERMINISTIC synthetic claim
+  // records, answers an in-scope billing question grounded on a specific claim
+  // (here a copay / patient-responsibility question that cites an adjudicated
+  // claim — every billing answer must trace to a claim/EOB record, never
+  // fabricated), and then routes an out-of-scope follow-up (a clinical /
+  // prescription request) to a human member-services specialist with a PII-safe
+  // billing context bundle. Scoped to billing/coverage self-service, distinct
+  // from the engagement agent. The claim/EOB records are ILLUSTRATIVE synthetics,
+  // NOT a real claims / 835-ERA / payer system. Seed data; production populates
+  // the ring buffer from the persistent log store.
+  const ms0 = Date.now() - 1000 * 60 * 13;
+  const memberServiceTaskId = "task-seed-member-service-001";
+  const memberServiceName =
+    "Agentforce Member Service · Billing & Coverage (Patient Service)";
+  const memberLookupSpanId = "span-member-service-001";
+  s.traces.push(
+    {
+      id: memberLookupSpanId,
+      taskId: memberServiceTaskId,
+      agentId: "member-service-agent",
+      agentName: memberServiceName,
+      operation: "billing.claim.lookup",
+      protocol: "rest",
+      startedAt: new Date(ms0).toISOString(),
+      finishedAt: new Date(ms0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        memberId: "member-demo-001",
+        claimsConsidered: 5,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-member-service-002",
+      taskId: memberServiceTaskId,
+      parentSpanId: memberLookupSpanId,
+      agentId: "member-service-agent",
+      agentName: memberServiceName,
+      operation: "billing.answer",
+      protocol: "rest",
+      startedAt: new Date(ms0 + 40).toISOString(),
+      finishedAt: new Date(ms0 + 80).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        intent: "patient-responsibility",
+        kind: "billing-answer",
+        citedClaimIds: ["clm-seed-adjudicated"],
+        citedClaimCount: 1,
+        patientResponsibility: 84,
+        // The honesty invariant: every billing answer traces to a claim record.
+        billingTracesToClaim: true,
+        routeToHuman: false,
+        synthetic: true
+      }
+    },
+      {
+        id: "span-member-service-003",
+        taskId: memberServiceTaskId,
+        parentSpanId: memberLookupSpanId,
+        agentId: "member-service-agent",
+        agentName: memberServiceName,
+        operation: "billing.route-to-human",
+        protocol: "a2a",
+        startedAt: new Date(ms0 + 80).toISOString(),
+        finishedAt: new Date(ms0 + 160).toISOString(),
+        durationMs: 80,
+        status: "ok",
+        attributes: {
+          intent: "out-of-scope",
+          reason:
+            "Out of scope for billing/coverage self-service (a clinical / prescription request) — handed to a human with the member's recent claim context",
+          queue: "member-services-billing",
+          // The route-to-human handoff asserts no billing figure, so it is
+          // honestly source-clean.
+          billingTracesToClaim: true,
+          routeToHuman: true,
+          synthetic: true
+        }
+      }
+    );
+
+  // A trace showing the Prior Authorization Agent — the HEAVIEST and LEAST
+  // demo-honest agent on the fabric — assembling a PA WITHOUT submitting it: it
+  // DETERMINISTICALLY matches the payer's medical-necessity criteria for a
+  // PA-requiring item (here systemic HRT / compounded estradiol — all criteria
+  // met), assembles the required supporting-documentation checklist (here
+  // complete), and then parks the package on an await-clinician marker. The
+  // load-bearing honesty invariants: the agent never autonomously submits (a
+  // clinician must approve — requiresClinicianApproval:true, submitted:false),
+  // and a submission must be documentation-complete. Real PA is a genuinely
+  // multi-system EDI/278 (or FHIR PAS) workflow; this is a MOCK, NOT a real
+  // 278/EDI or payer PA portal. Seed data; production populates the ring buffer
+  // from the persistent log store.
+  const pa0 = Date.now() - 1000 * 60 * 14;
+  const priorAuthTaskId = "task-seed-prior-authorization-001";
+  const priorAuthName =
+    "Agentforce Prior Authorization · CareRequest + Utilization Management (Health Cloud)";
+  const paMatchSpanId = "span-priorauth-001";
+  s.traces.push(
+    {
+      id: paMatchSpanId,
+      taskId: priorAuthTaskId,
+      agentId: "prior-authorization-agent",
+      agentName: priorAuthName,
+      operation: "priorauth.criteria.match",
+      protocol: "rest",
+      startedAt: new Date(pa0).toISOString(),
+      finishedAt: new Date(pa0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        itemId: "pa.systemic-hrt",
+        criteriaTotal: 3,
+        criteriaMet: 3,
+        criteriaComplete: true,
+        criteriaTraceToCatalog: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-priorauth-002",
+      taskId: priorAuthTaskId,
+      parentSpanId: paMatchSpanId,
+      agentId: "prior-authorization-agent",
+      agentName: priorAuthName,
+      operation: "priorauth.docs.assemble",
+      protocol: "rest",
+      startedAt: new Date(pa0 + 40).toISOString(),
+      finishedAt: new Date(pa0 + 80).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        itemId: "pa.systemic-hrt",
+        documentsRequired: 3,
+        documentsPresent: 3,
+        documentsMissing: 0,
+        paDocumentationComplete: true,
+        careRequestId: "care-req-seed-hrt",
+        synthetic: true
+      }
+    },
+    {
+      id: "span-priorauth-003",
+      taskId: priorAuthTaskId,
+      parentSpanId: paMatchSpanId,
+      agentId: "prior-authorization-agent",
+      agentName: priorAuthName,
+      operation: "priorauth.await-clinician",
+      protocol: "rest",
+      startedAt: new Date(pa0 + 80).toISOString(),
+      finishedAt: new Date(pa0 + 120).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        itemId: "pa.systemic-hrt",
+        status: "ready-for-clinician",
+        // The honesty invariants: never autonomously submitted; a submission
+        // must be documentation-complete.
+        requiresClinicianApproval: true,
+        paHasClinicianApproval: true,
+        paDocumentationComplete: true,
+        submitted: false,
+        synthetic: true
       }
     }
   );

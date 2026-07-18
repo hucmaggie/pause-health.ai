@@ -55,6 +55,15 @@ export type GovernanceTask = {
   gapsTraceToClinicalMeasure?: boolean;
   // Care plan (template-instantiated plan)
   planTracesToTemplate?: boolean;
+  // Medication adherence (nudge-only refill/adherence prompts)
+  refillRequiresHumanApproval?: boolean;
+  // Referral management (cosign-gated outbound referrals)
+  referralHasClinicianCosign?: boolean;
+  // Member service / billing (claim-sourced billing answers)
+  billingTracesToClaim?: boolean;
+  // Prior authorization (clinician-gated, documentation-complete PA assembly)
+  paHasClinicianApproval?: boolean;
+  paDocumentationComplete?: boolean;
   // Commercial plane (pipeline, account management)
   accessesPhi?: boolean;
   forecastSourcedFromCrm?: boolean;
@@ -241,6 +250,46 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An instantiated care plan doesn't derive from a defined template",
     reason:
       "The instantiated care plan did not derive from a defined CarePlanTemplate (an off-catalog / fabricated plan); every care plan must trace to a defined template"
+  },
+  {
+    policyId: "policy.medication.no-autonomous-refill",
+    signal: "refillRequiresHumanApproval",
+    violatingValue: false,
+    violationHint: "Submits/orders a refill without human approval",
+    reason:
+      "Attempted to autonomously submit/order a medication refill without human approval; the agent may only draft a nudge — a refill requires a human-in-the-loop"
+  },
+  {
+    policyId: "policy.referral.clinician-cosign",
+    signal: "referralHasClinicianCosign",
+    violatingValue: false,
+    violationHint: "Sends an outbound referral without a clinician sign-off",
+    reason:
+      "Attempted to send an outbound referral without a clinician sign-off; an outbound referral requires a clinician cosign before it is sent — the agent may only draft a cosign-gated referral, and a clinician signs and sends it"
+  },
+  {
+    policyId: "policy.billing.claim-data-sourced",
+    signal: "billingTracesToClaim",
+    violatingValue: false,
+    violationHint: "Billing/claim answer doesn't trace to a claim/EOB record",
+    reason:
+      "Returned billing/claim answer did not trace to a synthetic claim/EOB record (no cited claim); the agent may not fabricate claim data — a billing answer must derive from a claim record"
+  },
+  {
+    policyId: "policy.pa.no-autonomous-submission",
+    signal: "paHasClinicianApproval",
+    violatingValue: false,
+    violationHint: "Submits a PA without clinician approval",
+    reason:
+      "Attempted to submit a prior authorization without a clinician's approval; the agent may only assemble a clinician-gated draft — a PA submission requires a human-in-the-loop clinician approval"
+  },
+  {
+    policyId: "policy.pa.documentation-integrity",
+    signal: "paDocumentationComplete",
+    violatingValue: false,
+    violationHint: "Submits a PA missing required supporting documentation",
+    reason:
+      "Attempted to submit a prior authorization missing required supporting documentation; a PA submission must include the required supporting documentation"
   },
   {
     policyId: "policy.marketing.consent-to-contact-required",

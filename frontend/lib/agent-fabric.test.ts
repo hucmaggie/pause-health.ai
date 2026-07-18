@@ -418,11 +418,12 @@ describe("Validated-instrument assessment · Assessment agent", () => {
 });
 
 describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
-  it("brings the registry to seventeen agents", () => {
+  it("brings the registry to twenty-one agents", () => {
     // Sanity count guard: the funnel + intake + assessment + benefits +
-    // scheduling + care-gap-closure + care-plan agents, the Care Router, the
-    // platform substrate, and the commercial plane.
-    expect(listAgents()).toHaveLength(17);
+    // scheduling + care-gap-closure + care-plan + medication-adherence +
+    // referral-management + member-service + prior-authorization agents, the
+    // Care Router, the platform substrate, and the commercial plane.
+    expect(listAgents()).toHaveLength(21);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -789,6 +790,396 @@ describe("Care Plan · Clinical-decision live-Claude sibling", () => {
   });
 });
 
+describe("Medication Adherence · Nudge-only refill/adherence agent", () => {
+  it("registers as a prototype Agentforce agent on the patient-engagement tier", () => {
+    const m = getAgent("medication-adherence-agent");
+    expect(m).toBeDefined();
+    expect(m!.kind).toBe("agentforce");
+    expect(m!.protocol).toBe("a2a");
+    expect(m!.provider).toBe("Salesforce");
+    expect(m!.status).toBe("prototype");
+    // Proactive patient-engagement agent on the patient-care plane.
+    expect(m!.governanceTier).toBe("patient-engagement");
+    expect(planeForTier(m!.governanceTier)).toBe("patient-care");
+    expect(m!.endpoint).toBe("/api/agents/medication-adherence");
+  });
+
+  it("carries the no-autonomous-refill block plus the reused no-prescribing/outreach/consent/audit policies", () => {
+    const ids = getPoliciesForAgent("medication-adherence-agent").map((p) => p.id);
+    expect(ids).toContain("policy.medication.no-autonomous-refill");
+    // Reused clinical + engagement outreach guards.
+    expect(ids).toContain("policy.clinical.no-prescribing");
+    expect(ids).toContain("policy.marketing.consent-to-contact-required");
+    expect(ids).toContain("policy.marketing.human-approval-before-send");
+    expect(ids).toContain("policy.engagement.quiet-hours-and-channel-preference");
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT on any commercial-plane-only policy.
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("the no-autonomous-refill policy is an enforced block", () => {
+    const policy = listPolicies().find(
+      (p) => p.id === "policy.medication.no-autonomous-refill"
+    );
+    expect(policy).toBeDefined();
+    expect(policy!.enforcement).toBe("block");
+    expect(policy!.status).toBe("enforced");
+  });
+
+  it("blocks an autonomous refill, allows a human-approval-gated nudge", () => {
+    const blocked = evaluateGovernance({
+      agentId: "medication-adherence-agent",
+      task: {
+        refillRequiresHumanApproval: false,
+        hasContactConsent: true
+      }
+    });
+    expect(blocked.decision).toBe("block");
+    expect(blocked.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.medication.no-autonomous-refill"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "medication-adherence-agent",
+      task: {
+        refillRequiresHumanApproval: true,
+        hasContactConsent: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Outreach is consent-gated too.
+    const noConsent = evaluateGovernance({
+      agentId: "medication-adherence-agent",
+      task: { refillRequiresHumanApproval: true, hasContactConsent: false }
+    });
+    expect(noConsent.decision).toBe("block");
+    expect(noConsent.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.marketing.consent-to-contact-required"
+    );
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "medication-adherence-agent", task: {} })
+        .decision
+    ).toBe("allow");
+  });
+
+  it("seeds an assess→nudge→dropoff→engagement-handoff trace", () => {
+    const spans = listTraces({ taskId: "task-seed-medication-adherence-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(4);
+    // Assessment first, engagement handoff last.
+    expect(spans[0].agentId).toBe("medication-adherence-agent");
+    expect(spans[0].operation).toBe("medication.adherence.assess");
+    expect(spans[0].attributes?.refillRequiresHumanApproval).toBe(true);
+    expect(spans[0].attributes?.synthetic).toBe(true);
+    // Every drafted nudge is human-approval-gated, nudge-only, and never sent.
+    const nudges = spans.filter((s) => s.operation === "medication.nudge.draft");
+    expect(nudges.length).toBeGreaterThan(0);
+    for (const n of nudges) {
+      expect(n.attributes?.humanApprovalRequired).toBe(true);
+      expect(n.attributes?.nudgeOnly).toBe(true);
+      expect(n.attributes?.sent).toBe(false);
+    }
+    // The drop-off is flagged to the care team.
+    const dropoff = spans.find((s) => s.operation === "medication.dropoff.flag");
+    expect(dropoff?.agentId).toBe("medication-adherence-agent");
+    expect(dropoff?.attributes?.routedTo).toBe("care-team");
+    const last = spans[spans.length - 1];
+    expect(last.agentId).toBe("engagement-agent");
+    expect(last.operation).toBe("engagement.outreach.handoff");
+  });
+});
+
+describe("Referral Management · Cosign-gated outbound-referral agent", () => {
+  it("registers as a prototype Agentforce agent on the care-coordination tier", () => {
+    const r = getAgent("referral-management-agent");
+    expect(r).toBeDefined();
+    expect(r!.kind).toBe("agentforce");
+    expect(r!.protocol).toBe("a2a");
+    expect(r!.provider).toBe("Salesforce");
+    expect(r!.status).toBe("prototype");
+    // Reuses the Scheduling agent's care-coordination tier (patient-care plane).
+    expect(r!.governanceTier).toBe("care-coordination");
+    expect(planeForTier(r!.governanceTier)).toBe("patient-care");
+    expect(r!.endpoint).toBe("/api/agents/referral-management");
+  });
+
+  it("carries the clinician-cosign block plus the reused rationale + HIPAA-audit policies", () => {
+    const ids = getPoliciesForAgent("referral-management-agent").map((p) => p.id);
+    expect(ids).toContain("policy.referral.clinician-cosign");
+    // Reused by extending appliesTo.
+    expect(ids).toContain("policy.clinical.rationale-required");
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT on any commercial-plane-only policy.
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("the clinician-cosign policy is an enforced block", () => {
+    const policy = listPolicies().find(
+      (p) => p.id === "policy.referral.clinician-cosign"
+    );
+    expect(policy).toBeDefined();
+    expect(policy!.enforcement).toBe("block");
+    expect(policy!.status).toBe("enforced");
+  });
+
+  it("blocks a send-without-cosign, allows a cosign-gated draft", () => {
+    const blocked = evaluateGovernance({
+      agentId: "referral-management-agent",
+      task: {
+        referralHasClinicianCosign: false,
+        hasRationaleField: true
+      }
+    });
+    expect(blocked.decision).toBe("block");
+    expect(blocked.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.referral.clinician-cosign"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "referral-management-agent",
+      task: {
+        referralHasClinicianCosign: true,
+        hasRationaleField: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // A reasonless referral trips the reused rationale-required block.
+    const noReason = evaluateGovernance({
+      agentId: "referral-management-agent",
+      task: { referralHasClinicianCosign: true, hasRationaleField: false }
+    });
+    expect(noReason.decision).toBe("block");
+    expect(noReason.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.clinical.rationale-required"
+    );
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "referral-management-agent", task: {} })
+        .decision
+    ).toBe("allow");
+  });
+
+  it("seeds a triage→draft→await-cosign trace generalizing the router handoff", () => {
+    const spans = listTraces({ taskId: "task-seed-referral-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(4);
+    // Triage first, await-cosign last.
+    expect(spans[0].agentId).toBe("referral-management-agent");
+    expect(spans[0].operation).toBe("referral.triage");
+    expect(spans[0].attributes?.referralHasClinicianCosign).toBe(true);
+    expect(spans[0].attributes?.referralsTraceToSpecialty).toBe(true);
+    expect(spans[0].attributes?.synthetic).toBe(true);
+    // Every drafted referral is cosign-gated, drafted, and never sent.
+    const drafts = spans.filter((s) => s.operation === "referral.draft");
+    expect(drafts.length).toBeGreaterThan(0);
+    for (const d of drafts) {
+      expect(d.attributes?.requiresClinicianCosign).toBe(true);
+      expect(d.attributes?.status).toBe("drafted");
+      expect(d.attributes?.sent).toBe(false);
+    }
+    // Behavioral-health referral generalizes the Care Router handoff.
+    expect(drafts.map((d) => d.attributes?.specialtyId)).toContain(
+      "referral.behavioral-health"
+    );
+    const last = spans[spans.length - 1];
+    expect(last.operation).toBe("referral.await-cosign");
+    expect(last.attributes?.sent).toBe(false);
+  });
+});
+
+describe("Member Service · Billing/coverage patient-service agent", () => {
+  it("registers as a prototype Agentforce agent on the patient-facing tier", () => {
+    const m = getAgent("member-service-agent");
+    expect(m).toBeDefined();
+    expect(m!.kind).toBe("agentforce");
+    expect(m!.protocol).toBe("a2a");
+    expect(m!.provider).toBe("Salesforce");
+    expect(m!.status).toBe("prototype");
+    // The Member Service agent is patient-facing self-service on the
+    // patient-care plane (reuses the intake agent's tier).
+    expect(m!.governanceTier).toBe("patient-facing");
+    expect(planeForTier(m!.governanceTier)).toBe("patient-care");
+    expect(m!.endpoint).toBe("/api/agents/member-service");
+  });
+
+  it("carries the claim-data-sourced block plus the reused no-free-text-pii + HIPAA-audit policies", () => {
+    const ids = getPoliciesForAgent("member-service-agent").map((p) => p.id);
+    expect(ids).toContain("policy.billing.claim-data-sourced");
+    // Reused by extending appliesTo.
+    expect(ids).toContain("policy.phi.no-free-text-pii");
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT on any commercial-plane-only policy.
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("the claim-data-sourced policy is an enforced block", () => {
+    const policy = listPolicies().find(
+      (p) => p.id === "policy.billing.claim-data-sourced"
+    );
+    expect(policy).toBeDefined();
+    expect(policy!.enforcement).toBe("block");
+    expect(policy!.status).toBe("enforced");
+  });
+
+  it("blocks a billing answer that doesn't trace to a claim, allows one that does", () => {
+    const blocked = evaluateGovernance({
+      agentId: "member-service-agent",
+      task: { billingTracesToClaim: false, containsFreeTextPii: false }
+    });
+    expect(blocked.decision).toBe("block");
+    expect(blocked.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.billing.claim-data-sourced"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "member-service-agent",
+      task: { billingTracesToClaim: true, containsFreeTextPii: false }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Free-text PII trips the reused no-free-text-pii block.
+    const withPii = evaluateGovernance({
+      agentId: "member-service-agent",
+      task: { billingTracesToClaim: true, containsFreeTextPii: true }
+    });
+    expect(withPii.decision).toBe("block");
+    expect(withPii.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.phi.no-free-text-pii"
+    );
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "member-service-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a claim-lookup→answer→route-to-human trace where the answer is claim-sourced", () => {
+    const spans = listTraces({ taskId: "task-seed-member-service-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(3);
+    // Lookup first, human handoff last.
+    expect(spans[0].agentId).toBe("member-service-agent");
+    expect(spans[0].operation).toBe("billing.claim.lookup");
+    const answer = spans.find((s) => s.operation === "billing.answer");
+    expect(answer?.agentId).toBe("member-service-agent");
+    expect(answer?.attributes?.billingTracesToClaim).toBe(true);
+    expect(answer?.attributes?.synthetic).toBe(true);
+    const route = spans.find((s) => s.operation === "billing.route-to-human");
+    expect(route?.attributes?.routeToHuman).toBe(true);
+    // Even the handoff is honestly source-clean (asserts no billing figure).
+    expect(route?.attributes?.billingTracesToClaim).toBe(true);
+  });
+});
+
+describe("Prior Authorization · Clinician-gated, documentation-complete PA agent", () => {
+  it("registers as a prototype Agentforce agent on the clinical-decision tier", () => {
+    const p = getAgent("prior-authorization-agent");
+    expect(p).toBeDefined();
+    expect(p!.kind).toBe("agentforce");
+    expect(p!.protocol).toBe("a2a");
+    expect(p!.provider).toBe("Salesforce");
+    expect(p!.status).toBe("prototype");
+    // Reuses the Care Router / Care Plan clinical-decision tier (patient-care
+    // plane) — PA is a clinical / utilization decision.
+    expect(p!.governanceTier).toBe("clinical-decision");
+    expect(planeForTier(p!.governanceTier)).toBe("patient-care");
+    expect(p!.endpoint).toBe("/api/agents/prior-authorization");
+  });
+
+  it("carries the two PA blocks plus the reused no-prescribing / consent / HIPAA-audit policies", () => {
+    const ids = getPoliciesForAgent("prior-authorization-agent").map((p) => p.id);
+    expect(ids).toContain("policy.pa.no-autonomous-submission");
+    expect(ids).toContain("policy.pa.documentation-integrity");
+    // Reused by extending appliesTo.
+    expect(ids).toContain("policy.clinical.no-prescribing");
+    expect(ids).toContain("policy.data360.consent-required-before-grounding");
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT on any commercial-plane-only policy.
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("both PA policies are enforced blocks", () => {
+    for (const id of [
+      "policy.pa.no-autonomous-submission",
+      "policy.pa.documentation-integrity"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement).toBe("block");
+      expect(policy!.status).toBe("enforced");
+    }
+  });
+
+  it("blocks an autonomous submission or an incomplete-documentation submission, allows a clinician-gated, complete PA", () => {
+    const autonomous = evaluateGovernance({
+      agentId: "prior-authorization-agent",
+      task: { paHasClinicianApproval: false, paDocumentationComplete: true }
+    });
+    expect(autonomous.decision).toBe("block");
+    expect(autonomous.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.pa.no-autonomous-submission"
+    );
+
+    const incompleteDocs = evaluateGovernance({
+      agentId: "prior-authorization-agent",
+      task: { paHasClinicianApproval: true, paDocumentationComplete: false }
+    });
+    expect(incompleteDocs.decision).toBe("block");
+    expect(incompleteDocs.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.pa.documentation-integrity"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "prior-authorization-agent",
+      task: {
+        paHasClinicianApproval: true,
+        paDocumentationComplete: true,
+        hasAiDecisionSupportConsent: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Grounding is consent-gated too.
+    const noConsent = evaluateGovernance({
+      agentId: "prior-authorization-agent",
+      task: {
+        paHasClinicianApproval: true,
+        paDocumentationComplete: true,
+        hasAiDecisionSupportConsent: false
+      }
+    });
+    expect(noConsent.decision).toBe("block");
+    expect(noConsent.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.data360.consent-required-before-grounding"
+    );
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "prior-authorization-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a criteria-match→docs-assemble→await-clinician trace, never submitted", () => {
+    const spans = listTraces({ taskId: "task-seed-prior-authorization-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(3);
+    // Criteria match first, await-clinician last.
+    expect(spans[0].agentId).toBe("prior-authorization-agent");
+    expect(spans[0].operation).toBe("priorauth.criteria.match");
+    const match = spans.find((s) => s.operation === "priorauth.criteria.match");
+    expect(match?.attributes?.criteriaComplete).toBe(true);
+    expect(match?.attributes?.synthetic).toBe(true);
+    const docs = spans.find((s) => s.operation === "priorauth.docs.assemble");
+    expect(docs?.attributes?.paDocumentationComplete).toBe(true);
+    const last = spans[spans.length - 1];
+    expect(last.operation).toBe("priorauth.await-clinician");
+    // The honesty invariants: clinician-gated and never autonomously submitted.
+    expect(last.attributes?.requiresClinicianApproval).toBe(true);
+    expect(last.attributes?.submitted).toBe(false);
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -910,7 +1301,11 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-benefits-001",
       "task-seed-scheduling-001",
       "task-seed-caregap-001",
-      "task-seed-careplan-001"
+      "task-seed-careplan-001",
+      "task-seed-medication-adherence-001",
+      "task-seed-referral-001",
+      "task-seed-member-service-001",
+      "task-seed-prior-authorization-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });
