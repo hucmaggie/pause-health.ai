@@ -186,6 +186,29 @@ describe("POST /api/agent-fabric/governance/evaluate", () => {
     expect(ids).toContain("policy.consent.no-scope-override");
   });
 
+  it("passes the clinical-trials signals through to the evaluator", async () => {
+    // Pins that the new clinical-trials / research-matching GovernanceTask fields
+    // reach evaluateGovernance across the HTTP boundary.
+    const res = await POST(
+      post({
+        agentId: "clinical-trials-agent",
+        task: {
+          eligibilityTracesToCriteria: false,
+          researchConsentPresent: false,
+          enrollmentRequiresHuman: false
+        }
+      })
+    );
+    const json = await res.json();
+    expect(json.result.decision).toBe("block");
+    const ids = json.result.blockingViolations.map(
+      (v: { policyId: string }) => v.policyId
+    );
+    expect(ids).toContain("policy.trials.eligibility-criteria-sourced");
+    expect(ids).toContain("policy.trials.research-consent-required");
+    expect(ids).toContain("policy.trials.no-autonomous-enrollment");
+  });
+
   it("an unknown agent has no applicable policies and allows", async () => {
     const res = await POST(post({ agentId: "ghost-agent", task: {} }));
     const json = await res.json();

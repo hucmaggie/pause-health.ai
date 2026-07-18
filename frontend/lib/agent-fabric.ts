@@ -723,6 +723,39 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "MuleSoft Anypoint",
     governanceTier: "data-plane"
+  },
+  {
+    id: "clinical-trials-agent",
+    name: "Clinical Trials & Research Matching Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health" / Health
+    // Cloud clinical-trials / research-matching analog: POST
+    // /api/agents/clinical-trials/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) patient-care agent that matches a SINGLE patient
+    // against a SYNTHETIC study catalog using structured eligibility criteria
+    // (age band, symptom profile, comorbidities, geography, prior therapy, HRT
+    // status, postmenopausal status), returns the matching studies ranked with
+    // per-criterion explanations, and drafts a CONSENT-GATED outreach that NEVER
+    // auto-enrolls (informed consent + a human required). It ties to the Consent
+    // & Preferences Management agent's `research` consent scope — deferring to
+    // that authoritative research-consent state before any outreach — but does
+    // its own eligibility logic. Reuses the existing care-coordination tier
+    // (research matching is a care-navigation / coordination activity), not a new
+    // tier. The catalog + sponsors + criteria are ILLUSTRATIVE synthetics, NOT a
+    // certified trial-eligibility engine.
+    endpoint: "/api/agents/clinical-trials",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Matches a SINGLE menopause/midlife patient against a synthetic research-study catalog using STRUCTURED eligibility criteria (age band, symptom profile, comorbidities, geography, prior therapy, HRT status, postmenopausal status) — the 'Agentforce for Health' clinical-trials / research-matching analog, distinct from the population-health, care-gap, remote-monitoring, referral, and education agents",
+      "Eligibility matching is DETERMINISTIC — a pure function of the patient context against each study's DEFINED criteria (no randomness, no clock); the same context always yields the same matches + ranking with a stable, documented tie-break (eligible first, then match score, then studyId)",
+      "Every eligibility determination traces to a defined study criterion — a fabricated / ad-hoc / off-catalog eligibility is blocked at the Agent Fabric governance boundary (policy.trials.eligibility-criteria-sourced)",
+      "Trial outreach is RESEARCH-CONSENT-GATED — it defers to the patient's `research` consent scope (the Consent & Preferences Management agent's, withheld by default) and drafts an active outreach only when research consent is present, otherwise it withholds outreach (policy.trials.research-consent-required); and it NEVER enrolls a patient autonomously — enrollment requires informed consent + a human (policy.trials.no-autonomous-enrollment)",
+      "Runs against an ILLUSTRATIVE synthetic study catalog — studies, sponsors, criteria, and patient references clearly labeled; NOT real studies, real sponsors, or a certified trial-eligibility engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -775,7 +808,8 @@ const POLICIES: PolicyRecord[] = [
       "patient-education-agent",
       "remote-monitoring-agent",
       "population-health-agent",
-      "consent-management-agent"
+      "consent-management-agent",
+      "clinical-trials-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -975,6 +1009,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Consent & Preferences Management Agent may NOT let a decision override a withheld scope, or borrow consent for a scope the patient never granted — an ALLOW requires a granted, current consent record for that EXACT scope. A decision that would allow against a withheld or ungranted scope is rejected before it can leave the fabric, so consent granted for one purpose can never be silently reused for another. Consent is per-scope and non-transferable; this keeps the authoritative ledger defensible against scope-creep concerns.",
     appliesTo: ["consent-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.trials.eligibility-criteria-sourced",
+    name: "Trial eligibility must trace to defined criteria",
+    description:
+      "Every trial-eligibility determination the Clinical Trials & Research Matching Agent makes must trace to the study catalog's DEFINED eligibility criteria — a fabricated / ad-hoc / off-catalog eligibility (a matched or failed criterion that isn't a defined criterion) is rejected before any match is acted on, so the agent can never invent eligibility a study protocol doesn't define. Mirrors the Care Gap Closure Agent's clinical-measure-sourced integrity posture. (In the prototype the study catalog + criteria are clearly-labeled illustrative synthetics, not real studies or a certified eligibility engine; in production this is the customer's governed trial registry / eligibility rule set.)",
+    appliesTo: ["clinical-trials-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.trials.research-consent-required",
+    name: "Research consent required before trial outreach",
+    description:
+      "The Clinical Trials & Research Matching Agent may NOT draft an active trial outreach — or take any enrollment step — without the patient's RESEARCH consent. An active (drafted) outreach asserted without research consent is rejected before it can leave the fabric; when research consent is absent the agent WITHHOLDS outreach (a safe completed answer, not a block). It defers to the `research` consent scope the Consent & Preferences Management Agent holds (withheld by default in the demo ledger). Mirrors the SDOH / Patient Education / Remote Monitoring consent-before-outreach gates.",
+    appliesTo: ["clinical-trials-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.trials.no-autonomous-enrollment",
+    name: "No autonomous trial enrollment",
+    description:
+      "The Clinical Trials & Research Matching Agent may NEVER enroll a patient in a study autonomously — enrollment requires informed consent AND a human. Every outreach the agent drafts is requiresHuman:true / enrolled:false (there is no 'enrolled' state); an outreach asserted as enrolled, or one that doesn't require a human, is rejected before it can leave the fabric. Mirrors the Remote Patient Monitoring Agent's no-autonomous-escalation and the Prior Authorization Agent's no-autonomous-submission posture — the agent proposes a consent-gated invitation to consider, a human enrolls.",
+    appliesTo: ["clinical-trials-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -3397,6 +3458,106 @@ function store(): FabricStore {
         matchedConsentEventId: "consent-evt-contact-001",
         honorsRevocation: true,
         respectsConsentScope: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+
+  // A trace showing the Clinical Trials & Research Matching Agent — the
+  // "Agentforce for Health" clinical-trials / research-matching analog — loading
+  // the SYNTHETIC study catalog, DETERMINISTICALLY matching a single patient's
+  // structured context against each study's DEFINED eligibility criteria
+  // (matchTrials is a pure function of the context — no randomness, no clock),
+  // and drafting a CONSENT-GATED outreach that never auto-enrolls (informed
+  // consent + a human required). It reads patient clinical context, so every
+  // span sets phiAccessed:true. The catalog + sponsors + criteria are
+  // ILLUSTRATIVE synthetics, not a certified trial-eligibility engine. Seed
+  // data; production populates the ring buffer from the persistent log store.
+  const ct0 = Date.now() - 1000 * 60 * 1;
+  const ctTaskId = "task-seed-clinical-trials-001";
+  const ctName = "Clinical Trials & Research Matching Agent";
+  s.traces.push(
+    {
+      id: "span-trials-001",
+      taskId: ctTaskId,
+      agentId: "clinical-trials-agent",
+      agentName: ctName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ct0).toISOString(),
+      finishedAt: new Date(ct0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-trials-002",
+      taskId: ctTaskId,
+      parentSpanId: "span-trials-001",
+      agentId: "clinical-trials-agent",
+      agentName: ctName,
+      operation: "trials.load-catalog",
+      protocol: "a2a",
+      startedAt: new Date(ct0 + 40).toISOString(),
+      finishedAt: new Date(ct0 + 70).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        studiesLoaded: 4,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-trials-003",
+      taskId: ctTaskId,
+      parentSpanId: "span-trials-002",
+      agentId: "clinical-trials-agent",
+      agentName: ctName,
+      operation: "trials.match",
+      protocol: "a2a",
+      startedAt: new Date(ct0 + 70).toISOString(),
+      finishedAt: new Date(ct0 + 110).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        patientRef: "trial-patient-001",
+        eligibleCount: 3,
+        recommendedStudyIds: [
+          "study.hrt-initiation-rct",
+          "study.vms-nonhormonal-rct",
+          "study.sleep-cbt-observational"
+        ],
+        // The honesty invariant: every eligibility determination traces to a
+        // defined study criterion.
+        eligibilityTracesToCriteria: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-trials-004",
+      taskId: ctTaskId,
+      parentSpanId: "span-trials-003",
+      agentId: "clinical-trials-agent",
+      agentName: ctName,
+      operation: "trials.draft-outreach",
+      protocol: "a2a",
+      startedAt: new Date(ct0 + 110).toISOString(),
+      finishedAt: new Date(ct0 + 170).toISOString(),
+      durationMs: 60,
+      status: "ok",
+      attributes: {
+        outreachState: "drafted",
+        // The honesty invariants: outreach is research-consent-gated and the
+        // agent never enrolls a patient autonomously.
+        researchConsentPresent: true,
+        enrollmentRequiresHuman: true,
+        enrolled: false,
         phiAccessed: true,
         synthetic: true
       }

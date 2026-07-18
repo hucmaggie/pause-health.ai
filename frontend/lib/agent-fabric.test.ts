@@ -418,15 +418,15 @@ describe("Validated-instrument assessment · Assessment agent", () => {
 });
 
 describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
-  it("brings the registry to twenty-seven agents", () => {
+  it("brings the registry to twenty-eight agents", () => {
     // Sanity count guard: the funnel + intake + assessment + benefits +
     // scheduling + care-gap-closure + care-plan + medication-adherence +
     // referral-management + member-service + prior-authorization +
     // clinical-summary + sdoh-screening + patient-education +
-    // remote-monitoring + population-health agents, the Care Router, the
-    // platform substrate (incl. the Consent & Preferences Management agent),
-    // and the commercial plane.
-    expect(listAgents()).toHaveLength(27);
+    // remote-monitoring + population-health + clinical-trials agents, the Care
+    // Router, the platform substrate (incl. the Consent & Preferences
+    // Management agent), and the commercial plane.
+    expect(listAgents()).toHaveLength(28);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -1868,6 +1868,123 @@ describe("Consent & Preferences Management · authoritative consent-ledger + dec
   });
 });
 
+describe("Clinical Trials & Research Matching · criteria-sourced eligibility + consent-gated outreach agent", () => {
+  it("registers as a prototype Agentforce agent on the reused care-coordination tier (patient-care plane)", () => {
+    const c = getAgent("clinical-trials-agent");
+    expect(c).toBeDefined();
+    expect(c!.kind).toBe("agentforce");
+    expect(c!.protocol).toBe("a2a");
+    expect(c!.provider).toBe("Salesforce");
+    expect(c!.status).toBe("prototype");
+    // Reuses the existing care-coordination tier (patient-care plane) — research
+    // matching is a care-navigation / coordination activity; it does NOT invent
+    // a new tier.
+    expect(c!.governanceTier).toBe("care-coordination");
+    expect(planeForTier(c!.governanceTier)).toBe("patient-care");
+    expect(c!.endpoint).toBe("/api/agents/clinical-trials");
+  });
+
+  it("carries the three trials blocks plus the reused HIPAA-audit policy (touches patient clinical context)", () => {
+    const ids = getPoliciesForAgent("clinical-trials-agent").map((p) => p.id);
+    expect(ids).toContain("policy.trials.eligibility-criteria-sourced");
+    expect(ids).toContain("policy.trials.research-consent-required");
+    expect(ids).toContain("policy.trials.no-autonomous-enrollment");
+    // It touches patient clinical context, so it IS HIPAA-audited.
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT a live-Claude agent (no model allow-list) and NOT commercial.
+    expect(ids).not.toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("all three trials policies are enforced blocks", () => {
+    for (const id of [
+      "policy.trials.eligibility-criteria-sourced",
+      "policy.trials.research-consent-required",
+      "policy.trials.no-autonomous-enrollment"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement, id).toBe("block");
+      expect(policy!.status, id).toBe("enforced");
+    }
+  });
+
+  it("blocks a fabricated eligibility, an outreach-without-consent, and an autonomous enrollment; allows a well-formed task", () => {
+    // An eligibility determination that doesn't trace to a defined criterion.
+    const fabricated = evaluateGovernance({
+      agentId: "clinical-trials-agent",
+      task: {
+        eligibilityTracesToCriteria: false,
+        researchConsentPresent: true,
+        enrollmentRequiresHuman: true
+      }
+    });
+    expect(fabricated.decision).toBe("block");
+    expect(fabricated.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.trials.eligibility-criteria-sourced"
+    );
+
+    // A trial outreach without the patient's research consent.
+    const noConsent = evaluateGovernance({
+      agentId: "clinical-trials-agent",
+      task: {
+        eligibilityTracesToCriteria: true,
+        researchConsentPresent: false,
+        enrollmentRequiresHuman: true
+      }
+    });
+    expect(noConsent.decision).toBe("block");
+    expect(noConsent.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.trials.research-consent-required"
+    );
+
+    // An autonomous enrollment (no human / enrolled).
+    const autoEnroll = evaluateGovernance({
+      agentId: "clinical-trials-agent",
+      task: {
+        eligibilityTracesToCriteria: true,
+        researchConsentPresent: true,
+        enrollmentRequiresHuman: false
+      }
+    });
+    expect(autoEnroll.decision).toBe("block");
+    expect(autoEnroll.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.trials.no-autonomous-enrollment"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "clinical-trials-agent",
+      task: {
+        eligibilityTracesToCriteria: true,
+        researchConsentPresent: true,
+        enrollmentRequiresHuman: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "clinical-trials-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a load-catalog→match→draft-outreach trace, every span phiAccessed", () => {
+    const spans = listTraces({ taskId: "task-seed-clinical-trials-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(3);
+    const load = spans.find((s) => s.operation === "trials.load-catalog");
+    expect(load?.agentId).toBe("clinical-trials-agent");
+    const match = spans.find((s) => s.operation === "trials.match");
+    expect(match?.attributes?.eligibilityTracesToCriteria).toBe(true);
+    const outreach = spans.find((s) => s.operation === "trials.draft-outreach");
+    expect(outreach?.attributes?.researchConsentPresent).toBe(true);
+    expect(outreach?.attributes?.enrolled).toBe(false);
+    // The whole run touches the patient's clinical context.
+    for (const s of spans) {
+      expect(s.attributes?.phiAccessed, s.operation).toBe(true);
+    }
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -1998,7 +2115,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-patient-education-001",
       "task-seed-remote-monitoring-001",
       "task-seed-population-health-001",
-      "task-seed-consent-management-001"
+      "task-seed-consent-management-001",
+      "task-seed-clinical-trials-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });

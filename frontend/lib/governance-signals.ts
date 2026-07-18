@@ -78,6 +78,10 @@ export type GovernanceTask = {
   consentTracesToRecord?: boolean;
   honorsRevocation?: boolean;
   respectsConsentScope?: boolean;
+  // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
+  eligibilityTracesToCriteria?: boolean;
+  researchConsentPresent?: boolean;
+  enrollmentRequiresHuman?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -399,6 +403,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A decision overrides a withheld scope or a scope never granted",
     reason:
       "A consent decision would ALLOW against a scope the patient withheld, or a scope the patient never granted (no record); a decision may not override a withheld scope or borrow consent across scopes — an allow requires a granted, current consent record for that exact scope"
+  },
+  {
+    policyId: "policy.trials.eligibility-criteria-sourced",
+    signal: "eligibilityTracesToCriteria",
+    violatingValue: false,
+    violationHint: "An eligibility determination doesn't trace to a defined study criterion",
+    reason:
+      "A trial-eligibility determination did not trace to the study catalog's defined criteria (a fabricated / ad-hoc / off-catalog eligibility); every eligibility determination must trace to a defined criterion — the agent may not invent eligibility"
+  },
+  {
+    policyId: "policy.trials.research-consent-required",
+    signal: "researchConsentPresent",
+    violatingValue: false,
+    violationHint: "Drafts trial outreach / enrollment without the patient's research consent",
+    reason:
+      "Attempted a trial outreach / enrollment step without the patient's research consent; trial outreach is research-consent-gated — the agent may only draft an active outreach when the patient's research consent is present (it defers to the `research` consent scope), otherwise it withholds outreach"
+  },
+  {
+    policyId: "policy.trials.no-autonomous-enrollment",
+    signal: "enrollmentRequiresHuman",
+    violatingValue: false,
+    violationHint: "Enrolls a patient autonomously instead of requiring informed consent + a human",
+    reason:
+      "Attempted to enroll a patient in a study autonomously; the agent may NEVER enroll a patient on its own — enrollment requires informed consent AND a human (requiresHuman:true, enrolled:false), the agent only drafts a consent-gated invitation to consider"
   },
   {
     policyId: "policy.referral.clinician-cosign",
