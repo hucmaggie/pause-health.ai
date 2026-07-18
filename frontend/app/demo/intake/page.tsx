@@ -3,9 +3,12 @@ import { AgentforceFallback } from "../../../components/agentforce-fallback";
 import { AgentforceVoiceButton } from "../../../components/agentforce-voice-button";
 import { AssessmentPanel } from "../../../components/assessment-panel";
 import { BenefitsPanel } from "../../../components/benefits-panel";
+import { CareGapPanel } from "../../../components/care-gap-panel";
+import { CarePlanPanel } from "../../../components/care-plan-panel";
 import { DemoShell } from "../../../components/demo-shell";
 import { IntakePatientStage } from "../../../components/intake-patient-stage";
 import { PersonaJourneyFooter } from "../../../components/persona-journey-footer";
+import { SchedulingPanel } from "../../../components/scheduling-panel";
 import { getAgentforceConfig } from "../../../lib/agentforce";
 import { DEMO_COHORT } from "../../../lib/demo-cohort";
 import { pageMetadata } from "../../../lib/page-metadata";
@@ -56,6 +59,12 @@ export default function IntakeDemoPage() {
       <AssessmentPanel />
 
       <BenefitsPanel />
+
+      <SchedulingPanel />
+
+      <CarePlanPanel />
+
+      <CareGapPanel />
 
       <section className="demo-grid">
         <article className="card">
