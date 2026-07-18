@@ -488,54 +488,32 @@ behavior the moment steps 5–6 + the prechat registration are done.
 
 ## Greeting the patient by name
 
-The patient's name is now handed to the live agent in-band. `intake-patient-stage.tsx`
-forwards `_firstName` / `_lastName` (from the selected persona) as hidden prechat
-fields alongside `Patient_Zip` / `Patient_Insurance`. Unlike the `Pause_*__c`
-dossier fields, `_firstName` / `_lastName` are **Salesforce-standard** prechat
-fields — the SDK accepts them automatically, so there is **no MessagingSession
-field, permission set, routing-Flow variable, channel customParameter, or
-prechat-form registration to add.** They land as the messaging end user's
-identity with no org-side plumbing.
+**Goal:** the live `Pause_Health_Intake_Agent` opens its **first *reasoned*
+reply** with the patient's first name — e.g. *"Hi Brianna — …"*. This is
+**verified working on Agent Version 12 (Active)**.
 
-What that in-band handoff does *not* do by itself is make the agent open the
-conversation with "Hi Anika". Passing `_firstName` populates the end user's
-identity, but the agent's welcome message is static copy until you tell it to
-reference that identity. To actually greet by name (org-side Agent Builder, not
-in repo):
+> **The static welcome message stays generic by design.** Only the agent's
+> *reasoned* replies personalize. Do not try to interpolate a name into the
+> static welcome copy — a static welcome can't read a context variable, and this
+> is intentional. The greeting appears on the agent's first reasoned turn, not
+> on the canned opener.
 
-1. In **Agent Builder**, open the agent and edit its **welcome message** (or the
-   opening reasoning instruction) to reference the messaging end user's first
-   name — e.g.
+The patient's name reaches the agent two ways, both already wired in the app
+(**do NOT change code** — just configure the org):
 
-   > Greet the patient by their first name (the messaging end user's first name)
-   > if it is available; otherwise open warmly without a name. Then acknowledge
-   > what you already know about their menopause-care context rather than asking
-   > for their identity again.
+- `intake-patient-stage.tsx` forwards the Salesforce-standard `_firstName` /
+  `_lastName` hidden prechat fields in-band (auto-accepted, no org
+  registration). These populate the messaging end user's identity but are **not
+  reliably visible to the agent's reasoning** — do not depend on them for the
+  greeting.
+- **The durable route (this is what the greeting relies on):**
+  `intake-patient-stage.tsx` + `/api/intake/prechat-context` also pass a
+  **registered custom** hidden field `Patient_First_Name`. The routing Flow
+  lands it on `MessagingSession.Pause_Patient_First_Name__c`, and the agent
+  reads it through a **linked** context variable `Pause_Patient_First_Name`
+  sourced from `@MessagingSession.Pause_Patient_First_Name__c`.
 
-2. **Deactivate → Save → Activate** the agent so the new opening copy takes
-   effect (welcome-message changes don't apply to an already-active version
-   without the reactivate cycle).
-
-Until that org-side edit is made, the live agent still opens with its generic
-welcome copy even though `_firstName` is being handed in-band — the scripted
-`AgentforceFallback` already greets by the entered name today (see
-`firstNameFromInput` in `frontend/lib/agentforce.ts`).
-
-### The durable route: a `Patient_First_Name` context variable (parallel to the ZIP)
-
-Relying on `_firstName` alone is fragile — it populates the messaging end
-user's identity, but whether the agent can reference it in reasoning is
-implementation-dependent. The reliable path is the same five-component pipeline
-as "Auto-passing the ZIP": hand a **registered custom field** `Patient_First_Name`
-in-band, land it on `MessagingSession.Pause_Patient_First_Name__c` via the
-routing Flow, and expose it to the agent as `$Context.Pause_Patient_First_Name`.
-
-The app side is already wired: `/api/intake/prechat-context` emits a
-`Patient_First_Name` field, and `intake-patient-stage.tsx` passes
-`{ Patient_First_Name: <persona first name> }` as a hidden prechat field
-alongside `_firstName` / `_lastName`. Until `Patient_First_Name` is registered +
-mapped on the org, the SDK drops it and the greeting falls back to the static
-copy (graceful).
+### The plumbing (already implemented — do NOT change code)
 
 **Steps 1–4 are version-controlled** in `salesforce/` and deploy via
 `./salesforce/deploy.sh trailsignup`:
@@ -553,33 +531,100 @@ copy (graceful).
    `Patient_First_Name` `<customParameters>` block with the same
    `actionParameterMappings` shape as the other dossier fields.
 
-**Steps 5–7 stay org-managed** (Agent Builder UI + deployment Publish; not in repo):
+App side (also already wired): `/api/intake/prechat-context` emits a
+`Patient_First_Name` field and `intake-patient-stage.tsx` passes
+`{ Patient_First_Name: <persona first name> }` as a hidden prechat field
+alongside `_firstName` / `_lastName`. Until `Patient_First_Name` is registered +
+mapped + published on the org, the SDK drops it and the greeting falls back to
+the generic copy (graceful).
 
-5. **Register the hidden prechat field.** Setup → **Embedded Service
+### Working recipe (verified) — org-side, in Agent Builder + the deployment
+
+Do these in order. This is the exact recipe that produces "Hi Brianna — …" on
+the live embed.
+
+1. **Register the hidden prechat field.** Setup → **Embedded Service
    Deployments** → `Pause_Health_Intake` → Chat Settings → Prechat → add
    `Patient_First_Name` as a *hidden* field. This is the registration that makes
    `validatePrechatField` accept it; without it the SDK logs `invalid field name
    Patient_First_Name` and drops the value.
-6. **Add the bot context variable.** Agent Builder → the agent → **Variables /
-   Connections** → add context variable `Pause_Patient_First_Name`, source
-   `MessagingSession.Pause_Patient_First_Name__c`, so the agent can reference
-   `$Context.Pause_Patient_First_Name`.
-7. **Update the Agent-Level Instructions** to greet by that variable — e.g.
 
-   > If `$Context.Pause_Patient_First_Name` has a value, greet the patient by
-   > that first name (e.g. "Hi Anika"). Otherwise open warmly without a name.
-   > Then acknowledge what you already know about their menopause-care context
-   > rather than asking for their identity again.
+2. **Add the linked context variable.** Agent Builder → the agent →
+   **Variables / Connections** → add context variable `Pause_Patient_First_Name`
+   as a **linked** variable sourced from
+   `@MessagingSession.Pause_Patient_First_Name__c`. (Linked — sourced from the
+   MessagingSession field — is what makes the routing-Flow value flow into the
+   agent's reasoning.)
 
-   Then **Deactivate → Save → Activate** the agent.
+3. **Add the greet-by-name instruction with the correct merge-field syntax.**
+   In the Agent Script *reasoning* instructions, reference the variable as
+   **`{!@variables.Pause_Patient_First_Name}`** — for example:
 
-**⚠️ Re-Publish the Embedded Service Deployment.** As with the ZIP, the new
-hidden prechat field + channel customParameter only reach the routing Flow after
-you **re-Publish** the `Pause_Health_Intake` deployment (Setup → Embedded Service
-Deployments → Publish) and the **~5–15 min CDN propagation** completes. Test in a
-brand-new incognito session created *after* propagation (hidden fields attach at
-conversation creation, not on resume). Confirm with SOQL that
-`MessagingSession.Pause_Patient_First_Name__c` is populated on the new session.
+   > If `{!@variables.Pause_Patient_First_Name}` has a value, greet the patient
+   > by that first name (e.g. "Hi Brianna — …"). Otherwise open warmly without a
+   > name. Then acknowledge what you already know about their menopause-care
+   > context rather than asking for their identity again.
+
+   **Syntax matters — this is the hard-won part:**
+   - ✅ **Correct:** `{!@variables.Pause_Patient_First_Name}`.
+   - ❌ `$Context.Pause_Patient_First_Name` — renders as *literal text* in the
+     reply, it is not interpolated.
+   - ❌ `{!$Context.Pause_Patient_First_Name}` — also wrong.
+   - ⚠️ **Do not hand-type the `{!@variables....}` token.** Typing it by hand can
+     trigger a **compilation error** in the Agent Builder editor. Instead, insert
+     it with the editor's **insert-variable control / variable chip** so the
+     editor emits a valid token.
+
+4. **Place the instruction where it actually fires on the first reasoned reply.**
+   Put the greet-by-name instruction at the **Agent (top) level and/or on the
+   *Menopause Symptom Intake* subagent** so it applies to the first reasoned
+   turn. Note the **Agent Router may handle initial small talk directly**, so
+   covering both the Agent level and the intake subagent is the reliable way to
+   ensure the name lands on that first reasoned reply.
+
+5. **Activate the Agent Version.** **Deactivate → Save → Activate** the agent so
+   the new instruction + variable take effect. The greeting only works on an
+   **Active** version (we are on **Version 12, Active**).
+
+6. **Re-Publish the Embedded Service Deployment — and wait for propagation.**
+   The hidden prechat field + channel customParameter only reach the routing
+   Flow after you **re-Publish** the `Pause_Health_Intake` deployment (Setup →
+   Embedded Service Deployments → Publish). **A deployment that was published
+   *before* the field was registered will NOT carry the new field** — you must
+   re-Publish *after* registering it in step 1. Then wait **~5–15 min for CDN
+   propagation** before testing.
+
+7. **Verify on the live embed (the authoritative test).** After Publish +
+   propagation, open a **fresh incognito window** at
+   **`/demo/intake?personaId=brianna-okafor`**, send a message (e.g. "hi" or a
+   symptom), and confirm the **first reasoned reply is "Hi Brianna — …"**. Hidden
+   fields attach at conversation *creation*, not on resume, so a brand-new
+   session is required. (Optionally confirm with SOQL that
+   `MessagingSession.Pause_Patient_First_Name__c` is populated on the new
+   session.)
+
+> **⚠️ Builder Preview cannot verify this.** Builder Preview **cannot reliably
+> test linked MessagingSession context variables** — typing a value into the
+> Preview "Context Variables" panel does **not** inject a linked,
+> MessagingSession-sourced variable into the reasoning, so the greeting shows
+> **"Hi —"** (nameless) in Preview even when everything is configured correctly.
+> This is a **Preview limitation, not a config error**. The live embed (step 7)
+> is the only authoritative test.
+
+### Troubleshooting — the greeting shows "Hi —" (nameless)
+
+| Symptom | Likely cause | Fix |
+| --- | --- | --- |
+| "Hi —" in **Builder Preview** | Preview can't inject linked MessagingSession context variables — expected | Ignore Preview for this; verify on the live embed (step 7) in a fresh incognito session |
+| "Hi —" on the **live embed** | Deployment was **not re-Published** after the prechat field was registered (step 6), so the field never reaches the routing Flow | Re-Publish the `Pause_Health_Intake` deployment *after* registering `Patient_First_Name`, then re-test |
+| "Hi —" right after publishing | **CDN not propagated yet** | Wait ~5–15 min after Publish, then open a **new** incognito session |
+| Name renders as **literal text** (e.g. the agent says `$Context.Pause_Patient_First_Name`) | Wrong merge-field syntax in the reasoning instruction | Use `{!@variables.Pause_Patient_First_Name}` (inserted via the variable chip, not hand-typed); not `$Context.…` or `{!$Context.…}` |
+| **Compilation error** when saving the instruction | The `{!@variables....}` token was **hand-typed** | Delete it and re-insert via the editor's insert-variable control / variable chip |
+| Greeting never personalizes but Preview/config look right | Testing a **resumed** session, or on a non-Active version | Start a brand-new incognito session; confirm the Agent Version is **Active** (Version 12) |
+
+The scripted `AgentforceFallback` already greets by the entered name today (see
+`firstNameFromInput` in `frontend/lib/agentforce.ts`); this recipe brings the
+same personalization to the live Agentforce agent.
 
 ## When the live MuleSoft API replaces the public endpoint
 
