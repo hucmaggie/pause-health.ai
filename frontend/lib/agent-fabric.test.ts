@@ -418,11 +418,11 @@ describe("Validated-instrument assessment · Assessment agent", () => {
 });
 
 describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
-  it("brings the registry to fifteen agents", () => {
+  it("brings the registry to seventeen agents", () => {
     // Sanity count guard: the funnel + intake + assessment + benefits +
-    // scheduling agents, the Care Router, the platform substrate, and the
-    // commercial plane.
-    expect(listAgents()).toHaveLength(15);
+    // scheduling + care-gap-closure + care-plan agents, the Care Router, the
+    // platform substrate, and the commercial plane.
+    expect(listAgents()).toHaveLength(17);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -591,6 +591,204 @@ describe("Appointment Scheduling · Care-coordination agent", () => {
   });
 });
 
+describe("Care Gap Closure · Preventive-care agent", () => {
+  it("registers as a prototype Agentforce agent on its own care-gap tier", () => {
+    const c = getAgent("care-gap-closure-agent");
+    expect(c).toBeDefined();
+    expect(c!.kind).toBe("agentforce");
+    expect(c!.protocol).toBe("a2a");
+    expect(c!.provider).toBe("Salesforce");
+    expect(c!.status).toBe("prototype");
+    expect(c!.governanceTier).toBe("care-gap");
+    // The Care Gap Closure agent is proactive patient care on the patient-care
+    // plane (its own care-gap tier).
+    expect(planeForTier(c!.governanceTier)).toBe("patient-care");
+    expect(c!.endpoint).toBe("/api/agents/care-gap-closure");
+  });
+
+  it("carries the clinical-measure-sourced block plus the reused outreach/consent/audit policies", () => {
+    const ids = getPoliciesForAgent("care-gap-closure-agent").map((p) => p.id);
+    expect(ids).toContain("policy.caregap.clinical-measure-sourced");
+    // Reuses the engagement outreach + consent + grounding-consent + audit
+    // policies where they apply.
+    expect(ids).toContain("policy.marketing.consent-to-contact-required");
+    expect(ids).toContain("policy.marketing.human-approval-before-send");
+    expect(ids).toContain("policy.engagement.quiet-hours-and-channel-preference");
+    expect(ids).toContain("policy.data360.consent-required-before-grounding");
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT on any commercial-plane-only policy.
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("the clinical-measure-sourced policy is an enforced block", () => {
+    const policy = listPolicies().find(
+      (p) => p.id === "policy.caregap.clinical-measure-sourced"
+    );
+    expect(policy).toBeDefined();
+    expect(policy!.enforcement).toBe("block");
+    expect(policy!.status).toBe("enforced");
+  });
+
+  it("blocks a fabricated (off-catalog) gap, allows one that traces to a clinical measure", () => {
+    const blocked = evaluateGovernance({
+      agentId: "care-gap-closure-agent",
+      task: {
+        gapsTraceToClinicalMeasure: false,
+        hasContactConsent: true,
+        hasAiDecisionSupportConsent: true
+      }
+    });
+    expect(blocked.decision).toBe("block");
+    expect(blocked.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.caregap.clinical-measure-sourced"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "care-gap-closure-agent",
+      task: {
+        gapsTraceToClinicalMeasure: true,
+        hasContactConsent: true,
+        hasAiDecisionSupportConsent: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Outreach is consent-gated too.
+    const noConsent = evaluateGovernance({
+      agentId: "care-gap-closure-agent",
+      task: { gapsTraceToClinicalMeasure: true, hasContactConsent: false }
+    });
+    expect(noConsent.decision).toBe("block");
+    expect(noConsent.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.marketing.consent-to-contact-required"
+    );
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "care-gap-closure-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a grounding→detect→draft→engagement-handoff trace", () => {
+    const spans = listTraces({ taskId: "task-seed-caregap-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(4);
+    // Grounding first, engagement handoff last.
+    expect(spans[0].agentId).toBe("salesforce-data-360");
+    expect(spans[0].operation).toBe("data360.grounding");
+    const detect = spans.find((s) => s.operation === "caregap.detect");
+    expect(detect?.agentId).toBe("care-gap-closure-agent");
+    expect(detect?.attributes?.gapsTraceToClinicalMeasure).toBe(true);
+    expect(detect?.attributes?.synthetic).toBe(true);
+    // Every drafted outreach is human-approval-gated and never sent.
+    const drafts = spans.filter((s) => s.operation === "caregap.outreach.draft");
+    expect(drafts.length).toBeGreaterThan(0);
+    for (const d of drafts) {
+      expect(d.attributes?.humanApprovalRequired).toBe(true);
+      expect(d.attributes?.sent).toBe(false);
+    }
+    const last = spans[spans.length - 1];
+    expect(last.agentId).toBe("engagement-agent");
+    expect(last.operation).toBe("engagement.outreach.handoff");
+  });
+});
+
+describe("Care Plan · Clinical-decision live-Claude sibling", () => {
+  it("registers as a prototype anthropic-claude agent on the clinical-decision tier", () => {
+    const c = getAgent("care-plan-agent");
+    expect(c).toBeDefined();
+    // Live-Claude clinical agent, marked like the Care Router.
+    expect(c!.kind).toBe("anthropic-claude");
+    expect(c!.protocol).toBe("a2a");
+    expect(c!.provider).toBe("Anthropic + Pause-Health.ai");
+    expect(c!.status).toBe("prototype");
+    // Reuses the Care Router's clinical-decision tier (patient-care plane).
+    expect(c!.governanceTier).toBe("clinical-decision");
+    expect(planeForTier(c!.governanceTier)).toBe("patient-care");
+    expect(c!.endpoint).toBe("/api/agents/care-plan");
+  });
+
+  it("carries the template-sourced block plus the reused clinical/model/consent/audit policies", () => {
+    const ids = getPoliciesForAgent("care-plan-agent").map((p) => p.id);
+    expect(ids).toContain("policy.careplan.template-sourced");
+    // Reused from the Care Router by extending appliesTo.
+    expect(ids).toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    expect(ids).toContain("policy.clinical.no-prescribing");
+    expect(ids).toContain("policy.clinical.rationale-required");
+    expect(ids).toContain("policy.data360.consent-required-before-grounding");
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT on any commercial-plane-only policy.
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("the template-sourced policy is an enforced block", () => {
+    const policy = listPolicies().find(
+      (p) => p.id === "policy.careplan.template-sourced"
+    );
+    expect(policy).toBeDefined();
+    expect(policy!.enforcement).toBe("block");
+    expect(policy!.status).toBe("enforced");
+  });
+
+  it("blocks a fabricated (off-template) plan, allows one that traces to a template", () => {
+    const blocked = evaluateGovernance({
+      agentId: "care-plan-agent",
+      task: {
+        planTracesToTemplate: false,
+        requestedModel: "claude-sonnet-4-5-20250929",
+        hasRationaleField: true,
+        hasAiDecisionSupportConsent: true
+      }
+    });
+    expect(blocked.decision).toBe("block");
+    expect(blocked.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.careplan.template-sourced"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "care-plan-agent",
+      task: {
+        planTracesToTemplate: true,
+        requestedModel: "claude-sonnet-4-5-20250929",
+        hasRationaleField: true,
+        hasAiDecisionSupportConsent: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Model allow-list is enforced just like the Care Router.
+    const offModel = evaluateGovernance({
+      agentId: "care-plan-agent",
+      task: { planTracesToTemplate: true, requestedModel: "gpt-4o" }
+    });
+    expect(offModel.decision).toBe("block");
+    expect(offModel.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.model.anthropic-claude-sonnet-allowlisted"
+    );
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "care-plan-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a router→instantiate→summarize trace showing a deterministic scripted-fallback summary", () => {
+    const spans = listTraces({ taskId: "task-seed-careplan-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(3);
+    // Care Router recommendation first, care-plan summary last.
+    expect(spans[0].agentId).toBe("care-router-claude");
+    const instantiate = spans.find((s) => s.operation === "careplan.instantiate");
+    expect(instantiate?.agentId).toBe("care-plan-agent");
+    expect(instantiate?.attributes?.planTracesToTemplate).toBe(true);
+    expect(instantiate?.attributes?.synthetic).toBe(true);
+    const summarize = spans.find((s) => s.operation === "careplan.summarize");
+    expect(summarize?.agentId).toBe("care-plan-agent");
+    // Seeded example is deterministic: scripted-fallback with a fallbackReason,
+    // so it doesn't imply a live Claude call happened at seed time.
+    expect(summarize?.attributes?.via).toBe("scripted-fallback");
+    expect(typeof summarize?.attributes?.fallbackReason).toBe("string");
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -710,7 +908,9 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-mcp-bridge-001",
       "task-seed-assessment-001",
       "task-seed-benefits-001",
-      "task-seed-scheduling-001"
+      "task-seed-scheduling-001",
+      "task-seed-caregap-001",
+      "task-seed-careplan-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });

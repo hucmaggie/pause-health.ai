@@ -4,8 +4,13 @@ import {
   sendA2ATask,
   userMessage
 } from "../../../../lib/a2a";
-import type { IntakeRecord } from "../../../../lib/care-router";
+import type { CarePathway, IntakeRecord } from "../../../../lib/care-router";
 import { recordInstantSpan } from "../../../../lib/agent-fabric";
+import {
+  carePlanContextFromIntake,
+  instantiateCarePlan,
+  summarizeCarePlan
+} from "../../../../lib/care-plan";
 import {
   assessmentToIntakeSignal,
   isAllowlistedInstrument,
@@ -117,6 +122,15 @@ export async function POST(req: Request) {
       requestedDate?: string;
       requestedSlotStart?: string;
     } | false;
+    /**
+     * Optional post-visit care plan. When requested (carePlan: true or an
+     * object), after the Care Router returns a pathway the Care Plan Agent
+     * DETERMINISTICALLY instantiates a menopause care plan from a defined
+     * template and attaches a (live-Claude, scripted-fallback) progress summary
+     * to the trace + response meta. Strictly additive: absent = today's behavior
+     * unchanged. Set `carePlan: false` to opt out explicitly.
+     */
+    carePlan?: boolean | { onHrt?: boolean };
   };
   let body: Body;
   try {
@@ -436,6 +450,75 @@ export async function POST(req: Request) {
       }
     }
 
+    // Optional post-visit care plan (additive). When requested and the routing
+    // decision carries a pathway, the Care Plan Agent DETERMINISTICALLY
+    // instantiates a menopause care plan from a defined template and attaches a
+    // (live-Claude, scripted-fallback) progress summary to the trace + response
+    // meta — the routing → care-plan close. Best-effort + strictly additive: a
+    // failure here must never break the routing response, and absent = today's
+    // behavior unchanged.
+    let carePlanMeta: Record<string, unknown> | undefined;
+    const carePlanOptedOut = body.carePlan === false;
+    const carePlanReq =
+      body.carePlan && typeof body.carePlan === "object" ? body.carePlan : undefined;
+    const wantsCarePlan = !carePlanOptedOut && Boolean(body.carePlan);
+    if (wantsCarePlan && decision && typeof decision === "object") {
+      try {
+        const pathway =
+          ((decision as { pathway?: CarePathway }).pathway ?? "mscp-virtual-visit") as CarePathway;
+        const plan = instantiateCarePlan(
+          carePlanContextFromIntake(intake, { pathway }, { onHrt: carePlanReq?.onHrt })
+        );
+        const instantiateSpan = recordInstantSpan({
+          taskId,
+          parentSpanId: intakeSpan.id,
+          agentId: "care-plan-agent",
+          operation: "careplan.instantiate",
+          protocol: "a2a",
+          attributes: {
+            templateId: plan.templateId,
+            pathway: plan.pathway,
+            severity: plan.severity,
+            goals: plan.goals.length,
+            interventions: plan.interventions.length,
+            followUpIntervalDays: plan.followUp.intervalDays,
+            planTracesToTemplate: true,
+            synthetic: true,
+            ...(personaId ? { personaId } : {}),
+            ...(origin ? { origin } : {})
+          }
+        });
+        const summary = await summarizeCarePlan(plan);
+        recordInstantSpan({
+          taskId,
+          parentSpanId: instantiateSpan.id,
+          agentId: "care-plan-agent",
+          operation: "careplan.summarize",
+          protocol: "a2a",
+          attributes: {
+            templateId: plan.templateId,
+            provider: summary.modelProvenance.provider,
+            model: summary.modelProvenance.model,
+            via: summary.via,
+            ...(summary.fallbackReason ? { fallbackReason: summary.fallbackReason } : {}),
+            nonPrescriptive: true,
+            ...(personaId ? { personaId } : {}),
+            ...(origin ? { origin } : {})
+          }
+        });
+        carePlanMeta = {
+          templateId: plan.templateId,
+          templateLabel: plan.templateLabel,
+          summaryVia: summary.via,
+          summary: summary.summary,
+          ...(summary.fallbackReason ? { fallbackReason: summary.fallbackReason } : {}),
+          carePlanAfterRouting: true
+        };
+      } catch {
+        // Best-effort: leave routing untouched on a care-plan failure.
+      }
+    }
+
     return NextResponse.json({
       meta: {
         _note:
@@ -451,7 +534,8 @@ export async function POST(req: Request) {
         _salesforceConfigured: isSalesforceConfigured(),
         ...(assessmentMeta ? { _assessment: assessmentMeta } : {}),
         ...(coverageMeta ? { _coverage: coverageMeta } : {}),
-        ...(schedulingMeta ? { _scheduling: schedulingMeta } : {})
+        ...(schedulingMeta ? { _scheduling: schedulingMeta } : {}),
+        ...(carePlanMeta ? { _carePlan: carePlanMeta } : {})
       },
       taskId,
       sessionId,
@@ -460,6 +544,7 @@ export async function POST(req: Request) {
       ...(assessmentMeta ? { assessment: assessmentMeta } : {}),
       ...(coverageMeta ? { coverage: coverageMeta } : {}),
       ...(schedulingMeta ? { scheduling: schedulingMeta } : {}),
+      ...(carePlanMeta ? { carePlan: carePlanMeta } : {}),
       data360: {
         source: { identity: identitySource, grounding: groundingSource },
         identity,

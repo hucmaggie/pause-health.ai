@@ -51,6 +51,10 @@ export type GovernanceTask = {
   // Appointment scheduling (care coordination)
   requestedSlotIsFree?: boolean;
   slotWithinProviderAvailability?: boolean;
+  // Care gap closure (preventive care)
+  gapsTraceToClinicalMeasure?: boolean;
+  // Care plan (template-instantiated plan)
+  planTracesToTemplate?: boolean;
   // Commercial plane (pipeline, account management)
   accessesPhi?: boolean;
   forecastSourcedFromCrm?: boolean;
@@ -221,6 +225,22 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Slot falls outside the provider's published availability",
     reason:
       "Requested appointment slot falls outside the provider's published availability; the scheduler only books published slots"
+  },
+  {
+    policyId: "policy.caregap.clinical-measure-sourced",
+    signal: "gapsTraceToClinicalMeasure",
+    violatingValue: false,
+    violationHint: "A care gap doesn't derive from a defined clinical measure",
+    reason:
+      "A care gap acted on did not derive from a defined clinical measure (an off-catalog / fabricated gap); every care gap must trace to a defined clinical measure"
+  },
+  {
+    policyId: "policy.careplan.template-sourced",
+    signal: "planTracesToTemplate",
+    violatingValue: false,
+    violationHint: "An instantiated care plan doesn't derive from a defined template",
+    reason:
+      "The instantiated care plan did not derive from a defined CarePlanTemplate (an off-catalog / fabricated plan); every care plan must trace to a defined template"
   },
   {
     policyId: "policy.marketing.consent-to-contact-required",

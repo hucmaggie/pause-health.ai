@@ -382,6 +382,55 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "care-gap-closure-agent",
+    name: "Agentforce Care Gap Closure · Preventive Care (Health Cloud)",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health" /
+    // Health Cloud care-gap-closure agent: POST
+    // /api/agents/care-gap-closure/tasks (card at /.well-known/agent.json).
+    // Gap detection is DETERMINISTIC and grounded on the synthetic Data 360
+    // context; the clinical measures + intervals are illustrative synthetic
+    // values, NOT a certified clinical guideline engine.
+    endpoint: "/api/agents/care-gap-closure",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Proactively detects menopause-relevant preventive-care gaps — bone-density/DEXA (osteoporosis risk), lipid panel, screening mammogram, and overdue HRT follow-up — grounded on the patient's Data 360 context + age/cycle/symptom signals",
+      "Detection is DETERMINISTIC (a pure function of an explicit as-of date + per-measure history; no randomness, no clock) — the same context always yields the same gaps",
+      "Every detected gap references a defined clinical-measure catalog id (open/overdue, dueSince/lastDone, priority) — never a fabricated gap; enforced at the Agent Fabric governance boundary",
+      "Drafts consent- and quiet-hours-aware outreach for each gap (human-approval-gated, never auto-sent) and hands it to the Engagement Agent for delivery",
+      "Runs against ILLUSTRATIVE synthetic clinical measures + intervals — clearly labeled; NOT a certified clinical guideline engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-gap"
+  },
+  {
+    id: "care-plan-agent",
+    name: "Pause Care Plan · Claude Sonnet 4.5",
+    kind: "anthropic-claude",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health" /
+    // Health Cloud CarePlan + care-plan-summarization agent: POST
+    // /api/agents/care-plan/tasks (card at /.well-known/agent.json). A
+    // clinical-plane sibling of the Care Router and the SECOND live-Claude
+    // agent: plan instantiation is DETERMINISTIC (a defined template fill), and
+    // the progress summary is a live Claude call with a deterministic scripted
+    // fallback (same model + allow-list as the Care Router).
+    endpoint: "/api/agents/care-plan",
+    version: "0.1.0",
+    status: "prototype",
+    capabilities: [
+      "Instantiates a menopause care plan (goals, interventions, follow-up cadence) DETERMINISTICALLY from a defined CarePlanTemplate, selected by the Care Router's pathway/severity + intake — the Salesforce 'Agentforce for Health' / Health Cloud CarePlan analog",
+      "Every instantiated plan references a defined care-plan template id (open/structured goals + interventions + cadence) — never a fabricated plan; enforced at the Agent Fabric governance boundary",
+      "Generates a concise patient/clinician progress SUMMARY with live Anthropic Claude — the SECOND live-Claude agent after the Care Router — falling back to a DETERMINISTIC scripted summary (with a recorded fallbackReason) when ANTHROPIC_API_KEY is unset or the API call fails",
+      "Summaries are NON-PRESCRIPTIVE: they report the existing plan's goals/interventions/cadence and never add or change a medication, dose, order, or prescription",
+      "Runs against ILLUSTRATIVE synthetic care-plan templates — clearly labeled; NOT a certified clinical care-plan engine"
+    ],
+    provider: "Anthropic + Pause-Health.ai",
+    governanceTier: "clinical-decision"
   }
 ];
 
@@ -422,7 +471,9 @@ const POLICIES: PolicyRecord[] = [
       "mcp-bridge",
       "assessment-agent",
       "benefits-verification-agent",
-      "appointment-scheduling-agent"
+      "appointment-scheduling-agent",
+      "care-gap-closure-agent",
+      "care-plan-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -464,11 +515,29 @@ const POLICIES: PolicyRecord[] = [
     status: "enforced"
   },
   {
+    id: "policy.caregap.clinical-measure-sourced",
+    name: "Care gaps must derive from a defined clinical measure",
+    description:
+      "Every care gap the Care Gap Closure Agent acts on must derive from a defined clinical measure in the measure catalog — it may not act on a fabricated / off-catalog gap. A gap that doesn't trace to a defined clinical measure is rejected before any outreach is drafted or handed to the Engagement Agent, so the agent can never invent a preventive-care need. (In the prototype the clinical measures + intervals are clearly-labeled illustrative synthetics, not a certified guideline engine; in production this is the customer's governed clinical-measure / HEDIS-style registry.)",
+    appliesTo: ["care-gap-closure-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.careplan.template-sourced",
+    name: "Care plans must derive from a defined template",
+    description:
+      "Every care plan the Care Plan Agent instantiates must derive from a defined CarePlanTemplate in the template catalog — it may not act on a fabricated / off-catalog plan. A plan that doesn't trace to a defined template is rejected before it is summarized or returned, so the agent can never invent a care plan. (In the prototype the templates + their goals/interventions/cadences are clearly-labeled illustrative synthetics, not a certified care-plan engine; in production this is the customer's governed Health Cloud CarePlan template library.)",
+    appliesTo: ["care-plan-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
     id: "policy.model.anthropic-claude-sonnet-allowlisted",
     name: "Model allow-list",
     description:
       "Only models on the customer's approved list may serve clinical-decision agents. Default allow-list: claude-sonnet-4-5, claude-opus-4-7. Other models are blocked at policy evaluation time.",
-    appliesTo: ["care-router-claude"],
+    appliesTo: ["care-router-claude", "care-plan-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -477,7 +546,7 @@ const POLICIES: PolicyRecord[] = [
     name: "No autonomous prescribing",
     description:
       "Clinical-decision agents may recommend pathways but may not write prescriptions, order labs, or commit clinical actions without a human-in-the-loop clinician.",
-    appliesTo: ["care-router-claude"],
+    appliesTo: ["care-router-claude", "care-plan-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -486,7 +555,7 @@ const POLICIES: PolicyRecord[] = [
     name: "Rationale required on every decision",
     description:
       "Every routing decision must include human-readable rationale. Decisions without rationale are rejected and re-issued to the model.",
-    appliesTo: ["care-router-claude"],
+    appliesTo: ["care-router-claude", "care-plan-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -588,7 +657,9 @@ const POLICIES: PolicyRecord[] = [
     appliesTo: [
       "salesforce-data-360",
       "care-router-claude",
-      "benefits-verification-agent"
+      "benefits-verification-agent",
+      "care-gap-closure-agent",
+      "care-plan-agent"
     ],
     enforcement: "block",
     status: "enforced"
@@ -607,7 +678,7 @@ const POLICIES: PolicyRecord[] = [
     name: "Contact consent required for outreach",
     description:
       "Prospecting and engagement agents may only contact an individual who carries an active contact/marketing consent in the Data 360 consent ledger. Individuals without consent are suppressed from every audience before a message is ever drafted.",
-    appliesTo: ["prospecting-agent", "engagement-agent"],
+    appliesTo: ["prospecting-agent", "engagement-agent", "care-gap-closure-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -616,7 +687,7 @@ const POLICIES: PolicyRecord[] = [
     name: "Human approval before any patient message",
     description:
       "Outreach and engagement messages are drafted for human review. No message is delivered to a prospect or patient without a human-in-the-loop approval — the prototype never sends autonomously.",
-    appliesTo: ["prospecting-agent", "engagement-agent"],
+    appliesTo: ["prospecting-agent", "engagement-agent", "care-gap-closure-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -634,7 +705,7 @@ const POLICIES: PolicyRecord[] = [
     name: "Quiet-hours + channel preference honored",
     description:
       "Engagement touches must fall inside the patient's quiet-hours window and use a channel the patient has opted into. Touches outside the window or on an unpreferred channel are blocked.",
-    appliesTo: ["engagement-agent"],
+    appliesTo: ["engagement-agent", "care-gap-closure-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -1519,6 +1590,204 @@ function store(): FabricStore {
         channel: "sms",
         quietHoursRespected: true,
         humanApprovalRequired: true
+      }
+    }
+  );
+
+  // A trace showing the Care Gap Closure Agent working PROACTIVELY (not part of
+  // the reactive intake→router flow): it grounds on the patient's Data 360
+  // context, DETERMINISTICALLY detects menopause-relevant preventive-care gaps
+  // (here bone-density/DEXA + mammogram), each sourced to a defined clinical
+  // measure (never fabricated), drafts consent- and quiet-hours-aware outreach
+  // per gap (human-approval-gated, never auto-sent), and hands the drafts to the
+  // Engagement Agent for delivery. The clinical measures + intervals are
+  // ILLUSTRATIVE synthetics, not a certified guideline engine. Seed data;
+  // production populates the ring buffer from the persistent log store.
+  const cg0 = Date.now() - 1000 * 60 * 7;
+  const careGapTaskId = "task-seed-caregap-001";
+  const careGapName =
+    "Agentforce Care Gap Closure · Preventive Care (Health Cloud)";
+  s.traces.push(
+    {
+      id: "span-caregap-001",
+      taskId: careGapTaskId,
+      agentId: "salesforce-data-360",
+      agentName: "Salesforce Data 360 · Unified Patient Grounding",
+      operation: "data360.grounding",
+      protocol: "rest",
+      startedAt: new Date(cg0).toISOString(),
+      finishedAt: new Date(cg0 + 320).toISOString(),
+      durationMs: 320,
+      status: "ok",
+      attributes: {
+        unifiedPatientId: "pause-demo-patient-001",
+        daysSinceClinicalContact: 412,
+        cohort: "Cohort: 51-55 · primary hot_flashes"
+      }
+    },
+    {
+      id: "span-caregap-002",
+      taskId: careGapTaskId,
+      parentSpanId: "span-caregap-001",
+      agentId: "care-gap-closure-agent",
+      agentName: careGapName,
+      operation: "caregap.detect",
+      protocol: "rest",
+      startedAt: new Date(cg0 + 320).toISOString(),
+      finishedAt: new Date(cg0 + 360).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        asOf: "2026-02-02",
+        gapsDetected: 2,
+        measures: ["measure.bone-density-dexa", "measure.mammogram"],
+        priorities: ["urgent", "elevated"],
+        gapsTraceToClinicalMeasure: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-caregap-003",
+      taskId: careGapTaskId,
+      parentSpanId: "span-caregap-002",
+      agentId: "care-gap-closure-agent",
+      agentName: careGapName,
+      operation: "caregap.outreach.draft",
+      protocol: "rest",
+      startedAt: new Date(cg0 + 360).toISOString(),
+      finishedAt: new Date(cg0 + 420).toISOString(),
+      durationMs: 60,
+      status: "ok",
+      attributes: {
+        measureId: "measure.bone-density-dexa",
+        channel: "email",
+        quietHoursRespected: true,
+        humanApprovalRequired: true,
+        suppressedForNoConsent: false,
+        sent: false
+      }
+    },
+    {
+      id: "span-caregap-004",
+      taskId: careGapTaskId,
+      parentSpanId: "span-caregap-002",
+      agentId: "care-gap-closure-agent",
+      agentName: careGapName,
+      operation: "caregap.outreach.draft",
+      protocol: "rest",
+      startedAt: new Date(cg0 + 420).toISOString(),
+      finishedAt: new Date(cg0 + 480).toISOString(),
+      durationMs: 60,
+      status: "ok",
+      attributes: {
+        measureId: "measure.mammogram",
+        channel: "email",
+        quietHoursRespected: true,
+        humanApprovalRequired: true,
+        suppressedForNoConsent: false,
+        sent: false
+      }
+    },
+    {
+      id: "span-caregap-005",
+      taskId: careGapTaskId,
+      parentSpanId: "span-caregap-002",
+      agentId: "engagement-agent",
+      agentName: "Agentforce Engagement Agent · Care Continuity",
+      operation: "engagement.outreach.handoff",
+      protocol: "a2a",
+      startedAt: new Date(cg0 + 480).toISOString(),
+      finishedAt: new Date(cg0 + 900).toISOString(),
+      durationMs: 420,
+      status: "ok",
+      attributes: {
+        gapsHandedOff: 2,
+        channels: ["email", "email"],
+        humanApprovalRequired: true,
+        sent: false
+      }
+    }
+  );
+
+  // A trace showing the Care Plan Agent working POST-VISIT, downstream of the
+  // Care Router: the Router recommends a pathway, the Care Plan Agent
+  // DETERMINISTICALLY instantiates a menopause care plan from a defined template
+  // (here the vasomotor/lifestyle plan) — every plan traces to a template, never
+  // fabricated — and then generates a patient/clinician progress SUMMARY. This
+  // seeded example shows the DETERMINISTIC scripted-fallback path (via:
+  // scripted-fallback, with a fallbackReason) so it doesn't imply a live Claude
+  // call happened at seed time; at run time the summary is a live Claude call
+  // with the same scripted fallback. The templates are ILLUSTRATIVE synthetics,
+  // not a certified care-plan engine. Seed data; production populates the ring
+  // buffer from the persistent log store.
+  const cp0 = Date.now() - 1000 * 60 * 8;
+  const carePlanTaskId = "task-seed-careplan-001";
+  const carePlanName = "Pause Care Plan · Claude Sonnet 4.5";
+  s.traces.push(
+    {
+      id: "span-careplan-001",
+      taskId: carePlanTaskId,
+      agentId: "care-router-claude",
+      agentName: "Pause Care Router · Claude Sonnet 4.5",
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(cp0).toISOString(),
+      finishedAt: new Date(cp0 + 2200).toISOString(),
+      durationMs: 2200,
+      status: "ok",
+      attributes: {
+        pathway: "mscp-virtual-visit",
+        provider: "anthropic",
+        model: "claude-sonnet-4-5-20250929",
+        severity: "moderate"
+      }
+    },
+    {
+      id: "span-careplan-002",
+      taskId: carePlanTaskId,
+      parentSpanId: "span-careplan-001",
+      agentId: "care-plan-agent",
+      agentName: carePlanName,
+      operation: "careplan.instantiate",
+      protocol: "a2a",
+      startedAt: new Date(cp0 + 2200).toISOString(),
+      finishedAt: new Date(cp0 + 2240).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        templateId: "careplan.vasomotor-lifestyle",
+        pathway: "mscp-virtual-visit",
+        severity: "moderate",
+        goals: 2,
+        interventions: 3,
+        followUpIntervalDays: 30,
+        planTracesToTemplate: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-careplan-003",
+      taskId: carePlanTaskId,
+      parentSpanId: "span-careplan-002",
+      agentId: "care-plan-agent",
+      agentName: carePlanName,
+      operation: "careplan.summarize",
+      protocol: "a2a",
+      startedAt: new Date(cp0 + 2240).toISOString(),
+      finishedAt: new Date(cp0 + 2260).toISOString(),
+      durationMs: 20,
+      status: "ok",
+      attributes: {
+        templateId: "careplan.vasomotor-lifestyle",
+        provider: "pause-scripted",
+        model: "pause-care-plan-summarizer@1.0",
+        via: "scripted-fallback",
+        // Present ONLY on a scripted-fallback summary — the non-clinical
+        // diagnostic explaining why the live Claude call was not used. This
+        // seeded example is deterministic on purpose (no live call at seed time).
+        fallbackReason:
+          "ANTHROPIC_API_KEY not set; using deterministic Pause care-plan summarizer.",
+        nonPrescriptive: true
       }
     }
   );

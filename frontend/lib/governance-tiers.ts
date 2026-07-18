@@ -20,6 +20,7 @@ export type GovernanceTier =
   | "patient-acquisition"
   | "lead-qualification"
   | "patient-engagement"
+  | "care-gap"
   | "commercial-operations";
 
 /**
@@ -67,6 +68,7 @@ export const GOVERNANCE_TIERS: Record<
   "patient-acquisition": { label: "Patient acquisition", plane: "patient-care" },
   "lead-qualification": { label: "Lead qualification", plane: "patient-care" },
   "patient-engagement": { label: "Patient engagement", plane: "patient-care" },
+  "care-gap": { label: "Care gap closure", plane: "patient-care" },
   "data-plane": { label: "Data plane", plane: "platform" },
   integration: { label: "Integration", plane: "platform" },
   "data-grounding": { label: "Data grounding", plane: "platform" },
