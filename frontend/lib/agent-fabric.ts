@@ -542,6 +542,35 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "clinical-decision"
+  },
+  {
+    id: "clinical-summary-agent",
+    name: "Agentforce Clinical Summary Agent · After-Visit Summary",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health"
+    // After-Visit Summary / clinical-documentation agent: POST
+    // /api/agents/clinical-summary/tasks (card at /.well-known/agent.json). It
+    // COMPOSES the outputs the other agents already produced (intake, Care
+    // Router pathway, optional assessment / care plan / care gaps) into two
+    // artifacts — a patient-friendly after-visit summary and a clinician
+    // handoff. Assembly is DETERMINISTIC and gathers ONLY facts present in the
+    // inputs (the real grounding guarantee); the phrasing is a live Claude call
+    // with a deterministic scripted fallback (same model + allow-list as the
+    // Care Router / Care Plan) — the THIRD live-Claude agent. The artifacts are
+    // illustrative synthetics, NOT a certified clinical-documentation engine.
+    endpoint: "/api/agents/clinical-summary",
+    version: "0.1.0",
+    status: "prototype",
+    capabilities: [
+      "Composes an After-Visit Summary (patient-friendly) AND a clinician handoff note from the outputs the other agents already produced — the Salesforce 'Agentforce for Health' After-Visit Summary / clinical-documentation analog",
+      "Assembly is DETERMINISTIC and gathers ONLY facts present in the provided lifecycle inputs (intake severity/symptoms, Care Router pathway, optional validated-instrument assessment, optional instantiated care plan, optional detected care gaps) — the agent never invents a clinical fact or a source",
+      "Every summary must trace to the defined source records the context was assembled from — a fabricated / off-context assertion is blocked at the Agent Fabric governance boundary (policy.clinical-summary.source-record-sourced)",
+      "Phrases the two artifacts with live Anthropic Claude — the THIRD live-Claude agent after the Care Router and the Care Plan agent — falling back to a DETERMINISTIC scripted composition (with a recorded fallbackReason) when ANTHROPIC_API_KEY is unset or the API call fails",
+      "Non-prescriptive and commits no clinical action: it re-states existing synthetic records for two audiences and requires clinician review — the artifacts are ILLUSTRATIVE synthetics, NOT a certified clinical-documentation engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -588,7 +617,8 @@ const POLICIES: PolicyRecord[] = [
       "medication-adherence-agent",
       "referral-management-agent",
       "member-service-agent",
-      "prior-authorization-agent"
+      "prior-authorization-agent",
+      "clinical-summary-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -648,6 +678,15 @@ const POLICIES: PolicyRecord[] = [
     status: "enforced"
   },
   {
+    id: "policy.clinical-summary.source-record-sourced",
+    name: "Summaries must trace to source records (no fabrication)",
+    description:
+      "Every after-visit summary / clinician handoff the Clinical Summary Agent produces must trace to the defined source records the context was assembled from — it may not assert a clinical fact (or cite a record) that isn't grounded in what the upstream agents established. A summary that doesn't trace to a source record (a fabricated / off-context assertion, or one citing nothing at all) is rejected before it is returned, so the agent can never invent a clinical fact. The assembler gathers ONLY facts present in the provided lifecycle inputs, so this grounding property is real. (In the prototype the composed records are clearly-labeled synthetics, not a certified clinical-documentation engine; in production this is the customer's governed Health Cloud clinical record.)",
+    appliesTo: ["clinical-summary-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
     id: "policy.medication.no-autonomous-refill",
     name: "No autonomous medication refill",
     description:
@@ -661,7 +700,7 @@ const POLICIES: PolicyRecord[] = [
     name: "Model allow-list",
     description:
       "Only models on the customer's approved list may serve clinical-decision agents. Default allow-list: claude-sonnet-4-5, claude-opus-4-7. Other models are blocked at policy evaluation time.",
-    appliesTo: ["care-router-claude", "care-plan-agent"],
+    appliesTo: ["care-router-claude", "care-plan-agent", "clinical-summary-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -674,7 +713,8 @@ const POLICIES: PolicyRecord[] = [
       "care-router-claude",
       "care-plan-agent",
       "medication-adherence-agent",
-      "prior-authorization-agent"
+      "prior-authorization-agent",
+      "clinical-summary-agent"
     ],
     enforcement: "block",
     status: "enforced"
@@ -825,7 +865,8 @@ const POLICIES: PolicyRecord[] = [
       "benefits-verification-agent",
       "care-gap-closure-agent",
       "care-plan-agent",
-      "prior-authorization-agent"
+      "prior-authorization-agent",
+      "clinical-summary-agent"
     ],
     enforcement: "block",
     status: "enforced"
@@ -1968,6 +2009,87 @@ function store(): FabricStore {
         fallbackReason:
           "ANTHROPIC_API_KEY not set; using deterministic Pause care-plan summarizer.",
         nonPrescriptive: true
+      }
+    }
+  );
+
+  // A trace showing the Clinical Summary Agent working POST-VISIT, downstream of
+  // the whole lifecycle: it COMPOSES the outputs the other agents produced
+  // (here the intake + Care Router pathway + the instantiated care plan) into a
+  // patient-friendly After-Visit Summary and a clinician handoff. Assembly is
+  // DETERMINISTIC and gathers ONLY facts present in the inputs (every summary
+  // traces to a defined source record — never fabricated), and this seeded
+  // example shows the DETERMINISTIC scripted-fallback path (via:
+  // scripted-fallback, with a fallbackReason) so it doesn't imply a live Claude
+  // call happened at seed time; at run time the phrasing is a live Claude call
+  // with the same scripted fallback. It touches clinical context, so every span
+  // sets phiAccessed:true. The artifacts are ILLUSTRATIVE synthetics, not a
+  // certified clinical-documentation engine. Seed data; production populates the
+  // ring buffer from the persistent log store.
+  const cs0 = Date.now() - 1000 * 60 * 6;
+  const clinicalSummaryTaskId = "task-seed-clinical-summary-001";
+  const clinicalSummaryName = "Agentforce Clinical Summary Agent · After-Visit Summary";
+  s.traces.push(
+    {
+      id: "span-clinsum-001",
+      taskId: clinicalSummaryTaskId,
+      agentId: "clinical-summary-agent",
+      agentName: clinicalSummaryName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(cs0).toISOString(),
+      finishedAt: new Date(cs0 + 60).toISOString(),
+      durationMs: 60,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-clinsum-002",
+      taskId: clinicalSummaryTaskId,
+      parentSpanId: "span-clinsum-001",
+      agentId: "clinical-summary-agent",
+      agentName: clinicalSummaryName,
+      operation: "clinical-summary.assemble",
+      protocol: "a2a",
+      startedAt: new Date(cs0 + 60).toISOString(),
+      finishedAt: new Date(cs0 + 90).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        sourceRecords: 3,
+        summaryTracesToSourceRecords: true,
+        // Composes existing synthetic clinical records for two audiences.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-clinsum-003",
+      taskId: clinicalSummaryTaskId,
+      parentSpanId: "span-clinsum-002",
+      agentId: "clinical-summary-agent",
+      agentName: clinicalSummaryName,
+      operation: "clinical-summary.summarize",
+      protocol: "a2a",
+      startedAt: new Date(cs0 + 90).toISOString(),
+      finishedAt: new Date(cs0 + 110).toISOString(),
+      durationMs: 20,
+      status: "ok",
+      attributes: {
+        provider: "pause-scripted",
+        model: "pause-clinical-summary-composer@1.0",
+        via: "scripted-fallback",
+        // Present ONLY on a scripted-fallback composition — the non-clinical
+        // diagnostic explaining why the live Claude call was not used. This
+        // seeded example is deterministic on purpose (no live call at seed time).
+        fallbackReason:
+          "ANTHROPIC_API_KEY not set; using deterministic Pause clinical-summary composer.",
+        nonPrescriptive: true,
+        phiAccessed: true,
+        synthetic: true
       }
     }
   );

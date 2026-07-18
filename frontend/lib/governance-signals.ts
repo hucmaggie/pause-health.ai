@@ -55,6 +55,8 @@ export type GovernanceTask = {
   gapsTraceToClinicalMeasure?: boolean;
   // Care plan (template-instantiated plan)
   planTracesToTemplate?: boolean;
+  // Clinical summary (after-visit summary + clinician handoff)
+  summaryTracesToSourceRecords?: boolean;
   // Medication adherence (nudge-only refill/adherence prompts)
   refillRequiresHumanApproval?: boolean;
   // Referral management (cosign-gated outbound referrals)
@@ -250,6 +252,14 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An instantiated care plan doesn't derive from a defined template",
     reason:
       "The instantiated care plan did not derive from a defined CarePlanTemplate (an off-catalog / fabricated plan); every care plan must trace to a defined template"
+  },
+  {
+    policyId: "policy.clinical-summary.source-record-sourced",
+    signal: "summaryTracesToSourceRecords",
+    violatingValue: false,
+    violationHint: "A summary asserts a fact/record absent from the assembled context",
+    reason:
+      "The after-visit summary / clinician handoff did not trace to the source records the context was assembled from (a fabricated / off-context assertion, or none at all); every summary must trace to a defined source record and may not fabricate a clinical fact"
   },
   {
     policyId: "policy.medication.no-autonomous-refill",

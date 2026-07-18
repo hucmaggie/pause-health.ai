@@ -418,12 +418,13 @@ describe("Validated-instrument assessment · Assessment agent", () => {
 });
 
 describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
-  it("brings the registry to twenty-one agents", () => {
+  it("brings the registry to twenty-two agents", () => {
     // Sanity count guard: the funnel + intake + assessment + benefits +
     // scheduling + care-gap-closure + care-plan + medication-adherence +
-    // referral-management + member-service + prior-authorization agents, the
-    // Care Router, the platform substrate, and the commercial plane.
-    expect(listAgents()).toHaveLength(21);
+    // referral-management + member-service + prior-authorization +
+    // clinical-summary agents, the Care Router, the platform substrate, and the
+    // commercial plane.
+    expect(listAgents()).toHaveLength(22);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -1180,6 +1181,103 @@ describe("Prior Authorization · Clinician-gated, documentation-complete PA agen
   });
 });
 
+describe("Clinical Summary · After-visit summary / clinician-handoff live-Claude agent", () => {
+  it("registers as a prototype Agentforce agent on the care-coordination tier", () => {
+    const c = getAgent("clinical-summary-agent");
+    expect(c).toBeDefined();
+    // Modeled as an Agentforce for Health documentation feature (Claude-backed).
+    expect(c!.kind).toBe("agentforce");
+    expect(c!.protocol).toBe("a2a");
+    expect(c!.provider).toBe("Salesforce");
+    expect(c!.status).toBe("prototype");
+    // Reuses the care-coordination tier (patient-care plane) — the summary /
+    // handoff is a documentation & coordination artifact, not a new clinical
+    // decision.
+    expect(c!.governanceTier).toBe("care-coordination");
+    expect(planeForTier(c!.governanceTier)).toBe("patient-care");
+    expect(c!.endpoint).toBe("/api/agents/clinical-summary");
+  });
+
+  it("carries the source-record block plus the reused clinical/model/consent/audit policies", () => {
+    const ids = getPoliciesForAgent("clinical-summary-agent").map((p) => p.id);
+    expect(ids).toContain("policy.clinical-summary.source-record-sourced");
+    // Reused by extending appliesTo.
+    expect(ids).toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    expect(ids).toContain("policy.clinical.no-prescribing");
+    expect(ids).toContain("policy.data360.consent-required-before-grounding");
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT on any commercial-plane-only policy (it touches PHI).
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("the source-record policy is an enforced block", () => {
+    const policy = listPolicies().find(
+      (p) => p.id === "policy.clinical-summary.source-record-sourced"
+    );
+    expect(policy).toBeDefined();
+    expect(policy!.enforcement).toBe("block");
+    expect(policy!.status).toBe("enforced");
+  });
+
+  it("blocks an ungrounded (off-source-record) summary, allows one that traces", () => {
+    const blocked = evaluateGovernance({
+      agentId: "clinical-summary-agent",
+      task: {
+        summaryTracesToSourceRecords: false,
+        requestedModel: "claude-sonnet-4-5-20250929",
+        hasAiDecisionSupportConsent: true
+      }
+    });
+    expect(blocked.decision).toBe("block");
+    expect(blocked.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.clinical-summary.source-record-sourced"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "clinical-summary-agent",
+      task: {
+        summaryTracesToSourceRecords: true,
+        requestedModel: "claude-sonnet-4-5-20250929",
+        hasAiDecisionSupportConsent: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Model allow-list is enforced just like the Care Router / Care Plan.
+    const offModel = evaluateGovernance({
+      agentId: "clinical-summary-agent",
+      task: { summaryTracesToSourceRecords: true, requestedModel: "gpt-4o" }
+    });
+    expect(offModel.decision).toBe("block");
+    expect(offModel.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.model.anthropic-claude-sonnet-allowlisted"
+    );
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "clinical-summary-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds an assemble→summarize trace showing a deterministic scripted-fallback composition", () => {
+    const spans = listTraces({ taskId: "task-seed-clinical-summary-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(3);
+    const assemble = spans.find((s) => s.operation === "clinical-summary.assemble");
+    expect(assemble?.agentId).toBe("clinical-summary-agent");
+    expect(assemble?.attributes?.summaryTracesToSourceRecords).toBe(true);
+    // It composes clinical context, so every span asserts PHI was accessed.
+    for (const s of spans) {
+      expect(s.attributes?.phiAccessed, s.operation).toBe(true);
+    }
+    const summarize = spans.find((s) => s.operation === "clinical-summary.summarize");
+    expect(summarize?.agentId).toBe("clinical-summary-agent");
+    // Seeded example is deterministic: scripted-fallback with a fallbackReason,
+    // so it doesn't imply a live Claude call happened at seed time.
+    expect(summarize?.attributes?.via).toBe("scripted-fallback");
+    expect(typeof summarize?.attributes?.fallbackReason).toBe("string");
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -1305,7 +1403,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-medication-adherence-001",
       "task-seed-referral-001",
       "task-seed-member-service-001",
-      "task-seed-prior-authorization-001"
+      "task-seed-prior-authorization-001",
+      "task-seed-clinical-summary-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });

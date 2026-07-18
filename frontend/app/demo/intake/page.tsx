@@ -5,6 +5,7 @@ import { AssessmentPanel } from "../../../components/assessment-panel";
 import { BenefitsPanel } from "../../../components/benefits-panel";
 import { CareGapPanel } from "../../../components/care-gap-panel";
 import { CarePlanPanel } from "../../../components/care-plan-panel";
+import { ClinicalSummaryPanel } from "../../../components/clinical-summary-panel";
 import { DemoShell } from "../../../components/demo-shell";
 import { IntakePatientStage } from "../../../components/intake-patient-stage";
 import { PersonaJourneyFooter } from "../../../components/persona-journey-footer";
@@ -63,6 +64,8 @@ export default function IntakeDemoPage() {
       <SchedulingPanel />
 
       <CarePlanPanel />
+
+      <ClinicalSummaryPanel />
 
       <CareGapPanel />
 

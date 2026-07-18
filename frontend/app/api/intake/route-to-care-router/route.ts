@@ -9,8 +9,13 @@ import { recordInstantSpan } from "../../../../lib/agent-fabric";
 import {
   carePlanContextFromIntake,
   instantiateCarePlan,
-  summarizeCarePlan
+  summarizeCarePlan,
+  type InstantiatedCarePlan
 } from "../../../../lib/care-plan";
+import {
+  assembleClinicalSummaryContext,
+  summarizeClinical
+} from "../../../../lib/clinical-summary";
 import {
   assessmentToIntakeSignal,
   isAllowlistedInstrument,
@@ -131,6 +136,16 @@ export async function POST(req: Request) {
      * unchanged. Set `carePlan: false` to opt out explicitly.
      */
     carePlan?: boolean | { onHrt?: boolean };
+    /**
+     * Optional after-visit clinical summary. When requested (clinicalSummary:
+     * true), after the Care Router returns a pathway (and any care plan) the
+     * Clinical Summary Agent DETERMINISTICALLY assembles a context from the
+     * lifecycle outputs and composes a patient after-visit summary + clinician
+     * handoff (live-Claude, scripted-fallback), attaching them to the trace +
+     * response meta. Strictly additive: absent = today's behavior unchanged.
+     * Set `clinicalSummary: false` to opt out explicitly.
+     */
+    clinicalSummary?: boolean;
   };
   let body: Body;
   try {
@@ -458,6 +473,9 @@ export async function POST(req: Request) {
     // failure here must never break the routing response, and absent = today's
     // behavior unchanged.
     let carePlanMeta: Record<string, unknown> | undefined;
+    // Hoisted so the optional clinical-summary step below can compose the
+    // instantiated plan into the after-visit summary without re-deriving it.
+    let instantiatedCarePlan: InstantiatedCarePlan | undefined;
     const carePlanOptedOut = body.carePlan === false;
     const carePlanReq =
       body.carePlan && typeof body.carePlan === "object" ? body.carePlan : undefined;
@@ -469,6 +487,7 @@ export async function POST(req: Request) {
         const plan = instantiateCarePlan(
           carePlanContextFromIntake(intake, { pathway }, { onHrt: carePlanReq?.onHrt })
         );
+        instantiatedCarePlan = plan;
         const instantiateSpan = recordInstantSpan({
           taskId,
           parentSpanId: intakeSpan.id,
@@ -519,6 +538,76 @@ export async function POST(req: Request) {
       }
     }
 
+    // Optional after-visit clinical summary (additive). When requested and the
+    // routing decision carries a pathway, the Clinical Summary Agent
+    // DETERMINISTICALLY assembles a context from the lifecycle outputs (intake +
+    // pathway + any instantiated care plan) and composes a patient after-visit
+    // summary + clinician handoff (live-Claude, scripted-fallback), attaching
+    // them to the trace + response meta — the routing → summary close. It
+    // touches clinical context, so its spans set phiAccessed:true. Best-effort +
+    // strictly additive: a failure here must never break the routing response,
+    // and absent = today's behavior unchanged.
+    let clinicalSummaryMeta: Record<string, unknown> | undefined;
+    const wantsClinicalSummary = body.clinicalSummary === true;
+    if (wantsClinicalSummary && decision && typeof decision === "object") {
+      try {
+        const pathway = (decision as { pathway?: CarePathway }).pathway;
+        const context = assembleClinicalSummaryContext({
+          intake,
+          ...(pathway ? { pathway } : {}),
+          ...(carePlanReq?.onHrt !== undefined ? { onHrt: carePlanReq.onHrt } : {}),
+          ...(instantiatedCarePlan ? { carePlan: instantiatedCarePlan } : {}),
+          ...(personaId ? { personaId } : {})
+        });
+        const assembleSpan = recordInstantSpan({
+          taskId,
+          parentSpanId: intakeSpan.id,
+          agentId: "clinical-summary-agent",
+          operation: "clinical-summary.assemble",
+          protocol: "a2a",
+          attributes: {
+            sourceRecords: context.sourceRecords.length,
+            summaryTracesToSourceRecords: context.sourceRecords.length > 0,
+            hasCarePlan: Boolean(context.carePlan),
+            careGaps: context.careGaps.length,
+            phiAccessed: true,
+            synthetic: true,
+            ...(personaId ? { personaId } : {}),
+            ...(origin ? { origin } : {})
+          }
+        });
+        const summary = await summarizeClinical(context);
+        recordInstantSpan({
+          taskId,
+          parentSpanId: assembleSpan.id,
+          agentId: "clinical-summary-agent",
+          operation: "clinical-summary.summarize",
+          protocol: "a2a",
+          attributes: {
+            sourceRecords: summary.sourceRecords.length,
+            provider: summary.modelProvenance.provider,
+            model: summary.modelProvenance.model,
+            via: summary.via,
+            ...(summary.fallbackReason ? { fallbackReason: summary.fallbackReason } : {}),
+            nonPrescriptive: true,
+            phiAccessed: true,
+            ...(personaId ? { personaId } : {}),
+            ...(origin ? { origin } : {})
+          }
+        });
+        clinicalSummaryMeta = {
+          patientSummary: summary.patientSummary,
+          clinicianHandoff: summary.clinicianHandoff,
+          sourceRecords: summary.sourceRecords,
+          summaryVia: summary.via,
+          ...(summary.fallbackReason ? { fallbackReason: summary.fallbackReason } : {}),
+          clinicalSummaryAfterRouting: true
+        };
+      } catch {
+        // Best-effort: leave routing untouched on a clinical-summary failure.
+      }
+    }
+
     return NextResponse.json({
       meta: {
         _note:
@@ -535,7 +624,8 @@ export async function POST(req: Request) {
         ...(assessmentMeta ? { _assessment: assessmentMeta } : {}),
         ...(coverageMeta ? { _coverage: coverageMeta } : {}),
         ...(schedulingMeta ? { _scheduling: schedulingMeta } : {}),
-        ...(carePlanMeta ? { _carePlan: carePlanMeta } : {})
+        ...(carePlanMeta ? { _carePlan: carePlanMeta } : {}),
+        ...(clinicalSummaryMeta ? { _clinicalSummary: clinicalSummaryMeta } : {})
       },
       taskId,
       sessionId,
@@ -545,6 +635,7 @@ export async function POST(req: Request) {
       ...(coverageMeta ? { coverage: coverageMeta } : {}),
       ...(schedulingMeta ? { scheduling: schedulingMeta } : {}),
       ...(carePlanMeta ? { carePlan: carePlanMeta } : {}),
+      ...(clinicalSummaryMeta ? { clinicalSummary: clinicalSummaryMeta } : {}),
       data360: {
         source: { identity: identitySource, grounding: groundingSource },
         identity,
