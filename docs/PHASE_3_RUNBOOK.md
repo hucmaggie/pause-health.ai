@@ -136,6 +136,7 @@ All values are strings clamped to <=255 chars by `clampForChannel()`.
 |---|---|---|---|---|---|
 | `_firstName` | `Anika` | std | n/a | std | Salesforce-standard, auto-accepted |
 | `_lastName` | `Patel` | std | n/a | std | Salesforce-standard, auto-accepted |
+| `Patient_First_Name` | `Anika` | ✓ | `Pause_Patient_First_Name__c` | `Pause_Patient_First_Name` | Registered custom mirror of `_firstName`; lets the agent greet by name via `$Context.Pause_Patient_First_Name` |
 | `Patient_Id` | `003Hp00003b9bdqIAA` | ✓ | `Pause_Patient_Id__c` | `Pause_Patient_Id` | Real Salesforce Contact.Id when SF is configured |
 | `Identity_Confidence` | `0.94` | ✓ | `Pause_Identity_Confidence__c` | (dropped) | Provenance — Apex-queryable |
 | `Identity_Sources` | `epic-health-cloud, agentforce-intake-history` | ✓ | `Pause_Identity_Sources__c` | (dropped) | Provenance |
@@ -162,6 +163,7 @@ All values are strings clamped to <=255 chars by `clampForChannel()`.
 | Artifact | Salesforce type | Source of truth |
 |---|---|---|
 | `MessagingSession.Pause_Patient_Zip__c` | CustomField | ✅ `salesforce/force-app/main/default/objects/MessagingSession/fields/` |
+| `MessagingSession.Pause_Patient_First_Name__c` | CustomField | ✅ `salesforce/force-app/main/default/objects/MessagingSession/fields/` |
 | `Pause_Health_Intake_Prechat_Dossier` permission set (FLS) | PermissionSet | ✅ `salesforce/force-app/main/default/permissionsets/` |
 | `Pause_Intake_Prechat_Router` routing flow | Flow / RoutingFlow | ✅ `salesforce/force-app/main/default/flows/` |
 | `Messaging_for_In_App_Web` channel | MessagingChannel | ✅ `salesforce/force-app/main/default/messagingChannels/` (custom-params + flow handler) |

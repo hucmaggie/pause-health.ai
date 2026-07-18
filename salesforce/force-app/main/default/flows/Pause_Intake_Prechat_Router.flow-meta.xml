@@ -67,7 +67,7 @@
         <offset>0</offset>
     </actionCalls>
     <apiVersion>65.0</apiVersion>
-    <description>Phase 18a: reads the 21 hidden-prechat dossier fields sent by the Pause web app, writes them onto the MessagingSession custom fields, then routes the conversation to the Pause Health Intake Agentforce Service Agent.</description>
+    <description>Phase 18a: reads the 22 hidden-prechat dossier fields sent by the Pause web app, writes them onto the MessagingSession custom fields, then routes the conversation to the Pause Health Intake Agentforce Service Agent.</description>
     <environments>Default</environments>
     <interviewLabel>Pause Intake Prechat Router {!$Flow.CurrentDateTime}</interviewLabel>
     <label>Pause Intake Prechat Router</label>
@@ -189,6 +189,12 @@
             <field>Pause_Patient_Context_JSON__c</field>
             <value>
                 <elementReference>Patient_Context_JSON</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Pause_Patient_First_Name__c</field>
+            <value>
+                <elementReference>Patient_First_Name</elementReference>
             </value>
         </inputAssignments>
         <inputAssignments>
@@ -352,6 +358,13 @@
     </variables>
     <variables>
         <name>Patient_Context_JSON</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>Patient_First_Name</name>
         <dataType>String</dataType>
         <isCollection>false</isCollection>
         <isInput>true</isInput>

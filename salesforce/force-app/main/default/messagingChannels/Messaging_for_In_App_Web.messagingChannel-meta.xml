@@ -164,6 +164,16 @@
     </customParameters>
     <customParameters>
         <actionParameterMappings>
+            <actionParameterName>Patient_First_Name</actionParameterName>
+        </actionParameterMappings>
+        <externalParameterName>Patient_First_Name</externalParameterName>
+        <masterLabel>Patient_First_Name</masterLabel>
+        <maxLength>80</maxLength>
+        <name>Patient_First_Name</name>
+        <parameterDataType>String</parameterDataType>
+    </customParameters>
+    <customParameters>
+        <actionParameterMappings>
             <actionParameterName>Patient_Id</actionParameterName>
         </actionParameterMappings>
         <externalParameterName>Patient_Id</externalParameterName>

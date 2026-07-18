@@ -5,6 +5,7 @@
         <name>NamedCredential</name>
     </types>
     <types>
+        <members>MessagingSession.Pause_Patient_First_Name__c</members>
         <members>MessagingSession.Pause_Patient_Insurance__c</members>
         <members>MessagingSession.Pause_Patient_Zip__c</members>
         <name>CustomField</name>

@@ -521,6 +521,66 @@ welcome copy even though `_firstName` is being handed in-band — the scripted
 `AgentforceFallback` already greets by the entered name today (see
 `firstNameFromInput` in `frontend/lib/agentforce.ts`).
 
+### The durable route: a `Patient_First_Name` context variable (parallel to the ZIP)
+
+Relying on `_firstName` alone is fragile — it populates the messaging end
+user's identity, but whether the agent can reference it in reasoning is
+implementation-dependent. The reliable path is the same five-component pipeline
+as "Auto-passing the ZIP": hand a **registered custom field** `Patient_First_Name`
+in-band, land it on `MessagingSession.Pause_Patient_First_Name__c` via the
+routing Flow, and expose it to the agent as `$Context.Pause_Patient_First_Name`.
+
+The app side is already wired: `/api/intake/prechat-context` emits a
+`Patient_First_Name` field, and `intake-patient-stage.tsx` passes
+`{ Patient_First_Name: <persona first name> }` as a hidden prechat field
+alongside `_firstName` / `_lastName`. Until `Patient_First_Name` is registered +
+mapped on the org, the SDK drops it and the greeting falls back to the static
+copy (graceful).
+
+**Steps 1–4 are version-controlled** in `salesforce/` and deploy via
+`./salesforce/deploy.sh trailsignup`:
+
+1. ✅ **MessagingSession field** — `Pause_Patient_First_Name__c` (Text, 80) is
+   tracked at
+   `salesforce/force-app/main/default/objects/MessagingSession/fields/Pause_Patient_First_Name__c.field-meta.xml`.
+2. ✅ **Permission set** — `Pause_Health_Intake_Prechat_Dossier` grants FLS
+   (read/edit) on the new field.
+3. ✅ **Routing Flow** — `Pause_Intake_Prechat_Router` declares the
+   `Patient_First_Name` input variable and writes it to
+   `Pause_Patient_First_Name__c` on the existing `Write_Dossier_To_Session`
+   record-update.
+4. ✅ **Channel customParameter** — `Messaging_for_In_App_Web` declares the
+   `Patient_First_Name` `<customParameters>` block with the same
+   `actionParameterMappings` shape as the other dossier fields.
+
+**Steps 5–7 stay org-managed** (Agent Builder UI + deployment Publish; not in repo):
+
+5. **Register the hidden prechat field.** Setup → **Embedded Service
+   Deployments** → `Pause_Health_Intake` → Chat Settings → Prechat → add
+   `Patient_First_Name` as a *hidden* field. This is the registration that makes
+   `validatePrechatField` accept it; without it the SDK logs `invalid field name
+   Patient_First_Name` and drops the value.
+6. **Add the bot context variable.** Agent Builder → the agent → **Variables /
+   Connections** → add context variable `Pause_Patient_First_Name`, source
+   `MessagingSession.Pause_Patient_First_Name__c`, so the agent can reference
+   `$Context.Pause_Patient_First_Name`.
+7. **Update the Agent-Level Instructions** to greet by that variable — e.g.
+
+   > If `$Context.Pause_Patient_First_Name` has a value, greet the patient by
+   > that first name (e.g. "Hi Anika"). Otherwise open warmly without a name.
+   > Then acknowledge what you already know about their menopause-care context
+   > rather than asking for their identity again.
+
+   Then **Deactivate → Save → Activate** the agent.
+
+**⚠️ Re-Publish the Embedded Service Deployment.** As with the ZIP, the new
+hidden prechat field + channel customParameter only reach the routing Flow after
+you **re-Publish** the `Pause_Health_Intake` deployment (Setup → Embedded Service
+Deployments → Publish) and the **~5–15 min CDN propagation** completes. Test in a
+brand-new incognito session created *after* propagation (hidden fields attach at
+conversation creation, not on resume). Confirm with SOQL that
+`MessagingSession.Pause_Patient_First_Name__c` is populated on the new session.
+
 ## When the live MuleSoft API replaces the public endpoint
 
 Repoint the Named Credential `endpoint` at the gateway/CloudHub base and add the

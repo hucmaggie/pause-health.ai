@@ -261,6 +261,14 @@ function IntakePatientStageInner({ agentforceConfig }: Props) {
           if (selectedPersona.lastName) {
             fields._lastName = selectedPersona.lastName;
           }
+          if (selectedPersona.firstName) {
+            // Registered custom field that mirrors _firstName in-band so the
+            // agent can greet by name via $Context.Pause_Patient_First_Name
+            // (maps to MessagingSession.Pause_Patient_First_Name__c via the
+            // routing Flow). We keep _firstName/_lastName too — those are the
+            // Salesforce-standard identity fields accepted without registration.
+            fields.Patient_First_Name = selectedPersona.firstName;
+          }
           if (selectedPersona.patientZip) {
             fields.Patient_Zip = selectedPersona.patientZip;
           }

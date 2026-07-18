@@ -46,6 +46,11 @@ import { isSalesforceConfigured } from "../../../../lib/salesforce/auth";
  * custom parameter at 255 chars regardless of declared maxLength):
  *
  *   _firstName, _lastName                    -- Salesforce-standard
+ *   Patient_First_Name                        -- patient first name; mapped to
+ *                                                MessagingSession.Pause_Patient_First_Name__c
+ *                                                and bot context
+ *                                                $Context.Pause_Patient_First_Name so the
+ *                                                agent can greet the patient by name
  *   Patient_Id                                -- Salesforce Contact.Id when real
  *   Identity_Confidence                       -- 0.0-1.0 as string
  *   Identity_Sources                          -- comma-separated source labels
@@ -253,6 +258,12 @@ async function buildPrechatFields(
     Age_Band: persona.ageBand,
     Cycle_Status: persona.cycleStatus,
     Primary_Symptom: persona.primarySymptom,
+    // Patient first name — same prechat plumbing as Patient_Zip. Registered as
+    // a prechat field + channel customParameter + MessagingSession.Pause_Patient_First_Name__c
+    // + bot context variable ($Context.Pause_Patient_First_Name), so the agent
+    // can greet the patient by name. See docs/AGENTFORCE_PROVIDER_ACTION_RUNBOOK.md
+    // ("Greeting the patient by name").
+    Patient_First_Name: persona.firstName,
     // Patient ZIP — lets the Find-a-Provider Agentforce action geo-narrow
     // without asking the patient. Registered as a prechat field + channel
     // customParameter + MessagingSession.Pause_Patient_Zip__c + bot context

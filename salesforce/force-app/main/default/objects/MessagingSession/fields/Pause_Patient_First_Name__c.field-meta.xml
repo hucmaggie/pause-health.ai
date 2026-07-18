@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Pause_Patient_First_Name__c</fullName>
+    <label>Pause Patient First Name</label>
+    <type>Text</type>
+    <length>80</length>
+    <required>false</required>
+    <externalId>false</externalId>
+    <trackHistory>false</trackHistory>
+    <description>Patient first name handed in-band via hidden prechat; mapped to bot context Pause_Patient_First_Name so the agent can greet the patient by name.</description>
+</CustomField>

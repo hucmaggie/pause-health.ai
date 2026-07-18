@@ -68,6 +68,7 @@ describe("GET /api/intake/prechat-context", () => {
     }
     // Standard + custom fields the routing Flow depends on.
     expect(fields._firstName).toBe(PERSONA.firstName);
+    expect(fields.Patient_First_Name).toBe(PERSONA.firstName);
     expect(fields.Patient_Zip).toBe(PERSONA.patientZip);
     expect(fields.Patient_Insurance).toBe(PERSONA.patientInsurance);
   });
