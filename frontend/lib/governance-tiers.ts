@@ -11,6 +11,7 @@
 
 export type GovernanceTier =
   | "patient-facing"
+  | "benefits-verification"
   | "clinical-decision"
   | "data-plane"
   | "integration"
@@ -56,6 +57,10 @@ export const GOVERNANCE_TIERS: Record<
   { label: string; plane: GovernancePlane }
 > = {
   "patient-facing": { label: "Patient-facing", plane: "patient-care" },
+  "benefits-verification": {
+    label: "Benefits verification",
+    plane: "patient-care"
+  },
   "clinical-decision": { label: "Clinical decision", plane: "patient-care" },
   "patient-acquisition": { label: "Patient acquisition", plane: "patient-care" },
   "lead-qualification": { label: "Lead qualification", plane: "patient-care" },

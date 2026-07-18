@@ -46,6 +46,8 @@ export type GovernanceTask = {
   usesProtectedClassCriteria?: boolean;
   // Assessment (validated-instrument scoring)
   administersValidatedInstrumentOnly?: boolean;
+  // Benefits & coverage verification (EBV)
+  eligibilityTracesToSource?: boolean;
   // Commercial plane (pipeline, account management)
   accessesPhi?: boolean;
   forecastSourcedFromCrm?: boolean;
@@ -192,6 +194,14 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Administers an instrument outside the validated allow-list",
     reason:
       "Attempted to administer/score an instrument outside the validated allow-list (MRS, Greene, PHQ-9, ISI)"
+  },
+  {
+    policyId: "policy.benefits.eligibility-source-integrity",
+    signal: "eligibilityTracesToSource",
+    violatingValue: false,
+    violationHint: "Coverage result doesn't trace to a payer/clearinghouse EBV response",
+    reason:
+      "Returned coverage/eligibility result did not trace to a payer/clearinghouse EBV response (no source provenance); the agent may not fabricate coverage without a source"
   },
   {
     policyId: "policy.marketing.consent-to-contact-required",

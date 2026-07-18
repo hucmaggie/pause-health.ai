@@ -334,6 +334,29 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "patient-facing"
+  },
+  {
+    id: "benefits-verification-agent",
+    name: "Agentforce Benefits & Coverage Verification · Eligibility (EBV)",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the Salesforce "Agentforce for Health —
+    // Eligibility & Benefit Verification" agent: POST
+    // /api/agents/benefits-verification/tasks (card at
+    // /.well-known/agent.json). The eligibility result is a DETERMINISTIC
+    // synthetic EBV round-trip — clearly labeled synthetic, no real EDI/FHIR.
+    endpoint: "/api/agents/benefits-verification",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Verifies a patient's insurance eligibility & benefits for a menopause specialist (MSCP) visit — the Salesforce 'Agentforce for Health — Eligibility & Benefit Verification' analog",
+      "Returns a structured coverage result: plan status (active/inactive), in/out-of-network, deductible + amount met, coinsurance/copay, and an estimated visit cost + patient out-of-pocket",
+      "Runs a DETERMINISTIC synthetic EBV round-trip (mock payer/clearinghouse 270/271) — clearly labeled synthetic; not a real EDI transaction or FHIR eligibility call",
+      "Every returned coverage result must trace to a (mock) payer/clearinghouse EBV response — the agent may not fabricate coverage without a source",
+      "Feeds the eligibility summary into the intake → Care Router spine so a real coverage check can precede routing"
+    ],
+    provider: "Salesforce",
+    governanceTier: "benefits-verification"
   }
 ];
 
@@ -372,7 +395,8 @@ const POLICIES: PolicyRecord[] = [
       "inbound-lead-agent",
       "qualification-agent",
       "mcp-bridge",
-      "assessment-agent"
+      "assessment-agent",
+      "benefits-verification-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -383,6 +407,15 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Assessment Agent may only administer and score instruments on the validated allow-list (Menopause Rating Scale, Greene Climacteric Scale, PHQ-9, Insomnia Severity Index). A request to administer or score anything else is rejected before any scoring runs — no ad-hoc or unvalidated questionnaire feeds an intake severity signal.",
     appliesTo: ["assessment-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.benefits.eligibility-source-integrity",
+    name: "Eligibility results must trace to a payer/clearinghouse EBV response",
+    description:
+      "Every coverage/eligibility result the Benefits Verification Agent returns must trace to a (mock) payer/clearinghouse EBV response — the agent may not fabricate coverage without a source. A returned result that carries no source provenance is rejected before it can drive a benefit estimate or precede routing. (In the prototype the EBV round-trip is a clearly-labeled deterministic synthetic; in production this is a real 270/271 or FHIR CoverageEligibilityResponse.)",
+    appliesTo: ["benefits-verification-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -508,7 +541,11 @@ const POLICIES: PolicyRecord[] = [
     name: "Consent required before grounding",
     description:
       "Care Router grounding calls must be accompanied by an active 'ai-decision-support' consent in the patient's Data 360 consent ledger. Calls without consent are rejected with a redaction.",
-    appliesTo: ["salesforce-data-360", "care-router-claude"],
+    appliesTo: [
+      "salesforce-data-360",
+      "care-router-claude",
+      "benefits-verification-agent"
+    ],
     enforcement: "block",
     status: "enforced"
   },
@@ -1274,6 +1311,89 @@ function store(): FabricStore {
         provider: "anthropic",
         model: "claude-sonnet-4-5-20250929",
         severityFromAssessment: "severe"
+      }
+    }
+  );
+
+  // A trace showing the Benefits & Coverage Verification (EBV) Agent
+  // running a coverage check before intake hands off to routing: the
+  // agent verifies eligibility for the MSCP visit (a DETERMINISTIC
+  // synthetic EBV round-trip against a mock payer/clearinghouse — here
+  // Aetna, in-network, deductible met, $60 estimated patient
+  // responsibility), the eligibility summary is attached to the intake,
+  // and the enriched intake hands off to the Care Router. Every returned
+  // result traces to its (mock) EBV source — the honesty invariant the
+  // source-integrity policy guards. Seed data; production populates the
+  // ring buffer from the persistent log store.
+  const v0 = Date.now() - 1000 * 60 * 5;
+  const benefitsTaskId = "task-seed-benefits-001";
+  const benefitsName =
+    "Agentforce Benefits & Coverage Verification · Eligibility (EBV)";
+  s.traces.push(
+    {
+      id: "span-benefits-001",
+      taskId: benefitsTaskId,
+      agentId: "benefits-verification-agent",
+      agentName: benefitsName,
+      operation: "benefits.verify",
+      protocol: "rest",
+      startedAt: new Date(v0).toISOString(),
+      finishedAt: new Date(v0 + 60).toISOString(),
+      durationMs: 60,
+      status: "ok",
+      attributes: {
+        payer: "Aetna",
+        planName: "Aetna Choice PPO",
+        eligibilityStatus: "active",
+        network: "in-network",
+        deductibleTotal: 1500,
+        deductibleMet: 1500,
+        deductibleRemaining: 0,
+        coinsuranceRate: 0.2,
+        estimatedVisitCost: 300,
+        estimatedPatientResponsibility: 60,
+        ebvTransactionId: "ebv-seed-aetna",
+        sourced: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-benefits-002",
+      taskId: benefitsTaskId,
+      parentSpanId: "span-benefits-001",
+      agentId: "agentforce-intake",
+      agentName: "Agentforce Service Agent · Patient Intake",
+      operation: "intake.complete",
+      protocol: "a2a",
+      startedAt: new Date(v0 + 60).toISOString(),
+      finishedAt: new Date(v0 + 1600).toISOString(),
+      durationMs: 1540,
+      status: "ok",
+      attributes: {
+        capturedFields: 6,
+        redFlag: false,
+        coverageVerified: true,
+        coverageNetwork: "in-network",
+        estimatedPatientResponsibility: 60
+      }
+    },
+    {
+      id: "span-benefits-003",
+      taskId: benefitsTaskId,
+      parentSpanId: "span-benefits-002",
+      agentId: "care-router-claude",
+      agentName: "Pause Care Router · Claude Sonnet 4.5",
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(v0 + 1600).toISOString(),
+      finishedAt: new Date(v0 + 3800).toISOString(),
+      durationMs: 2200,
+      status: "ok",
+      attributes: {
+        pathway: "mscp-virtual-visit",
+        provider: "anthropic",
+        model: "claude-sonnet-4-5-20250929",
+        coverageVerifiedBeforeRouting: true
       }
     }
   );

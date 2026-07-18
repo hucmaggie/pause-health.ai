@@ -417,6 +417,94 @@ describe("Validated-instrument assessment · Assessment agent", () => {
   });
 });
 
+describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
+  it("brings the registry to fourteen agents", () => {
+    // Sanity count guard: the funnel + intake + assessment + benefits agents,
+    // the Care Router, the platform substrate, and the commercial plane.
+    expect(listAgents()).toHaveLength(14);
+    expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
+  });
+
+  it("registers as a prototype Agentforce agent on its own benefits-verification tier", () => {
+    const b = getAgent("benefits-verification-agent");
+    expect(b).toBeDefined();
+    expect(b!.kind).toBe("agentforce");
+    expect(b!.protocol).toBe("a2a");
+    expect(b!.provider).toBe("Salesforce");
+    expect(b!.status).toBe("prototype");
+    expect(b!.governanceTier).toBe("benefits-verification");
+    // The EBV agent is a patient-access agent on the patient-care plane.
+    expect(planeForTier(b!.governanceTier)).toBe("patient-care");
+    expect(b!.endpoint).toBe("/api/agents/benefits-verification");
+  });
+
+  it("carries the source-integrity block plus the reused consent + HIPAA-audit policies", () => {
+    const ids = getPoliciesForAgent("benefits-verification-agent").map((p) => p.id);
+    expect(ids).toContain("policy.benefits.eligibility-source-integrity");
+    expect(ids).toContain("policy.data360.consent-required-before-grounding");
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT on any commercial-plane-only policy.
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("the source-integrity policy is an enforced block", () => {
+    const policy = listPolicies().find(
+      (p) => p.id === "policy.benefits.eligibility-source-integrity"
+    );
+    expect(policy).toBeDefined();
+    expect(policy!.enforcement).toBe("block");
+    expect(policy!.status).toBe("enforced");
+  });
+
+  it("blocks a coverage result that doesn't trace to a source, allows one that does", () => {
+    const blocked = evaluateGovernance({
+      agentId: "benefits-verification-agent",
+      task: { eligibilityTracesToSource: false, hasAiDecisionSupportConsent: true }
+    });
+    expect(blocked.decision).toBe("block");
+    expect(blocked.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.benefits.eligibility-source-integrity"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "benefits-verification-agent",
+      task: { eligibilityTracesToSource: true, hasAiDecisionSupportConsent: true }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Coverage verification is consent-gated too.
+    const noConsent = evaluateGovernance({
+      agentId: "benefits-verification-agent",
+      task: { eligibilityTracesToSource: true, hasAiDecisionSupportConsent: false }
+    });
+    expect(noConsent.decision).toBe("block");
+    expect(noConsent.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.data360.consent-required-before-grounding"
+    );
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "benefits-verification-agent", task: {} })
+        .decision
+    ).toBe("allow");
+  });
+
+  it("seeds a coverage→intake→routing trace where every result is source-backed", () => {
+    const spans = listTraces({ taskId: "task-seed-benefits-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(3);
+    expect(spans[0].agentId).toBe("benefits-verification-agent");
+    expect(spans[0].operation).toBe("benefits.verify");
+    const verify = spans.find((s) => s.operation === "benefits.verify");
+    expect(verify?.attributes?.sourced).toBe(true);
+    expect(verify?.attributes?.synthetic).toBe(true);
+    // Coverage precedes the intake, which routes to the Care Router.
+    const intake = spans.find((s) => s.operation === "intake.complete");
+    expect(intake?.attributes?.coverageVerified).toBe(true);
+    const last = spans[spans.length - 1];
+    expect(last.agentId).toBe("care-router-claude");
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -534,7 +622,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-inbound-lead-001",
       "task-seed-commercial-001",
       "task-seed-mcp-bridge-001",
-      "task-seed-assessment-001"
+      "task-seed-assessment-001",
+      "task-seed-benefits-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });

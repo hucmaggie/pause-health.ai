@@ -13,6 +13,12 @@ import {
   type AssessmentResponse
 } from "../../../../lib/assessments";
 import {
+  coverageQueryFromIntake,
+  coverageSummary,
+  verifyCoverage,
+  type CoverageQuery
+} from "../../../../lib/benefits";
+import {
   DEMO_DATA360_PATIENT_ID,
   getGroundingContext,
   resolveIdentity
@@ -76,6 +82,16 @@ export async function POST(req: Request) {
      * self-reported band. Additive: absent = today's behavior, unchanged.
      */
     assessment?: AssessmentResponse;
+    /**
+     * Optional coverage/eligibility verification. When an explicit
+     * coverageQuery is provided — OR the intake carries patientInsurance —
+     * the Benefits & Coverage Verification (EBV) Agent runs a deterministic
+     * synthetic eligibility check and the summary is attached to the trace
+     * and the response meta so a real coverage check can precede routing.
+     * Set `coverage: false` to opt out even when patientInsurance is present.
+     * Additive: absent = today's behavior, unchanged.
+     */
+    coverage?: { query?: CoverageQuery; memberId?: string } | false;
   };
   let body: Body;
   try {
@@ -147,9 +163,63 @@ export async function POST(req: Request) {
     }
   }
 
+  // Optional coverage/eligibility verification (EBV). Runs when an explicit
+  // coverageQuery is supplied OR the intake carries patientInsurance (unless
+  // explicitly opted out with coverage:false). The eligibility summary is
+  // attached to the trace + response meta so a real coverage check can
+  // precede routing. Best-effort + strictly additive: a failure here must
+  // never break intake routing, and absent = today's behavior unchanged.
+  let coverageSpanId: string | undefined;
+  let coverageMeta: Record<string, unknown> | undefined;
+  const coverageOptedOut = body.coverage === false;
+  const explicitCoverage = body.coverage || undefined;
+  const shouldVerifyCoverage =
+    !coverageOptedOut &&
+    Boolean(explicitCoverage?.query || intake.patientInsurance);
+  if (shouldVerifyCoverage) {
+    try {
+      const query: CoverageQuery =
+        explicitCoverage?.query ??
+        coverageQueryFromIntake(intake, {
+          memberId: explicitCoverage?.memberId
+        });
+      const coverage = verifyCoverage(query);
+      const summary = coverageSummary(coverage);
+      const coverageSpan = recordInstantSpan({
+        taskId,
+        parentSpanId: assessmentSpanId,
+        agentId: "benefits-verification-agent",
+        operation: "benefits.verify",
+        protocol: "rest",
+        attributes: {
+          payer: summary.payerName,
+          planName: summary.planName,
+          eligibilityStatus: summary.eligibilityStatus,
+          network: summary.network,
+          deductibleTotal: summary.deductibleTotal,
+          deductibleMet: summary.deductibleMet,
+          deductibleRemaining: summary.deductibleRemaining,
+          coinsuranceRate: summary.coinsuranceRate,
+          ...(summary.copay !== undefined ? { copay: summary.copay } : {}),
+          estimatedVisitCost: summary.estimatedVisitCost,
+          estimatedPatientResponsibility: summary.estimatedPatientResponsibility,
+          ebvTransactionId: summary.ebvTransactionId,
+          sourced: summary.sourced,
+          synthetic: true,
+          ...(personaId ? { personaId } : {}),
+          ...(origin ? { origin } : {})
+        }
+      });
+      coverageSpanId = coverageSpan.id;
+      coverageMeta = { ...summary, coverageVerifiedBeforeRouting: true };
+    } catch {
+      // Best-effort: leave routing untouched on a malformed coverage query.
+    }
+  }
+
   const intakeSpan = recordInstantSpan({
     taskId,
-    parentSpanId: assessmentSpanId,
+    parentSpanId: coverageSpanId ?? assessmentSpanId,
     agentId: "agentforce-intake",
     operation: "intake.complete",
     protocol: "rest",
@@ -285,13 +355,15 @@ export async function POST(req: Request) {
         _data360IdentitySource: identitySource,
         _data360GroundingSource: groundingSource,
         _salesforceConfigured: isSalesforceConfigured(),
-        ...(assessmentMeta ? { _assessment: assessmentMeta } : {})
+        ...(assessmentMeta ? { _assessment: assessmentMeta } : {}),
+        ...(coverageMeta ? { _coverage: coverageMeta } : {})
       },
       taskId,
       sessionId,
       task,
       decision,
       ...(assessmentMeta ? { assessment: assessmentMeta } : {}),
+      ...(coverageMeta ? { coverage: coverageMeta } : {}),
       data360: {
         source: { identity: identitySource, grounding: groundingSource },
         identity,
