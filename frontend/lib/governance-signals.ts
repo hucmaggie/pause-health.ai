@@ -90,6 +90,10 @@ export type GovernanceTask = {
   measuresTraceToCatalog?: boolean;
   exclusionsTraceToCatalog?: boolean;
   submissionRequiresHumanApproval?: boolean;
+  // Advance care planning (catalog-sourced directives + human-signoff + LEP interpreter)
+  directivesTraceToCatalog?: boolean;
+  directiveChangeRequiresHumanSignoff?: boolean;
+  languageAccessSatisfied?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -483,6 +487,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Submits a HEDIS package without human quality-team approval",
     reason:
       "Attempted to submit a HEDIS quality-measure package without human quality-team approval; the agent may only assemble a human-approval-gated draft — a submission to a payer / CMS / quality registry requires a human quality team in the loop"
+  },
+  {
+    policyId: "policy.acp.directive-source-integrity",
+    signal: "directivesTraceToCatalog",
+    violatingValue: false,
+    violationHint: "A claimed advance directive doesn't trace to the directive catalog + an approved source + a recorded execution date",
+    reason:
+      "A claimed advance directive on file did not trace to the defined ACP directive catalog with an approved directive-source label and a recorded execution date (an off-catalog directive id, a verbal / ad-hoc source, or a missing execution date); every directive claimed on file must be catalog-sourced with a documented source — the agent may not fabricate a directive to inflate ACP completeness"
+  },
+  {
+    policyId: "policy.acp.no-autonomous-directive-change",
+    signal: "directiveChangeRequiresHumanSignoff",
+    violatingValue: false,
+    violationHint: "Applies an advance-directive change without clinician + patient sign-off",
+    reason:
+      "Attempted to autonomously create, update, or override an advance directive; a directive is a legal / clinical instrument — the agent may only draft a conversation prompt or a change proposal, and every directive change requires clinician AND patient sign-off (requiresClinicianAndPatientSignoff:true, applied:false)"
+  },
+  {
+    policyId: "policy.acp.language-access-integrity",
+    signal: "languageAccessSatisfied",
+    violatingValue: false,
+    violationHint: "Drafts an active ACP conversation for an LEP patient with no qualified-interpreter plan",
+    reason:
+      "Attempted to draft an active advance-care-planning conversation for a limited-English-proficiency (LEP) patient with no documented qualified-interpreter plan; an ACP conversation is legally consequential and must not be held in a language the patient cannot participate in — for an LEP patient the agent defers to the Language Access & Health Equity agent and WITHHOLDS the prompt (a safe completed answer) until a qualified-interpreter plan is documented"
   },
   {
     policyId: "policy.referral.clinician-cosign",

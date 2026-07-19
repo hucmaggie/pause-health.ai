@@ -822,6 +822,40 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "advance-care-planning-agent",
+    name: "Advance Care Planning Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the ACP touchpoint agent: POST
+    // /api/agents/advance-care-planning/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) agent that surfaces which advance directives
+    // are on file for a midlife/menopause patient (living will, DPOA-HC, POLST
+    // — POLST only when a serious-illness flag is on), flags missing / stale /
+    // language-access gaps, and drafts a consent-gated conversation prompt for
+    // the care team to deliver. It NEVER creates, updates, or overrides a
+    // directive on its own — every directive change requires clinician AND
+    // patient sign-off. For an LEP patient it WITHHOLDS the active prompt
+    // (a safe answer) until a qualified-interpreter plan is documented,
+    // deferring to the Language Access & Health Equity agent. REUSES the
+    // existing whole-person-care tier — an equity / preventive whole-person
+    // activity, not a new clinical decision. The directive catalog, source
+    // labels, and staleness threshold are ILLUSTRATIVE synthetics, NOT a
+    // certified directives registry.
+    endpoint: "/api/agents/advance-care-planning",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Surfaces which advance directives (living will, DPOA-HC, POLST) are on file for a midlife/menopause patient, flags missing / stale / off-source / language-access gaps, and drafts a consent-gated conversation prompt for the care team — a whole-person-care ACP touchpoint agent, distinct from the Consent Management agent (data-use consent) and the Care Plan agent (active treatment planning)",
+      "ACP assessment is DETERMINISTIC — a pure function of the caller-provided asOfDate + directives-on-file against the illustrative ACP directive catalog + approved-source list (no randomness, no clock); the same context always yields the same assessment (with a stable, documented flag ordering)",
+      "Every claimed directive on file must trace to the defined ACP directive catalog AND an approved directive-source label with a recorded execution date — an off-catalog directive, an unapproved / verbal source, or a missing execution date is blocked at the Agent Fabric governance boundary (policy.acp.directive-source-integrity), so the agent cannot fabricate a directive to inflate ACP completeness",
+      "The agent NEVER autonomously creates, updates, or overrides a directive — every directive change is a clinician + patient sign-off gated proposal, and any autonomous change is blocked (policy.acp.no-autonomous-directive-change); mirrors the Prior Authorization Agent's no-autonomous-submission and the HEDIS Agent's human-approval posture",
+      "For a limited-English-proficiency (LEP) patient the agent defers to the Language Access & Health Equity agent and WITHHOLDS the active prompt (a safe answer) until a qualified-interpreter plan is documented — a plan claiming an active ACP conversation for an LEP patient with no interpreter is blocked (policy.acp.language-access-integrity)",
+      "Runs against ILLUSTRATIVE synthetic directive-catalog, approved-source, and staleness-threshold values — directives, sources, and thresholds clearly labeled; NOT a certified advance-directives registry or a POLST/MOLST program"
+    ],
+    provider: "Salesforce",
+    governanceTier: "whole-person-care"
   }
 ];
 
@@ -877,7 +911,8 @@ const POLICIES: PolicyRecord[] = [
       "consent-management-agent",
       "clinical-trials-agent",
       "language-access-agent",
-      "hedis-quality-agent"
+      "hedis-quality-agent",
+      "advance-care-planning-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1158,6 +1193,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The HEDIS & Quality Reporting Agent may NEVER autonomously submit a quality-measure package to a payer / CMS / a quality registry — every submission requires a human quality-team approval. Every submission package the agent produces is requiresQualityTeamApproval:true / submitted:false (there is no autonomous 'submitted' state); a caller-asserted plan that claims already-submitted or bypasses the human approval gate is rejected before it can leave the fabric. Mirrors the Prior Authorization Agent's no-autonomous-submission, the Population Health Agent's no-autonomous-care-decision, and the Clinical Trials Agent's no-autonomous-enrollment posture — the agent proposes a package, a human files it.",
     appliesTo: ["hedis-quality-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.acp.directive-source-integrity",
+    name: "ACP directives must trace to the catalog and an approved source",
+    description:
+      "Every advance directive the Advance Care Planning Agent reports as ON FILE for a patient must trace to the defined ACP directive catalog AND to an approved directive-source label with a recorded execution date — an off-catalog directive id, an unapproved / verbal / ad-hoc source, or a missing execution date is rejected before it can leave the fabric, so the agent cannot fabricate a directive on file to inflate ACP completeness. Mirrors the Care Gap Closure Agent's clinical-measure-sourced, the HEDIS Agent's measure-catalog-sourced, and the Clinical Trials Agent's eligibility-criteria-sourced integrity posture. (In the prototype the directive catalog + approved-source labels are clearly-labeled illustrative synthetics — NOT a certified advance-directives registry; in production this is the customer's governed directives library.)",
+    appliesTo: ["advance-care-planning-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.acp.no-autonomous-directive-change",
+    name: "No autonomous advance-directive change",
+    description:
+      "The Advance Care Planning Agent may NEVER autonomously create, update, or override a patient's advance directive — a directive is a legal / clinical instrument, not an agent action. Every directive-change proposal is requiresClinicianAndPatientSignoff:true / applied:false; a caller-asserted plan that would autonomously apply a directive change or bypass the sign-off gate is rejected before it can leave the fabric. Mirrors the Prior Authorization Agent's no-autonomous-submission, the Medication Adherence Agent's no-autonomous-refill, the HEDIS Agent's no-autonomous-submission, and the Clinical Trials Agent's no-autonomous-enrollment posture — the agent proposes a conversation, a clinician + the patient sign off on any change.",
+    appliesTo: ["advance-care-planning-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.acp.language-access-integrity",
+    name: "ACP conversation must satisfy language access for LEP patients",
+    description:
+      "For a limited-English-proficiency (LEP) patient — preferred language other than the clinical default (English) — the Advance Care Planning Agent must not draft an ACTIVE conversation prompt without a documented QUALIFIED-INTERPRETER plan; an ACP conversation is legally consequential and must not be held in a language the patient cannot participate in. When no interpreter plan is documented the agent WITHHOLDS the active prompt (a safe completed answer — state:'withheld-language-access-required'), deferring to the Language Access & Health Equity agent. A caller-asserted plan claiming an active drafted prompt for an LEP patient with no interpreter plan is rejected before it can leave the fabric. Mirrors the Language Access Agent's qualified-interpreter-only and no-machine-translation-for-consent posture — patient-safety / equity requirement, enforced not merely advised.",
+    appliesTo: ["advance-care-planning-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -3797,6 +3859,85 @@ function store(): FabricStore {
 // The measurement period is illustrative and clearly labeled; this is not a
 // certified HEDIS engine. Seed data; production populates the ring buffer from
 // the persistent log store.
+// Advance Care Planning seed — a midlife-touchpoint ACP assessment with a
+// drafted conversation prompt (the English happy path), mirroring the shape a
+// live task produces. Illustrative; not a certified directives registry. Seed
+// data; production populates the ring buffer from the persistent log store.
+(function seedAdvanceCarePlanningTrace() {
+  const s = store();
+  const ac0 = Date.now() - 1000 * 60 * 1;
+  const acTaskId = "task-seed-acp-001";
+  const acName = "Advance Care Planning Agent";
+  s.traces.push(
+    {
+      id: "span-acp-001",
+      taskId: acTaskId,
+      agentId: "advance-care-planning-agent",
+      agentName: acName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ac0).toISOString(),
+      finishedAt: new Date(ac0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-acp-002",
+      taskId: acTaskId,
+      parentSpanId: "span-acp-001",
+      agentId: "advance-care-planning-agent",
+      agentName: acName,
+      operation: "acp.assess",
+      protocol: "a2a",
+      startedAt: new Date(ac0 + 40).toISOString(),
+      finishedAt: new Date(ac0 + 100).toISOString(),
+      durationMs: 60,
+      status: "ok",
+      attributes: {
+        patientRef: "acp-patient-001",
+        asOfDate: "2026-07-01",
+        preferredLanguageCode: "en",
+        qualifiedInterpreterPlanned: false,
+        // DPOA-HC on file, living will missing — completeness 0.5.
+        completeness: 0.5,
+        flagCount: 1,
+        // The honesty invariants: directives are catalog-sourced and the
+        // language-access gate is trivially satisfied (English patient).
+        directivesTraceToCatalog: true,
+        languageAccessSatisfied: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-acp-003",
+      taskId: acTaskId,
+      parentSpanId: "span-acp-002",
+      agentId: "advance-care-planning-agent",
+      agentName: acName,
+      operation: "acp.draft-conversation",
+      protocol: "a2a",
+      startedAt: new Date(ac0 + 100).toISOString(),
+      finishedAt: new Date(ac0 + 150).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        conversationPromptState: "drafted",
+        actionable: true,
+        // The load-bearing invariant: every directive change is clinician +
+        // patient sign-off gated — the agent never autonomously applies one.
+        directiveChangeRequiresHumanSignoff: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
 (function seedHedisQualityTrace() {
   const s = store();
   const hq0 = Date.now() - 1000 * 60 * 1;

@@ -1,4 +1,5 @@
 import { AcquisitionFunnelPanel } from "../../../components/acquisition-funnel-panel";
+import { AdvanceCarePlanningPanel } from "../../../components/advance-care-planning-panel";
 import { AgentforceFallback } from "../../../components/agentforce-fallback";
 import { AgentforceVoiceButton } from "../../../components/agentforce-voice-button";
 import { AssessmentPanel } from "../../../components/assessment-panel";
@@ -92,6 +93,8 @@ export default function IntakeDemoPage() {
       <LanguageAccessPanel />
 
       <HedisQualityPanel />
+
+      <AdvanceCarePlanningPanel />
 
       <section className="demo-grid">
         <article className="card">
