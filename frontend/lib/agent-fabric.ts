@@ -926,6 +926,43 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "grievance-appeals-agent",
+    name: "Grievance & Appeals Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for a member-service grievance-and-appeals
+    // agent: POST /api/agents/grievance-appeals/tasks (card at
+    // /.well-known/agent.json). A DETERMINISTIC (no-Claude) agent that runs
+    // the INTAKE half of the regulated grievance-and-appeals process — it
+    // classifies a member complaint or coverage-denial appeal (grievance /
+    // billing / standard-appeal / expedited-appeal), routes it to the
+    // correct human queue (member-services / clinical-review / compliance),
+    // and stamps a regulatory deadline that traces to the case-type catalog
+    // + received date. It NEVER resolves, approves, or denies a case on
+    // its own — every case is queued for human action; a denial-appeal in
+    // particular needs a clinician-plus-compliance human review. The
+    // routing summary handed to downstream queues is PHI-SAFE (structured
+    // only — memberRef, caseType, urgency, queue, deadlineDate). Distinct
+    // from the Member Service / Billing agent (billing self-service, one-
+    // shot answers) and the Prior Authorization agent (pre-service utili-
+    // zation management). The case-type catalog, deadline windows, and
+    // queue mapping are ILLUSTRATIVE synthetics, NOT Medicare Advantage
+    // Chapter 13 or a real appeal-adjudication engine.
+    endpoint: "/api/agents/grievance-appeals",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Classifies member complaints and coverage-denial appeals — grievance / billing / standard-appeal / expedited-appeal — routes each case to the correct human queue (member-services / clinical-review / compliance), and stamps a regulatory deadline that traces to the case-type catalog + received date; a member-service intake agent distinct from the Member Service / Billing agent (billing self-service) and the Prior Authorization agent (pre-service utilization management)",
+      "Classification, routing, and deadline stamping are DETERMINISTIC — a pure function of the intake keywords + coverage/service flags + received date accepted as data (no randomness, no clock); the same intake always yields the same case type / urgency / queue / deadline / summary, with a stable, documented case-id shape",
+      "The agent NEVER autonomously resolves, approves, or denies a case — every case is queued for human review, and every resolution proposal is human-queue-action gated (requiresHumanQueueAction:true, applied:false); an autonomous resolution is blocked at the Agent Fabric governance boundary (policy.grievance.no-autonomous-resolution), mirroring the ACP Agent's no-autonomous-directive-change and the HEDIS Agent's no-autonomous-submission posture",
+      "Every case deadline must trace to the defined case-type catalog + received date and may NOT exceed the regulatory maximum — an off-catalog case-type or a silently-extended deadline is blocked (policy.grievance.deadline-integrity), the load-bearing regulatory-compliance guard against breaching Medicare Advantage Chapter 13 / state-insurance-code timelines",
+      "The routing summary handed to the downstream human queue is PHI-SAFE — only the STRUCTURED case-type + urgency + queue + deadline + memberRef, never free-text PHI; a summary containing free-text PHI (patient name / DOB / diagnosis / medication / symptom detail) or an extra free-text key is blocked (policy.grievance.no-phi-in-routing-summary), so the routing payload can be delivered via lower-trust channels (Slack, email, ticketing) without leaking PHI",
+      "Runs against ILLUSTRATIVE synthetic case-type catalog, deadline windows, expedited-eligibility rules, and queue mapping — clearly labeled; NOT Medicare Advantage Chapter 13, a certified state-insurance-code process, or a real appeal-adjudication engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "patient-facing"
   }
 ];
 
@@ -984,7 +1021,8 @@ const POLICIES: PolicyRecord[] = [
       "hedis-quality-agent",
       "advance-care-planning-agent",
       "care-team-management-agent",
-      "transitions-of-care-agent"
+      "transitions-of-care-agent",
+      "grievance-appeals-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1346,6 +1384,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Discharge & Transitions of Care Agent's follow-up must be a SCHEDULED appointment (slotStart + providerRef + modality) or explicitly awaiting-schedule (state:'awaiting-schedule', a safe interim answer with a handoff to the Appointment Scheduling agent) — a package claiming a 'scheduled' or 'complete' follow-up without a real slot is rejected before it can leave the fabric. This is the load-bearing 30-day-readmission property: 'recommended' follow-ups that never get booked are the classic transitions-of-care failure mode. (In the prototype the follow-up window is a clearly-labeled illustrative synthetic; in production this is the customer's governed transitions-of-care SLA.)",
     appliesTo: ["transitions-of-care-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.grievance.no-autonomous-resolution",
+    name: "No autonomous grievance / appeal resolution",
+    description:
+      "The Grievance & Appeals Agent may NEVER autonomously resolve, approve, or deny a grievance / appeal case — every case is queued for human review, and every resolution proposal requires the assigned human queue (member-services / clinical-review / compliance) to action it. Every proposal is requiresHumanQueueAction:true / applied:false; a caller-asserted plan that would autonomously resolve a case or bypass the queue is rejected before it can leave the fabric. A denial-appeal decision in particular needs a clinician-plus-compliance human review. Mirrors the Prior Authorization Agent's no-autonomous-submission, the ACP Agent's no-autonomous-directive-change, the Care Team Agent's no-autonomous-assignment, and the HEDIS Agent's no-autonomous-submission posture — the agent proposes, humans resolve.",
+    appliesTo: ["grievance-appeals-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.grievance.deadline-integrity",
+    name: "Grievance / appeal deadlines must trace to the catalog",
+    description:
+      "Every grievance / appeal case must have a regulatory deadline that traces to the case-type catalog (which specifies the deadline window in days from received date) and does NOT exceed the catalog's regulatory maximum — an off-catalog case-type or a silently-extended deadline is rejected before it can leave the fabric. This is the load-bearing regulatory-compliance property: silently extending a regulatory deadline past the maximum is a common way cases quietly breach Medicare Advantage Chapter 13 or state-insurance-code timelines. (In the prototype the case-type catalog + windows are clearly-labeled illustrative synthetics — 3d for expedited coverage-denial appeals, 30d for standard appeals and grievances is the SHAPE of regulation, not certified; in production this is the customer's governed regulatory-timeline policy.)",
+    appliesTo: ["grievance-appeals-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.grievance.no-phi-in-routing-summary",
+    name: "Grievance routing summary must be PHI-safe",
+    description:
+      "The routing summary the Grievance & Appeals Agent hands to the receiving human queue (member-services / clinical-review / compliance) must be STRUCTURED only (memberRef + caseType + urgency + queue + deadlineDate + phiSafe) and MUST NOT contain free-text PHI (patient full name, DOB, address, MRN, diagnosis codes, medication names, symptom detail) or an extra free-text key — a routing summary containing free-text PHI, or an extra key beyond the allow-list, is rejected before it can leave the fabric. This lets compliance / member-services queues be reached via lower-trust channels (Slack, email, ticketing) without leaking PHI; the free-text complaint stays on the case record itself. Mirrors the phi-no-free-text-pii posture on the intake / assessment agents.",
+    appliesTo: ["grievance-appeals-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -4073,6 +4138,91 @@ function store(): FabricStore {
 // the shape a live task produces. Illustrative; not a certified TOC system.
 // Seed data; production populates the ring buffer from the persistent log
 // store.
+// Grievance & Appeals seed — an expedited coverage-denial appeal intake with
+// a 3-day deadline + PHI-safe routing to the clinical-review queue, mirroring
+// the shape a live task produces. Illustrative; not a certified regulatory
+// process. Seed data; production populates the ring buffer from the
+// persistent log store.
+(function seedGrievanceAppealsTrace() {
+  const s = store();
+  const ga0 = Date.now() - 1000 * 60 * 1;
+  const gaTaskId = "task-seed-grievance-001";
+  const gaName = "Grievance & Appeals Agent";
+  s.traces.push(
+    {
+      id: "span-grievance-001",
+      taskId: gaTaskId,
+      agentId: "grievance-appeals-agent",
+      agentName: gaName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ga0).toISOString(),
+      finishedAt: new Date(ga0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-grievance-002",
+      taskId: gaTaskId,
+      parentSpanId: "span-grievance-001",
+      agentId: "grievance-appeals-agent",
+      agentName: gaName,
+      operation: "grievance.classify",
+      protocol: "a2a",
+      startedAt: new Date(ga0 + 40).toISOString(),
+      finishedAt: new Date(ga0 + 110).toISOString(),
+      durationMs: 70,
+      status: "ok",
+      attributes: {
+        memberRef: "member-001",
+        receivedDate: "2026-07-01",
+        caseType: "case.appeal-expedited-coverage-denial",
+        urgency: "expedited",
+        deadlineDate: "2026-07-04",
+        // The honesty invariant: deadline traces to the case-type catalog.
+        deadlineTracesToCatalog: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-grievance-003",
+      taskId: gaTaskId,
+      parentSpanId: "span-grievance-002",
+      agentId: "grievance-appeals-agent",
+      agentName: gaName,
+      operation: "grievance.route-to-queue",
+      protocol: "a2a",
+      startedAt: new Date(ga0 + 110).toISOString(),
+      finishedAt: new Date(ga0 + 160).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        queue: "clinical-review",
+        state: "queued-for-human-review",
+        // The load-bearing invariants: every resolution is human-queue gated
+        // and the routing summary is PHI-safe (structured only).
+        caseResolutionRequiresHumanQueue: true,
+        routingSummaryIsPhiSafe: true,
+        routingSummary: {
+          memberRef: "member-001",
+          caseType: "case.appeal-expedited-coverage-denial",
+          urgency: "expedited",
+          queue: "clinical-review",
+          deadlineDate: "2026-07-04",
+          phiSafe: true
+        },
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
 (function seedTransitionsOfCareTrace() {
   const s = store();
   const to0 = Date.now() - 1000 * 60 * 1;

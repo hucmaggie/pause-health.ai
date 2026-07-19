@@ -102,6 +102,10 @@ export type GovernanceTask = {
   medicationsTraceToApprovedSource?: boolean;
   reconciliationChangeRequiresClinician?: boolean;
   followUpScheduledNotRecommended?: boolean;
+  // Grievance & appeals (human-queue resolution + deadline integrity + PHI-safe routing)
+  caseResolutionRequiresHumanQueue?: boolean;
+  deadlineTracesToCatalog?: boolean;
+  routingSummaryIsPhiSafe?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -567,6 +571,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A follow-up is marked complete without a real scheduled slot",
     reason:
       "A transitions-of-care follow-up was marked scheduled/complete without a real slot (slotStart + providerRef); a follow-up must be a scheduled appointment, not a text recommendation — the safe interim answer is state:'awaiting-schedule' with a handoff to the Appointment Scheduling agent, but the agent may never claim a 'recommended' follow-up is complete"
+  },
+  {
+    policyId: "policy.grievance.no-autonomous-resolution",
+    signal: "caseResolutionRequiresHumanQueue",
+    violatingValue: false,
+    violationHint: "Resolves / approves / denies a grievance or appeal without human queue action",
+    reason:
+      "Attempted to autonomously resolve, approve, or deny a grievance / appeal case; the agent may only draft a case and route it to a human queue (member-services / clinical-review / compliance) — every resolution requires human queue action (requiresHumanQueueAction:true, applied:false), a denial-appeal decision in particular needs a clinician + compliance sign-off"
+  },
+  {
+    policyId: "policy.grievance.deadline-integrity",
+    signal: "deadlineTracesToCatalog",
+    violatingValue: false,
+    violationHint: "Case deadline doesn't trace to the case-type catalog + received date, or exceeds the regulatory maximum",
+    reason:
+      "A grievance / appeal case deadline did not trace to the case-type catalog + received date, or was silently extended past the regulatory maximum; every case must have a deadline within the catalog-defined window — silently extending a regulatory deadline past the maximum breaches Medicare Advantage Chapter 13 / state-insurance-code timelines"
+  },
+  {
+    policyId: "policy.grievance.no-phi-in-routing-summary",
+    signal: "routingSummaryIsPhiSafe",
+    violatingValue: false,
+    violationHint: "The routing summary passed to a downstream queue contains free-text PHI",
+    reason:
+      "The routing summary handed to the receiving human queue (member-services / clinical-review / compliance) contained free-text PHI (patient full name, DOB, address, MRN, diagnosis codes, medication names, symptom detail) or an extra free-text key; the routing summary must be STRUCTURED only (memberRef + caseType + urgency + queue + deadlineDate + phiSafe) so it can be delivered via lower-trust channels (Slack, email, ticketing) without leaking PHI"
   },
   {
     policyId: "policy.referral.clinician-cosign",
