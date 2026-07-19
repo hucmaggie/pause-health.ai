@@ -791,6 +791,37 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "whole-person-care"
+  },
+  {
+    id: "hedis-quality-agent",
+    name: "HEDIS & Quality Reporting Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for a panel-level QUALITY-REPORTING agent: POST
+    // /api/agents/hedis-quality/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) agent that rolls up per-patient signals across a
+    // panel into HEDIS / Star measure compliance (numerator, denominator,
+    // exclusions, rate) for value-based-care contracts. Unlike the single-patient
+    // Care Gap Closure Agent (which drafts outreach for one patient's gaps) and
+    // the panel-level Population Health & Risk Stratification Agent (which
+    // prioritizes patients), this one reports a PANEL against a defined HEDIS
+    // measure catalog. It NEVER autonomously submits a measure package —
+    // submission always requires a human quality-team approval. REUSES the
+    // existing care-coordination tier — a quality / care-management activity,
+    // not a new tier. The measure catalog, thresholds, and exclusion lists are
+    // ILLUSTRATIVE synthetics, NOT an NCQA-certified HEDIS engine.
+    endpoint: "/api/agents/hedis-quality",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Rolls up per-patient signals across a panel into HEDIS quality measure compliance (numerator, denominator, exclusions, rate) with a per-measure gap list — a panel-level quality-reporting agent distinct from the single-patient Care Gap Closure agent and the panel-level Population Health risk-stratification agent",
+      "Quality reporting is DETERMINISTIC — a pure function of the panel signals + the caller-provided `asOfPeriod` accepted as data (no randomness, no clock); the same panel + period always yields the same rates + gap lists, with a stable, documented denominator narrowing per measure",
+      "Every scored measure must trace to the defined HEDIS measure catalog — an off-catalog / fabricated measure is blocked at the Agent Fabric governance boundary (policy.hedis.measure-catalog-sourced), and every applied denominator exclusion must trace to a defined catalog exclusion on that measure — an ad-hoc / unlisted exclusion is blocked (policy.hedis.exclusion-integrity), so a rate cannot be quietly inflated by shrinking the denominator",
+      "Submission is HUMAN-APPROVED — the agent may only assemble a submission package ready for human quality-team review, never submit autonomously to a payer / CMS / quality registry (policy.hedis.no-autonomous-submission); mirrors the Prior Authorization Agent's clinician-gated draft, the Population Health Agent's no-autonomous-care-decision, and the Clinical Trials Agent's no-autonomous-enrollment posture",
+      "Runs against an ILLUSTRATIVE synthetic HEDIS measure catalog + exclusion lists — measures, thresholds, and specs clearly labeled; NOT NCQA-certified specifications, real value sets, or a certified HEDIS engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -845,7 +876,8 @@ const POLICIES: PolicyRecord[] = [
       "population-health-agent",
       "consent-management-agent",
       "clinical-trials-agent",
-      "language-access-agent"
+      "language-access-agent",
+      "hedis-quality-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1099,6 +1131,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Language Access & Health Equity Agent may NOT use machine / auto translation for clinical consent or clinical decision communication — a plan that would machine-translate clinical consent is rejected before it can leave the fabric. Clinical consent and clinical-decision communication for an LEP patient go through a qualified human interpreter or an approved translated document, never an unmonitored machine translation. Mirrors the qualified-interpreter-only posture — a patient-safety / equity requirement, enforced not merely advised.",
     appliesTo: ["language-access-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.hedis.measure-catalog-sourced",
+    name: "HEDIS measures must trace to the defined catalog",
+    description:
+      "Every HEDIS quality measure in a report the HEDIS & Quality Reporting Agent produces (and every measure id in the submission package it assembles) must trace to the defined HEDIS measure catalog — an off-catalog / fabricated measure is rejected before it can leave the fabric, so the agent can never quietly report against a measure it invented. Mirrors the Care Gap Closure Agent's clinical-measure-sourced, the Clinical Trials Agent's eligibility-criteria-sourced, and the Population Health Agent's transparent-risk-model integrity posture. (In the prototype the measure catalog is a clearly-labeled illustrative synthetic — NOT NCQA-certified HEDIS specifications, real value sets, or a certified HEDIS engine; in production this is the customer's licensed HEDIS measure library.)",
+    appliesTo: ["hedis-quality-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.hedis.exclusion-integrity",
+    name: "HEDIS exclusions must trace to a catalog exclusion",
+    description:
+      "Every denominator exclusion the HEDIS & Quality Reporting Agent applies to a measure must trace to a defined exclusion entry on that measure's catalog spec — an ad-hoc / unlisted exclusion is rejected before it can leave the fabric. This is the load-bearing rate-integrity guard: inflating a compliance rate by shrinking the denominator with an unlisted exclusion is a classic HEDIS-integrity violation. Mirrors the Prior Authorization Agent's documentation-integrity and the Care Gap Closure Agent's clinical-measure-sourced posture — an integrity property enforced, not merely advised.",
+    appliesTo: ["hedis-quality-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.hedis.no-autonomous-submission",
+    name: "No autonomous HEDIS submission",
+    description:
+      "The HEDIS & Quality Reporting Agent may NEVER autonomously submit a quality-measure package to a payer / CMS / a quality registry — every submission requires a human quality-team approval. Every submission package the agent produces is requiresQualityTeamApproval:true / submitted:false (there is no autonomous 'submitted' state); a caller-asserted plan that claims already-submitted or bypasses the human approval gate is rejected before it can leave the fabric. Mirrors the Prior Authorization Agent's no-autonomous-submission, the Population Health Agent's no-autonomous-care-decision, and the Clinical Trials Agent's no-autonomous-enrollment posture — the agent proposes a package, a human files it.",
+    appliesTo: ["hedis-quality-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -3726,6 +3785,83 @@ function store(): FabricStore {
         usesQualifiedInterpreter: true,
         escalated: true,
         routedTo: "language-access-coordinator",
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+// HEDIS & Quality Reporting seed — a panel-level roll-up ending in a human-
+// approval-gated submission package, mirroring the shape a live task produces.
+// The measurement period is illustrative and clearly labeled; this is not a
+// certified HEDIS engine. Seed data; production populates the ring buffer from
+// the persistent log store.
+(function seedHedisQualityTrace() {
+  const s = store();
+  const hq0 = Date.now() - 1000 * 60 * 1;
+  const hqTaskId = "task-seed-hedis-quality-001";
+  const hqName = "HEDIS & Quality Reporting Agent";
+  s.traces.push(
+    {
+      id: "span-hedis-001",
+      taskId: hqTaskId,
+      agentId: "hedis-quality-agent",
+      agentName: hqName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(hq0).toISOString(),
+      finishedAt: new Date(hq0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-hedis-002",
+      taskId: hqTaskId,
+      parentSpanId: "span-hedis-001",
+      agentId: "hedis-quality-agent",
+      agentName: hqName,
+      operation: "hedis.rollup",
+      protocol: "a2a",
+      startedAt: new Date(hq0 + 40).toISOString(),
+      finishedAt: new Date(hq0 + 110).toISOString(),
+      durationMs: 70,
+      status: "ok",
+      attributes: {
+        asOfPeriod: "MY2026",
+        panelSize: 6,
+        measureCount: 5,
+        // The honesty invariants hold: measures + exclusions trace to the
+        // defined catalog spec.
+        measuresTraceToCatalog: true,
+        exclusionsTraceToCatalog: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-hedis-003",
+      taskId: hqTaskId,
+      parentSpanId: "span-hedis-002",
+      agentId: "hedis-quality-agent",
+      agentName: hqName,
+      operation: "hedis.assemble-submission",
+      protocol: "a2a",
+      startedAt: new Date(hq0 + 110).toISOString(),
+      finishedAt: new Date(hq0 + 160).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        submissionState: "ready-for-quality-team-review",
+        // The load-bearing invariant: submission requires human approval,
+        // never autonomously filed.
+        requiresQualityTeamApproval: true,
+        submitted: false,
+        submissionRequiresHumanApproval: true,
         phiAccessed: true,
         synthetic: true
       }

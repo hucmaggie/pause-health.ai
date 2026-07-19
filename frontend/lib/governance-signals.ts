@@ -86,6 +86,10 @@ export type GovernanceTask = {
   usesQualifiedInterpreter?: boolean;
   materialsTraceToApprovedSource?: boolean;
   noMachineTranslationForConsent?: boolean;
+  // HEDIS & quality reporting (catalog-sourced measures + exclusions + human-approved submission)
+  measuresTraceToCatalog?: boolean;
+  exclusionsTraceToCatalog?: boolean;
+  submissionRequiresHumanApproval?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -455,6 +459,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Uses machine translation for clinical consent or clinical decision communication",
     reason:
       "A plan would use machine / auto translation for clinical consent or clinical decision communication; machine translation may never be used for clinical consent or clinical decision communication — those go through a qualified human interpreter or an approved translated document"
+  },
+  {
+    policyId: "policy.hedis.measure-catalog-sourced",
+    signal: "measuresTraceToCatalog",
+    violatingValue: false,
+    violationHint: "A HEDIS measure in the report is not on the defined measure catalog",
+    reason:
+      "A HEDIS quality measure in the panel report did not trace to the defined HEDIS measure catalog (an off-catalog / fabricated measure); every measure in a quality report must trace to a defined catalog entry — the agent may not score a fabricated measure"
+  },
+  {
+    policyId: "policy.hedis.exclusion-integrity",
+    signal: "exclusionsTraceToCatalog",
+    violatingValue: false,
+    violationHint: "An applied exclusion is not on the measure's catalog exclusion list",
+    reason:
+      "An applied denominator exclusion did not trace to a defined exclusion on the target measure's catalog spec (an ad-hoc / unlisted exclusion); every exclusion must be catalog-sourced — inflating a rate by shrinking the denominator with an unlisted exclusion is a HEDIS-integrity violation"
+  },
+  {
+    policyId: "policy.hedis.no-autonomous-submission",
+    signal: "submissionRequiresHumanApproval",
+    violatingValue: false,
+    violationHint: "Submits a HEDIS package without human quality-team approval",
+    reason:
+      "Attempted to submit a HEDIS quality-measure package without human quality-team approval; the agent may only assemble a human-approval-gated draft — a submission to a payer / CMS / quality registry requires a human quality team in the loop"
   },
   {
     policyId: "policy.referral.clinician-cosign",

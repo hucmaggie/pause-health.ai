@@ -9,6 +9,7 @@ import { ClinicalSummaryPanel } from "../../../components/clinical-summary-panel
 import { ClinicalTrialsPanel } from "../../../components/clinical-trials-panel";
 import { ConsentManagementPanel } from "../../../components/consent-management-panel";
 import { DemoShell } from "../../../components/demo-shell";
+import { HedisQualityPanel } from "../../../components/hedis-quality-panel";
 import { IntakePatientStage } from "../../../components/intake-patient-stage";
 import { LanguageAccessPanel } from "../../../components/language-access-panel";
 import { PatientEducationPanel } from "../../../components/patient-education-panel";
@@ -89,6 +90,8 @@ export default function IntakeDemoPage() {
       <ClinicalTrialsPanel />
 
       <LanguageAccessPanel />
+
+      <HedisQualityPanel />
 
       <section className="demo-grid">
         <article className="card">
