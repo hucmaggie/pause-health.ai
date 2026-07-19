@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
 /**
@@ -47,6 +47,7 @@ const PRESERVED_PARAMS = ["personaId", "taskId"] as const;
 
 function PersonaPreservingNavInner() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const preserved = new URLSearchParams();
   for (const key of PRESERVED_PARAMS) {
@@ -57,11 +58,18 @@ function PersonaPreservingNavInner() {
 
   return (
     <nav className="demo-nav" aria-label="Prototype pages">
-      {LINKS.map((item) => (
-        <a key={item.href} href={suffix ? `${item.href}?${suffix}` : item.href}>
-          {item.label}
-        </a>
-      ))}
+      {LINKS.map((item) => {
+        const isActive = pathname === item.href;
+        return (
+          <a
+            key={item.href}
+            href={suffix ? `${item.href}?${suffix}` : item.href}
+            aria-current={isActive ? "page" : undefined}
+          >
+            {item.label}
+          </a>
+        );
+      })}
     </nav>
   );
 }

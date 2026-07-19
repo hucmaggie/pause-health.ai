@@ -885,6 +885,21 @@ th {
   background: var(--surface-3);
 }
 
+/*
+ * Active-section highlight, shared by the demo console (demo-shell-nav)
+ * and the investor briefs (proposal-shell-nav). Both navs mark the
+ * currently-viewed section with aria-current="page"; visually we mirror
+ * the hover treatment plus a subtle brand-tinted background so the
+ * highlight persists without a pointer over it. Keeping this behind
+ * one selector means the two shells stay locked in step.
+ */
+.demo-nav a[aria-current="page"] {
+  color: #ffd3e8;
+  border-color: var(--brand);
+  background: var(--surface-3);
+  box-shadow: inset 0 0 0 1px rgba(255, 143, 193, 0.35);
+}
+
 @media (max-width: 900px) {
   .demo-grid {
     grid-template-columns: 1fr;

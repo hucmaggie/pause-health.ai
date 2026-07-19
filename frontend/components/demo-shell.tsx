@@ -34,7 +34,14 @@ export function DemoShell({
         </a>
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
-        <p>{subtitle}</p>
+        {/*
+         * `hero-copy` is the shared semantic marker across the demo
+         * console and the investor-brief shells. Both surfaces
+         * currently inherit their hero-paragraph styling from
+         * `.hero p` in globals.css, but the class makes future
+         * per-shell overrides trivial without splintering markup.
+         */}
+        <p className="hero-copy">{subtitle}</p>
         {/*
          * In-page nav is split into its own client subcomponent so
          * it can read `?personaId=` (and a few other small params)
