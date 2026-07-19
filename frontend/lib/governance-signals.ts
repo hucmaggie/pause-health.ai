@@ -98,6 +98,10 @@ export type GovernanceTask = {
   rolesTraceToCatalog?: boolean;
   teamChangeRequiresCaseManager?: boolean;
   teamIncludesPcp?: boolean;
+  // Transitions of care (reconciliation-source + no autonomous med change + follow-up scheduled)
+  medicationsTraceToApprovedSource?: boolean;
+  reconciliationChangeRequiresClinician?: boolean;
+  followUpScheduledNotRecommended?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -539,6 +543,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "The roster ships without an accountable PCP anchor",
     reason:
       "The assembled care team did not include a primary care physician (role.pcp) — the PCP is the continuity-of-care anchor every specialist coordinates around; a legitimate multi-disciplinary team must include an accountable PCP, and a roster without one is rejected before it can leave the fabric"
+  },
+  {
+    policyId: "policy.toc.reconciliation-source-integrity",
+    signal: "medicationsTraceToApprovedSource",
+    violatingValue: false,
+    violationHint: "A reconciliation medication doesn't cite an approved source",
+    reason:
+      "A medication on the transitions-of-care reconciliation (pre-admit or discharge) did not cite an approved medication source (an unapproved / verbal / ad-hoc / undocumented source); every med on the reconciliation must trace to an approved source — the agent may not let a fabricated medication slip into the reconciliation"
+  },
+  {
+    policyId: "policy.toc.no-autonomous-medication-change",
+    signal: "reconciliationChangeRequiresClinician",
+    violatingValue: false,
+    violationHint: "Commits a medication add / remove / dose-change without clinician sign-off",
+    reason:
+      "Attempted to autonomously commit a medication add / remove / dose-change on the transitions-of-care reconciliation; the agent may only draft reconciliation notes — every medication change requires clinician sign-off (requiresClinicianSignoff:true, applied:false)"
+  },
+  {
+    policyId: "policy.toc.follow-up-scheduled-not-recommended",
+    signal: "followUpScheduledNotRecommended",
+    violatingValue: false,
+    violationHint: "A follow-up is marked complete without a real scheduled slot",
+    reason:
+      "A transitions-of-care follow-up was marked scheduled/complete without a real slot (slotStart + providerRef); a follow-up must be a scheduled appointment, not a text recommendation — the safe interim answer is state:'awaiting-schedule' with a handoff to the Appointment Scheduling agent, but the agent may never claim a 'recommended' follow-up is complete"
   },
   {
     policyId: "policy.referral.clinician-cosign",

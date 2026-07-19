@@ -889,6 +889,43 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "transitions-of-care-agent",
+    name: "Discharge & Transitions of Care Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for a transitions-of-care agent: POST
+    // /api/agents/transitions-of-care/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) agent that closes the loop back to primary
+    // care after a hospitalization / ED visit for a menopause/midlife
+    // patient: it RECONCILES the discharge medication list against the
+    // pre-admit list (added / removed / dose-changed / unchanged), booKS a
+    // follow-up (or drafts an appointment-request handoff to Scheduling —
+    // never a text recommendation), pulls the encounter-reason red-flag
+    // warning signs, emits a teach-back checklist, and assembles the PCP
+    // handoff summary. It is distinct from the Care Plan Agent (active
+    // treatment planning), the Medication Adherence Agent (nudge-only
+    // refill prompts), and the Referral Management Agent (specialist triage)
+    // — this one runs the CLOSE-THE-LOOP workflow after an acute event.
+    // REUSES the existing care-coordination tier. The encounter categories,
+    // red-flag catalog, follow-up window (14 days), approved medication-
+    // source labels, and teach-back items are ILLUSTRATIVE synthetics, NOT
+    // a certified TOC schema, a real ADT / discharge system, or a clinical
+    // guideline registry.
+    endpoint: "/api/agents/transitions-of-care",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Assembles the post-encounter transitions-of-care package for a menopause/midlife patient after a hospitalization / ED visit — medication reconciliation, scheduled follow-up (or awaiting-schedule handoff), encounter-reason red-flag warning signs, teach-back checklist, and PCP handoff summary — a care-coordination agent, distinct from the Care Plan, Medication Adherence, and Referral Management agents",
+      "The package is DETERMINISTIC — a pure function of the patient context + discharge date + provided medication lists (no randomness, no clock; timestamps are accepted as data); the same context always yields the same reconciliation + red-flag list + teach-back checklist + PCP summary, with a stable, documented reconciliation ordering (sorted by medication id)",
+      "Every medication on the reconciliation (pre-admit or discharge) must cite an approved medication source (pre-admit-verified, discharge-order, patient-verified, ehr-scanned-with-provenance) — a verbal / ad-hoc / undocumented source is blocked at the Agent Fabric governance boundary (policy.toc.reconciliation-source-integrity), so the agent cannot let a fabricated medication slip into the reconciliation",
+      "The agent NEVER autonomously commits a medication change — every add / remove / dose-change is a clinician sign-off gated proposal, and an autonomous change is blocked (policy.toc.no-autonomous-medication-change); mirrors the Medication Adherence Agent's no-autonomous-refill, the ACP Agent's no-autonomous-directive-change, and the Prior Authorization Agent's no-autonomous-submission posture",
+      "A follow-up must be a SCHEDULED slot (slotStart + providerRef + modality), not a text recommendation — 'recommended' follow-ups that never get booked are the classic 30-day-readmission failure mode this guard closes (policy.toc.follow-up-scheduled-not-recommended); the safe interim answer when no slot is available is state:'awaiting-schedule' with a handoff to the Appointment Scheduling agent",
+      "Runs against ILLUSTRATIVE synthetic encounter categories, red-flag catalog, follow-up window, approved-source labels, and teach-back items — clearly labeled; NOT a certified TOC schema, a real ADT / discharge system, or a clinical guideline registry"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -946,7 +983,8 @@ const POLICIES: PolicyRecord[] = [
       "language-access-agent",
       "hedis-quality-agent",
       "advance-care-planning-agent",
-      "care-team-management-agent"
+      "care-team-management-agent",
+      "transitions-of-care-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1281,6 +1319,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "A legitimate multi-disciplinary care team must include a primary care physician (role.pcp) — the continuity-of-care anchor every specialist coordinates around. A roster shipping without an accountable PCP is rejected before it can leave the fabric. This is a load-bearing continuity-of-care invariant: it prevents an assembly from quietly shipping a specialist-only team with no accountable primary-care owner. (In the prototype the PCP role is a clearly-labeled illustrative catalog id; in production this is the customer's governed PCP-of-record definition.)",
     appliesTo: ["care-team-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.toc.reconciliation-source-integrity",
+    name: "TOC reconciliation medications must cite an approved source",
+    description:
+      "Every medication on the transitions-of-care reconciliation (pre-admit or discharge) must cite an approved medication source (pre-admit-verified, discharge-order, patient-verified, ehr-scanned-with-provenance) — a verbal / ad-hoc / undocumented source is rejected before it can leave the fabric. This is the load-bearing safety property that prevents a fabricated medication from slipping into the reconciliation. Mirrors the ACP Agent's directive-source-integrity, the HEDIS Agent's measure-catalog-sourced, and the Medication Adherence Agent's source posture. (In the prototype the approved-source list is a clearly-labeled illustrative synthetic; in production this is the customer's governed medication-source policy.)",
+    appliesTo: ["transitions-of-care-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.toc.no-autonomous-medication-change",
+    name: "No autonomous TOC medication change",
+    description:
+      "The Discharge & Transitions of Care Agent may NEVER autonomously commit a medication add / remove / dose-change on the reconciliation — every change requires clinician sign-off. Every reconciliation-change proposal is requiresClinicianSignoff:true / applied:false; a caller-asserted plan that would autonomously apply a medication change or bypass the sign-off gate is rejected before it can leave the fabric. Mirrors the Medication Adherence Agent's no-autonomous-refill, the ACP Agent's no-autonomous-directive-change, the Prior Authorization Agent's no-autonomous-submission, and the HEDIS Agent's no-autonomous-submission posture.",
+    appliesTo: ["transitions-of-care-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.toc.follow-up-scheduled-not-recommended",
+    name: "TOC follow-up must be a scheduled slot, not a recommendation",
+    description:
+      "The Discharge & Transitions of Care Agent's follow-up must be a SCHEDULED appointment (slotStart + providerRef + modality) or explicitly awaiting-schedule (state:'awaiting-schedule', a safe interim answer with a handoff to the Appointment Scheduling agent) — a package claiming a 'scheduled' or 'complete' follow-up without a real slot is rejected before it can leave the fabric. This is the load-bearing 30-day-readmission property: 'recommended' follow-ups that never get booked are the classic transitions-of-care failure mode. (In the prototype the follow-up window is a clearly-labeled illustrative synthetic; in production this is the customer's governed transitions-of-care SLA.)",
+    appliesTo: ["transitions-of-care-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -4003,6 +4068,88 @@ function store(): FabricStore {
 // high-need midlife patient, mirroring the shape a live task produces.
 // Illustrative; not a certified care-team schema. Seed data; production
 // populates the ring buffer from the persistent log store.
+// Transitions of Care seed — a cardiovascular hospitalization discharge with
+// a scheduled follow-up + a clinician-signoff-gated reconciliation, mirroring
+// the shape a live task produces. Illustrative; not a certified TOC system.
+// Seed data; production populates the ring buffer from the persistent log
+// store.
+(function seedTransitionsOfCareTrace() {
+  const s = store();
+  const to0 = Date.now() - 1000 * 60 * 1;
+  const toTaskId = "task-seed-toc-001";
+  const toName = "Discharge & Transitions of Care Agent";
+  s.traces.push(
+    {
+      id: "span-toc-001",
+      taskId: toTaskId,
+      agentId: "transitions-of-care-agent",
+      agentName: toName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(to0).toISOString(),
+      finishedAt: new Date(to0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-toc-002",
+      taskId: toTaskId,
+      parentSpanId: "span-toc-001",
+      agentId: "transitions-of-care-agent",
+      agentName: toName,
+      operation: "toc.reconcile",
+      protocol: "a2a",
+      startedAt: new Date(to0 + 40).toISOString(),
+      finishedAt: new Date(to0 + 110).toISOString(),
+      durationMs: 70,
+      status: "ok",
+      attributes: {
+        patientRef: "toc-patient-001",
+        dischargeDate: "2026-07-01",
+        reconciliationLines: 3,
+        reconciliationChanges: 2,
+        // The honesty invariants: every med cites an approved source.
+        medicationsTraceToApprovedSource: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-toc-003",
+      taskId: toTaskId,
+      parentSpanId: "span-toc-002",
+      agentId: "transitions-of-care-agent",
+      agentName: toName,
+      operation: "toc.assemble-package",
+      protocol: "a2a",
+      startedAt: new Date(to0 + 110).toISOString(),
+      finishedAt: new Date(to0 + 160).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        encounterKind: "hospitalization",
+        encounterReasonCategory: "cardiovascular",
+        redFlagCount: 3,
+        teachBackCount: 4,
+        packageState: "ready-for-clinician-signoff",
+        followUpScheduled: true,
+        followUpAwaitingSchedule: false,
+        // The load-bearing invariants: every med change is clinician-signoff
+        // gated and the follow-up is a real scheduled slot, not a text
+        // recommendation.
+        reconciliationChangeRequiresClinician: true,
+        followUpScheduledNotRecommended: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
 (function seedCareTeamTrace() {
   const s = store();
   const ct0 = Date.now() - 1000 * 60 * 1;
