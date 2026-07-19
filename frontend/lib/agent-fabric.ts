@@ -856,6 +856,39 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "whole-person-care"
+  },
+  {
+    id: "care-team-management-agent",
+    name: "Care Team & Case Management Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for a care-coordination agent: POST
+    // /api/agents/care-team/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) agent that assembles the multi-disciplinary
+    // care team around a single high-need menopause/midlife patient — PCP,
+    // MSCP, cardiology, endocrinology, bone-health, pelvic-floor PT,
+    // behavioral health — assigns a case manager (a stable-hash pick from a
+    // synthetic pool), and emits a shared team snapshot. Unlike the panel-
+    // level Population Health & Risk Stratification Agent (which PRIORITIZES
+    // patients), this one COORDINATES clinicians around a single patient. It
+    // NEVER autonomously adds or removes a team member — every change is a
+    // case-manager sign-off gated proposal. REUSES the existing care-
+    // coordination tier. The care-role catalog, condition→role triggers,
+    // case-manager pool, and member refs are ILLUSTRATIVE synthetics, NOT a
+    // certified care-team schema.
+    endpoint: "/api/agents/care-team",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Assembles the multi-disciplinary care team around a single high-need menopause/midlife patient (PCP, MSCP, cardiology, endocrinology, bone-health, pelvic-floor PT, behavioral health), assigns a case manager, and emits a shared team snapshot — a care-coordination agent, distinct from the panel-level Population Health & Risk Stratification agent",
+      "Team assembly is DETERMINISTIC — a pure function of the patient's clinical needs against the illustrative care-role catalog + condition→role trigger map, with the case manager assigned by a stable, documented hash on the patientRef (no randomness, no clock); the same context always yields the same team + case manager + snapshot",
+      "Every team role — on the roster and in the needed-roles set — must trace to the defined care-role catalog; an off-catalog / fabricated discipline label is blocked at the Agent Fabric governance boundary (policy.careteam.role-catalog-sourced), so the agent cannot pad a roster or claim coverage for a role that doesn't exist",
+      "The agent NEVER autonomously adds or removes a team member — every roster change is a case-manager sign-off gated proposal, and an autonomous change is blocked (policy.careteam.no-autonomous-assignment); mirrors the ACP Agent's no-autonomous-directive-change and the HEDIS Agent's human-approval posture",
+      "A legitimate care team must include a PCP (role.pcp) — the continuity-of-care anchor every specialist coordinates around; a roster shipping without an accountable PCP is blocked (policy.careteam.pcp-required), a load-bearing continuity-of-care invariant",
+      "Runs against ILLUSTRATIVE synthetic care-role catalog, condition→role triggers, and case-manager pool — roles, responsibilities, and refs clearly labeled; NOT a certified care-team schema, a real provider directory, or a case-management workflow engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -912,7 +945,8 @@ const POLICIES: PolicyRecord[] = [
       "clinical-trials-agent",
       "language-access-agent",
       "hedis-quality-agent",
-      "advance-care-planning-agent"
+      "advance-care-planning-agent",
+      "care-team-management-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1220,6 +1254,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "For a limited-English-proficiency (LEP) patient — preferred language other than the clinical default (English) — the Advance Care Planning Agent must not draft an ACTIVE conversation prompt without a documented QUALIFIED-INTERPRETER plan; an ACP conversation is legally consequential and must not be held in a language the patient cannot participate in. When no interpreter plan is documented the agent WITHHOLDS the active prompt (a safe completed answer — state:'withheld-language-access-required'), deferring to the Language Access & Health Equity agent. A caller-asserted plan claiming an active drafted prompt for an LEP patient with no interpreter plan is rejected before it can leave the fabric. Mirrors the Language Access Agent's qualified-interpreter-only and no-machine-translation-for-consent posture — patient-safety / equity requirement, enforced not merely advised.",
     appliesTo: ["advance-care-planning-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.careteam.role-catalog-sourced",
+    name: "Care-team roles must trace to the defined catalog",
+    description:
+      "Every care-team role the Care Team & Case Management Agent lists — both the members it puts on the roster and the roles it claims are needed for the patient — must trace to the defined care-role catalog; an off-catalog / fabricated discipline or role label is rejected before it can leave the fabric, so the agent cannot pad a roster with an invented 'concierge liaison' or claim coverage for a needed role that doesn't exist. Mirrors the HEDIS Agent's measure-catalog-sourced, the ACP Agent's directive-source-integrity, and the Care Gap Closure Agent's clinical-measure-sourced posture — a load-bearing integrity property, enforced not merely advised. (In the prototype the care-role catalog is a clearly-labeled illustrative synthetic; in production this is the customer's governed discipline schema.)",
+    appliesTo: ["care-team-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.careteam.no-autonomous-assignment",
+    name: "No autonomous care-team assignment",
+    description:
+      "The Care Team & Case Management Agent may NEVER autonomously add or remove a clinician from the care team (or reassign the case manager) — every roster change requires the assigned case manager's approval. Every team-change proposal the agent produces is requiresCaseManagerApproval:true / applied:false; a caller-asserted plan that would autonomously apply a team change or bypass the case manager is rejected before it can leave the fabric. Mirrors the ACP Agent's no-autonomous-directive-change, the Prior Authorization Agent's no-autonomous-submission, and the HEDIS Agent's no-autonomous-submission posture — the agent proposes a change, a human coordinator approves it.",
+    appliesTo: ["care-team-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.careteam.pcp-required",
+    name: "Care team must include a PCP anchor",
+    description:
+      "A legitimate multi-disciplinary care team must include a primary care physician (role.pcp) — the continuity-of-care anchor every specialist coordinates around. A roster shipping without an accountable PCP is rejected before it can leave the fabric. This is a load-bearing continuity-of-care invariant: it prevents an assembly from quietly shipping a specialist-only team with no accountable primary-care owner. (In the prototype the PCP role is a clearly-labeled illustrative catalog id; in production this is the customer's governed PCP-of-record definition.)",
+    appliesTo: ["care-team-management-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -3931,6 +3992,84 @@ function store(): FabricStore {
         // The load-bearing invariant: every directive change is clinician +
         // patient sign-off gated — the agent never autonomously applies one.
         directiveChangeRequiresHumanSignoff: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+// Care Team & Case Management seed — a multi-disciplinary team assembly on a
+// high-need midlife patient, mirroring the shape a live task produces.
+// Illustrative; not a certified care-team schema. Seed data; production
+// populates the ring buffer from the persistent log store.
+(function seedCareTeamTrace() {
+  const s = store();
+  const ct0 = Date.now() - 1000 * 60 * 1;
+  const ctTaskId = "task-seed-careteam-001";
+  const ctName = "Care Team & Case Management Agent";
+  s.traces.push(
+    {
+      id: "span-careteam-001",
+      taskId: ctTaskId,
+      agentId: "care-team-management-agent",
+      agentName: ctName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ct0).toISOString(),
+      finishedAt: new Date(ct0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-careteam-002",
+      taskId: ctTaskId,
+      parentSpanId: "span-careteam-001",
+      agentId: "care-team-management-agent",
+      agentName: ctName,
+      operation: "careteam.assemble",
+      protocol: "a2a",
+      startedAt: new Date(ct0 + 40).toISOString(),
+      finishedAt: new Date(ct0 + 110).toISOString(),
+      durationMs: 70,
+      status: "ok",
+      attributes: {
+        patientRef: "careteam-patient-001",
+        asOfDate: "2026-07-01",
+        rosterCount: 4,
+        neededRoleCount: 6,
+        gapCount: 2,
+        caseManagerId: "cm.001",
+        // The honesty invariants: every role is catalog-sourced and the
+        // roster includes an accountable PCP anchor.
+        rolesTraceToCatalog: true,
+        teamIncludesPcp: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-careteam-003",
+      taskId: ctTaskId,
+      parentSpanId: "span-careteam-002",
+      agentId: "care-team-management-agent",
+      agentName: ctName,
+      operation: "careteam.draft-proposals",
+      protocol: "a2a",
+      startedAt: new Date(ct0 + 110).toISOString(),
+      finishedAt: new Date(ct0 + 160).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        proposalCount: 0,
+        // The load-bearing invariant: every roster change is case-manager
+        // sign-off gated — the agent never autonomously adds or removes a
+        // member.
+        teamChangeRequiresCaseManager: true,
         phiAccessed: true,
         synthetic: true
       }

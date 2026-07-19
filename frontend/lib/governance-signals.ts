@@ -94,6 +94,10 @@ export type GovernanceTask = {
   directivesTraceToCatalog?: boolean;
   directiveChangeRequiresHumanSignoff?: boolean;
   languageAccessSatisfied?: boolean;
+  // Care team & case management (catalog-sourced roles + case-manager approval + PCP anchor)
+  rolesTraceToCatalog?: boolean;
+  teamChangeRequiresCaseManager?: boolean;
+  teamIncludesPcp?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -511,6 +515,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Drafts an active ACP conversation for an LEP patient with no qualified-interpreter plan",
     reason:
       "Attempted to draft an active advance-care-planning conversation for a limited-English-proficiency (LEP) patient with no documented qualified-interpreter plan; an ACP conversation is legally consequential and must not be held in a language the patient cannot participate in — for an LEP patient the agent defers to the Language Access & Health Equity agent and WITHHOLDS the prompt (a safe completed answer) until a qualified-interpreter plan is documented"
+  },
+  {
+    policyId: "policy.careteam.role-catalog-sourced",
+    signal: "rolesTraceToCatalog",
+    violatingValue: false,
+    violationHint: "A care-team role isn't on the defined care-role catalog",
+    reason:
+      "A care-team role (on the roster or in the needed-roles set) did not trace to the defined care-role catalog (a fabricated discipline / role label); every team role must be catalog-sourced — the agent may not invent a role to pad a roster or claim coverage for a needed role that doesn't exist"
+  },
+  {
+    policyId: "policy.careteam.no-autonomous-assignment",
+    signal: "teamChangeRequiresCaseManager",
+    violatingValue: false,
+    violationHint: "Adds or removes a team member without case-manager approval",
+    reason:
+      "Attempted to autonomously add or remove a care-team member (or reassign the case manager) without the assigned case manager's approval; the agent may only draft a team-change proposal — every roster change requires case-manager sign-off (requiresCaseManagerApproval:true, applied:false)"
+  },
+  {
+    policyId: "policy.careteam.pcp-required",
+    signal: "teamIncludesPcp",
+    violatingValue: false,
+    violationHint: "The roster ships without an accountable PCP anchor",
+    reason:
+      "The assembled care team did not include a primary care physician (role.pcp) — the PCP is the continuity-of-care anchor every specialist coordinates around; a legitimate multi-disciplinary team must include an accountable PCP, and a roster without one is rejected before it can leave the fabric"
   },
   {
     policyId: "policy.referral.clinician-cosign",
