@@ -82,6 +82,10 @@ export type GovernanceTask = {
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
   enrollmentRequiresHuman?: boolean;
+  // Language access & health equity (qualified-interpreter-only + approved-source materials)
+  usesQualifiedInterpreter?: boolean;
+  materialsTraceToApprovedSource?: boolean;
+  noMachineTranslationForConsent?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -427,6 +431,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Enrolls a patient autonomously instead of requiring informed consent + a human",
     reason:
       "Attempted to enroll a patient in a study autonomously; the agent may NEVER enroll a patient on its own — enrollment requires informed consent AND a human (requiresHuman:true, enrolled:false), the agent only drafts a consent-gated invitation to consider"
+  },
+  {
+    policyId: "policy.langaccess.qualified-interpreter-only",
+    signal: "usesQualifiedInterpreter",
+    violatingValue: false,
+    violationHint: "Uses an untrained / ad-hoc / family interpreter for clinical communication",
+    reason:
+      "A clinical-interpretation plan would use an untrained / ad-hoc / family interpreter (or machine translation) for clinical communication or consent; clinical interpretation must use a QUALIFIED medical interpreter — when none is available the agent escalates to a human coordinator, it never substitutes an unqualified option"
+  },
+  {
+    policyId: "policy.langaccess.translated-material-source-integrity",
+    signal: "materialsTraceToApprovedSource",
+    violatingValue: false,
+    violationHint: "An in-language material doesn't trace to the approved translated-materials catalog",
+    reason:
+      "An in-language patient material presented as official did not trace to the approved translated-materials catalog (an unverified / ad-hoc translation, or an off-catalog document); every in-language material must trace to an approved translated source — the agent may not present an ad-hoc translation as official"
+  },
+  {
+    policyId: "policy.langaccess.no-machine-translation-for-consent",
+    signal: "noMachineTranslationForConsent",
+    violatingValue: false,
+    violationHint: "Uses machine translation for clinical consent or clinical decision communication",
+    reason:
+      "A plan would use machine / auto translation for clinical consent or clinical decision communication; machine translation may never be used for clinical consent or clinical decision communication — those go through a qualified human interpreter or an approved translated document"
   },
   {
     policyId: "policy.referral.clinician-cosign",

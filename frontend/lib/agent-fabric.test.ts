@@ -418,15 +418,15 @@ describe("Validated-instrument assessment · Assessment agent", () => {
 });
 
 describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
-  it("brings the registry to twenty-eight agents", () => {
+  it("brings the registry to twenty-nine agents", () => {
     // Sanity count guard: the funnel + intake + assessment + benefits +
     // scheduling + care-gap-closure + care-plan + medication-adherence +
     // referral-management + member-service + prior-authorization +
     // clinical-summary + sdoh-screening + patient-education +
-    // remote-monitoring + population-health + clinical-trials agents, the Care
-    // Router, the platform substrate (incl. the Consent & Preferences
-    // Management agent), and the commercial plane.
-    expect(listAgents()).toHaveLength(28);
+    // remote-monitoring + population-health + clinical-trials +
+    // language-access agents, the Care Router, the platform substrate (incl.
+    // the Consent & Preferences Management agent), and the commercial plane.
+    expect(listAgents()).toHaveLength(29);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -1985,6 +1985,125 @@ describe("Clinical Trials & Research Matching · criteria-sourced eligibility + 
   });
 });
 
+describe("Language Access & Health Equity · qualified-interpreter-only + approved-source materials agent", () => {
+  it("registers as a prototype Agentforce agent on the reused whole-person-care tier (patient-care plane)", () => {
+    const a = getAgent("language-access-agent");
+    expect(a).toBeDefined();
+    expect(a!.kind).toBe("agentforce");
+    expect(a!.protocol).toBe("a2a");
+    expect(a!.provider).toBe("Salesforce");
+    expect(a!.status).toBe("prototype");
+    // Reuses the existing whole-person-care tier (patient-care plane) — a
+    // health-equity / access activity, the SDOH/equity tier; it does NOT invent
+    // a new tier.
+    expect(a!.governanceTier).toBe("whole-person-care");
+    expect(planeForTier(a!.governanceTier)).toBe("patient-care");
+    expect(a!.endpoint).toBe("/api/agents/language-access");
+  });
+
+  it("carries the three language-access blocks plus the reused HIPAA-audit policy (touches patient context)", () => {
+    const ids = getPoliciesForAgent("language-access-agent").map((p) => p.id);
+    expect(ids).toContain("policy.langaccess.qualified-interpreter-only");
+    expect(ids).toContain("policy.langaccess.translated-material-source-integrity");
+    expect(ids).toContain("policy.langaccess.no-machine-translation-for-consent");
+    // It touches patient clinical context, so it IS HIPAA-audited.
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT a live-Claude agent (no model allow-list) and NOT commercial.
+    expect(ids).not.toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("all three language-access policies are enforced blocks", () => {
+    for (const id of [
+      "policy.langaccess.qualified-interpreter-only",
+      "policy.langaccess.translated-material-source-integrity",
+      "policy.langaccess.no-machine-translation-for-consent"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement, id).toBe("block");
+      expect(policy!.status, id).toBe("enforced");
+    }
+  });
+
+  it("blocks an unqualified interpreter, an unapproved translation, and a machine-translated consent; allows a well-formed task", () => {
+    // A family / ad-hoc interpreter for clinical communication.
+    const unqualified = evaluateGovernance({
+      agentId: "language-access-agent",
+      task: {
+        usesQualifiedInterpreter: false,
+        materialsTraceToApprovedSource: true,
+        noMachineTranslationForConsent: true
+      }
+    });
+    expect(unqualified.decision).toBe("block");
+    expect(unqualified.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.langaccess.qualified-interpreter-only"
+    );
+
+    // An unverified / ad-hoc translation presented as official.
+    const unapproved = evaluateGovernance({
+      agentId: "language-access-agent",
+      task: {
+        usesQualifiedInterpreter: true,
+        materialsTraceToApprovedSource: false,
+        noMachineTranslationForConsent: true
+      }
+    });
+    expect(unapproved.decision).toBe("block");
+    expect(unapproved.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.langaccess.translated-material-source-integrity"
+    );
+
+    // Machine-translating clinical consent.
+    const machine = evaluateGovernance({
+      agentId: "language-access-agent",
+      task: {
+        usesQualifiedInterpreter: true,
+        materialsTraceToApprovedSource: true,
+        noMachineTranslationForConsent: false
+      }
+    });
+    expect(machine.decision).toBe("block");
+    expect(machine.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.langaccess.no-machine-translation-for-consent"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "language-access-agent",
+      task: {
+        usesQualifiedInterpreter: true,
+        materialsTraceToApprovedSource: true,
+        noMachineTranslationForConsent: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "language-access-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a detect-language→assess→arrange-interpreter trace with an equity-gap example, every span phiAccessed", () => {
+    const spans = listTraces({ taskId: "task-seed-language-access-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(3);
+    const detect = spans.find((s) => s.operation === "langaccess.detect-language");
+    expect(detect?.agentId).toBe("language-access-agent");
+    const assess = spans.find((s) => s.operation === "langaccess.assess");
+    expect(assess?.attributes?.qualifiedInterpreterAvailable).toBe(false);
+    expect(assess?.attributes?.materialsTraceToApprovedSource).toBe(true);
+    const arrange = spans.find((s) => s.operation === "langaccess.arrange-interpreter");
+    // Equity-gap escalation is still qualified-only (never an unqualified fallback).
+    expect(arrange?.attributes?.usesQualifiedInterpreter).toBe(true);
+    expect(arrange?.attributes?.interpreterState).toBe("equity-gap-escalation");
+    // The whole run touches the patient's context.
+    for (const s of spans) {
+      expect(s.attributes?.phiAccessed, s.operation).toBe(true);
+    }
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -2116,7 +2235,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-remote-monitoring-001",
       "task-seed-population-health-001",
       "task-seed-consent-management-001",
-      "task-seed-clinical-trials-001"
+      "task-seed-clinical-trials-001",
+      "task-seed-language-access-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });

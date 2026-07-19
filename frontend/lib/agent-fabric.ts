@@ -756,6 +756,41 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "language-access-agent",
+    name: "Language Access & Health Equity Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for a patient-care EQUITY agent: POST
+    // /api/agents/language-access/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) agent that ensures limited-English-proficiency
+    // (LEP) patients can understand their care — it determines the patient's
+    // PREFERRED LANGUAGE (deferring in copy to the Consent & Preferences
+    // Management agent's preferred-language preference), decides whether a
+    // QUALIFIED MEDICAL INTERPRETER is required and of which modality (in-person
+    // / video / phone), checks whether the needed PATIENT MATERIALS exist in that
+    // language (from an approved translated-materials catalog, each with a
+    // translation-provenance label), and FLAGS EQUITY / ACCESS GAPS (no qualified
+    // interpreter for a language, a consent form only in English). It NEVER
+    // substitutes machine translation or an untrained / family interpreter for
+    // clinical communication or consent. REUSES the existing whole-person-care
+    // tier (the SDOH / equity tier — a health-equity / access activity), not a
+    // new tier. The languages, interpreter availability, materials, and
+    // provenance labels are ILLUSTRATIVE synthetics, NOT a certified language-
+    // access system.
+    endpoint: "/api/agents/language-access",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Ensures LEP patients can understand their care — determines the PREFERRED LANGUAGE (deferring to the Consent & Preferences Management agent's preferred-language preference), decides whether a qualified medical interpreter is needed and of which modality (in-person / video / phone), checks approved in-language materials, and flags equity / access gaps — a health-equity / access agent distinct from the SDOH, consent, and clinical agents",
+      "Language-access planning is DETERMINISTIC — a pure function of the patient's structured context against the supported-language + approved-materials catalogs (no randomness, no clock); the same context always yields the same assessment (with a stable, documented equity-gap ordering)",
+      "Clinical interpretation uses a QUALIFIED medical interpreter only — an untrained / ad-hoc / family interpreter (or machine translation) for clinical communication is blocked at the Agent Fabric governance boundary (policy.langaccess.qualified-interpreter-only); when no qualified interpreter is available the agent escalates to a human coordinator (a safe output), it never substitutes an unqualified option",
+      "In-language materials must trace to the approved translated-materials catalog — an unverified / ad-hoc translation presented as official is blocked (policy.langaccess.translated-material-source-integrity); and machine / auto translation may never be used for clinical consent or clinical decision communication (policy.langaccess.no-machine-translation-for-consent)",
+      "Runs against ILLUSTRATIVE synthetic supported-language, interpreter-availability, and approved-materials catalogs — languages, availability, materials, and translation provenance clearly labeled; NOT a certified language-access system"
+    ],
+    provider: "Salesforce",
+    governanceTier: "whole-person-care"
   }
 ];
 
@@ -809,7 +844,8 @@ const POLICIES: PolicyRecord[] = [
       "remote-monitoring-agent",
       "population-health-agent",
       "consent-management-agent",
-      "clinical-trials-agent"
+      "clinical-trials-agent",
+      "language-access-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1036,6 +1072,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Clinical Trials & Research Matching Agent may NEVER enroll a patient in a study autonomously — enrollment requires informed consent AND a human. Every outreach the agent drafts is requiresHuman:true / enrolled:false (there is no 'enrolled' state); an outreach asserted as enrolled, or one that doesn't require a human, is rejected before it can leave the fabric. Mirrors the Remote Patient Monitoring Agent's no-autonomous-escalation and the Prior Authorization Agent's no-autonomous-submission posture — the agent proposes a consent-gated invitation to consider, a human enrolls.",
     appliesTo: ["clinical-trials-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.langaccess.qualified-interpreter-only",
+    name: "Clinical interpretation requires a qualified medical interpreter",
+    description:
+      "The Language Access & Health Equity Agent may only propose a QUALIFIED medical interpreter for clinical communication — an untrained / ad-hoc / family interpreter (or a minor, or machine translation) for clinical communication or consent is rejected before it can leave the fabric. When no qualified interpreter is available for a language the agent ESCALATES to a human language-access coordinator (a safe completed answer, not a block) — it NEVER substitutes an unqualified fallback. Mirrors the Remote Patient Monitoring Agent's no-autonomous-escalation and the Clinical Trials Agent's no-autonomous-enrollment posture — the safe answer is enforced, not merely advised. (In the prototype the interpreter roster is a clearly-labeled illustrative synthetic; in production this is the customer's governed qualified-interpreter program.)",
+    appliesTo: ["language-access-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.langaccess.translated-material-source-integrity",
+    name: "In-language materials must trace to an approved translated source",
+    description:
+      "Every in-language patient material the Language Access & Health Equity Agent presents as official must trace to the APPROVED translated-materials catalog — an unverified / ad-hoc translation presented as an official document, or an off-catalog document, is rejected before it can leave the fabric, so the agent can never pass off an unapproved translation as official. Mirrors the Care Gap Closure Agent's clinical-measure-sourced and the Clinical Trials Agent's eligibility-criteria-sourced integrity posture. (In the prototype the approved-materials catalog + provenance labels are clearly-labeled illustrative synthetics, not a real translated-document library; in production this is the customer's governed translated-materials library.)",
+    appliesTo: ["language-access-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.langaccess.no-machine-translation-for-consent",
+    name: "No machine translation for clinical consent",
+    description:
+      "The Language Access & Health Equity Agent may NOT use machine / auto translation for clinical consent or clinical decision communication — a plan that would machine-translate clinical consent is rejected before it can leave the fabric. Clinical consent and clinical-decision communication for an LEP patient go through a qualified human interpreter or an approved translated document, never an unmonitored machine translation. Mirrors the qualified-interpreter-only posture — a patient-safety / equity requirement, enforced not merely advised.",
+    appliesTo: ["language-access-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -3558,6 +3621,111 @@ function store(): FabricStore {
         researchConsentPresent: true,
         enrollmentRequiresHuman: true,
         enrolled: false,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+
+  // A trace showing the Language Access & Health Equity Agent — a patient-care
+  // EQUITY agent — determining a patient's PREFERRED LANGUAGE, DETERMINISTICALLY
+  // deciding a qualified-medical-interpreter need + modality, checking approved
+  // in-language materials, and FLAGGING equity / access gaps. This seed shows
+  // the EQUITY-GAP example: a patient preferring a rare language with no
+  // qualified-interpreter pool and no approved translated materials, so the
+  // agent ESCALATES to a human coordinator (a safe completed answer) rather than
+  // substituting an unqualified interpreter or machine translation. It reads
+  // patient context, so every span sets phiAccessed:true. The languages,
+  // availability, and materials are ILLUSTRATIVE synthetics, not a certified
+  // language-access system. Seed data; production populates the ring buffer from
+  // the persistent log store.
+  const la0 = Date.now() - 1000 * 60 * 1;
+  const laTaskId = "task-seed-language-access-001";
+  const laName = "Language Access & Health Equity Agent";
+  s.traces.push(
+    {
+      id: "span-langaccess-001",
+      taskId: laTaskId,
+      agentId: "language-access-agent",
+      agentName: laName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(la0).toISOString(),
+      finishedAt: new Date(la0 + 35).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-langaccess-002",
+      taskId: laTaskId,
+      parentSpanId: "span-langaccess-001",
+      agentId: "language-access-agent",
+      agentName: laName,
+      operation: "langaccess.detect-language",
+      protocol: "a2a",
+      startedAt: new Date(la0 + 35).toISOString(),
+      finishedAt: new Date(la0 + 60).toISOString(),
+      durationMs: 25,
+      status: "ok",
+      attributes: {
+        patientRef: "langaccess-patient-002",
+        // Preferred language deferred to the Consent & Preferences Management
+        // agent's preferred-language preference (a rare, unstaffed language).
+        preferredLanguageCode: "ff",
+        preferredLanguageLabel: "Fulfulde (Pular)",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-langaccess-003",
+      taskId: laTaskId,
+      parentSpanId: "span-langaccess-002",
+      agentId: "language-access-agent",
+      agentName: laName,
+      operation: "langaccess.assess",
+      protocol: "a2a",
+      startedAt: new Date(la0 + 60).toISOString(),
+      finishedAt: new Date(la0 + 110).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        interpreterNeeded: true,
+        qualifiedInterpreterAvailable: false,
+        // An equity-gap example: no qualified interpreter + consent form only in
+        // English are flagged (a safe output, escalated to a human).
+        equityGapCount: 5,
+        // The honesty invariants hold: materials trace to the approved catalog
+        // and no machine translation is used for clinical consent.
+        materialsTraceToApprovedSource: true,
+        noMachineTranslationForConsent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-langaccess-004",
+      taskId: laTaskId,
+      parentSpanId: "span-langaccess-003",
+      agentId: "language-access-agent",
+      agentName: laName,
+      operation: "langaccess.arrange-interpreter",
+      protocol: "a2a",
+      startedAt: new Date(la0 + 110).toISOString(),
+      finishedAt: new Date(la0 + 160).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        interpreterState: "equity-gap-escalation",
+        // The load-bearing invariant: clinical interpretation is qualified-only —
+        // when none is available the agent escalates, never an unqualified fallback.
+        usesQualifiedInterpreter: true,
+        escalated: true,
+        routedTo: "language-access-coordinator",
         phiAccessed: true,
         synthetic: true
       }

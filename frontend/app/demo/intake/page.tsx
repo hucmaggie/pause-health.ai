@@ -10,6 +10,7 @@ import { ClinicalTrialsPanel } from "../../../components/clinical-trials-panel";
 import { ConsentManagementPanel } from "../../../components/consent-management-panel";
 import { DemoShell } from "../../../components/demo-shell";
 import { IntakePatientStage } from "../../../components/intake-patient-stage";
+import { LanguageAccessPanel } from "../../../components/language-access-panel";
 import { PatientEducationPanel } from "../../../components/patient-education-panel";
 import { PersonaJourneyFooter } from "../../../components/persona-journey-footer";
 import { PopulationHealthPanel } from "../../../components/population-health-panel";
@@ -86,6 +87,8 @@ export default function IntakeDemoPage() {
       <ConsentManagementPanel />
 
       <ClinicalTrialsPanel />
+
+      <LanguageAccessPanel />
 
       <section className="demo-grid">
         <article className="card">
