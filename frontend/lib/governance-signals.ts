@@ -110,6 +110,10 @@ export type GovernanceTask = {
   credentialsTraceToVerifiedSource?: boolean;
   noReferralToExpiredOrSanctioned?: boolean;
   directoryIsFresh?: boolean;
+  // Quality-measure attribution (methodology-catalog + contract-terms + tie-break-documented)
+  attributionsTraceToCatalog?: boolean;
+  attributionsHonorContractTerms?: boolean;
+  attributionTieBreaksAreDocumented?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -623,6 +627,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Directory record was last verified past the No-Surprises-Act freshness window",
     reason:
       "Returned a provider directory record as AUTHORITATIVE whose verifiedAsOf date is past the No-Surprises-Act 90-day accuracy window; stale directory data must not be returned as authoritative — the safe interim answer is to route the caller to a directory-refresh workflow"
+  },
+  {
+    policyId: "policy.attribution.methodology-catalog-sourced",
+    signal: "attributionsTraceToCatalog",
+    violatingValue: false,
+    violationHint: "An attribution's methodology or contract is off-catalog",
+    reason:
+      "An attribution's methodology or contract did not trace to the defined catalog (methodology.plurality-of-visits / methodology.pcp-of-record / methodology.prospective-medicare-advantage / methodology.contract-defined-window; contract.medicare-advantage-hedis-my2026 / contract.commercial-vbc-my2026); every attribution must trace to catalog-defined methodology + contract — the agent may not fabricate a bespoke attribution rule"
+  },
+  {
+    policyId: "policy.attribution.no-conflicting-contract-terms",
+    signal: "attributionsHonorContractTerms",
+    violatingValue: false,
+    violationHint: "An attribution keeps a patient the contract's terms explicitly exclude",
+    reason:
+      "An attribution asserted excludedByContract:false on a patient whose contract terms (age band, network status, or exclusion code) actually EXCLUDE them; every attribution must honor the contract's terms — an in-numerator attribution against explicit exclusions pollutes the contract's scorecard with patients the contract never covered"
+  },
+  {
+    policyId: "policy.attribution.tie-break-documented",
+    signal: "attributionTieBreaksAreDocumented",
+    violatingValue: false,
+    violationHint: "An attribution applied an undocumented / opaque tie-break rule",
+    reason:
+      "An attribution applied a tie-break rule outside the documented list (most-recent-visit-wins, provider-ref-lexical-ascending); every tie-break must be deterministic and documented — a coin-flip / opaque tie-break turns attribution into gameable non-determinism"
   },
   {
     policyId: "policy.referral.clinician-cosign",

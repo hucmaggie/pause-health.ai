@@ -1000,6 +1000,40 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "integration"
+  },
+  {
+    id: "quality-attribution-agent",
+    name: "Quality-Measure Attribution Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the OTHER HALF of the HEDIS story: POST
+    // /api/agents/quality-attribution/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) agent that pairs with the HEDIS & Quality
+    // Reporting Agent — HEDIS computes the RATES, THIS agent decides WHOSE
+    // PANEL each patient counts on. It attributes each patient to a
+    // provider/clinic under a defined methodology (plurality-of-visits, PCP-
+    // of-record, prospective Medicare Advantage, contract-defined window),
+    // honors the VBC contract's exclusion terms (age band, network status,
+    // exclusion codes), and applies a documented tie-break chain (most-
+    // recent-visit-wins → provider-ref-lexical-ascending) when the primary
+    // metric ties. It rolls up per-provider counts so the HEDIS agent can
+    // score against the correct denominator. Distinct from the Care Team
+    // agent (multi-disciplinary team assembly around a patient) and the
+    // Provider Credentialing agent (network integrity) — this one is quality
+    // ACCOUNTABILITY. REUSES the existing care-coordination tier.
+    endpoint: "/api/agents/quality-attribution",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Attributes each patient to a provider / clinic / VBC contract under a defined methodology (plurality-of-visits, PCP-of-record, prospective Medicare Advantage, contract-defined window) and rolls up per-provider counts so downstream HEDIS scoring lands on the correct denominator — a care-coordination / quality-accountability agent, distinct from the HEDIS Quality agent (which computes the rates) and the Care Team / Credentialing agents",
+      "Attribution is DETERMINISTIC — a pure function of the visit history + contract terms + caller-provided asOfDate (no randomness, no clock; timestamps and windows are accepted as data); the same context always yields the same attribution + rollup, and every tie is broken by the documented tie-break chain",
+      "Every attribution must trace to a defined methodology (plurality-of-visits / pcp-of-record / prospective-medicare-advantage / contract-defined-window) AND a defined VBC contract on the illustrative catalog — a bespoke / off-catalog methodology or contract is blocked at the Agent Fabric governance boundary (policy.attribution.methodology-catalog-sourced), so the agent cannot fabricate a 'we-just-guessed' attribution rule",
+      "Every attribution must honor the VBC contract's explicit exclusion terms (age band, network status, exclusion codes) — an attribution that keeps a patient the contract EXCLUDES in the numerator/denominator is blocked (policy.attribution.no-conflicting-contract-terms), so a contract's scorecard is not polluted with patients the contract never covered",
+      "Every tie-break must be a documented, deterministic rule (most-recent-visit-wins, provider-ref-lexical-ascending) — an undocumented / opaque / coin-flip tie-break is blocked (policy.attribution.tie-break-documented); this turns tie-break resolution from a gameable non-determinism into a fabric-verifiable invariant",
+      "Runs against ILLUSTRATIVE synthetic methodology + contract + tie-break catalogs — clearly labeled; NOT CMS Shared Savings Program attribution, an ACO REACH prospective assignment, an NCQA HEDIS attribution appendix, or a real payer's VBC contract terms"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -1060,7 +1094,8 @@ const POLICIES: PolicyRecord[] = [
       "care-team-management-agent",
       "transitions-of-care-agent",
       "grievance-appeals-agent",
-      "provider-credentialing-agent"
+      "provider-credentialing-agent",
+      "quality-attribution-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1476,6 +1511,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "A provider directory record the Provider Credentialing & Directory Agent returns as AUTHORITATIVE must have a verifiedAsOf date within the No-Surprises-Act 90-day accuracy window from the caller's asOfDate — a stale directory record returned as authoritative is rejected before it can leave the fabric. The safe interim answer when the record is stale is to route the caller to a directory-refresh workflow, not return the same authoritative record. Mirrors the No-Surprises-Act directory-accuracy posture — a regulatory / patient-protection requirement enforced, not merely advised. (In the prototype the freshness window is a clearly-labeled illustrative synthetic; in production this is the customer's governed NSA compliance window.)",
     appliesTo: ["provider-credentialing-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.attribution.methodology-catalog-sourced",
+    name: "Attribution methodology + contract must trace to the catalog",
+    description:
+      "Every patient attribution the Quality-Measure Attribution Agent produces must trace to a defined attribution methodology on the ATTRIBUTION_METHODOLOGIES catalog (plurality-of-visits, PCP-of-record, prospective Medicare Advantage, contract-defined window) AND a defined VBC contract on the VBC_CONTRACTS catalog — a bespoke / off-catalog / 'we-just-guessed' methodology or contract is rejected before it can leave the fabric. Mirrors the HEDIS Agent's measure-catalog-sourced, the ACP Agent's directive-source-integrity, and the Credentialing Agent's source-integrity posture — an integrity property enforced, not merely advised. (In the prototype the methodology and contract catalogs are clearly-labeled illustrative synthetics; in production these are the customer's governed VBC methodology and contract libraries.)",
+    appliesTo: ["quality-attribution-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.attribution.no-conflicting-contract-terms",
+    name: "Attributions must honor the VBC contract's exclusion terms",
+    description:
+      "The Quality-Measure Attribution Agent may NEVER assert an in-numerator attribution against a patient whose VBC contract terms (age band, network status, exclusion code) EXCLUDE them — a caller-asserted excludedByContract:false on a patient the contract would actually exclude is rejected before it can leave the fabric. This closes the load-bearing failure of polluting a contract's scorecard with patients the contract never covered. The agent's own analysis correctly sets excludedByContract:true when the contract terms exclude a patient (downstream HEDIS scoring then drops that attribution from the denominator); this policy catches a caller who overrides the flag dishonestly.",
+    appliesTo: ["quality-attribution-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.attribution.tie-break-documented",
+    name: "Attribution tie-breaks must be documented and deterministic",
+    description:
+      "When an attribution methodology ties on its primary metric (e.g. two providers with equal primary-care visit counts under plurality-of-visits), the tie-break rule applied must be one of the DOCUMENTED_TIE_BREAKS (most-recent-visit-wins, then provider-ref-lexical-ascending) — a coin-flip / opaque / undocumented tie-break is rejected before it can leave the fabric. This turns tie-break resolution from a gameable non-determinism into a fabric-verifiable invariant. (In the prototype the documented tie-break rules are clearly-labeled illustrative synthetics; in production this is the customer's governed VBC attribution tie-break policy.)",
+    appliesTo: ["quality-attribution-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -4213,6 +4275,84 @@ function store(): FabricStore {
 // produces. Illustrative; not a certified credentialing / directory system.
 // Seed data; production populates the ring buffer from the persistent log
 // store.
+// Quality-Measure Attribution seed — a five-patient panel attribution with
+// a tie-break resolved by most-recent-visit-wins and one contract-excluded
+// attribution, mirroring the shape a live task produces. Illustrative; not
+// a certified attribution engine. Seed data; production populates the ring
+// buffer from the persistent log store.
+(function seedQualityAttributionTrace() {
+  const s = store();
+  const qa0 = Date.now() - 1000 * 60 * 1;
+  const qaTaskId = "task-seed-attribution-001";
+  const qaName = "Quality-Measure Attribution Agent";
+  s.traces.push(
+    {
+      id: "span-attribution-001",
+      taskId: qaTaskId,
+      agentId: "quality-attribution-agent",
+      agentName: qaName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(qa0).toISOString(),
+      finishedAt: new Date(qa0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-attribution-002",
+      taskId: qaTaskId,
+      parentSpanId: "span-attribution-001",
+      agentId: "quality-attribution-agent",
+      agentName: qaName,
+      operation: "attribution.attribute",
+      protocol: "a2a",
+      startedAt: new Date(qa0 + 40).toISOString(),
+      finishedAt: new Date(qa0 + 110).toISOString(),
+      durationMs: 70,
+      status: "ok",
+      attributes: {
+        panelSize: 5,
+        attributedCount: 4,
+        excludedByContractCount: 1,
+        tieBrokenCount: 1,
+        unattributableCount: 0,
+        // The load-bearing invariants: every methodology + contract traces
+        // to the catalog, every attribution honors contract terms, every
+        // tie-break is documented and deterministic.
+        attributionsTraceToCatalog: true,
+        attributionsHonorContractTerms: true,
+        attributionTieBreaksAreDocumented: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-attribution-003",
+      taskId: qaTaskId,
+      parentSpanId: "span-attribution-002",
+      agentId: "quality-attribution-agent",
+      agentName: qaName,
+      operation: "attribution.rollup",
+      protocol: "a2a",
+      startedAt: new Date(qa0 + 110).toISOString(),
+      finishedAt: new Date(qa0 + 160).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        providerCount: 4,
+        contractRef: "contract.commercial-vbc-my2026",
+        methodologyId: "methodology.plurality-of-visits",
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
 (function seedProviderCredentialingTrace() {
   const s = store();
   const pc0 = Date.now() - 1000 * 60 * 1;
