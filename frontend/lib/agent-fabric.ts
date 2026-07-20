@@ -1165,6 +1165,36 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "trial-payments-agent",
+    name: "Clinical Trial Payments & Stipends Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the trial-payments workflow: POST
+    // /api/agents/trial-payments/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) agent that pairs with the Clinical Trials
+    // Matching agent (which selects candidates) — this one handles the
+    // reimbursable/regulated PAYMENTS side. For each visit, it looks up
+    // the IRB-approved compensation schedule, verifies the participant
+    // has research-payment consent on file, computes the stipend + travel
+    // reimbursement, and routes non-standard payments (missed visit,
+    // out-of-range travel, extra procedure) to the study coordinator for
+    // cosign. NEVER autonomously deviates from an IRB-approved schedule.
+    // NEVER issues a payment without participant consent (45 CFR 46).
+    endpoint: "/api/agents/trial-payments",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Computes per-visit participant stipends and travel reimbursement against IRB-approved schedules; classifies each request as schedule-approved / pend-coordinator-review / blocked-no-consent with a specific reason code and routes non-standard payments to the study coordinator for cosign. Pairs with the Clinical Trials Matching agent (patient-to-trial matching) — this handles the payments side",
+      "Payment computation is DETERMINISTIC — a pure function of the trial protocol + visit type + participant consent + travel miles + IRB schedule (no randomness, no clock); the same context always yields the same decision + amounts + reason code, with a documented decision precedence (blocked-no-consent > pend-coordinator-review > schedule-approved) and stable rule-id ordering",
+      "Every payment must trace to the defined IRB-approved schedule catalog (trial + visit type + rule + reason code) — an off-catalog / ad-hoc payment is blocked at the Agent Fabric governance boundary (policy.trial-payments.schedule-catalog-sourced), so the agent cannot issue arbitrary compensation",
+      "The agent NEVER autonomously deviates from an IRB-approved schedule — every non-standard payment (missed visit, out-of-range travel, extra procedure) is DRAFTED for study-coordinator cosign, and any autonomous deviation is blocked (policy.trial-payments.no-autonomous-irb-deviation); autonomous IRB deviations are a research-ethics failure that could invalidate the study. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the Formulary Agent's no-autonomous-override, and the FWA Agent's no-autonomous-denial posture",
+      "No payment may be issued to a participant without research-payment informed consent on file — a payment approved without consent is blocked (policy.trial-payments.participant-consented), a Common Rule / 45 CFR 46 requirement. The safe answer when consent is missing is decision:'blocked-no-consent' with zero payment",
+      "Runs against ILLUSTRATIVE synthetic trial schedules + visit types + rules + reason codes — clearly labeled; NOT IRBNet, WCG IRB, Advarra IRB, an actual sponsor's payment protocol, or a certified trial-payments engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -1230,7 +1260,8 @@ const POLICIES: PolicyRecord[] = [
       "complex-care-management-agent",
       "claims-adjudication-agent",
       "formulary-review-agent",
-      "fwa-detection-agent"
+      "fwa-detection-agent",
+      "trial-payments-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1781,6 +1812,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Fraud, Waste & Abuse Detection Agent's pattern-detection engine may NEVER score on protected-class attributes (race, ethnicity, gender identity, religion, national origin, disability status, sexual orientation, marital status) or provider-demographic proxies (provider race/ethnicity, clinic-neighborhood race composition) — a factor list including any of these is rejected before it can leave the fabric. Bias in FWA is a well-documented compliance failure: multiple algorithmic-audit reports have found payer systems that disproportionately targeted minority-owned clinics, and the audit results led to consent decrees. Mirrors the Population Health Agent's no-protected-class-factors posture — a fairness / responsible-AI requirement, enforced not merely advised.",
     appliesTo: ["fwa-detection-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.trial-payments.schedule-catalog-sourced",
+    name: "Trial payments must trace to the IRB-approved schedule catalog",
+    description:
+      "Every clinical-trial payment the Trial Payments & Stipends Agent issues must trace to the defined TRIAL_PAYMENT_SCHEDULES catalog (trial + IRB approval ref) AND to a defined visit type on TRIAL_VISIT_TYPES AND to an applied rule on TRIAL_PAYMENT_RULES — an ad-hoc / off-catalog payment is rejected before it can leave the fabric. Mirrors the Claims Adjudication Agent's edit-catalog-sourced, the Formulary Agent's catalog-sourced, and the FWA Agent's pattern-catalog-sourced posture. (In the prototype the schedule catalog is a clearly-labeled illustrative synthetic; in production this is the sponsor's IRB-approved payment protocol.)",
+    appliesTo: ["trial-payments-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.trial-payments.no-autonomous-irb-deviation",
+    name: "No autonomous IRB deviation",
+    description:
+      "The Trial Payments & Stipends Agent may NEVER autonomously deviate from an IRB-approved payment schedule — every non-standard payment (missed visit, out-of-range travel, extra procedure) requires study-coordinator cosign. Every non-schedule-approved decision is requiresCoordinatorCosign:true / cosigned:false; a caller-asserted plan that claims cosigned:true or bypasses the cosign gate is rejected before it can leave the fabric. IRB deviations are a research-ethics failure that could invalidate the study. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the Formulary Agent's no-autonomous-override, and the FWA Agent's no-autonomous-denial posture.",
+    appliesTo: ["trial-payments-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.trial-payments.participant-consented",
+    name: "Trial payments require participant informed consent",
+    description:
+      "The Trial Payments & Stipends Agent may NEVER issue a payment to a participant whose research-payment informed consent is not on file (or has been withdrawn) — this is a Common Rule / 45 CFR 46 requirement. When consent is missing, the safe answer is decision:'blocked-no-consent' with zero payment; a payment approved without consent is rejected before it can leave the fabric. Payments to non-consented participants are a serious research-ethics violation.",
+    appliesTo: ["trial-payments-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -4540,6 +4598,85 @@ function store(): FabricStore {
 // FWA Detection seed — an impossible-day billing flag routed to SIU
 // priority queue. Illustrative; not certified FWA. Seed data; production
 // populates the ring buffer from the persistent log store.
+// Trial Payments seed — a schedule-approved standard treatment visit
+// stipend + travel. Illustrative; not certified trial payments. Seed data;
+// production populates the ring buffer from the persistent log store.
+(function seedTrialPaymentsTrace() {
+  const s = store();
+  const tp0 = Date.now() - 1000 * 60 * 1;
+  const tpTaskId = "task-seed-trial-payments-001";
+  const tpName = "Clinical Trial Payments & Stipends Agent";
+  s.traces.push(
+    {
+      id: "span-trial-payments-001",
+      taskId: tpTaskId,
+      agentId: "trial-payments-agent",
+      agentName: tpName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(tp0).toISOString(),
+      finishedAt: new Date(tp0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-trial-payments-002",
+      taskId: tpTaskId,
+      parentSpanId: "span-trial-payments-001",
+      agentId: "trial-payments-agent",
+      agentName: tpName,
+      operation: "trial-payments.evaluate-rules",
+      protocol: "a2a",
+      startedAt: new Date(tp0 + 40).toISOString(),
+      finishedAt: new Date(tp0 + 90).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        requestRef: "tp-req-2026-07-001",
+        participantRef: "participant-001",
+        trialId: "trial.mn-vasomotor-fezolinetant-p3",
+        appliedRuleCount: 1,
+        // The honesty invariants: every rule is catalog-sourced; participant
+        // consent is on file.
+        paymentsTraceToCatalog: true,
+        paymentHasParticipantConsent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-trial-payments-003",
+      taskId: tpTaskId,
+      parentSpanId: "span-trial-payments-002",
+      agentId: "trial-payments-agent",
+      agentName: tpName,
+      operation: "trial-payments.decide",
+      protocol: "a2a",
+      startedAt: new Date(tp0 + 90).toISOString(),
+      finishedAt: new Date(tp0 + 140).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        decision: "schedule-approved",
+        stipendAmountCents: 15000,
+        travelReimbursementCents: 840,
+        primaryReasonCode: "reason.TP-100",
+        routedTo: "schedule-auto-pay",
+        requiresCoordinatorCosign: false,
+        // The load-bearing invariant: schedule-approved decisions don't
+        // need cosign; non-schedule decisions ALWAYS do.
+        deviationRequiresCoordinatorCosign: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
 (function seedFwaDetectionTrace() {
   const s = store();
   const fw0 = Date.now() - 1000 * 60 * 1;

@@ -9,6 +9,7 @@ import { ProviderCredentialingPanel } from "../../../components/provider-credent
 import { ClaimsAdjudicationPanel } from "../../../components/claims-adjudication-panel";
 import { FormularyReviewPanel } from "../../../components/formulary-review-panel";
 import { FwaDetectionPanel } from "../../../components/fwa-detection-panel";
+import { TrialPaymentsPanel } from "../../../components/trial-payments-panel";
 import { ComplexCareManagementPanel } from "../../../components/complex-care-management-panel";
 import { QualityAttributionPanel } from "../../../components/quality-attribution-panel";
 import { TransitionsOfCarePanel } from "../../../components/transitions-of-care-panel";
@@ -122,6 +123,8 @@ export default function IntakeDemoPage() {
       <FormularyReviewPanel />
 
       <FwaDetectionPanel />
+
+      <TrialPaymentsPanel />
 
       <section className="demo-grid">
         <article className="card">
