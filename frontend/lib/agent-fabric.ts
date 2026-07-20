@@ -1100,6 +1100,38 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "formulary-review-agent",
+    name: "Formulary & Drug Utilization Review Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side formulary + DUR pipeline:
+    // POST /api/agents/formulary-review/tasks (card at /.well-known/
+    // agent.json). A DETERMINISTIC (no-Claude) agent that for a proposed
+    // medication looks up the payer's formulary tier, verifies step-therapy
+    // sequencing against documented prior-therapy history, applies quantity
+    // limits, and screens for drug-drug interactions — classifying each
+    // request as preferred-approved / pend-step-therapy / pend-quantity-
+    // limit / pend-interaction-review / pend-non-formulary. It NEVER
+    // autonomously overrides a formulary exception; every non-preferred
+    // decision is DRAFTED for clinician cosign. Menopause-relevant because
+    // HRT tier placement varies significantly by plan (transdermal
+    // estradiol is often Tier 2 or non-formulary). REUSES the existing
+    // care-coordination tier.
+    endpoint: "/api/agents/formulary-review",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Reviews a proposed medication against the payer's formulary — tier lookup, step-therapy sequencing, quantity limits, drug-drug interactions — and classifies as preferred-approved / pend-step-therapy / pend-quantity-limit / pend-interaction-review / pend-non-formulary with routing to a clinician (or pharmacist for interactions). Companion to the Prior Auth (broader UM), Medication Adherence (nudge-only refill), and Claims Adjudication (post-service) agents",
+      "Review is DETERMINISTIC — a pure function of the request + patient's prior-therapy + current-medication list + payer formulary catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same decision + applied rules + reason code, with a documented precedence (pend-non-formulary > pend-step-therapy > pend-interaction-review > pend-quantity-limit > preferred-approved)",
+      "Every proposed drug + applied rule + reason code must trace to the defined catalogs (FORMULARY_DRUG_CATALOG, FORMULARY_RULE_CATALOG, FORMULARY_REASON_CODE_CATALOG) — a fabricated drug or 'we-just-said-no' rule is blocked at the Agent Fabric governance boundary (policy.formulary.catalog-sourced)",
+      "Step therapy must be HONORED — when the plan requires a documented trial of a preferred agent, the agent verifies documented prior-therapy is on file before returning preferred-approved; approving on undocumented / self-reported history is blocked (policy.formulary.step-therapy-honored), a common payer-audit finding",
+      "The agent NEVER autonomously overrides a formulary exception — every non-preferred decision is DRAFTED for clinician cosign (requiresClinicianCosign:true, cosigned:false), and any autonomous override is blocked (policy.formulary.no-autonomous-override); formulary exceptions are legally consequential (Medicare Advantage Chapter 6 + Part D require a documented rationale from a prescriber). Mirrors the Claims Adjudication Agent's no-autonomous-denial, the PA Agent's no-autonomous-submission, and the CCM Agent's no-autonomous-billing posture",
+      "Runs against ILLUSTRATIVE synthetic drug catalog + rule catalog + reason-code catalog + step-therapy chains + interaction pairs — clearly labeled; NOT Medi-Span, First Databank, RxNorm, an actual payer's formulary file, or a certified DUR engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -1163,7 +1195,8 @@ const POLICIES: PolicyRecord[] = [
       "provider-credentialing-agent",
       "quality-attribution-agent",
       "complex-care-management-agent",
-      "claims-adjudication-agent"
+      "claims-adjudication-agent",
+      "formulary-review-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1660,6 +1693,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "Every non-clean-pay claim decision the Claims Adjudication Assistant returns must cite a specific reason code from the defined CLAIM_REASON_CODE_CATALOG (illustrative CO-97 unbundling / CO-50 LCD / CO-96 NCD / CO-119 benefit max / CO-197 no prior auth / CO-18 duplicate / CO-242 out-of-network / CO-29 timely filing) — a denial or pend with no reason code, or an off-catalog reason code, is rejected before it can leave the fabric. Under Section 1557 (non-discrimination), state insurance code, and CMS, a denial notice must state the specific reason — this policy enforces that at the fabric level. (In the prototype the reason-code catalog is a clearly-labeled illustrative synthetic; in production this is the customer's governed X12 CARC/RARC library.)",
     appliesTo: ["claims-adjudication-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.formulary.catalog-sourced",
+    name: "Formulary drugs + rules must trace to the catalog",
+    description:
+      "Every proposed drug + applied rule + reason code in a formulary review must trace to the defined catalogs (FORMULARY_DRUG_CATALOG, FORMULARY_RULE_CATALOG, FORMULARY_REASON_CODE_CATALOG) — a fabricated drug, a 'we-just-said-no' rule, or an off-catalog reason code is rejected before it can leave the fabric. Mirrors the Claims Adjudication Agent's edit-catalog-sourced, the ACP Agent's directive-source-integrity, the HEDIS Agent's measure-catalog-sourced, and the CCM Agent's eligibility-catalog-sourced posture. (In the prototype the formulary + rule catalogs are clearly-labeled illustrative synthetics; in production these are the customer's governed formulary file, DUR rules, and X12 CARC/RARC library.)",
+    appliesTo: ["formulary-review-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.formulary.step-therapy-honored",
+    name: "Step therapy must be honored with a documented prior-therapy trial",
+    description:
+      "When the plan requires step therapy for the proposed drug (a documented trial of a preferred agent before this non-preferred one), the Formulary & Drug Utilization Review Agent must verify DOCUMENTED prior-therapy history is on file — self-reported / undocumented / claimed-but-unverified therapy does NOT satisfy step therapy, and a decision approving on that basis is rejected before it can leave the fabric. Skipping step therapy or approving on undocumented history is a common payer-audit finding.",
+    appliesTo: ["formulary-review-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.formulary.no-autonomous-override",
+    name: "No autonomous formulary override / exception",
+    description:
+      "The Formulary & Drug Utilization Review Agent may NEVER autonomously override a formulary exception, non-preferred drug, or manual tier-lower — every non-preferred-approved decision is DRAFTED for clinician cosign (requiresClinicianCosign:true, cosigned:false); a caller-asserted plan that claims cosigned:true or bypasses the cosign gate is rejected before it can leave the fabric. Formulary exceptions are legally consequential (Medicare Advantage Chapter 6 + Part D require a documented rationale from a prescriber). Mirrors the Claims Adjudication Agent's no-autonomous-denial, the PA Agent's no-autonomous-submission, and the CCM Agent's no-autonomous-billing posture.",
+    appliesTo: ["formulary-review-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -4412,6 +4472,87 @@ function store(): FabricStore {
 // with CO-18, requires adjudicator cosign. Illustrative; not certified
 // adjudication. Seed data; production populates the ring buffer from the
 // persistent log store.
+// Formulary & DUR Review seed — a step-therapy pend for a Tier 2 estradiol
+// patch when no documented oral trial is on file. Illustrative; not
+// certified DUR. Seed data; production populates the ring buffer from the
+// persistent log store.
+(function seedFormularyReviewTrace() {
+  const s = store();
+  const fr0 = Date.now() - 1000 * 60 * 1;
+  const frTaskId = "task-seed-formulary-001";
+  const frName = "Formulary & Drug Utilization Review Agent";
+  s.traces.push(
+    {
+      id: "span-formulary-001",
+      taskId: frTaskId,
+      agentId: "formulary-review-agent",
+      agentName: frName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(fr0).toISOString(),
+      finishedAt: new Date(fr0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-formulary-002",
+      taskId: frTaskId,
+      parentSpanId: "span-formulary-001",
+      agentId: "formulary-review-agent",
+      agentName: frName,
+      operation: "formulary.evaluate-rules",
+      protocol: "a2a",
+      startedAt: new Date(fr0 + 40).toISOString(),
+      finishedAt: new Date(fr0 + 90).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        requestRef: "formulary-req-2026-07-002",
+        memberRef: "member-002",
+        proposedDrugId: "drug.estradiol-patch-0.05mg",
+        appliedRuleCount: 1,
+        // The honesty invariants: every rule + drug traces to the catalog.
+        // Step therapy is not honored here (self-reported only), which is
+        // WHY the decision is pend-step-therapy — the signal is trivially
+        // satisfied because the agent is NOT claiming step therapy.
+        rulesTraceToCatalog: true,
+        stepTherapyIsHonored: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-formulary-003",
+      taskId: frTaskId,
+      parentSpanId: "span-formulary-002",
+      agentId: "formulary-review-agent",
+      agentName: frName,
+      operation: "formulary.decide",
+      protocol: "a2a",
+      startedAt: new Date(fr0 + 90).toISOString(),
+      finishedAt: new Date(fr0 + 140).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        decision: "pend-step-therapy",
+        tier: "2",
+        primaryReasonCode: "reason.PF-200",
+        routedTo: "clinician-review",
+        requiresClinicianCosign: true,
+        // The load-bearing invariant: the decision requires clinician cosign
+        // for any non-preferred-approved outcome.
+        exceptionRequiresClinicianCosign: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
 (function seedClaimsAdjudicationTrace() {
   const s = store();
   const ca0 = Date.now() - 1000 * 60 * 1;

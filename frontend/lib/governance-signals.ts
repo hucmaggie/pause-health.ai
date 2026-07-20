@@ -122,6 +122,10 @@ export type GovernanceTask = {
   editsTraceToCatalog?: boolean;
   denialRequiresAdjudicatorCosign?: boolean;
   decisionsCiteReasonCodes?: boolean;
+  // Formulary & drug utilization review (catalog + step-therapy + no autonomous override)
+  rulesTraceToCatalog?: boolean;
+  stepTherapyIsHonored?: boolean;
+  exceptionRequiresClinicianCosign?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -707,6 +711,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A non-clean-pay decision doesn't cite a specific catalog reason code",
     reason:
       "A non-clean-pay claim decision (deny / pend) was returned without a specific catalog reason code, or with an off-catalog reason code; every non-clean-pay decision must cite a defined reason code from CLAIM_REASON_CODE_CATALOG — under Section 1557 / state insurance code / CMS, a denial notice must state the specific reason"
+  },
+  {
+    policyId: "policy.formulary.catalog-sourced",
+    signal: "rulesTraceToCatalog",
+    violatingValue: false,
+    violationHint: "A formulary drug or rule isn't on the defined catalog",
+    reason:
+      "A formulary review cited a drug outside FORMULARY_DRUG_CATALOG or a rule outside FORMULARY_RULE_CATALOG / off-catalog reason code; every proposed drug + applied rule + reason code must trace to the catalog — the agent may not fabricate a 'we-just-said-no' rule or claim a drug is on formulary when it isn't"
+  },
+  {
+    policyId: "policy.formulary.step-therapy-honored",
+    signal: "stepTherapyIsHonored",
+    violatingValue: false,
+    violationHint: "Step therapy is required but no documented prior-therapy trial is on file",
+    reason:
+      "The plan requires step therapy (a documented trial of a preferred agent) before the proposed drug, and no documented prior-therapy trial is on file (only self-reported / undocumented trials); step therapy must be honored — skipping it or approving on claimed-but-undocumented history is a common audit finding and payer-compliance failure"
+  },
+  {
+    policyId: "policy.formulary.no-autonomous-override",
+    signal: "exceptionRequiresClinicianCosign",
+    violatingValue: false,
+    violationHint: "Overrides a formulary exception without clinician cosign",
+    reason:
+      "Attempted to autonomously override a formulary exception, non-preferred drug, or manual tier-lower; a formulary exception is legally consequential (Medicare Advantage Chapter 6 + Part D requires a documented rationale from a prescriber) — every non-preferred decision must be DRAFTED for clinician cosign (requiresClinicianCosign:true, cosigned:false)"
   },
   {
     policyId: "policy.referral.clinician-cosign",
