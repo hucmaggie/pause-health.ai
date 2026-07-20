@@ -1227,6 +1227,35 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "provider-contracting-agent",
+    name: "Provider Contracting & VBC Terms Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the contracting workflow: POST
+    // /api/agents/provider-contracting/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) agent on the commercial-operations plane
+    // that classifies provider-network contracts, computes the VBC
+    // quality-gate + spend-benchmark for a reporting period, and drafts
+    // term-change proposals for account-owner cosign. Sits alongside the
+    // Quality-Measure Attribution agent (attribution) and HEDIS agent
+    // (scoring) — this one handles the CONTRACT ITSELF. NEVER autonomously
+    // commits a contract-term change; every draft is DRAFTED for a human
+    // account owner to sign off on.
+    endpoint: "/api/agents/provider-contracting",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Classifies a provider-network contract (fee-for-service, capitation, shared-savings, bundled-payment, MA-value-based, commercial-VBC), computes the VBC quality-gate + spend-benchmark drift for a caller-provided reporting period against a catalog methodology, and classifies as in-good-standing / benchmark-drift-review / draft-term-change / blocked-non-catalog-contract with a specific reason code",
+      "Contracting is DETERMINISTIC — a pure function of the request + catalog + caller-provided reporting-period (no randomness, no clock); the same context always yields the same decision + benchmark drift + quality-gate outcome + reason code, with a documented decision precedence (blocked-non-catalog-contract > draft-term-change > benchmark-drift-review > in-good-standing) and stable rule-id ordering",
+      "Every classified contract must trace to the CONTRACT_TYPES + BENCHMARK_METHODOLOGIES catalog with applied rules from CONTRACTING_RULES — an off-catalog / bespoke payment model is blocked at the Agent Fabric governance boundary (policy.contracting.contract-type-catalog-sourced), so the agent cannot invent a 'we-made-up-a-payment-model' contract",
+      "The agent NEVER autonomously commits a contract-term change (rate, quality-gate threshold, benchmark formula, network status) — every draft-term-change decision is DRAFTED for account-owner cosign, and any autonomous commit is blocked (policy.contracting.no-autonomous-term-change); a contract-term change is legally consequential under state insurance code, provider-contract law, and CMS Medicare Advantage. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the UR Agent's no-autonomous-denial, the Formulary Agent's no-autonomous-override, and the Account Management Agent's human-owner-before-contract-change posture",
+      "Every VBC contract's quality-gate threshold + spend-drift tolerance must trace to a defined BENCHMARK_METHODOLOGIES entry — a bespoke / opaque / 'we-picked-a-number' benchmark is blocked (policy.contracting.benchmark-methodology-catalog-sourced), because an opaque benchmark polluts every downstream shared-savings / bonus / clawback calculation",
+      "Runs against ILLUSTRATIVE synthetic contract-type catalog + methodology catalog + rules + reason codes — clearly labeled; NOT Salesforce Health Cloud Provider Network Management, Optum Contract Manager, an actual payer's contract-lifecycle system, or a certified VBC benchmarking engine. Because it operates on business-side contract terms rather than patient PHI, this agent lives on the commercial-operations plane (NOT patient-care)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "commercial-operations"
   }
 ];
 
@@ -2200,8 +2229,8 @@ const POLICIES: PolicyRecord[] = [
     id: "policy.commercial.no-phi-in-commercial-plane",
     name: "Commercial plane is PHI-free",
     description:
-      "Commercial-operations agents (pipeline, account management) run on Sales Cloud commercial data only. They may not read, join, or derive patient PHI — the commercial plane and the clinical/PHI plane are strictly separated, and any cross-plane read is blocked. (This is also why these agents are NOT on the HIPAA audit policy: they never touch PHI.)",
-    appliesTo: ["pipeline-management-agent", "account-management-agent"],
+      "Commercial-operations agents (pipeline, account management, provider contracting) run on Sales Cloud commercial data only. They may not read, join, or derive patient PHI — the commercial plane and the clinical/PHI plane are strictly separated, and any cross-plane read is blocked. (This is also why these agents are NOT on the HIPAA audit policy: they never touch PHI.)",
+    appliesTo: ["pipeline-management-agent", "account-management-agent", "provider-contracting-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -2220,6 +2249,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "No renewal, pricing, or contract change is committed without a human account owner's approval. The agent drafts and recommends; a person commits.",
     appliesTo: ["account-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.contracting.contract-type-catalog-sourced",
+    name: "Provider contracts must trace to the contract-type catalog",
+    description:
+      "Every classified provider-network contract the Provider Contracting Agent decides on must trace to the defined CONTRACT_TYPES catalog (fee-for-service, capitation, shared-savings, bundled-payment, MA-value-based, commercial-VBC), the BENCHMARK_METHODOLOGIES catalog for VBC methodologies, and applied rules from CONTRACTING_RULES with reason codes from CONTRACTING_REASON_CODES — an off-catalog / bespoke payment model is rejected before it can leave the fabric. Mirrors the Claims Adjudication Agent's edit-catalog-sourced, the Formulary Agent's catalog-sourced, the FWA Agent's pattern-catalog-sourced, the Trial Payments Agent's schedule-catalog-sourced, and the UR Agent's criteria-catalog-sourced posture.",
+    appliesTo: ["provider-contracting-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.contracting.no-autonomous-term-change",
+    name: "No autonomous contract-term change — account-owner cosign required",
+    description:
+      "The Provider Contracting Agent may NEVER autonomously commit a contract-term change (rate, quality-gate threshold, benchmark formula, network status) — every draft-term-change decision requires account-owner cosign. Every draft-term-change decision is requiresAccountOwnerCosign:true / cosigned:false; a caller-asserted plan that claims cosigned:true or bypasses the cosign gate is rejected before it can leave the fabric. A contract-term change is legally consequential under state insurance code, provider-contract law, and CMS Medicare Advantage. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the UR Agent's no-autonomous-denial, the Formulary Agent's no-autonomous-override, the FWA Agent's no-autonomous-denial, the Trial Payments Agent's no-autonomous-irb-deviation, and the Account Management Agent's human-owner-before-contract-change posture.",
+    appliesTo: ["provider-contracting-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.contracting.benchmark-methodology-catalog-sourced",
+    name: "VBC benchmarks must trace to the methodology catalog",
+    description:
+      "Every VBC contract's quality-gate threshold and spend-drift tolerance must trace to a defined BENCHMARK_METHODOLOGIES catalog entry (methodology.mssp-shared-savings-my2026, methodology.ma-star-vbc-my2026, methodology.commercial-vbc-my2026, methodology.bundled-episode-flat-benchmark) — a bespoke / opaque / 'we-picked-a-number' benchmark is rejected before it can leave the fabric. An opaque benchmark polluts every downstream shared-savings / bonus / clawback calculation. Mirrors the Quality-Measure Attribution Agent's methodology-catalog-sourced posture.",
+    appliesTo: ["provider-contracting-agent"],
     enforcement: "block",
     status: "enforced"
   }
@@ -4811,6 +4867,89 @@ function store(): FabricStore {
         // clinician cosign — the agent never autonomously denies.
         denialRequiresClinicianCosign: true,
         phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+// Provider Contracting seed — a shared-savings contract with quality-gate
+// missed, routed to account-manager drift review. Illustrative; not
+// certified contracting. Seed data; production populates the ring buffer
+// from the persistent log store. On the commercial plane — no PHI.
+(function seedProviderContractingTrace() {
+  const s = store();
+  const pc0 = Date.now() - 1000 * 60 * 1;
+  const pcTaskId = "task-seed-provider-contracting-001";
+  const pcName = "Provider Contracting & VBC Terms Agent";
+  s.traces.push(
+    {
+      id: "span-provider-contracting-001",
+      taskId: pcTaskId,
+      agentId: "provider-contracting-agent",
+      agentName: pcName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(pc0).toISOString(),
+      finishedAt: new Date(pc0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        // Commercial plane — no PHI accessed.
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-provider-contracting-002",
+      taskId: pcTaskId,
+      parentSpanId: "span-provider-contracting-001",
+      agentId: "provider-contracting-agent",
+      agentName: pcName,
+      operation: "provider-contracting.evaluate-rules",
+      protocol: "a2a",
+      startedAt: new Date(pc0 + 40).toISOString(),
+      finishedAt: new Date(pc0 + 90).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        requestRef: "pc-req-2026-07-002",
+        providerRef: "provider-002",
+        contractRef: "contract-002",
+        contractTypeId: "contract-type.shared-savings",
+        methodologyId: "methodology.mssp-shared-savings-my2026",
+        appliedRuleCount: 1,
+        // The honesty invariants: every rule is catalog-sourced; benchmark
+        // traces to the methodology catalog.
+        contractsTraceToCatalog: true,
+        benchmarksTraceToMethodology: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-provider-contracting-003",
+      taskId: pcTaskId,
+      parentSpanId: "span-provider-contracting-002",
+      agentId: "provider-contracting-agent",
+      agentName: pcName,
+      operation: "provider-contracting.decide",
+      protocol: "a2a",
+      startedAt: new Date(pc0 + 90).toISOString(),
+      finishedAt: new Date(pc0 + 140).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        decision: "benchmark-drift-review",
+        primaryReasonCode: "reason.PC-200",
+        routedTo: "account-manager-drift-review",
+        qualityGateMet: false,
+        requiresAccountOwnerCosign: false,
+        // The load-bearing invariant: draft-term-change decisions ALWAYS
+        // require account-owner cosign — the agent never autonomously
+        // commits a contract-term change.
+        contractChangeRequiresOwnerCosign: true,
+        phiAccessed: false,
         synthetic: true
       }
     }

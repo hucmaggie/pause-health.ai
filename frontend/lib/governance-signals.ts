@@ -138,6 +138,10 @@ export type GovernanceTask = {
   criteriaTraceToCatalog?: boolean;
   denialRequiresClinicianCosign?: boolean;
   slaTracesToCatalog?: boolean;
+  // Provider contracting (contract-type catalog + owner cosign + benchmark methodology)
+  contractsTraceToCatalog?: boolean;
+  contractChangeRequiresOwnerCosign?: boolean;
+  benchmarksTraceToMethodology?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -819,6 +823,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "SLA deadline doesn't trace to urgency catalog + received date, or was silently extended",
     reason:
       "A UR case SLA deadline did not trace to the catalog urgency window (standard 72h, urgent 24h, concurrent-review 24h) applied against the received asOfDate, or was silently extended past the regulatory maximum; every UR case deadline must trace to catalog + received date — silently extending a UR deadline breaches Medicare Advantage Chapter 4 / state UR-agent timelines, mirroring the Grievance & Appeals agent's deadline-integrity guard"
+  },
+  {
+    policyId: "policy.contracting.contract-type-catalog-sourced",
+    signal: "contractsTraceToCatalog",
+    violatingValue: false,
+    violationHint: "A contract cites an off-catalog contract type / methodology / rule / reason code",
+    reason:
+      "A provider-contracting decision cited a contract type outside CONTRACT_TYPES, a methodology outside BENCHMARK_METHODOLOGIES, an applied rule outside CONTRACTING_RULES, or a reason code outside CONTRACTING_REASON_CODES — every classified contract must trace to the catalog; a bespoke / off-catalog payment model would pollute every downstream benchmarking calculation"
+  },
+  {
+    policyId: "policy.contracting.no-autonomous-term-change",
+    signal: "contractChangeRequiresOwnerCosign",
+    violatingValue: false,
+    violationHint: "Commits a contract-term change without account-owner cosign",
+    reason:
+      "Attempted to autonomously commit a contract-term change (rate, quality-gate threshold, benchmark formula, network status) without account-owner cosign; every draft-term-change decision must be requiresAccountOwnerCosign:true / cosigned:false — a contract-term change is legally consequential under state insurance code + provider-contract law + CMS Medicare Advantage and requires a human account owner sign-off. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the UR Agent's no-autonomous-denial, the Formulary Agent's no-autonomous-override, and the Account Management Agent's human-owner-before-contract-change posture"
+  },
+  {
+    policyId: "policy.contracting.benchmark-methodology-catalog-sourced",
+    signal: "benchmarksTraceToMethodology",
+    violatingValue: false,
+    violationHint: "Quality-gate threshold or spend-drift tolerance doesn't trace to the methodology catalog",
+    reason:
+      "A provider contract's quality-gate threshold or spend-drift tolerance did not trace to the defined BENCHMARK_METHODOLOGIES catalog for the cited methodology id; every VBC contract must derive its quality gate + spend-drift tolerance from a catalog methodology — a bespoke / opaque / 'we-picked-a-number' benchmark polluts every downstream shared-savings / bonus / clawback calculation"
   },
   {
     policyId: "policy.referral.clinician-cosign",
