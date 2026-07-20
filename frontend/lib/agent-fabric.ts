@@ -1195,6 +1195,38 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "utilization-review-agent",
+    name: "Utilization Review Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the utilization-review workflow: POST
+    // /api/agents/utilization-review/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) agent that runs the PRE-SERVICE medical-
+    // necessity screen against catalog criteria sets (MCG-analog /
+    // InterQual-analog) for a proposed procedure or inpatient admission,
+    // classifies as approves-meets-criteria / pend-for-clinical-review /
+    // require-peer-to-peer / blocked-non-covered, and routes non-approved
+    // cases to a clinical reviewer or peer-to-peer with a catalog-sourced
+    // SLA deadline. NEVER autonomously denies — every non-approved decision
+    // is DRAFTED for clinician cosign. Distinct from Prior Authorization
+    // (which assembles a clinician-gated PA package) and Claims
+    // Adjudication (post-service mechanical edits): this is pre-service
+    // medical necessity.
+    endpoint: "/api/agents/utilization-review",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Screens each proposed procedure / inpatient admission against catalog medical-necessity criteria and classifies as approves-meets-criteria / pend-for-clinical-review / require-peer-to-peer / blocked-non-covered with a specific reason code; routes non-approved cases to a clinical reviewer or peer-to-peer with a catalog-sourced SLA deadline (standard 72h, urgent 24h, concurrent-review 24h). Pairs with Prior Authorization (assembly), Claims Adjudication (post-service edits), and Grievance & Appeals (post-denial intake)",
+      "Screening is DETERMINISTIC — a pure function of the request + criteria evidence + urgency + catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same decision + criteria-met/missing lists + primary reason + SLA deadline, with a documented decision precedence (blocked-non-covered > require-peer-to-peer > pend-for-clinical-review > approves-meets-criteria) and stable rule-id ordering",
+      "Every applied criterion + rule + reason code must trace to the defined UR criteria catalog (service type + criteria set + rule + reason) — a fabricated / off-catalog 'we-just-decided-you-don't-need-it' criterion is blocked at the Agent Fabric governance boundary (policy.ur.criteria-catalog-sourced), so the agent cannot invent medical-necessity requirements",
+      "The agent NEVER autonomously denies a UR case — every non-approved decision is DRAFTED for clinician cosign, and any autonomous denial is blocked (policy.ur.no-autonomous-denial); UR denial letters are legally consequential under Medicare Advantage / state utilization-review-agent codes with notice + due-process rights, and denying medical necessity on the agent's own authority is a Section 1557 / state-code violation. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the Formulary Agent's no-autonomous-override, the FWA Agent's no-autonomous-denial, and the Trial Payments Agent's no-autonomous-irb-deviation posture",
+      "Every UR case has a catalog-sourced regulatory SLA deadline that traces to urgency + received asOfDate — a silently-extended deadline is blocked (policy.ur.sla-integrity); silently extending a UR deadline breaches Medicare Advantage Chapter 4 / state UR-agent timelines. Mirrors the Grievance & Appeals Agent's deadline-integrity posture",
+      "Runs against ILLUSTRATIVE synthetic service-type + criteria + rules + reason codes + SLA windows — clearly labeled; NOT MCG (Milliman Care Guidelines / Indicia), InterQual, an actual payer's UR rule set, or a certified medical-necessity engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -1261,7 +1293,8 @@ const POLICIES: PolicyRecord[] = [
       "claims-adjudication-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
-      "trial-payments-agent"
+      "trial-payments-agent",
+      "utilization-review-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1839,6 +1872,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Trial Payments & Stipends Agent may NEVER issue a payment to a participant whose research-payment informed consent is not on file (or has been withdrawn) — this is a Common Rule / 45 CFR 46 requirement. When consent is missing, the safe answer is decision:'blocked-no-consent' with zero payment; a payment approved without consent is rejected before it can leave the fabric. Payments to non-consented participants are a serious research-ethics violation.",
     appliesTo: ["trial-payments-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.ur.criteria-catalog-sourced",
+    name: "UR decisions must trace to the criteria catalog",
+    description:
+      "Every utilization-review decision the Utilization Review Agent issues must trace to the defined UR_SERVICE_TYPES catalog (service type + criteria set) AND to applied rules on UR_RULES AND to reason codes on UR_REASON_CODES — an off-catalog / ad-hoc / fabricated criterion or rule is rejected before it can leave the fabric. Mirrors the Claims Adjudication Agent's edit-catalog-sourced, the Formulary Agent's catalog-sourced, the FWA Agent's pattern-catalog-sourced, and the Trial Payments Agent's schedule-catalog-sourced posture. (In the prototype the criteria catalog is a clearly-labeled illustrative synthetic; in production this is the customer's licensed MCG / InterQual criteria set — the agent may not invent medical-necessity requirements.)",
+    appliesTo: ["utilization-review-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.ur.no-autonomous-denial",
+    name: "No autonomous UR denial — clinician cosign required",
+    description:
+      "The Utilization Review Agent may NEVER autonomously finalize a non-approved decision — every pend-for-clinical-review or require-peer-to-peer decision requires clinician cosign. Every non-approved decision is requiresClinicianCosign:true / cosigned:false; a caller-asserted plan that claims cosigned:true or bypasses the cosign gate is rejected before it can leave the fabric. UR denial letters are legally consequential under Medicare Advantage / state utilization-review-agent codes with notice + due-process rights, and denying medical necessity on the agent's own authority is a Section 1557 / state-code violation. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the Formulary Agent's no-autonomous-override, the FWA Agent's no-autonomous-denial, and the Trial Payments Agent's no-autonomous-irb-deviation posture.",
+    appliesTo: ["utilization-review-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.ur.sla-integrity",
+    name: "UR SLA deadlines must trace to the urgency catalog + received date",
+    description:
+      "Every Utilization Review case deadline must trace to the catalog urgency window (standard 72h, urgent 24h, concurrent-review 24h) applied against the received asOfDate — a deadline that doesn't match the catalog OR one that has been silently extended past the regulatory maximum is rejected before it can leave the fabric. Silently extending a UR deadline breaches Medicare Advantage Chapter 4 / state utilization-review-agent timelines. Mirrors the Grievance & Appeals Agent's deadline-integrity posture.",
+    appliesTo: ["utilization-review-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -4670,6 +4730,86 @@ function store(): FabricStore {
         // The load-bearing invariant: schedule-approved decisions don't
         // need cosign; non-schedule decisions ALWAYS do.
         deviationRequiresCoordinatorCosign: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+// Utilization Review seed — a hysterectomy request with a missing first-line
+// criterion, pend-for-clinical-review with UR-200 and a 72h standard SLA.
+// Illustrative; not certified UR. Seed data; production populates the ring
+// buffer from the persistent log store.
+(function seedUtilizationReviewTrace() {
+  const s = store();
+  const ur0 = Date.now() - 1000 * 60 * 1;
+  const urTaskId = "task-seed-utilization-review-001";
+  const urName = "Utilization Review Agent";
+  s.traces.push(
+    {
+      id: "span-utilization-review-001",
+      taskId: urTaskId,
+      agentId: "utilization-review-agent",
+      agentName: urName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ur0).toISOString(),
+      finishedAt: new Date(ur0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-utilization-review-002",
+      taskId: urTaskId,
+      parentSpanId: "span-utilization-review-001",
+      agentId: "utilization-review-agent",
+      agentName: urName,
+      operation: "utilization-review.evaluate-criteria",
+      protocol: "a2a",
+      startedAt: new Date(ur0 + 40).toISOString(),
+      finishedAt: new Date(ur0 + 90).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        requestRef: "ur-req-2026-07-002",
+        memberRef: "member-002",
+        serviceTypeId: "service.hysterectomy-abnormal-bleeding",
+        appliedRuleCount: 2,
+        criteriaMissingCount: 1,
+        // The honesty invariants: every criterion + rule is catalog-sourced;
+        // the SLA deadline traces to the catalog urgency window.
+        criteriaTraceToCatalog: true,
+        slaTracesToCatalog: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-utilization-review-003",
+      taskId: urTaskId,
+      parentSpanId: "span-utilization-review-002",
+      agentId: "utilization-review-agent",
+      agentName: urName,
+      operation: "utilization-review.decide",
+      protocol: "a2a",
+      startedAt: new Date(ur0 + 90).toISOString(),
+      finishedAt: new Date(ur0 + 140).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        decision: "pend-for-clinical-review",
+        primaryReasonCode: "reason.UR-200",
+        routedTo: "clinical-reviewer-queue",
+        slaWindowHours: 72,
+        requiresClinicianCosign: true,
+        // The load-bearing invariant: non-approved decisions ALWAYS require
+        // clinician cosign — the agent never autonomously denies.
+        denialRequiresClinicianCosign: true,
         phiAccessed: true,
         synthetic: true
       }
