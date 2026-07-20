@@ -118,6 +118,10 @@ export type GovernanceTask = {
   eligibilityTracesToCatalog?: boolean;
   billingRequiresHumanApproval?: boolean;
   timeEntriesAddUp?: boolean;
+  // Claims adjudication (edit-catalog + adjudicator-cosign + reason-code integrity)
+  editsTraceToCatalog?: boolean;
+  denialRequiresAdjudicatorCosign?: boolean;
+  decisionsCiteReasonCodes?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -679,6 +683,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "CCM time entries don't sum to the reported total, or a logged minute cites an off-catalog activity",
     reason:
       "A CCM time report failed integrity: either the per-activity entries did not sum to the reported total (phantom minutes — the classic CCM audit finding) or a logged minute cited an activity outside the defined CCM_ACTIVITY_CATALOG; every minute must trace to a catalog activity and the total must equal the sum of the entries"
+  },
+  {
+    policyId: "policy.claims.edit-catalog-sourced",
+    signal: "editsTraceToCatalog",
+    violatingValue: false,
+    violationHint: "An applied claim edit is not on the defined edit catalog",
+    reason:
+      "An applied claim edit did not trace to the defined CLAIM_EDIT_CATALOG (NCCI-PTP unbundling, LCD/NCD coverage, benefit-limit exhaustion, prior-auth missing, duplicate submission, out-of-network, timely-filing-window); every edit must be catalog-sourced — the agent may not fabricate a bespoke 'you owe us more' edit"
+  },
+  {
+    policyId: "policy.claims.no-autonomous-denial",
+    signal: "denialRequiresAdjudicatorCosign",
+    violatingValue: false,
+    violationHint: "Denies a claim without an adjudicator cosign",
+    reason:
+      "Attempted to autonomously finalize a claim denial (or bypass the adjudicator cosign gate); every denial must be DRAFTED for an adjudicator to cosign (requiresAdjudicatorCosign:true, cosigned:false) — a denial letter is legally consequential under CMS / ERISA / state insurance code and must have a human sign-off"
+  },
+  {
+    policyId: "policy.claims.reason-code-integrity",
+    signal: "decisionsCiteReasonCodes",
+    violatingValue: false,
+    violationHint: "A non-clean-pay decision doesn't cite a specific catalog reason code",
+    reason:
+      "A non-clean-pay claim decision (deny / pend) was returned without a specific catalog reason code, or with an off-catalog reason code; every non-clean-pay decision must cite a defined reason code from CLAIM_REASON_CODE_CATALOG — under Section 1557 / state insurance code / CMS, a denial notice must state the specific reason"
   },
   {
     policyId: "policy.referral.clinician-cosign",

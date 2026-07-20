@@ -1066,6 +1066,40 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "claims-adjudication-agent",
+    name: "Claims Adjudication Assistant Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side first-pass claims-
+    // adjudication piece: POST /api/agents/claims-adjudication/tasks (card
+    // at /.well-known/agent.json). A DETERMINISTIC (no-Claude) agent for a
+    // health-plan / TPA — it applies payer-specific claim edits (NCCI/PTP
+    // unbundling, LCD/NCD coverage, benefit limits, prior-auth linkage,
+    // duplicates, network, timely-filing), classifies each claim as
+    // clean-pay / pend-clinical-review / pend-adjudicator-review / deny-
+    // drafted with a specific catalog reason code, and routes anything non-
+    // clean to a human. It NEVER autonomously denies a claim; every denial
+    // is DRAFTED for adjudicator cosign. It is distinct from the Prior
+    // Authorization agent (pre-service utilization management), the
+    // Member Service / Billing agent (member-facing self-service), and the
+    // Grievance & Appeals agent (post-denial intake) — this one is the
+    // FIRST-PASS PAYER-SIDE adjudicator. REUSES the existing care-
+    // coordination tier.
+    endpoint: "/api/agents/claims-adjudication",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Applies payer-specific first-pass claim edits (NCCI-PTP unbundling, LCD/NCD coverage, benefit-limit exhaustion, prior-auth missing, duplicate submission, out-of-network, timely-filing) and classifies each claim as clean-pay / pend-clinical-review / pend-adjudicator-review / deny-drafted with a specific catalog reason code — a first-pass payer-side adjudicator, distinct from Prior Auth (pre-service), Member Service (billing self-service), and Grievance & Appeals (post-denial intake)",
+      "Adjudication is DETERMINISTIC — a pure function of the claim + member benefits + edit catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same decision + applied edits + reason code, with a documented decision precedence (deny > pend-clinical > pend-adjudicator > clean-pay) and stable edit-id ordering",
+      "Every applied edit must trace to the defined CLAIM_EDIT_CATALOG — an off-catalog / fabricated edit is blocked at the Agent Fabric governance boundary (policy.claims.edit-catalog-sourced), so the agent cannot invent a bespoke 'you owe us more' edit",
+      "The agent NEVER autonomously finalizes a denial — every denial is DRAFTED for adjudicator cosign (requiresAdjudicatorCosign:true, cosigned:false), and any autonomous denial is blocked (policy.claims.no-autonomous-denial); denial letters are legally consequential under CMS / ERISA / state insurance code and must have a human sign-off. Mirrors the PA Agent's no-autonomous-submission, the HEDIS Agent's no-autonomous-submission, and the CCM Agent's no-autonomous-billing posture",
+      "Every non-clean-pay decision must cite a specific catalog reason code (CLAIM_REASON_CODE_CATALOG — illustrative CO-97 / CO-50 / CO-96 / CO-119 / CO-197 / CO-18 / CO-242 / CO-29 style) — a denial or pend without a stated reason code is blocked (policy.claims.reason-code-integrity); under Section 1557 / state insurance code / CMS, a denial notice must state the specific reason",
+      "Runs against ILLUSTRATIVE synthetic edit catalog + reason-code catalog + benefit-rule shape — clearly labeled; NOT CMS X12 837 claim spec, an NCCI PTP edit table, an LCD/NCD medical-necessity registry, or a real payer's benefit configuration"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -1128,7 +1162,8 @@ const POLICIES: PolicyRecord[] = [
       "grievance-appeals-agent",
       "provider-credentialing-agent",
       "quality-attribution-agent",
-      "complex-care-management-agent"
+      "complex-care-management-agent",
+      "claims-adjudication-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1598,6 +1633,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "Every logged CCM minute the Complex Care Management Agent tracks must trace to a defined activity on CCM_ACTIVITY_CATALOG (medication reconciliation, care-plan update, patient communication, referral follow-up, care-team coordination, patient education, resource navigation) — an off-catalog activity is rejected — AND the reported monthly total must equal the sum of the per-entry minutes. Phantom-minute inflation is the classic CCM audit finding this guard closes. (In the prototype the CCM activity catalog is a clearly-labeled illustrative synthetic; in production this is the customer's governed CMS-aligned care-coordination activity list.)",
     appliesTo: ["complex-care-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.claims.edit-catalog-sourced",
+    name: "Claim edits must trace to the edit catalog",
+    description:
+      "Every claim edit the Claims Adjudication Assistant applies must cite one of the defined CLAIM_EDIT_CATALOG entries (NCCI-PTP unbundling, LCD coverage, NCD coverage, benefit-limit exhausted, prior-auth missing, duplicate submission, out-of-network, timely-filing-window) — an off-catalog / fabricated 'you owe us more' edit is rejected before it can leave the fabric. Mirrors the ACP Agent's directive-source-integrity, the HEDIS Agent's measure-catalog-sourced, the Credentialing Agent's source-integrity, the Attribution Agent's methodology-catalog-sourced, and the CCM Agent's eligibility-catalog-sourced posture — an integrity property enforced, not merely advised. (In the prototype the edit catalog is a clearly-labeled illustrative synthetic; in production this is the customer's governed NCCI / LCD / NCD / benefit-config policy.)",
+    appliesTo: ["claims-adjudication-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.claims.no-autonomous-denial",
+    name: "No autonomous claim denial",
+    description:
+      "The Claims Adjudication Assistant may NEVER autonomously finalize a claim denial — every denial is DRAFTED for adjudicator cosign. Every deny-drafted decision the agent produces is requiresAdjudicatorCosign:true / cosigned:false; a caller-asserted plan that claims cosigned:true or bypasses the cosign gate is rejected before it can leave the fabric. Denial letters are legally consequential under CMS / ERISA / state insurance code — a member is entitled to a written notice with appeal rights, which then goes to the Grievance & Appeals agent (the intake side). Mirrors the PA Agent's no-autonomous-submission, the HEDIS Agent's no-autonomous-submission, and the CCM Agent's no-autonomous-billing posture.",
+    appliesTo: ["claims-adjudication-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.claims.reason-code-integrity",
+    name: "Claim decisions must cite a specific catalog reason code",
+    description:
+      "Every non-clean-pay claim decision the Claims Adjudication Assistant returns must cite a specific reason code from the defined CLAIM_REASON_CODE_CATALOG (illustrative CO-97 unbundling / CO-50 LCD / CO-96 NCD / CO-119 benefit max / CO-197 no prior auth / CO-18 duplicate / CO-242 out-of-network / CO-29 timely filing) — a denial or pend with no reason code, or an off-catalog reason code, is rejected before it can leave the fabric. Under Section 1557 (non-discrimination), state insurance code, and CMS, a denial notice must state the specific reason — this policy enforces that at the fabric level. (In the prototype the reason-code catalog is a clearly-labeled illustrative synthetic; in production this is the customer's governed X12 CARC/RARC library.)",
+    appliesTo: ["claims-adjudication-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -4346,6 +4408,82 @@ function store(): FabricStore {
 // mirroring the shape a live task produces. Illustrative; not a certified
 // CCM billing engine. Seed data; production populates the ring buffer from
 // the persistent log store.
+// Claims Adjudication seed — a duplicate-submission claim → deny-drafted
+// with CO-18, requires adjudicator cosign. Illustrative; not certified
+// adjudication. Seed data; production populates the ring buffer from the
+// persistent log store.
+(function seedClaimsAdjudicationTrace() {
+  const s = store();
+  const ca0 = Date.now() - 1000 * 60 * 1;
+  const caTaskId = "task-seed-claims-001";
+  const caName = "Claims Adjudication Assistant Agent";
+  s.traces.push(
+    {
+      id: "span-claims-001",
+      taskId: caTaskId,
+      agentId: "claims-adjudication-agent",
+      agentName: caName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ca0).toISOString(),
+      finishedAt: new Date(ca0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-claims-002",
+      taskId: caTaskId,
+      parentSpanId: "span-claims-001",
+      agentId: "claims-adjudication-agent",
+      agentName: caName,
+      operation: "claims.evaluate-edits",
+      protocol: "a2a",
+      startedAt: new Date(ca0 + 40).toISOString(),
+      finishedAt: new Date(ca0 + 90).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        claimRef: "claim-2026-07-002",
+        memberRef: "member-001",
+        appliedEditCount: 1,
+        // The honesty invariant: every applied edit traces to the catalog.
+        editsTraceToCatalog: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-claims-003",
+      taskId: caTaskId,
+      parentSpanId: "span-claims-002",
+      agentId: "claims-adjudication-agent",
+      agentName: caName,
+      operation: "claims.decide",
+      protocol: "a2a",
+      startedAt: new Date(ca0 + 90).toISOString(),
+      finishedAt: new Date(ca0 + 140).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        decision: "deny-drafted",
+        primaryReasonCode: "reason.CO-18",
+        routedTo: "adjudicator",
+        requiresAdjudicatorCosign: true,
+        // The load-bearing invariants: the denial requires adjudicator
+        // cosign and cites a catalog reason code.
+        denialRequiresAdjudicatorCosign: true,
+        decisionsCiteReasonCodes: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
 (function seedComplexCareManagementTrace() {
   const s = store();
   const cc0 = Date.now() - 1000 * 60 * 1;
