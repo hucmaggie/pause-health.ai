@@ -963,6 +963,43 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "patient-facing"
+  },
+  {
+    id: "provider-credentialing-agent",
+    name: "Provider Credentialing & Directory Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for a network-integrity agent: POST
+    // /api/agents/provider-credentialing/tasks (card at /.well-known/
+    // agent.json). A DETERMINISTIC (no-Claude) agent that verifies a
+    // provider's credentialing status (state license, DEA, board cert,
+    // sanctions clearance, NPI) against approved verification sources,
+    // maintains the (illustrative) directory profile, and gates every
+    // referral / scheduling attempt at the network boundary — a referral
+    // to an expired / incomplete / sanctioned provider is blocked here,
+    // and a directory response past the No-Surprises-Act freshness window
+    // is not returned as authoritative. It sits alongside the data
+    // substrate (MuleSoft integration + Data 360 grounding) — the
+    // Referral Management, Appointment Scheduling, and Transitions of
+    // Care agents can consult this agent for a deterministic yes/no
+    // before they hand off. Distinct from every clinical / member-facing
+    // agent — this is NETWORK integrity. The catalog, verification
+    // sources, NSA freshness window (90 days), and directory schema are
+    // ILLUSTRATIVE synthetics, NOT NCQA / CAQH credentialing, a real
+    // state-medical-board API, or an OIG-LEIE sanction feed.
+    endpoint: "/api/agents/provider-credentialing",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Verifies a provider's credentialing status (state license, DEA, board certification, sanctions clearance, NPI) against approved verification sources, maintains the directory profile, and emits gate flags (canReferPatient / canBookAppointment / canReturnInDirectoryResponse) the Referral Management, Appointment Scheduling, and Transitions of Care agents can consult before handing off — a network-integrity agent, distinct from every clinical / member-facing agent",
+      "Verification is DETERMINISTIC — a pure function of the credentials + directory profile + caller-provided asOfDate (no randomness, no clock; timestamps are accepted as data); the same context always yields the same status (verified / incomplete / expired / sanctioned) + gate flags, with a stable, documented precedence (sanctioned > incomplete > expired > verified)",
+      "Every credential on file must cite an approved verification source (state-medical-board, dea-registry, abms-board, oig-leie-sanctions, npi-registry) with a recorded verifiedOn date — an unapproved / self-reported / verbal / undocumented source is blocked at the Agent Fabric governance boundary (policy.credentialing.source-integrity), so the agent cannot fabricate a 'verified' status from a hand-typed claim",
+      "The fabric NEVER hands a referral or scheduled appointment to a provider whose status is expired / incomplete / sanctioned — a referral or scheduling call for such a provider is blocked (policy.credentialing.no-referral-to-expired-or-sanctioned); this is where the ghost-network problem gets fixed at the network boundary, mirroring the CAQH ProView / NCQA credentialing posture without being certified",
+      "Directory responses returned as AUTHORITATIVE must have a verifiedAsOf date within the No-Surprises-Act 90-day accuracy window — a stale directory record returned as authoritative is blocked (policy.credentialing.no-surprises-act-directory-accuracy); the safe interim answer is to route the caller to a directory-refresh workflow, mirroring the NSA directory-accuracy posture",
+      "Runs against ILLUSTRATIVE synthetic credential-kind catalog, approved verification sources, and directory schema — clearly labeled; NOT NCQA / CAQH credentialing, a real state-medical-board API, an OIG-LEIE sanction feed, or a live directory"
+    ],
+    provider: "Salesforce",
+    governanceTier: "integration"
   }
 ];
 
@@ -1022,7 +1059,8 @@ const POLICIES: PolicyRecord[] = [
       "advance-care-planning-agent",
       "care-team-management-agent",
       "transitions-of-care-agent",
-      "grievance-appeals-agent"
+      "grievance-appeals-agent",
+      "provider-credentialing-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1411,6 +1449,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The routing summary the Grievance & Appeals Agent hands to the receiving human queue (member-services / clinical-review / compliance) must be STRUCTURED only (memberRef + caseType + urgency + queue + deadlineDate + phiSafe) and MUST NOT contain free-text PHI (patient full name, DOB, address, MRN, diagnosis codes, medication names, symptom detail) or an extra free-text key — a routing summary containing free-text PHI, or an extra key beyond the allow-list, is rejected before it can leave the fabric. This lets compliance / member-services queues be reached via lower-trust channels (Slack, email, ticketing) without leaking PHI; the free-text complaint stays on the case record itself. Mirrors the phi-no-free-text-pii posture on the intake / assessment agents.",
     appliesTo: ["grievance-appeals-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.credentialing.source-integrity",
+    name: "Provider credentials must cite an approved verification source",
+    description:
+      "Every credential on a provider's record (state license, DEA, board certification, sanctions clearance, NPI) that the Provider Credentialing & Directory Agent surfaces must cite an approved verification source (state-medical-board, dea-registry, abms-board, oig-leie-sanctions, npi-registry) with a recorded verifiedOn date — a self-reported / verbal / undocumented / off-catalog source is rejected before it can leave the fabric. This closes the load-bearing safety failure of fabricating a 'verified' status from a hand-typed claim. Mirrors the ACP Agent's directive-source-integrity, the HEDIS Agent's measure-catalog-sourced, and the TOC Agent's reconciliation-source-integrity posture — an integrity property enforced, not merely advised.",
+    appliesTo: ["provider-credentialing-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.credentialing.no-referral-to-expired-or-sanctioned",
+    name: "No referral or booking to an expired / incomplete / sanctioned provider",
+    description:
+      "The Pause Agent Fabric may NEVER hand a referral or a scheduled appointment to a provider whose credentialing status is expired, incomplete, or sanctioned — the Provider Credentialing & Directory Agent gates the network boundary here. A referral / scheduling call to such a provider is rejected before it can leave the fabric. This is where the ghost-network problem gets fixed: the Referral Management, Appointment Scheduling, and Transitions of Care agents consult this gate before every handoff. Mirrors the CAQH ProView / NCQA credentialing posture — a network-integrity requirement enforced, not merely advised.",
+    appliesTo: ["provider-credentialing-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.credentialing.no-surprises-act-directory-accuracy",
+    name: "Directory responses must satisfy No-Surprises-Act freshness",
+    description:
+      "A provider directory record the Provider Credentialing & Directory Agent returns as AUTHORITATIVE must have a verifiedAsOf date within the No-Surprises-Act 90-day accuracy window from the caller's asOfDate — a stale directory record returned as authoritative is rejected before it can leave the fabric. The safe interim answer when the record is stale is to route the caller to a directory-refresh workflow, not return the same authoritative record. Mirrors the No-Surprises-Act directory-accuracy posture — a regulatory / patient-protection requirement enforced, not merely advised. (In the prototype the freshness window is a clearly-labeled illustrative synthetic; in production this is the customer's governed NSA compliance window.)",
+    appliesTo: ["provider-credentialing-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -4143,6 +4208,67 @@ function store(): FabricStore {
 // the shape a live task produces. Illustrative; not a certified regulatory
 // process. Seed data; production populates the ring buffer from the
 // persistent log store.
+// Provider Credentialing & Directory seed — a fully-verified MSCP with all
+// gates open + fresh NSA directory record, mirroring the shape a live task
+// produces. Illustrative; not a certified credentialing / directory system.
+// Seed data; production populates the ring buffer from the persistent log
+// store.
+(function seedProviderCredentialingTrace() {
+  const s = store();
+  const pc0 = Date.now() - 1000 * 60 * 1;
+  const pcTaskId = "task-seed-credentialing-001";
+  const pcName = "Provider Credentialing & Directory Agent";
+  s.traces.push(
+    {
+      id: "span-credentialing-001",
+      taskId: pcTaskId,
+      agentId: "provider-credentialing-agent",
+      agentName: pcName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(pc0).toISOString(),
+      finishedAt: new Date(pc0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-credentialing-002",
+      taskId: pcTaskId,
+      parentSpanId: "span-credentialing-001",
+      agentId: "provider-credentialing-agent",
+      agentName: pcName,
+      operation: "credentialing.verify",
+      protocol: "a2a",
+      startedAt: new Date(pc0 + 40).toISOString(),
+      finishedAt: new Date(pc0 + 110).toISOString(),
+      durationMs: 70,
+      status: "ok",
+      attributes: {
+        providerRef: "provider-mscp-001",
+        asOfDate: "2026-07-01",
+        intent: "referral",
+        status: "verified",
+        sanctioned: false,
+        canReferPatient: true,
+        canBookAppointment: true,
+        canReturnInDirectoryResponse: true,
+        // The load-bearing invariants: every credential traces to an approved
+        // source, no expired/sanctioned referral slips through, and the
+        // directory record is within the NSA freshness window.
+        credentialsTraceToVerifiedSource: true,
+        noReferralToExpiredOrSanctioned: true,
+        directoryIsFresh: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
 (function seedGrievanceAppealsTrace() {
   const s = store();
   const ga0 = Date.now() - 1000 * 60 * 1;

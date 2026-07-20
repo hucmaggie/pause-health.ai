@@ -106,6 +106,10 @@ export type GovernanceTask = {
   caseResolutionRequiresHumanQueue?: boolean;
   deadlineTracesToCatalog?: boolean;
   routingSummaryIsPhiSafe?: boolean;
+  // Provider credentialing & directory (source-integrity + no-expired-referral + NSA freshness)
+  credentialsTraceToVerifiedSource?: boolean;
+  noReferralToExpiredOrSanctioned?: boolean;
+  directoryIsFresh?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -595,6 +599,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "The routing summary passed to a downstream queue contains free-text PHI",
     reason:
       "The routing summary handed to the receiving human queue (member-services / clinical-review / compliance) contained free-text PHI (patient full name, DOB, address, MRN, diagnosis codes, medication names, symptom detail) or an extra free-text key; the routing summary must be STRUCTURED only (memberRef + caseType + urgency + queue + deadlineDate + phiSafe) so it can be delivered via lower-trust channels (Slack, email, ticketing) without leaking PHI"
+  },
+  {
+    policyId: "policy.credentialing.source-integrity",
+    signal: "credentialsTraceToVerifiedSource",
+    violatingValue: false,
+    violationHint: "A provider credential doesn't cite an approved verification source",
+    reason:
+      "A provider credential (state license / DEA / board certification / sanctions clearance / NPI) did not cite an approved verification source (state-medical-board, dea-registry, abms-board, oig-leie-sanctions, npi-registry) with a recorded verifiedOn date; every credential must trace to an approved source — the agent may not fabricate a 'verified' status from a verbal / self-reported / undocumented source"
+  },
+  {
+    policyId: "policy.credentialing.no-referral-to-expired-or-sanctioned",
+    signal: "noReferralToExpiredOrSanctioned",
+    violatingValue: false,
+    violationHint: "Refers / books to an expired / incomplete / sanctioned provider",
+    reason:
+      "Attempted to refer a patient to (or book an appointment with) a provider whose credentialing status is expired, incomplete, or sanctioned; the fabric may never hand a referral or scheduled appointment to a provider who is not currently credentialed and unsanctioned — this is where the ghost-network problem gets fixed at the network boundary"
+  },
+  {
+    policyId: "policy.credentialing.no-surprises-act-directory-accuracy",
+    signal: "directoryIsFresh",
+    violatingValue: false,
+    violationHint: "Directory record was last verified past the No-Surprises-Act freshness window",
+    reason:
+      "Returned a provider directory record as AUTHORITATIVE whose verifiedAsOf date is past the No-Surprises-Act 90-day accuracy window; stale directory data must not be returned as authoritative — the safe interim answer is to route the caller to a directory-refresh workflow"
   },
   {
     policyId: "policy.referral.clinician-cosign",

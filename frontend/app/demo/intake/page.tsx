@@ -5,6 +5,7 @@ import { AgentforceVoiceButton } from "../../../components/agentforce-voice-butt
 import { AssessmentPanel } from "../../../components/assessment-panel";
 import { CareTeamManagementPanel } from "../../../components/care-team-management-panel";
 import { GrievanceAppealsPanel } from "../../../components/grievance-appeals-panel";
+import { ProviderCredentialingPanel } from "../../../components/provider-credentialing-panel";
 import { TransitionsOfCarePanel } from "../../../components/transitions-of-care-panel";
 import { BenefitsPanel } from "../../../components/benefits-panel";
 import { CareGapPanel } from "../../../components/care-gap-panel";
@@ -104,6 +105,8 @@ export default function IntakeDemoPage() {
       <TransitionsOfCarePanel />
 
       <GrievanceAppealsPanel />
+
+      <ProviderCredentialingPanel />
 
       <section className="demo-grid">
         <article className="card">
