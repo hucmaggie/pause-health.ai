@@ -6,6 +6,7 @@ import { AssessmentPanel } from "../../../components/assessment-panel";
 import { CareTeamManagementPanel } from "../../../components/care-team-management-panel";
 import { GrievanceAppealsPanel } from "../../../components/grievance-appeals-panel";
 import { ProviderCredentialingPanel } from "../../../components/provider-credentialing-panel";
+import { ComplexCareManagementPanel } from "../../../components/complex-care-management-panel";
 import { QualityAttributionPanel } from "../../../components/quality-attribution-panel";
 import { TransitionsOfCarePanel } from "../../../components/transitions-of-care-panel";
 import { BenefitsPanel } from "../../../components/benefits-panel";
@@ -110,6 +111,8 @@ export default function IntakeDemoPage() {
       <ProviderCredentialingPanel />
 
       <QualityAttributionPanel />
+
+      <ComplexCareManagementPanel />
 
       <section className="demo-grid">
         <article className="card">

@@ -1034,6 +1034,38 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "complex-care-management-agent",
+    name: "Complex Care Management Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the reimbursable-time-tracking half of
+    // care management: POST /api/agents/complex-care-management/tasks
+    // (card at /.well-known/agent.json). A DETERMINISTIC (no-Claude) agent
+    // for a Medicare CCM program — it confirms CCM eligibility (2+ catalog-
+    // sourced chronic conditions, Medicare age, coverage flag, consent),
+    // tracks per-activity time entries against catalog-sourced activity
+    // types, maps monthly totals to the CPT ladder (99490/99491 non-complex,
+    // 99487/99489 complex), and assembles a billing package for human
+    // quality-team review — NEVER autonomously submits a CMS claim. It is
+    // distinct from the Care Team agent (multi-disciplinary team assembly)
+    // and the Care Plan agent (treatment planning) — this one is the
+    // reimbursable TIME-TRACKING piece paired with them. REUSES the
+    // existing care-coordination tier.
+    endpoint: "/api/agents/complex-care-management",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Confirms Medicare CCM eligibility, tracks per-activity monthly time entries, maps the total to the illustrative CPT ladder (99490/99491 non-complex, 99487/99489 complex), and assembles a billing package for human quality-team review — the reimbursable time-tracking piece of care management, distinct from Care Team (roster) and Care Plan (treatment content)",
+      "Eligibility, time totals, and CPT selection are DETERMINISTIC — a pure function of the patient's chronic conditions, Medicare-coverage flag, consent flag, age, and per-activity time entries (no randomness, no clock); the same context always yields the same eligibility + time summary + CPT selection + billing package",
+      "Every CCM eligibility claim must trace to the defined chronic-condition catalog (≥ 2 conditions), the Medicare-eligibility age gate, the Medicare-coverage flag, and the consent flag — a fabricated chronic condition or unsupported eligibility is blocked at the Agent Fabric governance boundary (policy.ccm.eligibility-catalog-sourced)",
+      "The agent NEVER autonomously submits a CCM claim to CMS — every billing package is requiresQualityTeamApproval:true / submitted:false, and any autonomous submission is blocked (policy.ccm.no-autonomous-billing); mirrors the HEDIS Agent's no-autonomous-submission and the Prior Authorization Agent's no-autonomous-submission posture",
+      "Every logged minute must trace to the defined CCM activity catalog (medication reconciliation, care-plan update, patient communication, referral follow-up, care-team coordination, patient education, resource navigation) and the reported total must equal the sum of the per-entry minutes — phantom-minute inflation (the classic CCM audit finding) or an off-catalog activity is blocked (policy.ccm.time-integrity)",
+      "Runs against ILLUSTRATIVE synthetic chronic-condition catalog, CCM activity catalog, CPT thresholds, and Medicare eligibility flags — clearly labeled; NOT CMS Chapter 12 / MLN Booklet 909188 CCM billing, an actual CPT coding manual, or a live Medicare claim-submission system"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -1095,7 +1127,8 @@ const POLICIES: PolicyRecord[] = [
       "transitions-of-care-agent",
       "grievance-appeals-agent",
       "provider-credentialing-agent",
-      "quality-attribution-agent"
+      "quality-attribution-agent",
+      "complex-care-management-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1538,6 +1571,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "When an attribution methodology ties on its primary metric (e.g. two providers with equal primary-care visit counts under plurality-of-visits), the tie-break rule applied must be one of the DOCUMENTED_TIE_BREAKS (most-recent-visit-wins, then provider-ref-lexical-ascending) — a coin-flip / opaque / undocumented tie-break is rejected before it can leave the fabric. This turns tie-break resolution from a gameable non-determinism into a fabric-verifiable invariant. (In the prototype the documented tie-break rules are clearly-labeled illustrative synthetics; in production this is the customer's governed VBC attribution tie-break policy.)",
     appliesTo: ["quality-attribution-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.ccm.eligibility-catalog-sourced",
+    name: "CCM eligibility must trace to the chronic-condition catalog",
+    description:
+      "Every Medicare CCM eligibility determination the Complex Care Management Agent produces must cite chronic conditions from the defined CHRONIC_CONDITION_CATALOG — an off-catalog / fabricated chronic condition is rejected before it can leave the fabric. Mirrors the ACP Agent's directive-source-integrity, the HEDIS Agent's measure-catalog-sourced, the Credentialing Agent's source-integrity, and the Attribution Agent's methodology-catalog-sourced posture — an integrity property enforced, not merely advised. (In the prototype the chronic-condition catalog is a clearly-labeled illustrative synthetic; in production this is the customer's governed CMS-aligned chronic-condition list.)",
+    appliesTo: ["complex-care-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.ccm.no-autonomous-billing",
+    name: "No autonomous CCM claim submission",
+    description:
+      "The Complex Care Management Agent may NEVER autonomously submit a Medicare CCM claim (CPT 99490 / 99491 / 99487 / 99489) — every billing package requires a human quality-team approval. Every package the agent produces is requiresQualityTeamApproval:true / submitted:false; a caller-asserted plan that claims already-submitted or bypasses the human approval gate is rejected before it can leave the fabric. Mirrors the HEDIS Agent's no-autonomous-submission, the Prior Authorization Agent's no-autonomous-submission, and the ACP Agent's no-autonomous-directive-change posture — the agent proposes a package, a human files it with CMS.",
+    appliesTo: ["complex-care-management-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.ccm.time-integrity",
+    name: "CCM time entries must add up and cite catalog activities",
+    description:
+      "Every logged CCM minute the Complex Care Management Agent tracks must trace to a defined activity on CCM_ACTIVITY_CATALOG (medication reconciliation, care-plan update, patient communication, referral follow-up, care-team coordination, patient education, resource navigation) — an off-catalog activity is rejected — AND the reported monthly total must equal the sum of the per-entry minutes. Phantom-minute inflation is the classic CCM audit finding this guard closes. (In the prototype the CCM activity catalog is a clearly-labeled illustrative synthetic; in production this is the customer's governed CMS-aligned care-coordination activity list.)",
+    appliesTo: ["complex-care-management-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -4280,6 +4340,105 @@ function store(): FabricStore {
 // attribution, mirroring the shape a live task produces. Illustrative; not
 // a certified attribution engine. Seed data; production populates the ring
 // buffer from the persistent log store.
+// Complex Care Management seed — a Medicare-eligible 68-year-old patient
+// with three chronic conditions + 35min of catalog-sourced activities →
+// CPT 99490 non-complex CCM package ready for human quality-team review,
+// mirroring the shape a live task produces. Illustrative; not a certified
+// CCM billing engine. Seed data; production populates the ring buffer from
+// the persistent log store.
+(function seedComplexCareManagementTrace() {
+  const s = store();
+  const cc0 = Date.now() - 1000 * 60 * 1;
+  const ccTaskId = "task-seed-ccm-001";
+  const ccName = "Complex Care Management Agent";
+  s.traces.push(
+    {
+      id: "span-ccm-001",
+      taskId: ccTaskId,
+      agentId: "complex-care-management-agent",
+      agentName: ccName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(cc0).toISOString(),
+      finishedAt: new Date(cc0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ccm-002",
+      taskId: ccTaskId,
+      parentSpanId: "span-ccm-001",
+      agentId: "complex-care-management-agent",
+      agentName: ccName,
+      operation: "ccm.evaluate-eligibility",
+      protocol: "a2a",
+      startedAt: new Date(cc0 + 40).toISOString(),
+      finishedAt: new Date(cc0 + 80).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        patientRef: "ccm-patient-001",
+        month: "2026-07",
+        eligible: true,
+        qualifyingConditionCount: 3,
+        eligibilityTracesToCatalog: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ccm-003",
+      taskId: ccTaskId,
+      parentSpanId: "span-ccm-002",
+      agentId: "complex-care-management-agent",
+      agentName: ccName,
+      operation: "ccm.summarize-time",
+      protocol: "a2a",
+      startedAt: new Date(cc0 + 80).toISOString(),
+      finishedAt: new Date(cc0 + 130).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        totalMinutes: 35,
+        activityCount: 3,
+        everyActivityIsCatalogSourced: true,
+        // The load-bearing invariant: the reported total equals the sum of
+        // the entries (no phantom minutes) and every activity is catalog-
+        // sourced.
+        timeEntriesAddUp: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ccm-004",
+      taskId: ccTaskId,
+      parentSpanId: "span-ccm-003",
+      agentId: "complex-care-management-agent",
+      agentName: ccName,
+      operation: "ccm.assemble-billing-package",
+      protocol: "a2a",
+      startedAt: new Date(cc0 + 130).toISOString(),
+      finishedAt: new Date(cc0 + 180).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        cptCode: "99490",
+        state: "ready-for-quality-team-review",
+        // The load-bearing invariant: the agent never autonomously submits
+        // a CMS claim.
+        billingRequiresHumanApproval: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
 (function seedQualityAttributionTrace() {
   const s = store();
   const qa0 = Date.now() - 1000 * 60 * 1;

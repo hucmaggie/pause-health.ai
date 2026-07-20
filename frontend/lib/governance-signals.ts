@@ -114,6 +114,10 @@ export type GovernanceTask = {
   attributionsTraceToCatalog?: boolean;
   attributionsHonorContractTerms?: boolean;
   attributionTieBreaksAreDocumented?: boolean;
+  // Complex care management (eligibility-catalog + no autonomous billing + time-integrity)
+  eligibilityTracesToCatalog?: boolean;
+  billingRequiresHumanApproval?: boolean;
+  timeEntriesAddUp?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -651,6 +655,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An attribution applied an undocumented / opaque tie-break rule",
     reason:
       "An attribution applied a tie-break rule outside the documented list (most-recent-visit-wins, provider-ref-lexical-ascending); every tie-break must be deterministic and documented — a coin-flip / opaque tie-break turns attribution into gameable non-determinism"
+  },
+  {
+    policyId: "policy.ccm.eligibility-catalog-sourced",
+    signal: "eligibilityTracesToCatalog",
+    violatingValue: false,
+    violationHint: "A CCM eligibility claim cites an off-catalog chronic condition",
+    reason:
+      "A CCM eligibility claim included a chronic condition outside the defined CHRONIC_CONDITION_CATALOG; every qualifying condition must trace to the catalog — the agent may not fabricate a chronic condition to reach the 2+ threshold"
+  },
+  {
+    policyId: "policy.ccm.no-autonomous-billing",
+    signal: "billingRequiresHumanApproval",
+    violatingValue: false,
+    violationHint: "Submits a CCM claim without human quality-team approval",
+    reason:
+      "Attempted to autonomously submit a Medicare CCM claim (CPT 99490 / 99491 / 99487 / 99489); the agent may only assemble a human-approval-gated billing package — CMS submission requires a human quality-team in the loop"
+  },
+  {
+    policyId: "policy.ccm.time-integrity",
+    signal: "timeEntriesAddUp",
+    violatingValue: false,
+    violationHint: "CCM time entries don't sum to the reported total, or a logged minute cites an off-catalog activity",
+    reason:
+      "A CCM time report failed integrity: either the per-activity entries did not sum to the reported total (phantom minutes — the classic CCM audit finding) or a logged minute cited an activity outside the defined CCM_ACTIVITY_CATALOG; every minute must trace to a catalog activity and the total must equal the sum of the entries"
   },
   {
     policyId: "policy.referral.clinician-cosign",
