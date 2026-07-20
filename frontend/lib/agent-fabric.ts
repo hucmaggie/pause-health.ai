@@ -1132,6 +1132,39 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "fwa-detection-agent",
+    name: "Fraud, Waste & Abuse Detection Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side FWA screener: POST
+    // /api/agents/fwa-detection/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) agent that screens each claim / prior-
+    // auth against a defined FWA pattern catalog (unbundling, upcoding,
+    // duplicate billing, quantity outliers, impossible-day billing,
+    // phantom services), classifies each hit by severity, and routes to
+    // the SIU (Special Investigations Unit) for HUMAN review. It NEVER
+    // autonomously denies a claim, opens an investigation, or freezes
+    // payment — every flagged claim goes to human review with due-process
+    // protections. Distinct from the Claims Adjudication Assistant (which
+    // AUTO-denies routine catalog edits like NCCI-PTP unbundling with a
+    // specific reason code): FWA is about SUSPICIOUS PATTERNS that need
+    // investigation, not mechanical edits. REUSES the care-coordination
+    // tier.
+    endpoint: "/api/agents/fwa-detection",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Screens claims / prior-auths against a defined FWA pattern catalog (unbundling, upcoding, duplicate billing, quantity outliers, impossible-day billing, phantom services), classifies each hit by severity, and routes to the SIU for HUMAN review. Distinct from the Claims Adjudication Assistant (mechanical edits with immediate deny) — this is about pattern-level suspicion that needs investigation, not routine catalog edits",
+      "Screening is DETERMINISTIC — a pure function of the claim + provider peer-baseline + pattern catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same flags + primary pattern + severity, with a documented precedence (high > medium > low; lexical tie-break by pattern-id) and stable flag ordering",
+      "Every applied FWA flag must trace to the defined FWA_PATTERNS catalog — a fabricated 'we-just-don't-like-this-provider' flag or a category-of-one pattern is blocked at the Agent Fabric governance boundary (policy.fwa.pattern-catalog-sourced), so the agent cannot raise arbitrary suspicion",
+      "The agent NEVER autonomously denies a claim, opens an investigation, or freezes payment — every report is requiresSiuReview:true (when flagged) / investigationOpened:false / paymentFrozen:false, and any autonomous action is blocked (policy.fwa.no-autonomous-denial); denying a claim on unproven suspicion is a Section 1557 / state insurance code / due-process failure. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the PA Agent's no-autonomous-submission, and the CCM Agent's no-autonomous-billing posture",
+      "The pattern-detection engine may NOT use protected-class attributes (race, ethnicity, religion, national origin, disability, gender identity, sexual orientation, marital status) or provider-demographic proxies as detection factors — a factor list including any of those is blocked (policy.fwa.no-protected-class-factors), a documented compliance failure in real payer FWA systems. Mirrors the Population Health Agent's no-protected-class-factors posture",
+      "Runs against ILLUSTRATIVE synthetic pattern catalog + peer baselines + severity thresholds — clearly labeled; NOT SAS Detection and Investigation, LexisNexis Provider Insight, an actual payer SIU rule set, or a certified fraud-detection engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -1196,7 +1229,8 @@ const POLICIES: PolicyRecord[] = [
       "quality-attribution-agent",
       "complex-care-management-agent",
       "claims-adjudication-agent",
-      "formulary-review-agent"
+      "formulary-review-agent",
+      "fwa-detection-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -1720,6 +1754,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Formulary & Drug Utilization Review Agent may NEVER autonomously override a formulary exception, non-preferred drug, or manual tier-lower — every non-preferred-approved decision is DRAFTED for clinician cosign (requiresClinicianCosign:true, cosigned:false); a caller-asserted plan that claims cosigned:true or bypasses the cosign gate is rejected before it can leave the fabric. Formulary exceptions are legally consequential (Medicare Advantage Chapter 6 + Part D require a documented rationale from a prescriber). Mirrors the Claims Adjudication Agent's no-autonomous-denial, the PA Agent's no-autonomous-submission, and the CCM Agent's no-autonomous-billing posture.",
     appliesTo: ["formulary-review-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.fwa.pattern-catalog-sourced",
+    name: "FWA flags must trace to the pattern catalog",
+    description:
+      "Every FWA flag the Fraud, Waste & Abuse Detection Agent raises must cite a pattern on FWA_PATTERNS (unbundling, upcoding, duplicate-billing, quantity-outlier, impossible-day-billing, phantom-service) — a fabricated 'we-just-don't-like-this-provider' flag or category-of-one pattern is rejected before it can leave the fabric. Mirrors the Claims Adjudication Agent's edit-catalog-sourced, the Formulary Agent's catalog-sourced, the ACP Agent's directive-source-integrity, and the CCM Agent's eligibility-catalog-sourced posture — an integrity property enforced, not merely advised. (In the prototype the pattern catalog is a clearly-labeled illustrative synthetic; in production this is the customer's governed SIU rule set.)",
+    appliesTo: ["fwa-detection-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.fwa.no-autonomous-denial",
+    name: "No autonomous denial / investigation / payment freeze",
+    description:
+      "The Fraud, Waste & Abuse Detection Agent may NEVER autonomously deny a claim, open an investigation, or freeze payment — every flagged claim goes to SIU (Special Investigations Unit) HUMAN review. Every report is requiresSiuReview:true (when flagged) / investigationOpened:false / paymentFrozen:false; a caller-asserted plan that claims any of those true is rejected before it can leave the fabric. Denying a claim on unproven suspicion is a Section 1557 / state insurance code / due-process failure — payers cannot deny claims on suspicion without notice + appeal rights. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the PA Agent's no-autonomous-submission, and the CCM Agent's no-autonomous-billing posture — the agent surfaces suspicion; humans investigate.",
+    appliesTo: ["fwa-detection-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.fwa.no-protected-class-factors",
+    name: "FWA detection must not use protected-class factors",
+    description:
+      "The Fraud, Waste & Abuse Detection Agent's pattern-detection engine may NEVER score on protected-class attributes (race, ethnicity, gender identity, religion, national origin, disability status, sexual orientation, marital status) or provider-demographic proxies (provider race/ethnicity, clinic-neighborhood race composition) — a factor list including any of these is rejected before it can leave the fabric. Bias in FWA is a well-documented compliance failure: multiple algorithmic-audit reports have found payer systems that disproportionately targeted minority-owned clinics, and the audit results led to consent decrees. Mirrors the Population Health Agent's no-protected-class-factors posture — a fairness / responsible-AI requirement, enforced not merely advised.",
+    appliesTo: ["fwa-detection-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -4476,6 +4537,85 @@ function store(): FabricStore {
 // patch when no documented oral trial is on file. Illustrative; not
 // certified DUR. Seed data; production populates the ring buffer from the
 // persistent log store.
+// FWA Detection seed — an impossible-day billing flag routed to SIU
+// priority queue. Illustrative; not certified FWA. Seed data; production
+// populates the ring buffer from the persistent log store.
+(function seedFwaDetectionTrace() {
+  const s = store();
+  const fw0 = Date.now() - 1000 * 60 * 1;
+  const fwTaskId = "task-seed-fwa-001";
+  const fwName = "Fraud, Waste & Abuse Detection Agent";
+  s.traces.push(
+    {
+      id: "span-fwa-001",
+      taskId: fwTaskId,
+      agentId: "fwa-detection-agent",
+      agentName: fwName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(fw0).toISOString(),
+      finishedAt: new Date(fw0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-fwa-002",
+      taskId: fwTaskId,
+      parentSpanId: "span-fwa-001",
+      agentId: "fwa-detection-agent",
+      agentName: fwName,
+      operation: "fwa.evaluate-patterns",
+      protocol: "a2a",
+      startedAt: new Date(fw0 + 40).toISOString(),
+      finishedAt: new Date(fw0 + 90).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        requestRef: "fwa-req-2026-07-003",
+        providerRef: "provider-004",
+        claimRef: "claim-2026-07-102",
+        flagCount: 1,
+        // The honesty invariants: every flag is catalog-sourced; the factor
+        // list uses no protected-class attributes.
+        patternsTraceToCatalog: true,
+        noProtectedClassFactors: true,
+        factorsInUseCount: 12,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-fwa-003",
+      taskId: fwTaskId,
+      parentSpanId: "span-fwa-002",
+      agentId: "fwa-detection-agent",
+      agentName: fwName,
+      operation: "fwa.decide",
+      protocol: "a2a",
+      startedAt: new Date(fw0 + 90).toISOString(),
+      finishedAt: new Date(fw0 + 140).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        decision: "flag-for-siu-review",
+        primaryPatternId: "pattern.impossible-day-billing",
+        primarySeverity: "high",
+        routedTo: "siu-priority-queue",
+        requiresSiuReview: true,
+        // The load-bearing invariant: never opens an investigation, never
+        // freezes payment. Only flags for SIU review.
+        reportRequiresSiuReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
 (function seedFormularyReviewTrace() {
   const s = store();
   const fr0 = Date.now() - 1000 * 60 * 1;

@@ -126,6 +126,10 @@ export type GovernanceTask = {
   rulesTraceToCatalog?: boolean;
   stepTherapyIsHonored?: boolean;
   exceptionRequiresClinicianCosign?: boolean;
+  // Fraud, Waste & Abuse detection (pattern-catalog + SIU-review + no protected-class factors)
+  patternsTraceToCatalog?: boolean;
+  reportRequiresSiuReview?: boolean;
+  noProtectedClassFactors?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -735,6 +739,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Overrides a formulary exception without clinician cosign",
     reason:
       "Attempted to autonomously override a formulary exception, non-preferred drug, or manual tier-lower; a formulary exception is legally consequential (Medicare Advantage Chapter 6 + Part D requires a documented rationale from a prescriber) — every non-preferred decision must be DRAFTED for clinician cosign (requiresClinicianCosign:true, cosigned:false)"
+  },
+  {
+    policyId: "policy.fwa.pattern-catalog-sourced",
+    signal: "patternsTraceToCatalog",
+    violatingValue: false,
+    violationHint: "An FWA flag cites a pattern not on the defined catalog",
+    reason:
+      "An FWA flag was raised citing a pattern outside FWA_PATTERNS (unbundling, upcoding, duplicate-billing, quantity-outlier, impossible-day-billing, phantom-service); every flag must trace to a catalog pattern — the agent may not raise a category-of-one 'we just don't like this provider' flag masquerading as a rule"
+  },
+  {
+    policyId: "policy.fwa.no-autonomous-denial",
+    signal: "reportRequiresSiuReview",
+    violatingValue: false,
+    violationHint: "Denies a claim, opens an investigation, or freezes payment without SIU review",
+    reason:
+      "The FWA agent attempted to autonomously deny a claim, open an investigation, or freeze payment; suspected fraud is a serious allegation and requires SIU (Special Investigations Unit) human review — every report must be requiresSiuReview:true (when flagged) with investigationOpened:false / paymentFrozen:false. Denying a claim on unproven suspicion is a discrimination / due-process failure under Section 1557 / state insurance code"
+  },
+  {
+    policyId: "policy.fwa.no-protected-class-factors",
+    signal: "noProtectedClassFactors",
+    violatingValue: false,
+    violationHint: "The FWA engine uses a protected-class attribute as a detection factor",
+    reason:
+      "The FWA engine used a protected-class attribute (race, ethnicity, gender identity, religion, national origin, disability status, sexual orientation, marital status) or a provider-demographic proxy (provider race/ethnicity, clinic-neighborhood race composition) as a detection factor; bias in FWA is a well-documented compliance failure (algorithmic-audit reports of payer systems disproportionately targeting minority-owned clinics) — the engine may only score on catalog-defined patterns and non-protected peer-baseline metrics"
   },
   {
     policyId: "policy.referral.clinician-cosign",
