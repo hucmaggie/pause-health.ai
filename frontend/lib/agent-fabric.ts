@@ -1256,6 +1256,38 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "commercial-operations"
+  },
+  {
+    id: "care-coordination-handoff-agent",
+    name: "Care Coordination Handoff Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the cross-setting handoff workflow: POST
+    // /api/agents/care-coordination-handoff/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) agent for ANY cross-setting patient
+    // transition (hospital → SNF, SNF → home, home → hospice, ED → PCP,
+    // PCP → specialist / behavioral health). Assembles a Joint-Commission-
+    // NPSG-2 SBAR handoff, verifies the receiving clinician is
+    // credentialed, and confirms transfer consent is on file for
+    // transitions that require it. NEVER autonomously accepts on behalf
+    // of the receiving clinician; every accepted handoff is
+    // requiresReceivingClinicianCosign:true / cosigned:false. Distinct
+    // from Transitions of Care (post-discharge hospital→home + med
+    // reconciliation) and Referral Management (outbound specialist
+    // referral).
+    endpoint: "/api/agents/care-coordination-handoff",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Deterministically assembles a Joint-Commission-NPSG-2 SBAR handoff (situation, background, assessment, recommendation) for any cross-setting patient transition and classifies as handoff-accepted / pend-sbar-incomplete / blocked-clinician-not-credentialed / blocked-no-consent with a specific reason code. Distinct from Transitions of Care (post-discharge hospital→home + med reconciliation) and Referral Management (outbound specialist referral) — this is any cross-setting handoff",
+      "Handoff evaluation is DETERMINISTIC — a pure function of the request + catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same decision + missing-sections list + primary reason, with a documented decision precedence (blocked-no-consent > blocked-clinician-not-credentialed > pend-sbar-incomplete > handoff-accepted) and stable rule-id ordering",
+      "Every handoff-accepted decision must have all four SBAR sections populated — the Joint Commission NPSG-2 requires standardized handoff communication; a handoff-accepted decision missing a section is blocked (policy.handoff.sbar-completeness), and the safe answer when incomplete is decision:'pend-sbar-incomplete' routed to sending-clinician-completion",
+      "The receiving clinician must be credentialed (current, unsanctioned) — a handoff to an expired / incomplete / sanctioned clinician is a ghost-network variant and a Section 1557 / due-process failure (policy.handoff.receiving-clinician-credentialed); the safe answer is decision:'blocked-clinician-not-credentialed' routed to credentialing-remediation. Mirrors the Provider Credentialing Agent's no-referral-to-expired-or-sanctioned posture",
+      "Transitions that share PHI with a new setting (hospital→SNF, SNF→home, home→hospice, PCP→behavioral-health) require documented transfer consent — a handoff without it is a HIPAA disclosure failure (policy.handoff.consent-on-file); the safe answer is decision:'blocked-no-consent' routed to consent-capture. Mirrors the Consent & Preferences Management Agent's consent-scope posture",
+      "Runs against ILLUSTRATIVE synthetic care-setting + transition-type + rule + reason catalogs — clearly labeled; NOT Epic Care Everywhere, Cerner CareAware, an actual health system's handoff protocol, or a certified Joint Commission / ONC-approved handoff module"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -1323,7 +1355,8 @@ const POLICIES: PolicyRecord[] = [
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
-      "utilization-review-agent"
+      "utilization-review-agent",
+      "care-coordination-handoff-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2276,6 +2309,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "Every VBC contract's quality-gate threshold and spend-drift tolerance must trace to a defined BENCHMARK_METHODOLOGIES catalog entry (methodology.mssp-shared-savings-my2026, methodology.ma-star-vbc-my2026, methodology.commercial-vbc-my2026, methodology.bundled-episode-flat-benchmark) — a bespoke / opaque / 'we-picked-a-number' benchmark is rejected before it can leave the fabric. An opaque benchmark polluts every downstream shared-savings / bonus / clawback calculation. Mirrors the Quality-Measure Attribution Agent's methodology-catalog-sourced posture.",
     appliesTo: ["provider-contracting-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.handoff.sbar-completeness",
+    name: "Handoffs must have a complete SBAR (Joint Commission NPSG-2)",
+    description:
+      "Every cross-setting handoff the Care Coordination Handoff Agent accepts must have all four SBAR sections (situation, background, assessment, recommendation) populated — the Joint Commission National Patient Safety Goal 2 requires standardized handoff communication. A handoff-accepted decision missing a section is rejected before it can leave the fabric; the safe answer when incomplete is decision:'pend-sbar-incomplete' routed to sending-clinician-completion. (In the prototype the SBAR fields are illustrative structured labels — NOT free-text PHI; in production this is the customer's Joint-Commission-compliant handoff template.)",
+    appliesTo: ["care-coordination-handoff-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.handoff.receiving-clinician-credentialed",
+    name: "Handoffs must route to a credentialed receiving clinician",
+    description:
+      "Every cross-setting handoff must route to a receiving clinician whose credentialing status is current and unsanctioned — a handoff to an expired / incomplete / sanctioned clinician is a ghost-network variant and a Section 1557 / due-process failure. A handoff-accepted decision to an uncredentialed clinician is rejected before it can leave the fabric; the safe answer is decision:'blocked-clinician-not-credentialed' routed to credentialing-remediation. Mirrors the Provider Credentialing Agent's no-referral-to-expired-or-sanctioned posture.",
+    appliesTo: ["care-coordination-handoff-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.handoff.consent-on-file",
+    name: "Cross-setting handoffs require transfer consent (HIPAA)",
+    description:
+      "Cross-setting handoffs on transition types that share PHI with a new setting (hospital→SNF, SNF→home, home→hospice, PCP→behavioral-health) require documented patient consent to share clinical information with the receiving setting — a handoff-accepted decision without transfer consent on file is rejected before it can leave the fabric. Sharing clinical information with a new setting without patient consent is a HIPAA disclosure failure. The safe answer is decision:'blocked-no-consent' routed to consent-capture. Mirrors the Consent & Preferences Management Agent's consent-scope posture.",
+    appliesTo: ["care-coordination-handoff-agent"],
     enforcement: "block",
     status: "enforced"
   }
@@ -4950,6 +5010,86 @@ function store(): FabricStore {
         // commits a contract-term change.
         contractChangeRequiresOwnerCosign: true,
         phiAccessed: false,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+// Care Coordination Handoff seed — a hospital→SNF transition with a
+// complete SBAR, credentialed receiving clinician, and transfer consent
+// on file, accepted and routed to the receiving-clinician-inbox for cosign.
+// Illustrative; not certified handoff. Seed data; production populates
+// the ring buffer from the persistent log store.
+(function seedCareCoordinationHandoffTrace() {
+  const s = store();
+  const ho0 = Date.now() - 1000 * 60 * 1;
+  const hoTaskId = "task-seed-care-coordination-handoff-001";
+  const hoName = "Care Coordination Handoff Agent";
+  s.traces.push(
+    {
+      id: "span-care-coordination-handoff-001",
+      taskId: hoTaskId,
+      agentId: "care-coordination-handoff-agent",
+      agentName: hoName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ho0).toISOString(),
+      finishedAt: new Date(ho0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-care-coordination-handoff-002",
+      taskId: hoTaskId,
+      parentSpanId: "span-care-coordination-handoff-001",
+      agentId: "care-coordination-handoff-agent",
+      agentName: hoName,
+      operation: "care-coordination-handoff.evaluate-rules",
+      protocol: "a2a",
+      startedAt: new Date(ho0 + 40).toISOString(),
+      finishedAt: new Date(ho0 + 90).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        requestRef: "ho-req-2026-07-001",
+        patientRef: "patient-001",
+        transitionTypeId: "transition.hospital-to-snf",
+        appliedRuleCount: 1,
+        missingSbarCount: 0,
+        // The honesty invariants: SBAR is complete; receiving clinician is
+        // credentialed; transfer consent is on file for this transition.
+        sbarIsComplete: true,
+        receivingClinicianIsCredentialed: true,
+        handoffHasConsent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-care-coordination-handoff-003",
+      taskId: hoTaskId,
+      parentSpanId: "span-care-coordination-handoff-002",
+      agentId: "care-coordination-handoff-agent",
+      agentName: hoName,
+      operation: "care-coordination-handoff.decide",
+      protocol: "a2a",
+      startedAt: new Date(ho0 + 90).toISOString(),
+      finishedAt: new Date(ho0 + 140).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        decision: "handoff-accepted",
+        primaryReasonCode: "reason.HO-100",
+        routedTo: "receiving-clinician-inbox",
+        // Every accepted handoff still needs receiving-clinician cosign —
+        // the agent never autonomously accepts on behalf of the clinician.
+        requiresReceivingClinicianCosign: true,
+        phiAccessed: true,
         synthetic: true
       }
     }

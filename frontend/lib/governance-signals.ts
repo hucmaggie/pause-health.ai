@@ -142,6 +142,10 @@ export type GovernanceTask = {
   contractsTraceToCatalog?: boolean;
   contractChangeRequiresOwnerCosign?: boolean;
   benchmarksTraceToMethodology?: boolean;
+  // Care coordination handoff (SBAR completeness + credentialed receiver + transfer consent)
+  sbarIsComplete?: boolean;
+  receivingClinicianIsCredentialed?: boolean;
+  handoffHasConsent?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -847,6 +851,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Quality-gate threshold or spend-drift tolerance doesn't trace to the methodology catalog",
     reason:
       "A provider contract's quality-gate threshold or spend-drift tolerance did not trace to the defined BENCHMARK_METHODOLOGIES catalog for the cited methodology id; every VBC contract must derive its quality gate + spend-drift tolerance from a catalog methodology — a bespoke / opaque / 'we-picked-a-number' benchmark polluts every downstream shared-savings / bonus / clawback calculation"
+  },
+  {
+    policyId: "policy.handoff.sbar-completeness",
+    signal: "sbarIsComplete",
+    violatingValue: false,
+    violationHint: "Handoff-accepted decision claimed with missing SBAR sections",
+    reason:
+      "A cross-setting handoff was marked handoff-accepted without a complete SBAR (situation, background, assessment, recommendation) — this violates Joint Commission National Patient Safety Goal 2 for standardized handoff communication; every accepted handoff must have all four SBAR sections populated, and the safe answer when incomplete is decision:'pend-sbar-incomplete' routed to sending-clinician-completion"
+  },
+  {
+    policyId: "policy.handoff.receiving-clinician-credentialed",
+    signal: "receivingClinicianIsCredentialed",
+    violatingValue: false,
+    violationHint: "Handoff routed to an expired / incomplete / sanctioned receiving clinician",
+    reason:
+      "A cross-setting handoff was marked handoff-accepted to a receiving clinician whose credentialing status is expired, incomplete, or sanctioned — this is a variant of the ghost-network problem and a Section 1557 / due-process failure. Mirrors the Provider Credentialing Agent's no-referral-to-expired-or-sanctioned posture; the safe answer is decision:'blocked-clinician-not-credentialed' routed to credentialing-remediation"
+  },
+  {
+    policyId: "policy.handoff.consent-on-file",
+    signal: "handoffHasConsent",
+    violatingValue: false,
+    violationHint: "Handoff on a consent-required transition without transfer consent on file",
+    reason:
+      "A cross-setting handoff on a transition type that requires patient consent (hospital→SNF, SNF→home, home→hospice, PCP→behavioral-health) was marked handoff-accepted without documented transfer consent — this is a HIPAA disclosure failure (sharing clinical information with the receiving setting requires the patient's consent). The safe answer when consent is missing is decision:'blocked-no-consent' routed to consent-capture"
   },
   {
     policyId: "policy.referral.clinician-cosign",
