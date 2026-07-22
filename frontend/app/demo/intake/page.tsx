@@ -13,6 +13,7 @@ import { TrialPaymentsPanel } from "../../../components/trial-payments-panel";
 import { UtilizationReviewPanel } from "../../../components/utilization-review-panel";
 import { ProviderContractingPanel } from "../../../components/provider-contracting-panel";
 import { CareCoordinationHandoffPanel } from "../../../components/care-coordination-handoff-panel";
+import { AdverseEventReportingPanel } from "../../../components/adverse-event-reporting-panel";
 import { ComplexCareManagementPanel } from "../../../components/complex-care-management-panel";
 import { QualityAttributionPanel } from "../../../components/quality-attribution-panel";
 import { TransitionsOfCarePanel } from "../../../components/transitions-of-care-panel";
@@ -134,6 +135,8 @@ export default function IntakeDemoPage() {
       <ProviderContractingPanel />
 
       <CareCoordinationHandoffPanel />
+
+      <AdverseEventReportingPanel />
 
       <section className="demo-grid">
         <article className="card">

@@ -1288,6 +1288,35 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "adverse-event-reporting-agent",
+    name: "Adverse Event Reporting Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the pharmacovigilance / device-safety
+    // reporting workflow: POST /api/agents/adverse-event-reporting/tasks
+    // (card at /.well-known/agent.json). A DETERMINISTIC (no-Claude)
+    // pharmacovigilance analog — classifies drug ADRs, vaccine
+    // reactions, device malfunctions, medication errors, and
+    // therapeutic failures into the MedWatch (3500/3500A) or VAERS
+    // channel, computes the 21-CFR-314.80 seriousness tier, and drafts
+    // for regulatory-team cosign. NEVER autonomously files to the FDA.
+    // NEVER drafts on an unverified reporter (FDA reporting requires an
+    // attested reporter).
+    endpoint: "/api/agents/adverse-event-reporting",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Classifies each reported adverse event (drug ADR, vaccine reaction, device malfunction, medication error, therapeutic failure) into the FDA MedWatch (3500 / 3500A) or VAERS channel, computes the 21-CFR-314.80 seriousness tier (non-serious / serious / life-threatening / death), verifies reporter identity attestation, and classifies as draft-medwatch / draft-vaers / blocked-non-catalog-event / blocked-reporter-unverified with a specific reason code",
+      "Classification is DETERMINISTIC — a pure function of the request + catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same decision + channel + seriousness + primary reason, with a documented decision precedence (blocked-reporter-unverified > blocked-non-catalog-event > draft-medwatch / draft-vaers) and stable rule-id ordering",
+      "Every draft must trace to the ADVERSE_EVENT_TYPES + SERIOUSNESS_TIERS + ADVERSE_EVENT_RULES + ADVERSE_EVENT_REASON_CODES catalog — an off-catalog event type or made-up severity is blocked at the Agent Fabric governance boundary (policy.adverse-event.event-catalog-sourced), because a bespoke event doesn't map to an FDA channel and poisons pharmacovigilance signal",
+      "The agent NEVER autonomously submits a MedWatch or VAERS report to the FDA — every draft decision is DRAFTED for regulatory-team cosign, and any autonomous submission is blocked (policy.adverse-event.no-autonomous-submission); FDA submissions are legally consequential under 21 CFR 314.80 (mandatory reporting) with sponsor / manufacturer / clinician liability. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the UR Agent's no-autonomous-denial, the Trial Payments Agent's no-autonomous-irb-deviation, and the HEDIS Agent's no-autonomous-submission posture",
+      "Reporter identity must be attested (name / credentials / contact) — an anonymous or unverified reporter is not admissible under FDA reporting requirements and is blocked (policy.adverse-event.reporter-verified). The safe answer when unverified is decision:'blocked-reporter-unverified' routed to blocked-hold",
+      "Runs against ILLUSTRATIVE synthetic event-type catalog + seriousness tiers + rules + reason codes — clearly labeled; NOT FDA MedWatch, VAERS, EudraVigilance, an actual sponsor's pharmacovigilance database, or a certified 21 CFR 314.80 submission pipeline"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -1356,7 +1385,8 @@ const POLICIES: PolicyRecord[] = [
       "fwa-detection-agent",
       "trial-payments-agent",
       "utilization-review-agent",
-      "care-coordination-handoff-agent"
+      "care-coordination-handoff-agent",
+      "adverse-event-reporting-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2336,6 +2366,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "Cross-setting handoffs on transition types that share PHI with a new setting (hospital→SNF, SNF→home, home→hospice, PCP→behavioral-health) require documented patient consent to share clinical information with the receiving setting — a handoff-accepted decision without transfer consent on file is rejected before it can leave the fabric. Sharing clinical information with a new setting without patient consent is a HIPAA disclosure failure. The safe answer is decision:'blocked-no-consent' routed to consent-capture. Mirrors the Consent & Preferences Management Agent's consent-scope posture.",
     appliesTo: ["care-coordination-handoff-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.adverse-event.event-catalog-sourced",
+    name: "Adverse events must trace to the event-type catalog",
+    description:
+      "Every adverse-event decision the Adverse Event Reporting Agent produces must trace to the defined ADVERSE_EVENT_TYPES catalog (drug ADR, vaccine reaction, device malfunction, medication error, therapeutic failure) AND to a seriousness tier from SERIOUSNESS_TIERS (aligned with 21 CFR 314.80: non-serious / serious / life-threatening / death) AND to applied rules from ADVERSE_EVENT_RULES with reason codes from ADVERSE_EVENT_REASON_CODES — an off-catalog / bespoke event type or a made-up severity level is rejected before it can leave the fabric. Mirrors the Claims Adjudication Agent's edit-catalog-sourced, the Formulary Agent's catalog-sourced, the FWA Agent's pattern-catalog-sourced, the Trial Payments Agent's schedule-catalog-sourced, the UR Agent's criteria-catalog-sourced, and the Handoff Agent's SBAR-completeness posture. (In the prototype the event catalog is a clearly-labeled illustrative synthetic; in production this is the customer's pharmacovigilance codes plus MedDRA / SNOMED CT integration.)",
+    appliesTo: ["adverse-event-reporting-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.adverse-event.no-autonomous-submission",
+    name: "No autonomous MedWatch / VAERS submission — regulatory-team cosign required",
+    description:
+      "The Adverse Event Reporting Agent may NEVER autonomously submit a MedWatch (3500 / 3500A) or VAERS report to the FDA — every draft decision requires regulatory-team cosign. Every draft-medwatch or draft-vaers decision is requiresRegulatoryTeamCosign:true / cosigned:false; a caller-asserted plan that claims cosigned:true or bypasses the cosign gate is rejected before it can leave the fabric. FDA submissions are legally consequential under 21 CFR 314.80 (mandatory reporting) with sponsor / manufacturer / clinician liability. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the UR Agent's no-autonomous-denial, the Formulary Agent's no-autonomous-override, the FWA Agent's no-autonomous-denial, the Trial Payments Agent's no-autonomous-irb-deviation, and the HEDIS Agent's no-autonomous-submission posture.",
+    appliesTo: ["adverse-event-reporting-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.adverse-event.reporter-verified",
+    name: "Adverse-event reports require a verified reporter identity",
+    description:
+      "The Adverse Event Reporting Agent may NEVER draft a MedWatch or VAERS submission without an attested, identifiable reporter (name / credentials / contact). An anonymous or unverified reporter is not admissible under FDA reporting requirements and poisons the pharmacovigilance surveillance signal. A draft decision with reporterIdentityVerified:false is rejected before it can leave the fabric; the safe answer is decision:'blocked-reporter-unverified' routed to blocked-hold.",
+    appliesTo: ["adverse-event-reporting-agent"],
     enforcement: "block",
     status: "enforced"
   }
@@ -5089,6 +5146,86 @@ function store(): FabricStore {
         // Every accepted handoff still needs receiving-clinician cosign —
         // the agent never autonomously accepts on behalf of the clinician.
         requiresReceivingClinicianCosign: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+// Adverse Event Reporting seed — a serious drug ADR (hospitalization)
+// classified into the MedWatch channel and routed to the regulatory-team
+// queue for cosign. Illustrative; not certified pharmacovigilance. Seed
+// data; production populates the ring buffer from the persistent log store.
+(function seedAdverseEventReportingTrace() {
+  const s = store();
+  const ae0 = Date.now() - 1000 * 60 * 1;
+  const aeTaskId = "task-seed-adverse-event-reporting-001";
+  const aeName = "Adverse Event Reporting Agent";
+  s.traces.push(
+    {
+      id: "span-adverse-event-reporting-001",
+      taskId: aeTaskId,
+      agentId: "adverse-event-reporting-agent",
+      agentName: aeName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ae0).toISOString(),
+      finishedAt: new Date(ae0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-adverse-event-reporting-002",
+      taskId: aeTaskId,
+      parentSpanId: "span-adverse-event-reporting-001",
+      agentId: "adverse-event-reporting-agent",
+      agentName: aeName,
+      operation: "adverse-event-reporting.evaluate-rules",
+      protocol: "a2a",
+      startedAt: new Date(ae0 + 40).toISOString(),
+      finishedAt: new Date(ae0 + 90).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        requestRef: "ae-req-2026-07-001",
+        patientRef: "patient-001",
+        eventTypeId: "event.drug-adr",
+        seriousnessTierId: "seriousness.serious",
+        appliedRuleCount: 1,
+        // The honesty invariants: event + seriousness are catalog-sourced;
+        // reporter identity is attested.
+        eventsTraceToCatalog: true,
+        reporterIdentityVerified: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-adverse-event-reporting-003",
+      taskId: aeTaskId,
+      parentSpanId: "span-adverse-event-reporting-002",
+      agentId: "adverse-event-reporting-agent",
+      agentName: aeName,
+      operation: "adverse-event-reporting.decide",
+      protocol: "a2a",
+      startedAt: new Date(ae0 + 90).toISOString(),
+      finishedAt: new Date(ae0 + 140).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        decision: "draft-medwatch",
+        primaryReasonCode: "reason.AE-100",
+        routedTo: "regulatory-team-medwatch-queue",
+        requiresRegulatoryTeamCosign: true,
+        // The load-bearing invariant: draft decisions ALWAYS require
+        // regulatory-team cosign — the agent never autonomously files to
+        // the FDA.
+        submissionRequiresRegulatoryTeamCosign: true,
         phiAccessed: true,
         synthetic: true
       }
