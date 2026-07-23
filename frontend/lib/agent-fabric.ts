@@ -1317,6 +1317,35 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "data-sharing-tefca-agent",
+    name: "Data-Sharing / TEFCA Interoperability Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the interoperability workflow: POST
+    // /api/agents/data-sharing-tefca/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) TEFCA / Carequality / CommonWell analog
+    // — classifies each cross-org PHI exchange by purpose, verifies the
+    // counterparty is a Trusted Exchange Framework participant, applies
+    // the patient's data-sharing consent scopes from the Consent agent,
+    // and authorizes or blocks the release. NEVER autonomously releases
+    // PHI for a non-TPO purpose without explicit consent (HIPAA §164.506).
+    // NEVER releases to an unverified counterparty (45 CFR 171 / TEFCA
+    // Common Agreement).
+    endpoint: "/api/agents/data-sharing-tefca",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Classifies each cross-organization PHI exchange request (TEFCA QHIN, Carequality, CommonWell, Direct Secure Messaging) by purpose (treatment / payment / operations / patient-request / public-health / research), verifies the counterparty against the participant registry, applies the patient's data-sharing consent scopes, and classifies as release-authorized / pend-purpose-verification / blocked-non-catalog-purpose / blocked-participant-unverified / blocked-consent-required-non-tpo with a specific reason code",
+      "Exchange evaluation is DETERMINISTIC — a pure function of the request + catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same decision + primary reason, with a documented decision precedence (blocked-participant-unverified > blocked-non-catalog-purpose > blocked-consent-required-non-tpo > pend-purpose-verification > release-authorized) and stable rule-id ordering",
+      "Every classified exchange must trace to the EXCHANGE_PURPOSES + EXCHANGE_NETWORKS + DATA_SHARING_RULES catalog — an off-catalog / bespoke exchange purpose is blocked at the Agent Fabric governance boundary (policy.data-sharing.purpose-catalog-sourced), because a bespoke purpose doesn't map to a HIPAA disclosure permission and would open the network to unauthorized aggregation",
+      "The agent NEVER autonomously releases PHI for a non-TPO purpose without an active consent scope — every non-TPO release without consent is DRAFTED for consent capture, and any autonomous release is blocked (policy.data-sharing.no-autonomous-non-tpo-release); this is the load-bearing HIPAA §164.506 boundary — TPO (treatment / payment / operations) doesn't need consent, everything else does. Mirrors the Consent & Preferences Management Agent's no-scope-override, the Grievance & Appeals Agent's no-phi-in-routing-summary, and the Handoff Agent's transfer-consent posture",
+      "The requester participant must be identity-attested against the TEFCA / Carequality / CommonWell participant registry — an unverified counterparty is blocked (policy.data-sharing.participant-verified), because under 45 CFR 171 + the TEFCA Common Agreement a QHIN / participant / sub-participant must be identity-attested before a cross-org exchange is authorized. Mirrors the Provider Credentialing Agent's source-integrity, the Adverse Event Reporting Agent's reporter-verified, and the Handoff Agent's receiving-clinician-credentialed posture",
+      "Runs against ILLUSTRATIVE synthetic exchange-network + exchange-purpose + rule + reason catalogs — clearly labeled; NOT an actual TEFCA QHIN implementation, the Carequality Interoperability Framework, the CommonWell Health Alliance node stack, an ONC-certified data-sharing gateway, or a certified 45 CFR 171 information-blocking-safe release engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -1386,7 +1415,8 @@ const POLICIES: PolicyRecord[] = [
       "trial-payments-agent",
       "utilization-review-agent",
       "care-coordination-handoff-agent",
-      "adverse-event-reporting-agent"
+      "adverse-event-reporting-agent",
+      "data-sharing-tefca-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2393,6 +2423,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Adverse Event Reporting Agent may NEVER draft a MedWatch or VAERS submission without an attested, identifiable reporter (name / credentials / contact). An anonymous or unverified reporter is not admissible under FDA reporting requirements and poisons the pharmacovigilance surveillance signal. A draft decision with reporterIdentityVerified:false is rejected before it can leave the fabric; the safe answer is decision:'blocked-reporter-unverified' routed to blocked-hold.",
     appliesTo: ["adverse-event-reporting-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.data-sharing.purpose-catalog-sourced",
+    name: "Data-sharing exchanges must trace to the exchange-purpose catalog",
+    description:
+      "Every data-sharing decision the Data-Sharing / TEFCA Interoperability Agent produces must trace to the defined EXCHANGE_PURPOSES catalog (treatment / payment / operations / patient-request / public-health / research), EXCHANGE_NETWORKS catalog (TEFCA QHIN / Carequality / CommonWell / Direct Secure Messaging), DATA_SHARING_RULES, and DATA_SHARING_REASON_CODES — an off-catalog / bespoke exchange purpose is rejected before it can leave the fabric. A bespoke purpose doesn't map to a HIPAA disclosure permission and would open the network to unauthorized aggregation. Mirrors the Claims Adjudication Agent's edit-catalog-sourced, the FWA Agent's pattern-catalog-sourced, the Trial Payments Agent's schedule-catalog-sourced, the UR Agent's criteria-catalog-sourced, the Handoff Agent's SBAR-completeness, and the Adverse Event Reporting Agent's event-catalog-sourced posture.",
+    appliesTo: ["data-sharing-tefca-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.data-sharing.no-autonomous-non-tpo-release",
+    name: "No autonomous PHI release for non-TPO purposes without consent",
+    description:
+      "The Data-Sharing / TEFCA Interoperability Agent may NEVER autonomously release PHI for a non-TPO purpose (research, public-health, patient-request, or any off-catalog use) without an active patient consent scope on file for that exact purpose. Every non-TPO release without consent is rejected before it can leave the fabric; the safe answer is decision:'blocked-consent-required-non-tpo' routed to consent-capture. This is the load-bearing HIPAA §164.506 boundary — TPO (treatment / payment / operations) doesn't need consent, but every other purpose does. Unauthorized non-TPO disclosures are the documented breach pattern behind the majority of OCR enforcement actions. Mirrors the Consent & Preferences Management Agent's no-scope-override, the Grievance & Appeals Agent's no-phi-in-routing-summary, and the Handoff Agent's transfer-consent posture.",
+    appliesTo: ["data-sharing-tefca-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.data-sharing.participant-verified",
+    name: "Data-sharing exchanges require a verified participant identity",
+    description:
+      "The Data-Sharing / TEFCA Interoperability Agent may NEVER release PHI to a counterparty whose identity is not attested against the TEFCA / Carequality / CommonWell participant registry — under 45 CFR 171 + the TEFCA Common Agreement a QHIN / participant / sub-participant must be identity-attested before a cross-org exchange is authorized. A release-authorized decision with requesterIdentityVerified:false is rejected before it can leave the fabric; the safe answer is decision:'blocked-participant-unverified' routed to participant-registry-verification. Releasing to an unverified counterparty is a federated-identity trust failure that opens the network to spoofing and unauthorized aggregation. Mirrors the Provider Credentialing Agent's source-integrity, the Adverse Event Reporting Agent's reporter-verified, and the Handoff Agent's receiving-clinician-credentialed posture.",
+    appliesTo: ["data-sharing-tefca-agent"],
     enforcement: "block",
     status: "enforced"
   }
@@ -5226,6 +5283,87 @@ function store(): FabricStore {
         // regulatory-team cosign — the agent never autonomously files to
         // the FDA.
         submissionRequiresRegulatoryTeamCosign: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+// Data-Sharing / TEFCA seed — a TPO treatment exchange over the TEFCA
+// QHIN, authorized without consent (HIPAA §164.506) after participant
+// verification. Illustrative; not certified TEFCA. Seed data; production
+// populates the ring buffer from the persistent log store.
+(function seedDataSharingTefcaTrace() {
+  const s = store();
+  const ds0 = Date.now() - 1000 * 60 * 1;
+  const dsTaskId = "task-seed-data-sharing-tefca-001";
+  const dsName = "Data-Sharing / TEFCA Interoperability Agent";
+  s.traces.push(
+    {
+      id: "span-data-sharing-tefca-001",
+      taskId: dsTaskId,
+      agentId: "data-sharing-tefca-agent",
+      agentName: dsName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ds0).toISOString(),
+      finishedAt: new Date(ds0 + 40).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-data-sharing-tefca-002",
+      taskId: dsTaskId,
+      parentSpanId: "span-data-sharing-tefca-001",
+      agentId: "data-sharing-tefca-agent",
+      agentName: dsName,
+      operation: "data-sharing-tefca.evaluate-rules",
+      protocol: "a2a",
+      startedAt: new Date(ds0 + 40).toISOString(),
+      finishedAt: new Date(ds0 + 90).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        requestRef: "ds-req-2026-07-001",
+        patientRef: "patient-001",
+        networkId: "network.tefca-qhin",
+        purposeId: "purpose.treatment",
+        appliedRuleCount: 1,
+        // The honesty invariants: purpose + network + rule are catalog-
+        // sourced; requester identity is attested against the participant
+        // registry.
+        purposesTraceToCatalog: true,
+        participantIdentityVerified: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-data-sharing-tefca-003",
+      taskId: dsTaskId,
+      parentSpanId: "span-data-sharing-tefca-002",
+      agentId: "data-sharing-tefca-agent",
+      agentName: dsName,
+      operation: "data-sharing-tefca.decide",
+      protocol: "a2a",
+      startedAt: new Date(ds0 + 90).toISOString(),
+      finishedAt: new Date(ds0 + 140).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        decision: "release-authorized",
+        primaryReasonCode: "reason.DS-100",
+        routedTo: "auto-release",
+        isTpo: true,
+        requiresPrivacyOfficerCosign: false,
+        // The load-bearing invariant: non-TPO releases without consent
+        // are ALWAYS blocked — HIPAA §164.506 boundary.
+        releaseHonorsNonTpoConsent: true,
         phiAccessed: true,
         synthetic: true
       }

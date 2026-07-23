@@ -150,6 +150,10 @@ export type GovernanceTask = {
   eventsTraceToCatalog?: boolean;
   submissionRequiresRegulatoryTeamCosign?: boolean;
   reporterIdentityVerified?: boolean;
+  // Data-sharing / TEFCA (purpose catalog + no autonomous non-TPO release + participant verified)
+  purposesTraceToCatalog?: boolean;
+  releaseHonorsNonTpoConsent?: boolean;
+  participantIdentityVerified?: boolean;
   // Referral management (cosign-gated outbound referrals)
   referralHasClinicianCosign?: boolean;
   // Member service / billing (claim-sourced billing answers)
@@ -903,6 +907,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Adverse-event submission drafted with an unverified / anonymous reporter",
     reason:
       "An adverse-event submission was drafted for an FDA report without an attested, identifiable reporter (name / credentials / contact); an anonymous or unverified reporter is not admissible under FDA reporting requirements and poisons the surveillance signal. The safe answer when reporter identity is not attested is decision:'blocked-reporter-unverified' routed to blocked-hold"
+  },
+  {
+    policyId: "policy.data-sharing.purpose-catalog-sourced",
+    signal: "purposesTraceToCatalog",
+    violatingValue: false,
+    violationHint: "Data-sharing decision cites an off-catalog exchange purpose / network / rule / reason",
+    reason:
+      "A data-sharing decision cited an exchange purpose outside EXCHANGE_PURPOSES (treatment / payment / operations / patient-request / public-health / research), an exchange network outside EXCHANGE_NETWORKS (TEFCA QHIN / Carequality / CommonWell / Direct Secure Messaging), an applied rule outside DATA_SHARING_RULES, or a reason code outside DATA_SHARING_REASON_CODES — every exchange must trace to the catalog; a bespoke exchange purpose doesn't map to a HIPAA disclosure permission and would open the network to unauthorized aggregation"
+  },
+  {
+    policyId: "policy.data-sharing.no-autonomous-non-tpo-release",
+    signal: "releaseHonorsNonTpoConsent",
+    violatingValue: false,
+    violationHint: "PHI released for a non-TPO purpose without an active consent scope",
+    reason:
+      "A data-sharing decision authorized release of PHI for a non-TPO purpose (research / public-health / patient-request / any off-catalog use) without an active patient consent scope on file for that exact purpose — this is a HIPAA §164.506 violation and the documented breach pattern behind the majority of OCR enforcement actions. The safe answer when consent is missing is decision:'blocked-consent-required-non-tpo' routed to consent-capture. TPO purposes (treatment / payment / operations) do NOT need consent, but every other purpose does"
+  },
+  {
+    policyId: "policy.data-sharing.participant-verified",
+    signal: "participantIdentityVerified",
+    violatingValue: false,
+    violationHint: "Data-sharing release authorized to an unverified requester participant",
+    reason:
+      "A data-sharing decision authorized release of PHI to a requester whose identity is not attested against the TEFCA / Carequality / CommonWell participant registry — under 45 CFR 171 + the TEFCA Common Agreement a QHIN / participant / sub-participant must be identity-attested before a cross-org exchange is authorized. Releasing to an unverified counterparty is a federated-identity trust failure that opens the network to spoofing and unauthorized aggregation. The safe answer is decision:'blocked-participant-unverified' routed to participant-registry-verification"
   },
   {
     policyId: "policy.referral.clinician-cosign",

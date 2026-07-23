@@ -14,6 +14,7 @@ import { UtilizationReviewPanel } from "../../../components/utilization-review-p
 import { ProviderContractingPanel } from "../../../components/provider-contracting-panel";
 import { CareCoordinationHandoffPanel } from "../../../components/care-coordination-handoff-panel";
 import { AdverseEventReportingPanel } from "../../../components/adverse-event-reporting-panel";
+import { DataSharingTefcaPanel } from "../../../components/data-sharing-tefca-panel";
 import { ComplexCareManagementPanel } from "../../../components/complex-care-management-panel";
 import { QualityAttributionPanel } from "../../../components/quality-attribution-panel";
 import { TransitionsOfCarePanel } from "../../../components/transitions-of-care-panel";
@@ -137,6 +138,8 @@ export default function IntakeDemoPage() {
       <CareCoordinationHandoffPanel />
 
       <AdverseEventReportingPanel />
+
+      <DataSharingTefcaPanel />
 
       <section className="demo-grid">
         <article className="card">
