@@ -1,3 +1,4 @@
+import { ProposalShell } from "../../components/proposal-shell";
 import { StatusPill } from "../../components/status-pill";
 import { pageMetadata } from "../../lib/page-metadata";
 
@@ -218,45 +219,63 @@ function SectionCardRender({ card }: { card: SectionCard }) {
 }
 
 export default function ProposalPage() {
-  return (
-    <main className="container">
-      <section className="hero">
-        <p className="eyebrow">Investor brief · Pause-Health.ai</p>
-        <h1>Premium menopause intelligence for modern provider organizations</h1>
-        <p className="hero-copy">
-          Pause-Health.ai transforms fragmented menopause care into an
-          elegant, measurable, and clinically explainable workflow built
-          for provider excellence — EHR-native, never a sidecar.
-        </p>
-        <ul className="metric-list" style={{ marginTop: "0.5rem" }}>
-          {heroPoints.map((point) => (
-            <li
-              key={point.text}
-              style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}
-            >
-              {point.badge && (
-                <StatusPill
-                  status={point.badge}
-                  style={{ flexShrink: 0, marginTop: "0.15rem" }}
-                />
-              )}
-              <span>{point.text}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="hero-actions">
-          <a href="/proposal/full" className="btn btn-primary">
-            Open Full Investor Proposal
-          </a>
-          <a href="/demo/intake" className="btn btn-secondary">
-            Experience Clickable Prototype
-          </a>
-          <a href="/" className="btn btn-secondary">
-            Back to Landing
-          </a>
-        </div>
-      </section>
+  // Everything that belongs INSIDE the hero (below the subtitle,
+  // above where the section nav would live if we showed it) is
+  // handed to ProposalShell via the heroExtra slot. The hub owns:
+  //
+  //   * the metric-list of heroPoints (with per-item StatusPills),
+  //   * the top-level three-CTA row (full proposal / prototype /
+  //     landing).
+  //
+  // We pass `showSectionNav={false}` because the two card grids
+  // below already surface every brief with richer context (summary
+  // + Read/Demo/API links per card), so a duplicate flat nav in
+  // the hero would just add noise. `showJourneyFooter={false}`
+  // because the hub isn't a member of the linear proposalSections
+  // walk — a "next brief" affordance doesn't map here.
+  const heroExtra = (
+    <>
+      <ul className="metric-list" style={{ marginTop: "0.5rem" }}>
+        {heroPoints.map((point) => (
+          <li
+            key={point.text}
+            style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}
+          >
+            {point.badge && (
+              <StatusPill
+                status={point.badge}
+                style={{ flexShrink: 0, marginTop: "0.15rem" }}
+              />
+            )}
+            <span>{point.text}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="hero-actions">
+        <a href="/proposal/full" className="btn btn-primary">
+          Open Full Investor Proposal
+        </a>
+        <a href="/demo/intake" className="btn btn-secondary">
+          Experience Clickable Prototype
+        </a>
+        <a href="/" className="btn btn-secondary">
+          Back to Landing
+        </a>
+      </div>
+    </>
+  );
 
+  return (
+    <ProposalShell
+      eyebrow="Investor brief · Pause-Health.ai"
+      title="Premium menopause intelligence for modern provider organizations"
+      subtitle="Pause-Health.ai transforms fragmented menopause care into an elegant, measurable, and clinically explainable workflow built for provider excellence — EHR-native, never a sidecar."
+      backHref="/"
+      backLabel="Back to Landing"
+      heroExtra={heroExtra}
+      showSectionNav={false}
+      showJourneyFooter={false}
+    >
       <section style={{ marginTop: "1.75rem" }}>
         <p className="eyebrow">Arc A · Investment thesis</p>
         <h2 className="proposal-section-title">
@@ -334,6 +353,6 @@ export default function ProposalPage() {
           </a>
         </div>
       </section>
-    </main>
+    </ProposalShell>
   );
 }

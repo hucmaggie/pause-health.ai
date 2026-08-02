@@ -20,6 +20,26 @@ type ProposalShellProps = {
   /** Optional label for the "Back to ..." button. */
   backLabel?: string;
   /**
+   * Optional content rendered inside the <section className="hero">
+   * block, AFTER the subtitle and BEFORE the section nav. This is
+   * how a page can extend the hero with page-specific affordances
+   * (metric-list of hero points, an inline CTA row, etc.) while
+   * still keeping the hero visually coherent with the rest of the
+   * proposal shell. The hub (/proposal) uses this to mount its
+   * heroPoints list and the three top-level Open/Prototype/Landing
+   * CTA row without hand-rolling the shell.
+   */
+  heroExtra?: ReactNode;
+  /**
+   * Whether to render the multi-brief section nav in the hero.
+   * Defaults to true. Set false on pages where the section list
+   * is either the primary content (the hub, which shows both
+   * strategy and architecture card grids that already link to
+   * every brief) or would look out of place (a landing / rollup
+   * page with its own top-level TOC).
+   */
+  showSectionNav?: boolean;
+  /**
    * Whether to render the linear prev/next journey footer at the
    * bottom of the shell. Defaults to true so all 15 numbered
    * briefs get consistent forward navigation without touching
@@ -56,6 +76,8 @@ export function ProposalShell({
   children,
   backHref = "/proposal",
   backLabel = "Back to Investor Brief",
+  heroExtra,
+  showSectionNav = true,
   showJourneyFooter = true
 }: ProposalShellProps) {
   return (
@@ -67,6 +89,7 @@ export function ProposalShell({
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
         <p className="hero-copy">{subtitle}</p>
+        {heroExtra}
         {/*
          * In-page nav is split into its own client subcomponent so
          * it can read a small set of URL params via useSearchParams
@@ -75,7 +98,7 @@ export function ProposalShell({
          * The shell itself stays server-rendered. This mirrors the
          * demo-shell / demo-shell-nav split exactly.
          */}
-        <ProposalShellNav />
+        {showSectionNav && <ProposalShellNav />}
       </section>
       {children}
       {showJourneyFooter && <ProposalJourneyFooter />}
