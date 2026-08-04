@@ -1346,6 +1346,40 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "risk-adjustment-agent",
+    name: "Risk Adjustment & HCC Coding Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for a value-based-care documentation-integrity agent:
+    // POST /api/agents/risk-adjustment/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) agent that reviews a patient's clinical context and
+    // identifies suspected / confirmed HIERARCHICAL CONDITION CATEGORIES (HCCs) for
+    // risk adjustment — mapping each to the documented clinical evidence that
+    // supports it, computing a RAF-style risk score from the confirmed set, and
+    // flagging coding gaps (suspected-but-unconfirmed) and unsupported / over-coded
+    // entries. It is a RECOMMENDER + integrity checker: every suspected code is a
+    // recommendation requiring clinician validation, and it NEVER autonomously
+    // submits codes or adjusts a claim / RAF for reimbursement. It COMPLEMENTS — it
+    // does NOT duplicate — the HEDIS & Quality Reporting and Quality-Measure
+    // Attribution agents (those score quality MEASURES; this is risk-adjustment
+    // CONDITION coding). REUSES the existing care-coordination tier (a quality /
+    // care-management activity), not a new tier. The HCC catalog, illustrative RAF
+    // weights, and supporting-evidence catalog are ILLUSTRATIVE synthetics, NOT the
+    // certified CMS-HCC model, real RAF coefficients, or a certified coding engine.
+    endpoint: "/api/agents/risk-adjustment",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Reviews a SINGLE patient's clinical context and identifies suspected / confirmed HCCs for risk adjustment (each mapped to the documented clinical evidence that supports it), computes a RAF-style risk score from the confirmed set, and flags coding gaps + unsupported / over-coded entries — a clinical-documentation-integrity agent that COMPLEMENTS, not duplicates, the HEDIS & Quality Reporting and Quality-Measure Attribution agents (quality MEASURES) with risk-adjustment CONDITION coding",
+      "HCC suspicion + RAF scoring is DETERMINISTIC — a pure function of the structured clinical context against the HCC + supporting-evidence catalogs (no randomness, no clock; any dates are taken as data); the same context always yields the same assessment, with confirmed = coded + evidence-supported, suspected = evidence-supported but uncoded (a coding gap), and unsupported = coded but not evidence-supported (over-coded)",
+      "Every confirmed / suspected HCC must trace to documented clinical evidence in the catalog — a fabricated / unsupported code presented as supported (upcoding) is blocked at the Agent Fabric governance boundary (policy.riskadj.evidence-supported-coding); a coding gap or an unsupported / over-coded flag is a SAFE, honest OUTPUT surfaced for a clinician to validate / correct, NOT a block",
+      "Every suspected code is a RECOMMENDATION requiring clinician validation before use — a suspected code finalized without clinician validation is blocked (policy.riskadj.clinician-validation-required); and the agent NEVER autonomously submits codes or adjusts a claim / RAF for reimbursement — an autonomous submission is blocked (policy.riskadj.no-autonomous-submission). Mirrors the Prior Authorization Agent's clinician-approval + no-autonomous-submission posture",
+      "Runs against an ILLUSTRATIVE synthetic HCC catalog, RAF weights, and supporting-evidence catalog — clearly labeled; NOT the certified CMS-HCC model, real RAF coefficients, ICD-10 → HCC crosswalks, or a certified risk-adjustment / coding engine"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
   }
 ];
 
@@ -1416,7 +1450,8 @@ const POLICIES: PolicyRecord[] = [
       "utilization-review-agent",
       "care-coordination-handoff-agent",
       "adverse-event-reporting-agent",
-      "data-sharing-tefca-agent"
+      "data-sharing-tefca-agent",
+      "risk-adjustment-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2095,6 +2130,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "A prior authorization the Prior Authorization Agent submits must include the required supporting documentation for the item — a submission missing a required document is rejected before it can leave the fabric, so the agent can never file an incomplete PA. Assembling a DRAFT with missing documentation is allowed (the draft honestly lists what is still outstanding); only a submission must be documentation-complete. (In the prototype the required-documentation checklist is a clearly-labeled illustrative synthetic, NOT a certified utilization-management requirement; in production this is the payer's real documentation-requirements rules — e.g. Da Vinci DTR.)",
     appliesTo: ["prior-authorization-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.riskadj.evidence-supported-coding",
+    name: "HCC coding must trace to documented clinical evidence (no upcoding)",
+    description:
+      "Every confirmed / suspected HCC the Risk Adjustment & HCC Coding Agent reports must trace to the documented clinical evidence in the supporting-evidence catalog that supports it — a fabricated / unsupported code PRESENTED AS supported (an off-catalog HCC, or a confirmed / suspected HCC whose evidence doesn't cover the catalog's required set) is rejected before it can leave the fabric, so the agent can never upcode by asserting a condition the record does not support. A coding gap (a suspected HCC — clinical evidence documented but no diagnosis code on the claim) and an unsupported / over-coded flag (a code on the claim but the evidence not documented) are SAFE, honest OUTPUTS surfaced for a clinician to validate / correct — NOT blocks; the block is only for presenting an unsupported code as supported. Mirrors the Care Gap Closure Agent's clinical-measure-sourced, the HEDIS Agent's measure-catalog-sourced, and the Clinical Trials Agent's eligibility-criteria-sourced integrity posture. (In the prototype the HCC catalog + RAF weights + supporting-evidence catalog are clearly-labeled illustrative synthetics — NOT the certified CMS-HCC model, real RAF coefficients, or an ICD-10 → HCC crosswalk; in production this is the customer's licensed risk-adjustment model.)",
+    appliesTo: ["risk-adjustment-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.riskadj.clinician-validation-required",
+    name: "Suspected codes require clinician validation",
+    description:
+      "Every suspected risk-adjustment code the Risk Adjustment & HCC Coding Agent produces is a RECOMMENDATION only and requires a human clinician to validate it before use — a suspected code finalized / submitted without clinician validation is rejected before it can leave the fabric. The agent may only surface a suspected code for clinician validation, never treat it as a confirmed, reimbursable code on its own. Mirrors the Prior Authorization Agent's no-autonomous-submission clinician-approval gate and the HEDIS Agent's no-autonomous-submission posture — a human-in-the-loop requirement enforced, not merely advised.",
+    appliesTo: ["risk-adjustment-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.riskadj.no-autonomous-submission",
+    name: "No autonomous code submission or claim adjustment",
+    description:
+      "The Risk Adjustment & HCC Coding Agent may NEVER autonomously submit risk-adjustment codes or adjust a claim / RAF for reimbursement — it is a recommender + integrity checker, so a caller-asserted autonomous submission / claim adjustment is rejected before it can leave the fabric. Every assessment is submitted:false; a code submission is a human action taken after clinician validation, never the agent's. Mirrors the Prior Authorization Agent's no-autonomous-submission, the HEDIS Agent's no-autonomous-submission, and the Complex Care Management Agent's no-autonomous-billing posture — the agent proposes, a human files.",
+    appliesTo: ["risk-adjustment-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -6114,6 +6176,132 @@ function store(): FabricStore {
         requiresQualityTeamApproval: true,
         submitted: false,
         submissionRequiresHumanApproval: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+// Risk Adjustment & HCC Coding seed — a value-based-care documentation-integrity
+// run: review the patient's clinical context, suspect the HCCs, compute the
+// RAF-style score, and flag the coding gaps for clinician validation. This seed
+// shows the HAPPY PATH (the demo patient): two confirmed HCCs (diabetes-with-
+// complication + osteoporosis-with-fracture) driving a RAF of 0.739, plus one
+// suspected coding gap (major depression — evidence documented but uncoded) that
+// is flagged for a clinician to validate. Every suspected code is a
+// recommendation (requiresClinicianValidation:true) and the agent never submits
+// autonomously (submitted:false). It reads patient context, so every span sets
+// phiAccessed:true. The HCC catalog, RAF weights, and evidence are ILLUSTRATIVE
+// synthetics, not a certified risk-adjustment / coding engine. Seed data;
+// production populates the ring buffer from the persistent log store.
+(function seedRiskAdjustmentTrace() {
+  const s = store();
+  const ra0 = Date.now() - 1000 * 60 * 1;
+  const raTaskId = "task-seed-risk-adjustment-001";
+  const raName = "Risk Adjustment & HCC Coding Agent";
+  s.traces.push(
+    {
+      id: "span-riskadj-001",
+      taskId: raTaskId,
+      agentId: "risk-adjustment-agent",
+      agentName: raName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ra0).toISOString(),
+      finishedAt: new Date(ra0 + 35).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-riskadj-002",
+      taskId: raTaskId,
+      parentSpanId: "span-riskadj-001",
+      agentId: "risk-adjustment-agent",
+      agentName: raName,
+      operation: "riskadj.review-documentation",
+      protocol: "a2a",
+      startedAt: new Date(ra0 + 35).toISOString(),
+      finishedAt: new Date(ra0 + 70).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        patientRef: "riskadj-patient-001",
+        documentedEvidenceCount: 6,
+        codedConditionCount: 2,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-riskadj-003",
+      taskId: raTaskId,
+      parentSpanId: "span-riskadj-002",
+      agentId: "risk-adjustment-agent",
+      agentName: raName,
+      operation: "riskadj.suspect-hccs",
+      protocol: "a2a",
+      startedAt: new Date(ra0 + 70).toISOString(),
+      finishedAt: new Date(ra0 + 120).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        hccCount: 3,
+        confirmedCount: 2,
+        suspectedCount: 1,
+        unsupportedCount: 0,
+        // The load-bearing invariant: every confirmed / suspected HCC traces to
+        // documented clinical evidence (no upcoding).
+        codesTraceToClinicalEvidence: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-riskadj-004",
+      taskId: raTaskId,
+      parentSpanId: "span-riskadj-003",
+      agentId: "risk-adjustment-agent",
+      agentName: raName,
+      operation: "riskadj.score",
+      protocol: "a2a",
+      startedAt: new Date(ra0 + 120).toISOString(),
+      finishedAt: new Date(ra0 + 150).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // The sum of the two confirmed HCCs' illustrative RAF weights.
+        rafScore: 0.739,
+        confirmedCount: 2,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-riskadj-005",
+      taskId: raTaskId,
+      parentSpanId: "span-riskadj-004",
+      agentId: "risk-adjustment-agent",
+      agentName: raName,
+      operation: "riskadj.flag-for-validation",
+      protocol: "a2a",
+      startedAt: new Date(ra0 + 150).toISOString(),
+      finishedAt: new Date(ra0 + 195).toISOString(),
+      durationMs: 45,
+      status: "ok",
+      attributes: {
+        codingGapCount: 1,
+        unsupportedFlagCount: 0,
+        // Every suspected code is a recommendation requiring clinician validation;
+        // the agent never autonomously submits codes or adjusts a claim / RAF.
+        requiresClinicianValidation: true,
+        codingRequiresClinicianValidation: true,
+        noAutonomousCodeSubmission: true,
+        submitted: false,
         phiAccessed: true,
         synthetic: true
       }

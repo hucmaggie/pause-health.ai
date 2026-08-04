@@ -161,6 +161,10 @@ export type GovernanceTask = {
   // Prior authorization (clinician-gated, documentation-complete PA assembly)
   paHasClinicianApproval?: boolean;
   paDocumentationComplete?: boolean;
+  // Risk adjustment & HCC coding (evidence-supported coding + clinician-validation + no autonomous submission)
+  codesTraceToClinicalEvidence?: boolean;
+  codingRequiresClinicianValidation?: boolean;
+  noAutonomousCodeSubmission?: boolean;
   // Commercial plane (pipeline, account management)
   accessesPhi?: boolean;
   forecastSourcedFromCrm?: boolean;
@@ -963,6 +967,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Submits a PA missing required supporting documentation",
     reason:
       "Attempted to submit a prior authorization missing required supporting documentation; a PA submission must include the required supporting documentation"
+  },
+  {
+    policyId: "policy.riskadj.evidence-supported-coding",
+    signal: "codesTraceToClinicalEvidence",
+    violatingValue: false,
+    violationHint: "Presents a confirmed/suspected HCC as supported without documented clinical evidence",
+    reason:
+      "A confirmed / suspected HCC did not trace to documented clinical evidence in the catalog (a fabricated / unsupported code presented as supported, or an off-catalog HCC); every confirmed / suspected HCC must trace to the documented clinical evidence that supports it — the agent may not upcode by asserting a condition the record does not support"
+  },
+  {
+    policyId: "policy.riskadj.clinician-validation-required",
+    signal: "codingRequiresClinicianValidation",
+    violatingValue: false,
+    violationHint: "Uses a suspected code as final without clinician validation",
+    reason:
+      "Attempted to finalize / submit a suspected risk-adjustment code without a clinician's validation; every suspected code is a recommendation only and requires a human clinician to confirm it before use — the agent may only surface a suspected code for clinician validation"
+  },
+  {
+    policyId: "policy.riskadj.no-autonomous-submission",
+    signal: "noAutonomousCodeSubmission",
+    violatingValue: false,
+    violationHint: "Autonomously submits codes or adjusts a claim / RAF",
+    reason:
+      "Attempted to autonomously submit risk-adjustment codes or adjust a claim / RAF for reimbursement; the agent is a recommender + integrity checker and may NEVER submit a code or adjust a claim on its own — a code submission is a human action after clinician validation"
   },
   {
     policyId: "policy.marketing.consent-to-contact-required",

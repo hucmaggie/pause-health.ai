@@ -418,7 +418,7 @@ describe("Validated-instrument assessment · Assessment agent", () => {
 });
 
 describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
-  it("brings the registry to forty-six agents", () => {
+  it("brings the registry to forty-seven agents", () => {
     // Sanity count guard: the funnel + intake + assessment + benefits +
     // scheduling + care-gap-closure + care-plan + medication-adherence +
     // referral-management + member-service + prior-authorization +
@@ -429,11 +429,11 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // provider-credentialing + quality-attribution + complex-care-management
     // + claims-adjudication + formulary-review + fwa-detection +
     // trial-payments + utilization-review + care-coordination-handoff +
-    // adverse-event-reporting + data-sharing-tefca agents, the Care
-    // Router, the platform substrate (incl. the Consent & Preferences
+    // adverse-event-reporting + data-sharing-tefca + risk-adjustment agents,
+    // the Care Router, the platform substrate (incl. the Consent & Preferences
     // Management agent), and the commercial plane (incl. the Provider
     // Contracting agent).
-    expect(listAgents()).toHaveLength(46);
+    expect(listAgents()).toHaveLength(47);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -2111,6 +2111,129 @@ describe("Language Access & Health Equity · qualified-interpreter-only + approv
   });
 });
 
+describe("Risk Adjustment & HCC Coding · evidence-supported (no-upcoding) + clinician-validated + no-autonomous-submission agent", () => {
+  it("registers as a prototype Agentforce agent on the reused care-coordination tier (patient-care plane)", () => {
+    const a = getAgent("risk-adjustment-agent");
+    expect(a).toBeDefined();
+    expect(a!.kind).toBe("agentforce");
+    expect(a!.protocol).toBe("a2a");
+    expect(a!.provider).toBe("Salesforce");
+    expect(a!.status).toBe("prototype");
+    // Reuses the existing care-coordination tier (patient-care plane) — it does
+    // NOT invent a new tier.
+    expect(a!.governanceTier).toBe("care-coordination");
+    expect(planeForTier(a!.governanceTier)).toBe("patient-care");
+    expect(a!.endpoint).toBe("/api/agents/risk-adjustment");
+  });
+
+  it("carries the three risk-adjustment blocks plus the reused HIPAA-audit policy (touches patient context)", () => {
+    const ids = getPoliciesForAgent("risk-adjustment-agent").map((p) => p.id);
+    expect(ids).toContain("policy.riskadj.evidence-supported-coding");
+    expect(ids).toContain("policy.riskadj.clinician-validation-required");
+    expect(ids).toContain("policy.riskadj.no-autonomous-submission");
+    // It reviews patient clinical context, so it IS HIPAA-audited.
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT a live-Claude agent (no model allow-list) and NOT commercial.
+    expect(ids).not.toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("all three risk-adjustment policies are enforced blocks", () => {
+    for (const id of [
+      "policy.riskadj.evidence-supported-coding",
+      "policy.riskadj.clinician-validation-required",
+      "policy.riskadj.no-autonomous-submission"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement, id).toBe("block");
+      expect(policy!.status, id).toBe("enforced");
+    }
+  });
+
+  it("blocks upcoding, a skipped clinician validation, and an autonomous submission; allows a well-formed task", () => {
+    // A confirmed / suspected HCC presented as supported but not tracing to
+    // documented clinical evidence (upcoding).
+    const upcoded = evaluateGovernance({
+      agentId: "risk-adjustment-agent",
+      task: {
+        codesTraceToClinicalEvidence: false,
+        codingRequiresClinicianValidation: true,
+        noAutonomousCodeSubmission: true
+      }
+    });
+    expect(upcoded.decision).toBe("block");
+    expect(upcoded.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.riskadj.evidence-supported-coding"
+    );
+
+    // A suspected code finalized without a clinician validating it.
+    const skipValidation = evaluateGovernance({
+      agentId: "risk-adjustment-agent",
+      task: {
+        codesTraceToClinicalEvidence: true,
+        codingRequiresClinicianValidation: false,
+        noAutonomousCodeSubmission: true
+      }
+    });
+    expect(skipValidation.decision).toBe("block");
+    expect(skipValidation.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.riskadj.clinician-validation-required"
+    );
+
+    // An autonomous code submission / claim adjustment.
+    const autonomous = evaluateGovernance({
+      agentId: "risk-adjustment-agent",
+      task: {
+        codesTraceToClinicalEvidence: true,
+        codingRequiresClinicianValidation: true,
+        noAutonomousCodeSubmission: false
+      }
+    });
+    expect(autonomous.decision).toBe("block");
+    expect(autonomous.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.riskadj.no-autonomous-submission"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "risk-adjustment-agent",
+      task: {
+        codesTraceToClinicalEvidence: true,
+        codingRequiresClinicianValidation: true,
+        noAutonomousCodeSubmission: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "risk-adjustment-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a review-documentation→suspect-hccs→score→flag-for-validation trace with a coding-gap example, every span phiAccessed", () => {
+    const spans = listTraces({ taskId: "task-seed-risk-adjustment-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(4);
+    const review = spans.find((s) => s.operation === "riskadj.review-documentation");
+    expect(review?.agentId).toBe("risk-adjustment-agent");
+    const suspect = spans.find((s) => s.operation === "riskadj.suspect-hccs");
+    expect(suspect?.attributes?.confirmedCount).toBe(2);
+    expect(suspect?.attributes?.suspectedCount).toBe(1);
+    expect(suspect?.attributes?.codesTraceToClinicalEvidence).toBe(true);
+    const score = spans.find((s) => s.operation === "riskadj.score");
+    expect(score?.attributes?.rafScore).toBe(0.739);
+    const flag = spans.find((s) => s.operation === "riskadj.flag-for-validation");
+    // The coding gap is surfaced for a clinician; nothing is submitted autonomously.
+    expect(flag?.attributes?.codingGapCount).toBe(1);
+    expect(flag?.attributes?.requiresClinicianValidation).toBe(true);
+    expect(flag?.attributes?.submitted).toBe(false);
+    // The whole run reviews the patient's clinical context.
+    for (const s of spans) {
+      expect(s.attributes?.phiAccessed, s.operation).toBe(true);
+    }
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -2243,7 +2366,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-population-health-001",
       "task-seed-consent-management-001",
       "task-seed-clinical-trials-001",
-      "task-seed-language-access-001"
+      "task-seed-language-access-001",
+      "task-seed-risk-adjustment-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });

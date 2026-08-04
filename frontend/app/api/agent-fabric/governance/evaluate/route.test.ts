@@ -232,6 +232,29 @@ describe("POST /api/agent-fabric/governance/evaluate", () => {
     expect(ids).toContain("policy.langaccess.no-machine-translation-for-consent");
   });
 
+  it("passes the risk-adjustment signals through to the evaluator", async () => {
+    // Pins that the new risk-adjustment / HCC-coding GovernanceTask fields reach
+    // evaluateGovernance across the HTTP boundary.
+    const res = await POST(
+      post({
+        agentId: "risk-adjustment-agent",
+        task: {
+          codesTraceToClinicalEvidence: false,
+          codingRequiresClinicianValidation: false,
+          noAutonomousCodeSubmission: false
+        }
+      })
+    );
+    const json = await res.json();
+    expect(json.result.decision).toBe("block");
+    const ids = json.result.blockingViolations.map(
+      (v: { policyId: string }) => v.policyId
+    );
+    expect(ids).toContain("policy.riskadj.evidence-supported-coding");
+    expect(ids).toContain("policy.riskadj.clinician-validation-required");
+    expect(ids).toContain("policy.riskadj.no-autonomous-submission");
+  });
+
   it("an unknown agent has no applicable policies and allows", async () => {
     const res = await POST(post({ agentId: "ghost-agent", task: {} }));
     const json = await res.json();
