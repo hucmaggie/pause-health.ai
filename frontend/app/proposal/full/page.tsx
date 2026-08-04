@@ -1,3 +1,4 @@
+import { ProposalShell } from "../../../components/proposal-shell";
 import {
   StatusPill,
   type StatusPillStatus
@@ -438,14 +439,11 @@ const strategyDeepDives = [
 
 export default function FullProposalPage() {
   return (
-    <main className="container">
-      <section className="hero">
-        <a href="/proposal" className="btn btn-secondary">
-          Back to Investor Brief
-        </a>
-        <p className="eyebrow">Full investor proposal · Pause-Health.ai</p>
-        <h1>Menopause Clinical Decision Support</h1>
-        <p className="hero-copy">
+    <ProposalShell
+      eyebrow="Full investor proposal · Pause-Health.ai"
+      title="Menopause Clinical Decision Support"
+      subtitle={
+        <>
           Pause-Health.ai is designed to help clinicians diagnose and treat
           menopause-related symptoms faster and more accurately by combining
           patient history, wearable signals, and AI guidance inside normal
@@ -456,9 +454,11 @@ export default function FullProposalPage() {
           Experience API contract verifiable from any{" "}
           <code>curl</code> against <a href="/api/mulesoft/providers">/api/mulesoft/providers</a>.
           Provider organizations onboard in 2026 H2.
-        </p>
-      </section>
-
+        </>
+      }
+      showSectionNav={false}
+      showJourneyFooter={false}
+    >
       <section style={{ marginTop: "1.25rem" }}>
         <div className="proposal-stat-block">
           {heroMetrics.map((m) => (
@@ -846,6 +846,6 @@ export default function FullProposalPage() {
           </a>
         </div>
       </section>
-    </main>
+    </ProposalShell>
   );
 }

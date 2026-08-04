@@ -5,7 +5,7 @@ import { ProposalJourneyFooter } from "./proposal-journey-footer";
 type ProposalShellProps = {
   eyebrow: string;
   title: string;
-  subtitle: string;
+  subtitle: ReactNode;
   children: ReactNode;
   /**
    * Optional URL for the "Back to ..." button. Defaults to
