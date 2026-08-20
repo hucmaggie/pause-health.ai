@@ -275,8 +275,9 @@ function AgentFabricConsoleInner() {
     return map;
   }, [policies]);
 
-  // Group the registry by plane (patient/clinical, platform, commercial) so
-  // the PHI boundary is visible instead of a flat list of raw tier slugs.
+  // Group the registry by plane (patient/clinical, payer & plan operations,
+  // platform, commercial) so the PHI boundary is visible instead of a flat
+  // list of raw tier slugs.
   const agentsByPlane = useMemo(() => {
     const map = new Map<GovernancePlane | "other", AgentRecord[]>();
     for (const a of agents) {
@@ -532,9 +533,10 @@ function AgentFabricConsoleInner() {
       <section style={{ marginBottom: "1.5rem" }}>
         <p className="eyebrow">Agent Registry</p>
         <p style={{ marginTop: "0.4rem", color: "var(--muted)", fontSize: "0.88rem" }}>
-          Grouped by plane. The patient/clinical plane and the commercial plane
-          are the PHI boundary — the platform plane is the shared data +
-          integration substrate that serves the patient plane.
+          Grouped by plane. The patient/clinical and payer & plan operations
+          planes are PHI-bearing (on the HIPAA audit policy); the commercial
+          plane is strictly PHI-separated; the platform plane is the shared data
+          + integration substrate that serves them.
         </p>
         {PLANES_IN_ORDER.filter(
           (plane) => (agentsByPlane.get(plane) ?? []).length > 0
@@ -1160,7 +1162,7 @@ export default function AgentFabricConsole() {
   return (
     <DemoShell
       title="Multi-agent control plane"
-      subtitle="Live view of every Pause-Health.ai agent registered on a (mocked) MuleSoft Agent Fabric, grouped by plane. The patient/clinical plane runs the lifecycle — inbound lead generation, prospecting & nurture, qualification, Agentforce intake, validated-instrument assessment, benefits verification, the Claude Care Router, care planning, scheduling, referrals, engagement, care-gap closure, medication adherence, clinical summaries, SDOH screening, patient education, remote monitoring, population health, clinical-trials matching, language access, HEDIS quality, advance care planning, care-team management, transitions of care, grievance & appeals, quality attribution, complex care management, claims adjudication, formulary/DUR, fraud-waste-abuse detection, trial payments, utilization review, care-coordination handoff, adverse-event reporting, TEFCA data-sharing, and risk-adjustment coding. The platform & data substrate carries the Pause MCP server, the MCP Bridge, the MuleSoft Process API, Data 360 grounding, provider credentialing, and the consent, master-patient-index, break-the-glass, and records-retention services. A strictly PHI-separated commercial plane runs pipeline management, account management, and provider contracting. Four agents call live Claude with a deterministic fallback. Every A2A handoff and tool call lands here as a trace span so you can govern, monitor, and audit the multi-agent system in one place."
+      subtitle="Live view of every Pause-Health.ai agent registered on a (mocked) MuleSoft Agent Fabric, grouped by plane. The patient/clinical plane runs the lifecycle — inbound lead generation, prospecting & nurture, qualification, Agentforce intake, validated-instrument assessment, benefits verification, the Claude Care Router, care planning, scheduling, referrals, engagement, care-gap closure, medication adherence, clinical summaries, SDOH screening, patient education, remote monitoring, population health, clinical-trials matching, language access, HEDIS quality, advance care planning, care-team management, transitions of care, grievance & appeals, quality attribution, complex care management, trial payments, care-coordination handoff, adverse-event reporting, TEFCA data-sharing, and risk-adjustment coding. A PHI-bearing payer & plan operations plane runs claims adjudication, formulary/DUR review, fraud-waste-abuse detection, and utilization review — plan-side, human-cosign-gated, never an autonomous adverse determination. The platform & data substrate carries the Pause MCP server, the MCP Bridge, the MuleSoft Process API, Data 360 grounding, provider credentialing, and the consent, master-patient-index, break-the-glass, and records-retention services. A strictly PHI-separated commercial plane runs pipeline management, account management, and provider contracting. Four agents call live Claude with a deterministic fallback. Every A2A handoff and tool call lands here as a trace span so you can govern, monitor, and audit the multi-agent system in one place."
       eyebrow="Prototype · Agent Fabric Console"
       backHref="/demo/intake"
       backLabel="← Back to Intake"

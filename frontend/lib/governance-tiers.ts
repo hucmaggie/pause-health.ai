@@ -13,6 +13,7 @@ export type GovernanceTier =
   | "patient-facing"
   | "benefits-verification"
   | "care-coordination"
+  | "payer-operations"
   | "clinical-decision"
   | "whole-person-care"
   | "data-plane"
@@ -25,11 +26,16 @@ export type GovernanceTier =
   | "commercial-operations";
 
 /**
- * The three planes the fabric separates agents into. The patient/clinical
- * plane and the commercial plane are the PHI boundary; the platform plane is
- * the shared data + integration substrate that serves the patient plane.
+ * The four planes the fabric separates agents into. The patient/clinical and
+ * payer & plan operations planes are PHI-bearing (on the HIPAA audit policy);
+ * the commercial plane is strictly PHI-separated; the platform plane is the
+ * shared data + integration substrate that serves them.
  */
-export type GovernancePlane = "patient-care" | "platform" | "commercial";
+export type GovernancePlane =
+  | "patient-care"
+  | "payer-plan"
+  | "platform"
+  | "commercial";
 
 export const GOVERNANCE_PLANES: Record<
   GovernancePlane,
@@ -41,14 +47,20 @@ export const GOVERNANCE_PLANES: Record<
     description:
       "Everything that touches a patient or a clinical decision — acquisition, qualification, intake, routing, and post-conversion engagement. PHI lives here and is governed by the HIPAA audit policy."
   },
-  platform: {
+  "payer-plan": {
     order: 1,
+    label: "Payer & plan operations · PHI",
+    description:
+      "Plan-side utilization management, claims adjudication, drug-utilization review, and program integrity. PHI-bearing — on the HIPAA audit policy like the patient/clinical plane — but functionally distinct: every adverse determination is human-cosign-gated and never autonomous."
+  },
+  platform: {
+    order: 2,
     label: "Platform & data substrate",
     description:
       "The shared data and integration layer that serves the patient plane — Data 360 grounding, the Pause MCP server, and the MuleSoft process tier. Federated, consent-gated, allow-listed."
   },
   commercial: {
-    order: 2,
+    order: 3,
     label: "Commercial plane · PHI-separated",
     description:
       "Pause's own B2B go-to-market in Sales Cloud. Strictly separated from the clinical plane: these agents cannot read patient PHI, which is why they are deliberately NOT on the HIPAA audit policy."
@@ -65,6 +77,10 @@ export const GOVERNANCE_TIERS: Record<
     plane: "patient-care"
   },
   "care-coordination": { label: "Care coordination", plane: "patient-care" },
+  "payer-operations": {
+    label: "Payer & plan operations",
+    plane: "payer-plan"
+  },
   "clinical-decision": { label: "Clinical decision", plane: "patient-care" },
   "whole-person-care": { label: "Whole-person care", plane: "patient-care" },
   "patient-acquisition": { label: "Patient acquisition", plane: "patient-care" },

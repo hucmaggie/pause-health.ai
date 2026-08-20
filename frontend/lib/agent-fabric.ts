@@ -1099,7 +1099,7 @@ const REGISTRY: AgentSeed[] = [
       "Runs against ILLUSTRATIVE synthetic edit catalog + reason-code catalog + benefit-rule shape — clearly labeled; NOT CMS X12 837 claim spec, an NCCI PTP edit table, an LCD/NCD medical-necessity registry, or a real payer's benefit configuration"
     ],
     provider: "Salesforce",
-    governanceTier: "care-coordination"
+    governanceTier: "payer-operations"
   },
   {
     id: "formulary-review-agent",
@@ -1131,7 +1131,7 @@ const REGISTRY: AgentSeed[] = [
       "Runs against ILLUSTRATIVE synthetic drug catalog + rule catalog + reason-code catalog + step-therapy chains + interaction pairs — clearly labeled; NOT Medi-Span, First Databank, RxNorm, an actual payer's formulary file, or a certified DUR engine"
     ],
     provider: "Salesforce",
-    governanceTier: "care-coordination"
+    governanceTier: "payer-operations"
   },
   {
     id: "fwa-detection-agent",
@@ -1164,7 +1164,7 @@ const REGISTRY: AgentSeed[] = [
       "Runs against ILLUSTRATIVE synthetic pattern catalog + peer baselines + severity thresholds — clearly labeled; NOT SAS Detection and Investigation, LexisNexis Provider Insight, an actual payer SIU rule set, or a certified fraud-detection engine"
     ],
     provider: "Salesforce",
-    governanceTier: "care-coordination"
+    governanceTier: "payer-operations"
   },
   {
     id: "trial-payments-agent",
@@ -1226,7 +1226,7 @@ const REGISTRY: AgentSeed[] = [
       "Runs against ILLUSTRATIVE synthetic service-type + criteria + rules + reason codes + SLA windows — clearly labeled; NOT MCG (Milliman Care Guidelines / Indicia), InterQual, an actual payer's UR rule set, or a certified medical-necessity engine"
     ],
     provider: "Salesforce",
-    governanceTier: "care-coordination"
+    governanceTier: "payer-operations"
   },
   {
     id: "provider-contracting-agent",
