@@ -33,6 +33,7 @@ import { PersonaJourneyFooter } from "../../../components/persona-journey-footer
 import { PopulationHealthPanel } from "../../../components/population-health-panel";
 import { RemoteMonitoringPanel } from "../../../components/remote-monitoring-panel";
 import { RiskAdjustmentPanel } from "../../../components/risk-adjustment-panel";
+import { MasterPatientIndexPanel } from "../../../components/master-patient-index-panel";
 import { SchedulingPanel } from "../../../components/scheduling-panel";
 import { SdohScreeningPanel } from "../../../components/sdoh-screening-panel";
 import { getAgentforceConfig } from "../../../lib/agentforce";
@@ -143,6 +144,8 @@ export default function IntakeDemoPage() {
       <DataSharingTefcaPanel />
 
       <RiskAdjustmentPanel />
+
+      <MasterPatientIndexPanel />
 
       <section className="demo-grid">
         <article className="card">

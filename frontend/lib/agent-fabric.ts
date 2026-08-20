@@ -1380,6 +1380,43 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "care-coordination"
+  },
+  {
+    id: "master-patient-index-agent",
+    name: "Master Patient Index / Identity Resolution Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the MuleSoft control-plane / data-substrate
+    // identity service: POST /api/agents/master-patient-index/tasks (card at
+    // /.well-known/agent.json). The identity/dedup layer of the data substrate:
+    // given an INCOMING patient record plus a set of CANDIDATE records, it
+    // DETERMINISTICALLY scores each candidate against a TRANSPARENT weighted
+    // demographic feature set (name, DOB, administrative sex, address, phone,
+    // member/MRN identifiers), classifies each as match / possible-match /
+    // no-match by FIXED thresholds, and recommends a resolution action (link /
+    // merge / manual-review / no-action). It is a RECOMMENDER + integrity gate:
+    // a high-confidence match at/above the auto-match threshold surfaces a
+    // link/merge recommendation, but a merge below that threshold is a
+    // manual-review recommendation requiring a human steward — there is never an
+    // 'auto-merged' state, and it NEVER autonomously merges a low-confidence
+    // pair. It COMPLEMENTS the other platform agents (salesforce-data-360,
+    // consent-management, mulesoft-ingest) — it is the identity/dedup layer,
+    // distinct from all of them. It is a control-plane / data-substrate service
+    // (platform plane), NOT a live-Claude agent. The match features + weights +
+    // thresholds + patient records are ILLUSTRATIVE synthetics, NOT a certified
+    // EMPI algorithm.
+    endpoint: "/api/agents/master-patient-index",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "The identity/dedup layer of the data substrate — resolves a patient's identity across source systems by scoring an INCOMING record against a set of CANDIDATE records, complementing (not duplicating) Data 360 grounding, the Consent & Preferences Management agent, and the MuleSoft ingest process",
+      "Matching is DETERMINISTIC and TRANSPARENT — a pure, additive/weighted function of a defined demographic feature set (name, DOB, member/MRN identifier, address, phone, administrative sex), each with a documented weight; the same incoming + candidates always yield the same scores + classifications + recommendation (stable, documented candidateId tie-break; no randomness, no clock)",
+      "Every match decision is EXPLAINABLE by citing its matched features and traces to the defined match-feature spec — an opaque / off-spec / black-box match is blocked at the Agent Fabric governance boundary (policy.mpi.transparent-matching)",
+      "A merge below the auto-match threshold is NEVER performed autonomously — it is a manual-review recommendation requiring a human steward (policy.mpi.no-autonomous-merge); and the matching feature set may NOT use a protected-class attribute (race, ethnicity, religion, etc.) — a fairness / responsible-AI requirement (policy.mpi.no-protected-class-matching)",
+      "Runs against ILLUSTRATIVE synthetic match features + weights + thresholds and synthetic/de-identified patient records — clearly labeled; NOT a certified enterprise master-patient-index (EMPI) algorithm"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
   }
 ];
 
@@ -1451,7 +1488,8 @@ const POLICIES: PolicyRecord[] = [
       "care-coordination-handoff-agent",
       "adverse-event-reporting-agent",
       "data-sharing-tefca-agent",
-      "risk-adjustment-agent"
+      "risk-adjustment-agent",
+      "master-patient-index-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2157,6 +2195,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Risk Adjustment & HCC Coding Agent may NEVER autonomously submit risk-adjustment codes or adjust a claim / RAF for reimbursement — it is a recommender + integrity checker, so a caller-asserted autonomous submission / claim adjustment is rejected before it can leave the fabric. Every assessment is submitted:false; a code submission is a human action taken after clinician validation, never the agent's. Mirrors the Prior Authorization Agent's no-autonomous-submission, the HEDIS Agent's no-autonomous-submission, and the Complex Care Management Agent's no-autonomous-billing posture — the agent proposes, a human files.",
     appliesTo: ["risk-adjustment-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.mpi.transparent-matching",
+    name: "Identity matching must trace to a transparent, documented feature spec",
+    description:
+      "Every match decision the Master Patient Index / Identity Resolution Agent makes must trace to the documented match-feature spec — a transparent, additive/weighted function of a defined demographic feature set (name, DOB, member/MRN identifier, address, phone, administrative sex), each candidate's classification explainable by citing its matched features. It may not resolve identity on an opaque / black-box / off-spec score. A match that doesn't trace to the defined features (an off-catalog feature, a score that doesn't sum from its matched features, or a classification that doesn't follow from the thresholds) is rejected before any link / merge is acted on, so the agent can never merge patients on an unexplainable score. (In the prototype the match features + weights + thresholds are clearly-labeled illustrative synthetics, NOT a certified EMPI algorithm; in production this is the customer's governed, validated identity-resolution model.)",
+    appliesTo: ["master-patient-index-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.mpi.no-autonomous-merge",
+    name: "No autonomous merge — a merge below the auto threshold requires a human steward",
+    description:
+      "The Master Patient Index / Identity Resolution Agent may recommend a link / merge, but a merge below the auto-match threshold may NOT be performed autonomously — it requires a human steward to review. A resolution that would merge / link a pair whose best match is below the auto-match threshold without requiring human review (an autonomous merge) is rejected before it can leave the fabric; there is never an 'auto-merged' state, and the agent never autonomously merges a low-confidence pair. A possible-match is a manual-review recommendation with requiresHumanReview:true (a safe answer, not a block). Mirrors the Population Health Agent's no-autonomous-care-decision and the Remote Patient Monitoring Agent's no-autonomous-escalation posture — the safe answer is enforced, not merely advised.",
+    appliesTo: ["master-patient-index-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.mpi.no-protected-class-matching",
+    name: "No protected-class attributes as matching features (fairness / responsible-AI)",
+    description:
+      "The Master Patient Index / Identity Resolution Agent's matching feature set may NOT use a protected-class attribute (race, ethnicity, religion, national origin, gender identity, sexual orientation, disability status, marital status) as a matching feature — a fairness / responsible-AI requirement. A feature set that asserts a protected-class attribute was used as a matching feature is rejected before any resolution is acted on; identity matching may use only permitted demographic / administrative identifiers. This keeps identity resolution defensible against discriminatory-matching concerns. (Distinct from the Population Health Agent's no-protected-class-factors — this governs the identity-matching feature set, not a risk model.)",
+    appliesTo: ["master-patient-index-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -6302,6 +6367,138 @@ function store(): FabricStore {
         codingRequiresClinicianValidation: true,
         noAutonomousCodeSubmission: true,
         submitted: false,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+// Master Patient Index / Identity Resolution seed — an identity-resolution run:
+// load the candidate records, deterministically score each against the incoming
+// record with the transparent feature set, resolve the best match, and flag the
+// ambiguous candidates for a human steward. This seed shows the HAPPY PATH (the
+// demo candidate set): a clear match at MAX_SCORE (100/100 — every feature, a
+// shared identifier) driving a merge recommendation, PLUS a possible-match
+// candidate (name + DOB + administrative sex only, score 60) flagged for
+// manual-review, and a no-match candidate. A merge below the auto threshold is
+// never performed autonomously (mergeRequiresHumanReview:true), every match
+// traces to the feature spec (matchTracesToFeatures:true), and no protected-class
+// attribute is used (excludesProtectedAttributesInMatching:true). It resolves
+// patient identifiers, so every span sets phiAccessed:true. The match features,
+// weights, thresholds, and records are ILLUSTRATIVE synthetics, not a certified
+// EMPI algorithm. Seed data; production populates the ring buffer from the
+// persistent log store.
+(function seedMasterPatientIndexTrace() {
+  const s = store();
+  const mpi0 = Date.now() - 1000 * 60 * 1;
+  const mpiTaskId = "task-seed-master-patient-index-001";
+  const mpiName = "Master Patient Index / Identity Resolution Agent";
+  s.traces.push(
+    {
+      id: "span-mpi-001",
+      taskId: mpiTaskId,
+      agentId: "master-patient-index-agent",
+      agentName: mpiName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(mpi0).toISOString(),
+      finishedAt: new Date(mpi0 + 35).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mpi-002",
+      taskId: mpiTaskId,
+      parentSpanId: "span-mpi-001",
+      agentId: "master-patient-index-agent",
+      agentName: mpiName,
+      operation: "mpi.load-candidates",
+      protocol: "a2a",
+      startedAt: new Date(mpi0 + 35).toISOString(),
+      finishedAt: new Date(mpi0 + 65).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        incomingRef: "mpi-incoming-001",
+        candidateCount: 3,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mpi-003",
+      taskId: mpiTaskId,
+      parentSpanId: "span-mpi-002",
+      agentId: "master-patient-index-agent",
+      agentName: mpiName,
+      operation: "mpi.score",
+      protocol: "a2a",
+      startedAt: new Date(mpi0 + 65).toISOString(),
+      finishedAt: new Date(mpi0 + 115).toISOString(),
+      durationMs: 50,
+      status: "ok",
+      attributes: {
+        candidateCount: 3,
+        bestScore: 100,
+        // The load-bearing invariant: every match traces to the feature spec
+        // (transparent, not a black box) and no protected-class attribute is used.
+        matchTracesToFeatures: true,
+        excludesProtectedAttributesInMatching: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mpi-004",
+      taskId: mpiTaskId,
+      parentSpanId: "span-mpi-003",
+      agentId: "master-patient-index-agent",
+      agentName: mpiName,
+      operation: "mpi.resolve",
+      protocol: "a2a",
+      startedAt: new Date(mpi0 + 115).toISOString(),
+      finishedAt: new Date(mpi0 + 150).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        bestMatchId: "mpi-candidate-clear-001",
+        bestScore: 100,
+        classification: "match",
+        recommendation: "merge",
+        // The load-bearing invariant: a merge below the auto threshold is never
+        // performed autonomously.
+        mergeRequiresHumanReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mpi-005",
+      taskId: mpiTaskId,
+      parentSpanId: "span-mpi-004",
+      agentId: "master-patient-index-agent",
+      agentName: mpiName,
+      operation: "mpi.flag-for-review",
+      protocol: "a2a",
+      startedAt: new Date(mpi0 + 150).toISOString(),
+      finishedAt: new Date(mpi0 + 190).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        matchCount: 1,
+        // One ambiguous possible-match is flagged for a human steward — the
+        // manual-review example (a safe answer, not a block).
+        possibleMatchCount: 1,
+        noMatchCount: 1,
+        // The best match is a clean at-threshold merge, so it does not itself
+        // require human review; a below-threshold merge always would.
+        requiresHumanReview: false,
+        mergeRequiresHumanReview: true,
         phiAccessed: true,
         synthetic: true
       }

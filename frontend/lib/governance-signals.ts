@@ -78,6 +78,10 @@ export type GovernanceTask = {
   consentTracesToRecord?: boolean;
   honorsRevocation?: boolean;
   respectsConsentScope?: boolean;
+  // Master patient index / identity resolution (transparent matching + no autonomous merge + no protected-class matching)
+  matchTracesToFeatures?: boolean;
+  mergeRequiresHumanReview?: boolean;
+  excludesProtectedAttributesInMatching?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -479,6 +483,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A decision overrides a withheld scope or a scope never granted",
     reason:
       "A consent decision would ALLOW against a scope the patient withheld, or a scope the patient never granted (no record); a decision may not override a withheld scope or borrow consent across scopes — an allow requires a granted, current consent record for that exact scope"
+  },
+  {
+    policyId: "policy.mpi.transparent-matching",
+    signal: "matchTracesToFeatures",
+    violatingValue: false,
+    violationHint: "A match decision doesn't trace to the defined match-feature spec",
+    reason:
+      "A match decision did not trace to the defined match-feature spec (an opaque / off-spec / black-box match, an off-catalog feature, a score that doesn't sum from its matched features, or a classification that doesn't follow from the thresholds); every match decision must be explainable by citing the defined match features — the agent may not resolve identity on an opaque score"
+  },
+  {
+    policyId: "policy.mpi.no-autonomous-merge",
+    signal: "mergeRequiresHumanReview",
+    violatingValue: false,
+    violationHint: "Merges a pair below the auto-match threshold without human steward review",
+    reason:
+      "A merge / link below the auto-match threshold was performed autonomously (requiresHumanReview:false); a merge below the auto threshold must NOT be performed autonomously — it requires a human steward to review (there is never an 'auto-merged' state), and the agent may never autonomously merge a low-confidence pair"
+  },
+  {
+    policyId: "policy.mpi.no-protected-class-matching",
+    signal: "excludesProtectedAttributesInMatching",
+    violatingValue: false,
+    violationHint: "The matching feature set uses a protected-class attribute",
+    reason:
+      "The matching feature set used a protected-class attribute (race, ethnicity, religion, national origin, gender identity, sexual orientation, disability status, marital status) as a matching feature; identity matching may use only permitted demographic / administrative identifiers — a fairness / responsible-AI requirement"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

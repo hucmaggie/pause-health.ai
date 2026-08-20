@@ -255,6 +255,29 @@ describe("POST /api/agent-fabric/governance/evaluate", () => {
     expect(ids).toContain("policy.riskadj.no-autonomous-submission");
   });
 
+  it("passes the master-patient-index signals through to the evaluator", async () => {
+    // Pins that the new master-patient-index / identity-resolution GovernanceTask
+    // fields reach evaluateGovernance across the HTTP boundary.
+    const res = await POST(
+      post({
+        agentId: "master-patient-index-agent",
+        task: {
+          matchTracesToFeatures: false,
+          mergeRequiresHumanReview: false,
+          excludesProtectedAttributesInMatching: false
+        }
+      })
+    );
+    const json = await res.json();
+    expect(json.result.decision).toBe("block");
+    const ids = json.result.blockingViolations.map(
+      (v: { policyId: string }) => v.policyId
+    );
+    expect(ids).toContain("policy.mpi.transparent-matching");
+    expect(ids).toContain("policy.mpi.no-autonomous-merge");
+    expect(ids).toContain("policy.mpi.no-protected-class-matching");
+  });
+
   it("an unknown agent has no applicable policies and allows", async () => {
     const res = await POST(post({ agentId: "ghost-agent", task: {} }));
     const json = await res.json();

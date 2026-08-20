@@ -431,9 +431,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // trial-payments + utilization-review + care-coordination-handoff +
     // adverse-event-reporting + data-sharing-tefca + risk-adjustment agents,
     // the Care Router, the platform substrate (incl. the Consent & Preferences
-    // Management agent), and the commercial plane (incl. the Provider
-    // Contracting agent).
-    expect(listAgents()).toHaveLength(47);
+    // Management agent and the Master Patient Index / Identity Resolution
+    // agent), and the commercial plane (incl. the Provider Contracting agent).
+    expect(listAgents()).toHaveLength(48);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -2234,6 +2234,131 @@ describe("Risk Adjustment & HCC Coding · evidence-supported (no-upcoding) + cli
   });
 });
 
+describe("Master Patient Index / Identity Resolution · transparent-matching + no-autonomous-merge + no-protected-class-matching agent", () => {
+  it("registers as a prototype MuleSoft-process agent on the reused data-plane tier (platform plane)", () => {
+    const a = getAgent("master-patient-index-agent");
+    expect(a).toBeDefined();
+    expect(a!.kind).toBe("mulesoft-process");
+    expect(a!.protocol).toBe("a2a");
+    expect(a!.provider).toBe("MuleSoft Anypoint");
+    expect(a!.status).toBe("prototype");
+    // Reuses the existing data-plane tier (platform plane) — it does NOT invent
+    // a new tier (the same tier the Consent agent uses).
+    expect(a!.governanceTier).toBe("data-plane");
+    expect(planeForTier(a!.governanceTier)).toBe("platform");
+    expect(a!.endpoint).toBe("/api/agents/master-patient-index");
+  });
+
+  it("carries the three MPI blocks plus the reused HIPAA-audit policy (handles patient identifiers)", () => {
+    const ids = getPoliciesForAgent("master-patient-index-agent").map((p) => p.id);
+    expect(ids).toContain("policy.mpi.transparent-matching");
+    expect(ids).toContain("policy.mpi.no-autonomous-merge");
+    expect(ids).toContain("policy.mpi.no-protected-class-matching");
+    // It resolves patient identifiers, so it IS HIPAA-audited.
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT a live-Claude agent (no model allow-list) and NOT commercial.
+    expect(ids).not.toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("all three MPI policies are enforced blocks", () => {
+    for (const id of [
+      "policy.mpi.transparent-matching",
+      "policy.mpi.no-autonomous-merge",
+      "policy.mpi.no-protected-class-matching"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement, id).toBe("block");
+      expect(policy!.status, id).toBe("enforced");
+    }
+  });
+
+  it("blocks an opaque match, an autonomous merge, and a protected-class feature; allows a well-formed task", () => {
+    // A match asserted on an opaque / off-spec score that doesn't trace to the
+    // defined match-feature spec.
+    const opaque = evaluateGovernance({
+      agentId: "master-patient-index-agent",
+      task: {
+        matchTracesToFeatures: false,
+        mergeRequiresHumanReview: true,
+        excludesProtectedAttributesInMatching: true
+      }
+    });
+    expect(opaque.decision).toBe("block");
+    expect(opaque.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.mpi.transparent-matching"
+    );
+
+    // A merge below the auto-match threshold performed autonomously.
+    const autonomousMerge = evaluateGovernance({
+      agentId: "master-patient-index-agent",
+      task: {
+        matchTracesToFeatures: true,
+        mergeRequiresHumanReview: false,
+        excludesProtectedAttributesInMatching: true
+      }
+    });
+    expect(autonomousMerge.decision).toBe("block");
+    expect(autonomousMerge.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.mpi.no-autonomous-merge"
+    );
+
+    // A protected-class attribute used as a matching feature.
+    const protectedClass = evaluateGovernance({
+      agentId: "master-patient-index-agent",
+      task: {
+        matchTracesToFeatures: true,
+        mergeRequiresHumanReview: true,
+        excludesProtectedAttributesInMatching: false
+      }
+    });
+    expect(protectedClass.decision).toBe("block");
+    expect(protectedClass.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.mpi.no-protected-class-matching"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "master-patient-index-agent",
+      task: {
+        matchTracesToFeatures: true,
+        mergeRequiresHumanReview: true,
+        excludesProtectedAttributesInMatching: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "master-patient-index-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a load-candidates→score→resolve→flag-for-review trace with a manual-review example, every span phiAccessed", () => {
+    const spans = listTraces({ taskId: "task-seed-master-patient-index-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(4);
+    const load = spans.find((s) => s.operation === "mpi.load-candidates");
+    expect(load?.agentId).toBe("master-patient-index-agent");
+    expect(load?.attributes?.candidateCount).toBe(3);
+    const score = spans.find((s) => s.operation === "mpi.score");
+    expect(score?.attributes?.bestScore).toBe(100);
+    expect(score?.attributes?.matchTracesToFeatures).toBe(true);
+    expect(score?.attributes?.excludesProtectedAttributesInMatching).toBe(true);
+    const resolve = spans.find((s) => s.operation === "mpi.resolve");
+    expect(resolve?.attributes?.classification).toBe("match");
+    expect(resolve?.attributes?.recommendation).toBe("merge");
+    // A merge below the auto threshold is never performed autonomously.
+    expect(resolve?.attributes?.mergeRequiresHumanReview).toBe(true);
+    const flag = spans.find((s) => s.operation === "mpi.flag-for-review");
+    // One ambiguous possible-match is surfaced for a human steward.
+    expect(flag?.attributes?.possibleMatchCount).toBe(1);
+    // The whole run resolves patient identifiers.
+    for (const s of spans) {
+      expect(s.attributes?.phiAccessed, s.operation).toBe(true);
+    }
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -2367,7 +2492,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-consent-management-001",
       "task-seed-clinical-trials-001",
       "task-seed-language-access-001",
-      "task-seed-risk-adjustment-001"
+      "task-seed-risk-adjustment-001",
+      "task-seed-master-patient-index-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });
