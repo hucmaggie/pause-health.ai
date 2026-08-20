@@ -431,9 +431,10 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // trial-payments + utilization-review + care-coordination-handoff +
     // adverse-event-reporting + data-sharing-tefca + risk-adjustment agents,
     // the Care Router, the platform substrate (incl. the Consent & Preferences
-    // Management agent and the Master Patient Index / Identity Resolution
-    // agent), and the commercial plane (incl. the Provider Contracting agent).
-    expect(listAgents()).toHaveLength(48);
+    // Management agent, the Master Patient Index / Identity Resolution agent,
+    // and the Break-the-Glass / Emergency Access Governance agent), and the
+    // commercial plane (incl. the Provider Contracting agent).
+    expect(listAgents()).toHaveLength(49);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -2359,6 +2360,128 @@ describe("Master Patient Index / Identity Resolution · transparent-matching + n
   });
 });
 
+describe("Break-the-Glass / Emergency Access Governance · justification-required + minimum-necessary-time-boxed + mandatory-audit-review agent", () => {
+  it("registers as a prototype MuleSoft-process agent on the reused data-plane tier (platform plane)", () => {
+    const a = getAgent("break-the-glass-agent");
+    expect(a).toBeDefined();
+    expect(a!.kind).toBe("mulesoft-process");
+    expect(a!.protocol).toBe("a2a");
+    expect(a!.provider).toBe("MuleSoft Anypoint");
+    expect(a!.status).toBe("prototype");
+    // Reuses the existing data-plane tier (platform plane) — it does NOT invent
+    // a new tier (the same tier the Consent + MPI agents use).
+    expect(a!.governanceTier).toBe("data-plane");
+    expect(planeForTier(a!.governanceTier)).toBe("platform");
+    expect(a!.endpoint).toBe("/api/agents/break-the-glass");
+  });
+
+  it("carries the three break-the-glass blocks plus the reused HIPAA-audit policy (governs PHI access)", () => {
+    const ids = getPoliciesForAgent("break-the-glass-agent").map((p) => p.id);
+    expect(ids).toContain("policy.btg.justification-required");
+    expect(ids).toContain("policy.btg.minimum-necessary-time-boxed");
+    expect(ids).toContain("policy.btg.mandatory-audit-review");
+    // It governs emergency access to PHI, so it IS HIPAA-audited.
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT a live-Claude agent (no model allow-list) and NOT commercial.
+    expect(ids).not.toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("all three break-the-glass policies are enforced blocks", () => {
+    for (const id of [
+      "policy.btg.justification-required",
+      "policy.btg.minimum-necessary-time-boxed",
+      "policy.btg.mandatory-audit-review"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement, id).toBe("block");
+      expect(policy!.status, id).toBe("enforced");
+    }
+  });
+
+  it("blocks an unjustified grant, a standing grant, and an un-audited grant; allows a well-formed task", () => {
+    // A granted access with no recorded clinical justification.
+    const unjustified = evaluateGovernance({
+      agentId: "break-the-glass-agent",
+      task: {
+        accessHasJustification: false,
+        accessIsMinimumNecessaryTimeBoxed: true,
+        accessLoggedForReview: true
+      }
+    });
+    expect(unjustified.decision).toBe("block");
+    expect(unjustified.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.btg.justification-required"
+    );
+
+    // A standing / full-record / non-expiring grant.
+    const standing = evaluateGovernance({
+      agentId: "break-the-glass-agent",
+      task: {
+        accessHasJustification: true,
+        accessIsMinimumNecessaryTimeBoxed: false,
+        accessLoggedForReview: true
+      }
+    });
+    expect(standing.decision).toBe("block");
+    expect(standing.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.btg.minimum-necessary-time-boxed"
+    );
+
+    // An un-audited / un-reviewed grant.
+    const unaudited = evaluateGovernance({
+      agentId: "break-the-glass-agent",
+      task: {
+        accessHasJustification: true,
+        accessIsMinimumNecessaryTimeBoxed: true,
+        accessLoggedForReview: false
+      }
+    });
+    expect(unaudited.decision).toBe("block");
+    expect(unaudited.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.btg.mandatory-audit-review"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "break-the-glass-agent",
+      task: {
+        accessHasJustification: true,
+        accessIsMinimumNecessaryTimeBoxed: true,
+        accessLoggedForReview: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "break-the-glass-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a receive-request→evaluate→grant-scoped→log-audit trace with a minimum-necessary grant, every span phiAccessed", () => {
+    const spans = listTraces({ taskId: "task-seed-break-the-glass-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(4);
+    const receive = spans.find((s) => s.operation === "btg.receive-request");
+    expect(receive?.agentId).toBe("break-the-glass-agent");
+    expect(receive?.attributes?.accessHasJustification).toBe(true);
+    const evaluate = spans.find((s) => s.operation === "btg.evaluate");
+    expect(evaluate?.attributes?.granted).toBe(true);
+    expect(evaluate?.attributes?.accessIsMinimumNecessaryTimeBoxed).toBe(true);
+    const grant = spans.find((s) => s.operation === "btg.grant-scoped");
+    // A minimum-necessary grant — 4 fields, NOT the full chart — time-boxed.
+    expect(grant?.attributes?.grantedFieldCount).toBe(4);
+    expect(grant?.attributes?.durationMinutes).toBe(60);
+    const audit = spans.find((s) => s.operation === "btg.log-audit");
+    expect(audit?.attributes?.requiresPostAccessReview).toBe(true);
+    expect(audit?.attributes?.accessLoggedForReview).toBe(true);
+    // The whole run governs access to patient PHI.
+    for (const s of spans) {
+      expect(s.attributes?.phiAccessed, s.operation).toBe(true);
+    }
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -2493,7 +2616,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-clinical-trials-001",
       "task-seed-language-access-001",
       "task-seed-risk-adjustment-001",
-      "task-seed-master-patient-index-001"
+      "task-seed-master-patient-index-001",
+      "task-seed-break-the-glass-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });

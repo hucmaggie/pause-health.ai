@@ -1417,6 +1417,43 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "MuleSoft Anypoint",
     governanceTier: "data-plane"
+  },
+  {
+    id: "break-the-glass-agent",
+    name: "Break-the-Glass / Emergency Access Governance Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the MuleSoft control-plane / data-substrate
+    // security service: POST /api/agents/break-the-glass/tasks (card at
+    // /.well-known/agent.json). Governs emergency "break-the-glass" override
+    // access to PHI: given an ACCESS REQUEST — requester role, target patient,
+    // stated purpose, an emergency flag, and a free-text clinical justification —
+    // it DETERMINISTICALLY decides whether to grant emergency access, and if so
+    // returns a TIME-BOXED, MINIMUM-NECESSARY grant (a scoped field set + a
+    // derived expiry), ALWAYS emitting a mandatory audit event and flagging the
+    // grant for mandatory post-access review. It NEVER grants standing / broad /
+    // full-record access and never grants without a recorded justification. A
+    // DENY (no emergency, no justification, or an off-catalog purpose) is a SAFE,
+    // completed answer — NOT a block. It COMPLEMENTS the other platform agents —
+    // distinct from the Consent & Preferences Management agent (patient consent
+    // scopes for outreach / data-sharing) and the Master Patient Index (identity
+    // / dedup): this governs EMERGENCY clinician access under HIPAA
+    // minimum-necessary + audit. It is a control-plane / data-substrate service
+    // (platform plane), NOT a live-Claude agent. The purpose catalog, scopes,
+    // durations, and audit ids are ILLUSTRATIVE synthetics, NOT a certified
+    // break-the-glass system.
+    endpoint: "/api/agents/break-the-glass",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "The emergency-access governance layer of the data substrate — governs break-the-glass override access to PHI, complementing (not duplicating) the Consent & Preferences Management agent (consent scopes) and the Master Patient Index (identity/dedup)",
+      "Access decisions are DETERMINISTIC — a pure function of the request + its own atTime (no randomness, no clock); a grant is ALWAYS time-boxed (an expiry derived from atTime + the purpose's duration) and minimum-necessary (the purpose's scoped field set — never the full chart), and the same request always yields the same grant/deny + scope + expiry + audit id",
+      "No emergency access without a recorded, non-empty clinical justification — an asserted-but-unjustified grant is blocked at the Agent Fabric governance boundary (policy.btg.justification-required)",
+      "Every grant is minimum-necessary + time-boxed — a standing / full-record / non-expiring grant is blocked (policy.btg.minimum-necessary-time-boxed); and every emergency access must emit a mandatory audit event AND be flagged for post-access review — un-audited access is blocked (policy.btg.mandatory-audit-review)",
+      "Runs against an ILLUSTRATIVE synthetic purpose catalog + minimum-necessary scopes + access durations + audit ids — clearly labeled; NOT a certified break-the-glass / emergency-access system"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
   }
 ];
 
@@ -1489,7 +1526,8 @@ const POLICIES: PolicyRecord[] = [
       "adverse-event-reporting-agent",
       "data-sharing-tefca-agent",
       "risk-adjustment-agent",
-      "master-patient-index-agent"
+      "master-patient-index-agent",
+      "break-the-glass-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2222,6 +2260,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Master Patient Index / Identity Resolution Agent's matching feature set may NOT use a protected-class attribute (race, ethnicity, religion, national origin, gender identity, sexual orientation, disability status, marital status) as a matching feature — a fairness / responsible-AI requirement. A feature set that asserts a protected-class attribute was used as a matching feature is rejected before any resolution is acted on; identity matching may use only permitted demographic / administrative identifiers. This keeps identity resolution defensible against discriminatory-matching concerns. (Distinct from the Population Health Agent's no-protected-class-factors — this governs the identity-matching feature set, not a risk model.)",
     appliesTo: ["master-patient-index-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.btg.justification-required",
+    name: "No emergency access without a recorded clinical justification",
+    description:
+      "The Break-the-Glass / Emergency Access Governance Agent may NEVER grant emergency override access to PHI without a recorded, non-empty clinical justification — an asserted-but-unjustified break-the-glass grant is rejected before any access can leave the fabric, so the authoritative emergency-access log can never hold access it can't evidence with a documented clinical reason. A DENY for a missing justification is a safe completed answer; the block fires only on a granted access that carries no recorded justification. (In the prototype the purpose catalog + scopes + audit ids are clearly-labeled illustrative synthetics, not a certified break-the-glass system; in production this is the customer's governed emergency-access control with a signed audit trail.)",
+    appliesTo: ["break-the-glass-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.btg.minimum-necessary-time-boxed",
+    name: "Every emergency grant must be minimum-necessary and time-boxed",
+    description:
+      "An emergency grant the Break-the-Glass / Emergency Access Governance Agent issues must be scoped to a MINIMUM-NECESSARY field set AND TIME-BOXED with a derived expiry — never a standing / broad / full-record / non-expiring grant. A grant that would open the full chart (an over-broad or full-record scope) or grant access with no expiry is rejected before it can leave the fabric, so a break-the-glass override can never become a standing back-door into the record. This is the HIPAA §164.502 minimum-necessary property enforced, not merely advised. Mirrors the Master Patient Index Agent's no-autonomous-merge and the Population Health Agent's no-autonomous-care-decision posture — the safe answer is enforced. (In the prototype the minimum-necessary scopes + access durations are clearly-labeled illustrative synthetics; in production this is the customer's governed minimum-necessary determination.)",
+    appliesTo: ["break-the-glass-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.btg.mandatory-audit-review",
+    name: "Every emergency access must be logged and post-access reviewed",
+    description:
+      "Every emergency access the Break-the-Glass / Emergency Access Governance Agent grants must emit a mandatory audit event AND be flagged for mandatory post-access review — there is no un-audited break-the-glass access. A granted access that is not logged or not flagged for post-access review is rejected before it can leave the fabric, so a break-the-glass override always leaves a reviewable trail. This is the HIPAA §164.312 audit-controls property enforced, not merely advised. (In the prototype the audit-event ids are clearly-labeled illustrative synthetics, not a certified tamper-evident audit trail; in production this exports to the customer's SIEM via MuleSoft with a signed audit trail.)",
+    appliesTo: ["break-the-glass-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -6499,6 +6564,133 @@ function store(): FabricStore {
         // require human review; a below-threshold merge always would.
         requiresHumanReview: false,
         mergeRequiresHumanReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+// Break-the-Glass / Emergency Access Governance seed — an emergency-access run:
+// receive the break-the-glass request, deterministically evaluate it, grant a
+// TIME-BOXED, MINIMUM-NECESSARY scoped access, and log the mandatory audit event
+// flagged for post-access review. This seed shows the HAPPY PATH (the demo
+// request): an emergency physician breaking the glass for an unstable ED patient
+// with a recorded justification → a minimum-necessary grant scoped to allergies /
+// medications / problems / vitals (4 fields, NOT the full chart), time-boxed to 60
+// minutes, logged, and flagged for post-access review. No standing access is ever
+// granted (accessIsMinimumNecessaryTimeBoxed:true), every access carries a
+// recorded justification (accessHasJustification:true), and every access is logged
+// for review (accessLoggedForReview:true). It touches patient PHI, so every span
+// sets phiAccessed:true. The purpose catalog, scopes, durations, and audit ids are
+// ILLUSTRATIVE synthetics, not a certified break-the-glass system. Seed data;
+// production populates the ring buffer from the persistent log store.
+(function seedBreakTheGlassTrace() {
+  const s = store();
+  const btg0 = Date.now() - 1000 * 60 * 1;
+  const btgTaskId = "task-seed-break-the-glass-001";
+  const btgName = "Break-the-Glass / Emergency Access Governance Agent";
+  s.traces.push(
+    {
+      id: "span-btg-001",
+      taskId: btgTaskId,
+      agentId: "break-the-glass-agent",
+      agentName: btgName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(btg0).toISOString(),
+      finishedAt: new Date(btg0 + 35).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-btg-002",
+      taskId: btgTaskId,
+      parentSpanId: "span-btg-001",
+      agentId: "break-the-glass-agent",
+      agentName: btgName,
+      operation: "btg.receive-request",
+      protocol: "a2a",
+      startedAt: new Date(btg0 + 35).toISOString(),
+      finishedAt: new Date(btg0 + 65).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        patientRef: "btg-patient-001",
+        requesterRole: "emergency-physician",
+        purpose: "emergency-treatment",
+        emergency: true,
+        // The honesty invariant: a grant requires a recorded justification.
+        accessHasJustification: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-btg-003",
+      taskId: btgTaskId,
+      parentSpanId: "span-btg-002",
+      agentId: "break-the-glass-agent",
+      agentName: btgName,
+      operation: "btg.evaluate",
+      protocol: "a2a",
+      startedAt: new Date(btg0 + 65).toISOString(),
+      finishedAt: new Date(btg0 + 105).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        granted: true,
+        // The honesty invariant: the grant is minimum-necessary and time-boxed.
+        accessIsMinimumNecessaryTimeBoxed: true,
+        accessHasJustification: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-btg-004",
+      taskId: btgTaskId,
+      parentSpanId: "span-btg-003",
+      agentId: "break-the-glass-agent",
+      agentName: btgName,
+      operation: "btg.grant-scoped",
+      protocol: "a2a",
+      startedAt: new Date(btg0 + 105).toISOString(),
+      finishedAt: new Date(btg0 + 140).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        granted: true,
+        // Minimum-necessary: 4 fields, NOT the full chart; time-boxed to 60 min.
+        grantedFieldCount: 4,
+        durationMinutes: 60,
+        expiresAt: "2026-03-01T03:30:00.000Z",
+        accessIsMinimumNecessaryTimeBoxed: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-btg-005",
+      taskId: btgTaskId,
+      parentSpanId: "span-btg-004",
+      agentId: "break-the-glass-agent",
+      agentName: btgName,
+      operation: "btg.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(btg0 + 140).toISOString(),
+      finishedAt: new Date(btg0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        auditEventId: "btg-audit-btg-patient-001-emergency-treatment-20260301023000",
+        // The honesty invariant: every access is logged AND post-access reviewed.
+        requiresPostAccessReview: true,
+        accessLoggedForReview: true,
         phiAccessed: true,
         synthetic: true
       }

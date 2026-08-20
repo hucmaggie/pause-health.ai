@@ -82,6 +82,10 @@ export type GovernanceTask = {
   matchTracesToFeatures?: boolean;
   mergeRequiresHumanReview?: boolean;
   excludesProtectedAttributesInMatching?: boolean;
+  // Break-the-glass / emergency access governance (justification-required + minimum-necessary-time-boxed + mandatory-audit-review)
+  accessHasJustification?: boolean;
+  accessIsMinimumNecessaryTimeBoxed?: boolean;
+  accessLoggedForReview?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -507,6 +511,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "The matching feature set uses a protected-class attribute",
     reason:
       "The matching feature set used a protected-class attribute (race, ethnicity, religion, national origin, gender identity, sexual orientation, disability status, marital status) as a matching feature; identity matching may use only permitted demographic / administrative identifiers — a fairness / responsible-AI requirement"
+  },
+  {
+    policyId: "policy.btg.justification-required",
+    signal: "accessHasJustification",
+    violatingValue: false,
+    violationHint: "Grants emergency access with no recorded clinical justification",
+    reason:
+      "An emergency break-the-glass access was granted with no recorded, non-empty clinical justification; emergency access may never be granted without a recorded justification — the agent may only grant access that carries a documented clinical reason"
+  },
+  {
+    policyId: "policy.btg.minimum-necessary-time-boxed",
+    signal: "accessIsMinimumNecessaryTimeBoxed",
+    violatingValue: false,
+    violationHint: "Grants standing / full-record / non-expiring emergency access",
+    reason:
+      "An emergency access grant was standing / full-record / non-expiring (an over-broad or full-chart scope, or a grant with no expiry); every grant must be scoped to a minimum-necessary field set AND time-boxed with a derived expiry — the agent may never grant standing / broad / full-record access"
+  },
+  {
+    policyId: "policy.btg.mandatory-audit-review",
+    signal: "accessLoggedForReview",
+    violatingValue: false,
+    violationHint: "Grants un-audited / un-reviewed emergency access",
+    reason:
+      "An emergency access grant was not logged with a mandatory audit event and/or not flagged for post-access review; every emergency access must emit a mandatory audit event AND be flagged for mandatory post-access review — there is no un-audited break-the-glass access"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

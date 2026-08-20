@@ -278,6 +278,29 @@ describe("POST /api/agent-fabric/governance/evaluate", () => {
     expect(ids).toContain("policy.mpi.no-protected-class-matching");
   });
 
+  it("passes the break-the-glass signals through to the evaluator", async () => {
+    // Pins that the new break-the-glass / emergency-access GovernanceTask fields
+    // reach evaluateGovernance across the HTTP boundary.
+    const res = await POST(
+      post({
+        agentId: "break-the-glass-agent",
+        task: {
+          accessHasJustification: false,
+          accessIsMinimumNecessaryTimeBoxed: false,
+          accessLoggedForReview: false
+        }
+      })
+    );
+    const json = await res.json();
+    expect(json.result.decision).toBe("block");
+    const ids = json.result.blockingViolations.map(
+      (v: { policyId: string }) => v.policyId
+    );
+    expect(ids).toContain("policy.btg.justification-required");
+    expect(ids).toContain("policy.btg.minimum-necessary-time-boxed");
+    expect(ids).toContain("policy.btg.mandatory-audit-review");
+  });
+
   it("an unknown agent has no applicable policies and allows", async () => {
     const res = await POST(post({ agentId: "ghost-agent", task: {} }));
     const json = await res.json();
