@@ -86,6 +86,10 @@ export type GovernanceTask = {
   accessHasJustification?: boolean;
   accessIsMinimumNecessaryTimeBoxed?: boolean;
   accessLoggedForReview?: boolean;
+  // Data retention & records lifecycle management (legal-hold-overrides-purge + schedule-sourced + no-autonomous-purge)
+  retentionRespectsLegalHold?: boolean;
+  retentionRuleCited?: boolean;
+  purgeHumanApproved?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -535,6 +539,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Grants un-audited / un-reviewed emergency access",
     reason:
       "An emergency access grant was not logged with a mandatory audit event and/or not flagged for post-access review; every emergency access must emit a mandatory audit event AND be flagged for mandatory post-access review — there is no un-audited break-the-glass access"
+  },
+  {
+    policyId: "policy.retention.legal-hold-overrides-purge",
+    signal: "retentionRespectsLegalHold",
+    violatingValue: false,
+    violationHint: "Marks a record on active legal hold as eligible-for-purge",
+    reason:
+      "A records-disposition decision marked a record eligible-for-purge (or asserted a purge) while it was under an active legal hold; a legal hold ALWAYS overrides a purge — a held record must be `hold`, never eligible-for-purge, no matter how far past its retention expiry it is. Purging a record under legal hold is spoliation of evidence"
+  },
+  {
+    policyId: "policy.retention.schedule-sourced",
+    signal: "retentionRuleCited",
+    violatingValue: false,
+    violationHint: "A disposition doesn't cite a recorded retention rule",
+    reason:
+      "A records-disposition decision (retain / eligible-for-purge / hold) did not cite a recorded retention rule from the schedule catalog (an ad-hoc / un-sourced disposition, a missing or off-catalog rule id); every disposition must trace to a defined retention schedule — the agent may not dispose of a record on an ad-hoc, un-sourced rule"
+  },
+  {
+    policyId: "policy.retention.no-autonomous-purge",
+    signal: "purgeHumanApproved",
+    violatingValue: false,
+    violationHint: "Executes an autonomous / unapproved purge",
+    reason:
+      "A records-disposition decision asserted an autonomous / unapproved purge (an eligible-for-purge disposition not gated on human approval); a destructive purge may NEVER be executed autonomously — an eligible-for-purge is a RECOMMENDATION requiring human approval (requiresHumanApproval:true), and a purge only happens after a human approves it. Mirrors the Master Patient Index Agent's no-autonomous-merge and the Break-the-Glass Agent's minimum-necessary posture — the safe answer is enforced"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

@@ -432,9 +432,10 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // adverse-event-reporting + data-sharing-tefca + risk-adjustment agents,
     // the Care Router, the platform substrate (incl. the Consent & Preferences
     // Management agent, the Master Patient Index / Identity Resolution agent,
-    // and the Break-the-Glass / Emergency Access Governance agent), and the
-    // commercial plane (incl. the Provider Contracting agent).
-    expect(listAgents()).toHaveLength(49);
+    // the Break-the-Glass / Emergency Access Governance agent, and the Data
+    // Retention & Records Lifecycle Management agent), and the commercial plane
+    // (incl. the Provider Contracting agent).
+    expect(listAgents()).toHaveLength(50);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
@@ -2482,6 +2483,128 @@ describe("Break-the-Glass / Emergency Access Governance · justification-require
   });
 });
 
+describe("Data Retention & Records Lifecycle Management · legal-hold-overrides-purge + schedule-sourced + no-autonomous-purge agent", () => {
+  it("registers as a prototype MuleSoft-process agent on the reused data-plane tier (platform plane)", () => {
+    const a = getAgent("records-retention-agent");
+    expect(a).toBeDefined();
+    expect(a!.kind).toBe("mulesoft-process");
+    expect(a!.protocol).toBe("a2a");
+    expect(a!.provider).toBe("MuleSoft Anypoint");
+    expect(a!.status).toBe("prototype");
+    // Reuses the existing data-plane tier (platform plane) — it does NOT invent
+    // a new tier (the same tier the Consent + MPI + Break-the-Glass agents use).
+    expect(a!.governanceTier).toBe("data-plane");
+    expect(planeForTier(a!.governanceTier)).toBe("platform");
+    expect(a!.endpoint).toBe("/api/agents/records-retention");
+  });
+
+  it("carries the three retention blocks plus the reused HIPAA-audit policy (governs PHI records)", () => {
+    const ids = getPoliciesForAgent("records-retention-agent").map((p) => p.id);
+    expect(ids).toContain("policy.retention.legal-hold-overrides-purge");
+    expect(ids).toContain("policy.retention.schedule-sourced");
+    expect(ids).toContain("policy.retention.no-autonomous-purge");
+    // It governs the lifecycle of PHI records, so it IS HIPAA-audited.
+    expect(ids).toContain("policy.audit.hipaa-log-every-turn");
+    // It is NOT a live-Claude agent (no model allow-list) and NOT commercial.
+    expect(ids).not.toContain("policy.model.anthropic-claude-sonnet-allowlisted");
+    expect(ids).not.toContain("policy.commercial.no-phi-in-commercial-plane");
+  });
+
+  it("all three retention policies are enforced blocks", () => {
+    for (const id of [
+      "policy.retention.legal-hold-overrides-purge",
+      "policy.retention.schedule-sourced",
+      "policy.retention.no-autonomous-purge"
+    ]) {
+      const policy = listPolicies().find((p) => p.id === id);
+      expect(policy, id).toBeDefined();
+      expect(policy!.enforcement, id).toBe("block");
+      expect(policy!.status, id).toBe("enforced");
+    }
+  });
+
+  it("blocks a purge under legal hold, an un-sourced disposition, and an autonomous purge; allows a well-formed task", () => {
+    // A purge asserted while under an active legal hold.
+    const purgeUnderHold = evaluateGovernance({
+      agentId: "records-retention-agent",
+      task: {
+        retentionRespectsLegalHold: false,
+        retentionRuleCited: true,
+        purgeHumanApproved: true
+      }
+    });
+    expect(purgeUnderHold.decision).toBe("block");
+    expect(purgeUnderHold.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.retention.legal-hold-overrides-purge"
+    );
+
+    // An ad-hoc disposition with no cited retention schedule.
+    const unsourced = evaluateGovernance({
+      agentId: "records-retention-agent",
+      task: {
+        retentionRespectsLegalHold: true,
+        retentionRuleCited: false,
+        purgeHumanApproved: true
+      }
+    });
+    expect(unsourced.decision).toBe("block");
+    expect(unsourced.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.retention.schedule-sourced"
+    );
+
+    // An autonomous / unapproved purge.
+    const autonomousPurge = evaluateGovernance({
+      agentId: "records-retention-agent",
+      task: {
+        retentionRespectsLegalHold: true,
+        retentionRuleCited: true,
+        purgeHumanApproved: false
+      }
+    });
+    expect(autonomousPurge.decision).toBe("block");
+    expect(autonomousPurge.blockingViolations.map((v) => v.policyId)).toContain(
+      "policy.retention.no-autonomous-purge"
+    );
+
+    const allowed = evaluateGovernance({
+      agentId: "records-retention-agent",
+      task: {
+        retentionRespectsLegalHold: true,
+        retentionRuleCited: true,
+        purgeHumanApproved: true
+      }
+    });
+    expect(allowed.decision).toBe("allow");
+
+    // Absent signals must not trip the gate (opt-in-by-signal convention).
+    expect(
+      evaluateGovernance({ agentId: "records-retention-agent", task: {} }).decision
+    ).toBe("allow");
+  });
+
+  it("seeds a receive-record→evaluate→recommend→log-audit trace with an eligible-for-purge recommendation, every span phiAccessed", () => {
+    const spans = listTraces({ taskId: "task-seed-records-retention-001" });
+    expect(spans.length).toBeGreaterThanOrEqual(4);
+    const receive = spans.find((s) => s.operation === "retention.receive-record");
+    expect(receive?.agentId).toBe("records-retention-agent");
+    expect(receive?.attributes?.retentionRuleCited).toBe(true);
+    const evaluate = spans.find((s) => s.operation === "retention.evaluate");
+    expect(evaluate?.attributes?.recommendation).toBe("eligible-for-purge");
+    expect(evaluate?.attributes?.retentionRespectsLegalHold).toBe(true);
+    const recommend = spans.find((s) => s.operation === "retention.recommend");
+    // A purge is only ever a recommendation requiring human approval.
+    expect(recommend?.attributes?.requiresHumanApproval).toBe(true);
+    expect(recommend?.attributes?.purgeHumanApproved).toBe(true);
+    const audit = spans.find((s) => s.operation === "retention.log-audit");
+    expect(audit?.attributes?.recommendation).toBe("eligible-for-purge");
+    expect(audit?.attributes?.underLegalHold).toBe(false);
+    // The whole run governs the lifecycle of patient records.
+    for (const s of spans) {
+      expect(s.attributes?.phiAccessed, s.operation).toBe(true);
+    }
+  });
+});
+
 describe("Commercial plane · Pipeline + Account Management agents", () => {
   it("registers both as prototype Agentforce agents on the commercial-operations tier", () => {
     for (const id of ["pipeline-management-agent", "account-management-agent"]) {
@@ -2617,7 +2740,8 @@ describe("Referential integrity · registry ⇄ policy catalog", () => {
       "task-seed-language-access-001",
       "task-seed-risk-adjustment-001",
       "task-seed-master-patient-index-001",
-      "task-seed-break-the-glass-001"
+      "task-seed-break-the-glass-001",
+      "task-seed-records-retention-001"
     ];
     for (const taskId of seededTaskIds) {
       const spans = listTraces({ taskId });

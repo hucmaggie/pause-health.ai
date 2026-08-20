@@ -35,6 +35,7 @@ import { RemoteMonitoringPanel } from "../../../components/remote-monitoring-pan
 import { RiskAdjustmentPanel } from "../../../components/risk-adjustment-panel";
 import { MasterPatientIndexPanel } from "../../../components/master-patient-index-panel";
 import { BreakTheGlassPanel } from "../../../components/break-the-glass-panel";
+import { RecordsRetentionPanel } from "../../../components/records-retention-panel";
 import { SchedulingPanel } from "../../../components/scheduling-panel";
 import { SdohScreeningPanel } from "../../../components/sdoh-screening-panel";
 import { getAgentforceConfig } from "../../../lib/agentforce";
@@ -149,6 +150,8 @@ export default function IntakeDemoPage() {
       <MasterPatientIndexPanel />
 
       <BreakTheGlassPanel />
+
+      <RecordsRetentionPanel />
 
       <section className="demo-grid">
         <article className="card">

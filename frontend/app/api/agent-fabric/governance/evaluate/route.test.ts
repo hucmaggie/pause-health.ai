@@ -301,6 +301,29 @@ describe("POST /api/agent-fabric/governance/evaluate", () => {
     expect(ids).toContain("policy.btg.mandatory-audit-review");
   });
 
+  it("passes the records-retention signals through to the evaluator", async () => {
+    // Pins that the new data-retention / records-lifecycle GovernanceTask fields
+    // reach evaluateGovernance across the HTTP boundary.
+    const res = await POST(
+      post({
+        agentId: "records-retention-agent",
+        task: {
+          retentionRespectsLegalHold: false,
+          retentionRuleCited: false,
+          purgeHumanApproved: false
+        }
+      })
+    );
+    const json = await res.json();
+    expect(json.result.decision).toBe("block");
+    const ids = json.result.blockingViolations.map(
+      (v: { policyId: string }) => v.policyId
+    );
+    expect(ids).toContain("policy.retention.legal-hold-overrides-purge");
+    expect(ids).toContain("policy.retention.schedule-sourced");
+    expect(ids).toContain("policy.retention.no-autonomous-purge");
+  });
+
   it("an unknown agent has no applicable policies and allows", async () => {
     const res = await POST(post({ agentId: "ghost-agent", task: {} }));
     const json = await res.json();

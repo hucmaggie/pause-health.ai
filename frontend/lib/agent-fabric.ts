@@ -1454,6 +1454,45 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "MuleSoft Anypoint",
     governanceTier: "data-plane"
+  },
+  {
+    id: "records-retention-agent",
+    name: "Data Retention & Records Lifecycle Management Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the MuleSoft control-plane / data-substrate
+    // records-management service: POST /api/agents/records-retention/tasks (card
+    // at /.well-known/agent.json). Manages the lifecycle of records against
+    // RETENTION SCHEDULES and LEGAL HOLDS: given a RECORD — its type/category,
+    // patient, created and last-touched dates (evaluated against a provided
+    // atTime), jurisdiction, and any active legal hold — it DETERMINISTICALLY
+    // produces a disposition RECOMMENDATION (retain / eligible-for-purge / hold),
+    // citing the governing retention rule and the computed retention expiry. It
+    // NEVER autonomously purges: an eligible-for-purge is a RECOMMENDATION
+    // requiring human approval, and an active LEGAL HOLD ALWAYS overrides a purge
+    // (a held record is `hold`, never eligible-for-purge). An eligible-for-purge
+    // RECOMMENDATION is a SAFE, completed answer — NOT a block, and never a
+    // deletion. It COMPLEMENTS the other platform agents — distinct from the
+    // Consent & Preferences Management agent (patient consent scopes for outreach
+    // / data-sharing), the Master Patient Index (identity / dedup), and the
+    // Break-the-Glass / Emergency Access Governance agent (emergency PHI access):
+    // this governs records RETENTION / DISPOSITION under records-management +
+    // legal-hold obligations. It is a control-plane / data-substrate service
+    // (platform plane), NOT a live-Claude agent. The retention schedules, periods,
+    // and rule ids are ILLUSTRATIVE synthetics, NOT a certified records-management
+    // system — real retention is jurisdiction-specific and legally reviewed.
+    endpoint: "/api/agents/records-retention",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "The records-disposition layer of the data substrate — manages the lifecycle of records against retention schedules and legal holds, complementing (not duplicating) the Consent & Preferences Management agent (consent scopes), the Master Patient Index (identity/dedup), and the Break-the-Glass agent (emergency PHI access)",
+      "Dispositions are DETERMINISTIC — a pure function of the record's dates + the request's own atTime (no randomness, no clock); the retention expiry is derived from the record dates + the schedule period, and the same record always yields the same recommendation (retain / eligible-for-purge / hold) + cited rule + expiry",
+      "A legal hold ALWAYS overrides a purge — a record under an active legal hold is retained on hold and is never marked eligible-for-purge; a purge asserted while under a hold is blocked at the Agent Fabric governance boundary (policy.retention.legal-hold-overrides-purge)",
+      "Every disposition must cite a recorded retention schedule — an ad-hoc / un-sourced disposition is blocked (policy.retention.schedule-sourced); and a destructive purge is never executed autonomously — an eligible-for-purge is a RECOMMENDATION requiring human approval, and an autonomous / unapproved purge is blocked (policy.retention.no-autonomous-purge)",
+      "Runs against ILLUSTRATIVE synthetic retention schedules + periods + rule ids — clearly labeled; NOT a certified records-management system (real retention is jurisdiction-specific and legally reviewed)"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
   }
 ];
 
@@ -1527,7 +1566,8 @@ const POLICIES: PolicyRecord[] = [
       "data-sharing-tefca-agent",
       "risk-adjustment-agent",
       "master-patient-index-agent",
-      "break-the-glass-agent"
+      "break-the-glass-agent",
+      "records-retention-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2287,6 +2327,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "Every emergency access the Break-the-Glass / Emergency Access Governance Agent grants must emit a mandatory audit event AND be flagged for mandatory post-access review — there is no un-audited break-the-glass access. A granted access that is not logged or not flagged for post-access review is rejected before it can leave the fabric, so a break-the-glass override always leaves a reviewable trail. This is the HIPAA §164.312 audit-controls property enforced, not merely advised. (In the prototype the audit-event ids are clearly-labeled illustrative synthetics, not a certified tamper-evident audit trail; in production this exports to the customer's SIEM via MuleSoft with a signed audit trail.)",
     appliesTo: ["break-the-glass-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.retention.legal-hold-overrides-purge",
+    name: "A legal hold always overrides a purge",
+    description:
+      "The Data Retention & Records Lifecycle Management Agent may NEVER mark a record under an active legal hold as eligible-for-purge (or assert a purge of a held record) — a legal hold ALWAYS overrides a purge, so a held record is retained on `hold`, never eligible-for-purge, no matter how far past its retention expiry it is. A disposition that would purge a record on legal hold is rejected before it can leave the fabric, so the fabric can never authorize spoliation of evidence under a preservation obligation. This is the legal-hold / litigation-hold property enforced, not merely advised. (In the prototype the retention schedules + rule ids are clearly-labeled illustrative synthetics, not a certified records-management system; real retention is jurisdiction-specific and legally reviewed.)",
+    appliesTo: ["records-retention-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.retention.schedule-sourced",
+    name: "Every disposition must cite a recorded retention schedule",
+    description:
+      "Every records-disposition decision (retain / eligible-for-purge / hold) the Data Retention & Records Lifecycle Management Agent produces must cite a recorded retention rule from the schedule catalog — there is no ad-hoc, un-sourced disposition. A disposition with a missing or off-catalog retention rule is rejected before it can leave the fabric, so the records-lifecycle log can never hold a disposition it can't evidence with a defined schedule. Mirrors the Master Patient Index Agent's transparent-matching and the HEDIS Agent's measure-catalog-sourced posture — every decision traces to a defined source. (In the prototype the retention schedules are clearly-labeled illustrative synthetics; in production this is the customer's legally-reviewed, jurisdiction-specific retention schedule.)",
+    appliesTo: ["records-retention-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.retention.no-autonomous-purge",
+    name: "A purge is never autonomous — it is human-approval-gated",
+    description:
+      "The Data Retention & Records Lifecycle Management Agent may NEVER execute a destructive purge autonomously — an eligible-for-purge disposition is a RECOMMENDATION requiring human approval (requiresHumanApproval:true), and a purge only happens after a human approves it. A disposition that asserts an autonomous / unapproved purge is rejected before it can leave the fabric, so a records-retention recommendation can never become an unattended deletion. Mirrors the Master Patient Index Agent's no-autonomous-merge, the Break-the-Glass Agent's minimum-necessary-time-boxed, and the Population Health Agent's no-autonomous-care-decision posture — the safe answer is enforced. (In the prototype the schedules + periods are clearly-labeled illustrative synthetics; in production this is the customer's governed records-disposition workflow with a human-in-the-loop approval + a signed audit trail.)",
+    appliesTo: ["records-retention-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -6691,6 +6758,135 @@ function store(): FabricStore {
         // The honesty invariant: every access is logged AND post-access reviewed.
         requiresPostAccessReview: true,
         accessLoggedForReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+// Data Retention & Records Lifecycle Management seed — a records-disposition run:
+// receive the record, deterministically evaluate it against the retention schedule
+// + legal hold, recommend a disposition, and log the decision to the audit trail.
+// This seed shows the ELIGIBLE-FOR-PURGE case (the demo purge-eligible request): an
+// old billing / claim record last touched in 2016, well past its 7-year retention
+// expiry (2023-03-01), with NO active legal hold → eligible-for-purge. It is a
+// RECOMMENDATION requiring human approval (requiresHumanApproval:true) — NOT a
+// deletion and NOT a block — which is how a legitimate recommendation is
+// distinguished from a governance block. Every disposition cites a recorded
+// retention rule (retentionRuleCited:true), a legal hold would always override a
+// purge (retentionRespectsLegalHold:true here — there is no hold), and a purge is
+// never autonomous (purgeHumanApproved:true). It touches patient records, so every
+// span sets phiAccessed:true. The retention schedules, periods, and rule ids are
+// ILLUSTRATIVE synthetics, NOT a certified records-management system — real
+// retention is jurisdiction-specific and legally reviewed. Seed data; production
+// populates the ring buffer from the persistent log store.
+(function seedRecordsRetentionTrace() {
+  const s = store();
+  const ret0 = Date.now() - 1000 * 60 * 1;
+  const retTaskId = "task-seed-records-retention-001";
+  const retName = "Data Retention & Records Lifecycle Management Agent";
+  s.traces.push(
+    {
+      id: "span-retention-001",
+      taskId: retTaskId,
+      agentId: "records-retention-agent",
+      agentName: retName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ret0).toISOString(),
+      finishedAt: new Date(ret0 + 35).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-retention-002",
+      taskId: retTaskId,
+      parentSpanId: "span-retention-001",
+      agentId: "records-retention-agent",
+      agentName: retName,
+      operation: "retention.receive-record",
+      protocol: "a2a",
+      startedAt: new Date(ret0 + 35).toISOString(),
+      finishedAt: new Date(ret0 + 65).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        recordId: "retention-record-002",
+        patientRef: "retention-patient-002",
+        recordType: "billing-claim",
+        underLegalHold: false,
+        // The honesty invariant: every disposition cites a recorded schedule.
+        retentionRuleCited: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-retention-003",
+      taskId: retTaskId,
+      parentSpanId: "span-retention-002",
+      agentId: "records-retention-agent",
+      agentName: retName,
+      operation: "retention.evaluate",
+      protocol: "a2a",
+      startedAt: new Date(ret0 + 65).toISOString(),
+      finishedAt: new Date(ret0 + 105).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        recommendation: "eligible-for-purge",
+        retentionRuleId: "rule.retention.billing-claim-7y",
+        retentionExpiresAt: "2023-03-01T00:00:00.000Z",
+        // The honesty invariant: a legal hold always overrides a purge (none here).
+        retentionRespectsLegalHold: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-retention-004",
+      taskId: retTaskId,
+      parentSpanId: "span-retention-003",
+      agentId: "records-retention-agent",
+      agentName: retName,
+      operation: "retention.recommend",
+      protocol: "a2a",
+      startedAt: new Date(ret0 + 105).toISOString(),
+      finishedAt: new Date(ret0 + 140).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        recommendation: "eligible-for-purge",
+        // The honesty invariant: a purge is a recommendation requiring human approval.
+        requiresHumanApproval: true,
+        purgeHumanApproved: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-retention-005",
+      taskId: retTaskId,
+      parentSpanId: "span-retention-004",
+      agentId: "records-retention-agent",
+      agentName: retName,
+      operation: "retention.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(ret0 + 140).toISOString(),
+      finishedAt: new Date(ret0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        recordId: "retention-record-002",
+        recommendation: "eligible-for-purge",
+        retentionRuleId: "rule.retention.billing-claim-7y",
+        underLegalHold: false,
+        requiresHumanApproval: true,
         phiAccessed: true,
         synthetic: true
       }
