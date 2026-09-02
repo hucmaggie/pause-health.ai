@@ -1493,6 +1493,38 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "MuleSoft Anypoint",
     governanceTier: "data-plane"
+  },
+  {
+    id: "coordination-of-benefits-agent",
+    name: "Coordination of Benefits Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side coordination-of-benefits piece:
+    // POST /api/agents/coordination-of-benefits/tasks (card at /.well-known/
+    // agent.json). A DETERMINISTIC (no-Claude) agent for a health-plan / TPA —
+    // when a patient carries more than one coverage, it ORDERS the coverages
+    // (primary → secondary → tertiary) by applying the NAIC-model order-of-
+    // benefits rules + Medicare Secondary Payer + the birthday rule, citing the
+    // governing COB rule for every ordering decision. It NEVER autonomously
+    // adjudicates or pays — an order-of-benefits determination is a RECOMMENDATION
+    // that sets payer order and requires human cosign. It is distinct from the
+    // Claims Adjudication Assistant (per-claim edits AFTER the payer order is
+    // known), the Benefits & Coverage Verification / EBV agent (single-plan
+    // eligibility), and the Utilization Review agent (medical necessity) — this
+    // decides the ORDER OF BENEFITS ACROSS coverages BEFORE a claim is
+    // adjudicated. REUSES the existing payer-operations tier.
+    endpoint: "/api/agents/coordination-of-benefits",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Orders a patient's multiple coverages (primary → secondary → tertiary) for a health-plan / TPA, citing the governing COB rule for every ordering decision — companion to the Claims Adjudication (per-claim edits after payer order is known), Benefits & Coverage Verification / EBV (single-plan eligibility), and Utilization Review (medical necessity) agents; this decides the ORDER OF BENEFITS across coverages BEFORE adjudication",
+      "Ordering is DETERMINISTIC — a pure function of the coverages + the request's own context (no randomness, no clock); the same coverages always yield the same order + cited rules, applying a documented precedence (custody-decree > Medicaid-payer-of-last-resort > Medicare-secondary-payer > subscriber-before-dependent > active-before-inactive > birthday-rule > longer-coverage tie-break)",
+      "A custody / court decree ALWAYS overrides the birthday rule — when an active decree names a dependent child's primary coverage, that plan is primary; a determination that ignores the decree is blocked at the Agent Fabric governance boundary (policy.cob.custody-decree-overrides-birthday). Mirrors the Data Retention Agent's legal-hold-overrides-purge — a legal instrument overrides the default rule",
+      "Every ordering decision must cite a recorded COB rule from the rule catalog — an ad-hoc / un-sourced ordering is blocked (policy.cob.order-of-benefits-rule-sourced); and the agent NEVER autonomously adjudicates or pays — an order-of-benefits determination is a RECOMMENDATION requiring human cosign (requiresHumanCosign:true), and any autonomous adjudication is blocked (policy.cob.no-autonomous-adjudication). Mirrors the Claims Adjudication Agent's no-autonomous-denial posture",
+      "Runs against ILLUSTRATIVE synthetic COB rule catalog + plan types + payer labels — clearly labeled; NOT a certified coordination-of-benefits engine (real COB is governed by the NAIC COB Model Regulation, Medicare Secondary Payer 42 CFR 411, Medicaid third-party liability 42 CFR 433.139, ERISA plan documents, and state insurance code)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
   }
 ];
 
@@ -1567,7 +1599,8 @@ const POLICIES: PolicyRecord[] = [
       "risk-adjustment-agent",
       "master-patient-index-agent",
       "break-the-glass-agent",
-      "records-retention-agent"
+      "records-retention-agent",
+      "coordination-of-benefits-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2354,6 +2387,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Data Retention & Records Lifecycle Management Agent may NEVER execute a destructive purge autonomously — an eligible-for-purge disposition is a RECOMMENDATION requiring human approval (requiresHumanApproval:true), and a purge only happens after a human approves it. A disposition that asserts an autonomous / unapproved purge is rejected before it can leave the fabric, so a records-retention recommendation can never become an unattended deletion. Mirrors the Master Patient Index Agent's no-autonomous-merge, the Break-the-Glass Agent's minimum-necessary-time-boxed, and the Population Health Agent's no-autonomous-care-decision posture — the safe answer is enforced. (In the prototype the schedules + periods are clearly-labeled illustrative synthetics; in production this is the customer's governed records-disposition workflow with a human-in-the-loop approval + a signed audit trail.)",
     appliesTo: ["records-retention-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.cob.custody-decree-overrides-birthday",
+    name: "A custody / court decree always overrides the birthday rule",
+    description:
+      "The Coordination of Benefits Agent may NEVER let the birthday rule override an active custody / court decree — when a decree assigns primary responsibility for a dependent child's health coverage to a specific parent's plan, THAT plan is primary, no matter whose birthday falls earlier in the year. A determination that orders the coverages against an active decree is rejected before it can leave the fabric, so the fabric can never coordinate benefits contrary to a binding court order. Mirrors the Data Retention Agent's legal-hold-overrides-purge — a legal instrument overrides the default rule. (In the prototype the COB rule catalog is a clearly-labeled illustrative synthetic; real COB is governed by the NAIC COB Model Regulation and the terms of the specific decree.)",
+    appliesTo: ["coordination-of-benefits-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.cob.order-of-benefits-rule-sourced",
+    name: "Every ordering decision must cite a recorded order-of-benefits rule",
+    description:
+      "Every order-of-benefits decision the Coordination of Benefits Agent produces must cite a recorded COB rule from the rule catalog — there is no ad-hoc, un-sourced ordering. A determination that orders a coverage with a missing or off-catalog rule id is rejected before it can leave the fabric, so a payer-order determination can never be evidenced by anything other than a defined COB rule. Mirrors the Data Retention Agent's schedule-sourced and the Claims Adjudication Agent's edit-catalog-sourced posture — every decision traces to a defined source. (In the prototype the COB rule catalog is a clearly-labeled illustrative synthetic; in production this is the customer's NAIC-model-conformant, legally-reviewed order-of-benefits rule set.)",
+    appliesTo: ["coordination-of-benefits-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.cob.no-autonomous-adjudication",
+    name: "A COB determination is never autonomous — it is human-cosign-gated",
+    description:
+      "The Coordination of Benefits Agent may NEVER autonomously adjudicate, pay, or adjust a claim — an order-of-benefits determination sets payer ORDER only, and it is a RECOMMENDATION requiring human cosign (requiresHumanCosign:true) before it drives a claim's payment. A determination that asserts an autonomous adjudication is rejected before it can leave the fabric, so a COB recommendation can never become an unattended payment decision. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the Utilization Review Agent's no-autonomous-denial, and the Data Retention Agent's no-autonomous-purge posture — the safe answer is enforced. (In the prototype the COB rule catalog + payers are clearly-labeled illustrative synthetics; in production this is the customer's governed COB workflow with a human-in-the-loop cosign + a signed audit trail.)",
+    appliesTo: ["coordination-of-benefits-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -6887,6 +6947,132 @@ function store(): FabricStore {
         retentionRuleId: "rule.retention.billing-claim-7y",
         underLegalHold: false,
         requiresHumanApproval: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+// Coordination of Benefits seed — an order-of-benefits determination run: receive
+// the coverages, deterministically order them against the COB rule catalog,
+// recommend the payer order, and log the decision to the audit trail. This seed
+// shows the CUSTODY-DECREE case (the demo decree request): a dependent child covered
+// under both parents where the mother's earlier birthday (03-14 vs 06-20) would win
+// the birthday rule — but an active court decree names the FATHER's plan primary, so
+// the decree OVERRIDES the birthday rule (custodyDecreeApplied:true,
+// cobDecreeHonored:true). Every ordering decision cites a recorded COB rule
+// (cobRuleCited:true), and the determination is a payer-order RECOMMENDATION
+// requiring human cosign — the agent never autonomously adjudicates
+// (cobHumanCosigned:true). It touches coverage/PHI, so every span sets
+// phiAccessed:true. The COB rule catalog, plan types, and payers are ILLUSTRATIVE
+// synthetics, NOT a certified coordination-of-benefits engine — real COB is governed
+// by the NAIC COB Model Regulation, Medicare Secondary Payer, and Medicaid TPL. Seed
+// data; production populates the ring buffer from the persistent log store.
+(function seedCoordinationOfBenefitsTrace() {
+  const s = store();
+  const cob0 = Date.now() - 1000 * 60 * 1;
+  const cobTaskId = "task-seed-coordination-of-benefits-001";
+  const cobName = "Coordination of Benefits Agent";
+  s.traces.push(
+    {
+      id: "span-cob-001",
+      taskId: cobTaskId,
+      agentId: "coordination-of-benefits-agent",
+      agentName: cobName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(cob0).toISOString(),
+      finishedAt: new Date(cob0 + 35).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-cob-002",
+      taskId: cobTaskId,
+      parentSpanId: "span-cob-001",
+      agentId: "coordination-of-benefits-agent",
+      agentName: cobName,
+      operation: "cob.receive-coverages",
+      protocol: "a2a",
+      startedAt: new Date(cob0 + 35).toISOString(),
+      finishedAt: new Date(cob0 + 65).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        patientRef: "cob-patient-003",
+        isDependentChild: true,
+        coverageCount: 2,
+        // The honesty invariant: an active custody decree is honored.
+        cobDecreeHonored: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-cob-003",
+      taskId: cobTaskId,
+      parentSpanId: "span-cob-002",
+      agentId: "coordination-of-benefits-agent",
+      agentName: cobName,
+      operation: "cob.order-benefits",
+      protocol: "a2a",
+      startedAt: new Date(cob0 + 65).toISOString(),
+      finishedAt: new Date(cob0 + 105).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        primaryCoverageId: "coverage-dad-hmo",
+        primaryRuleId: "rule.cob.custody-decree-overrides-birthday",
+        custodyDecreeApplied: true,
+        // The honesty invariant: every ordering decision cites a recorded rule.
+        cobRuleCited: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-cob-004",
+      taskId: cobTaskId,
+      parentSpanId: "span-cob-003",
+      agentId: "coordination-of-benefits-agent",
+      agentName: cobName,
+      operation: "cob.recommend",
+      protocol: "a2a",
+      startedAt: new Date(cob0 + 105).toISOString(),
+      finishedAt: new Date(cob0 + 140).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        primaryCoverageId: "coverage-dad-hmo",
+        // The honesty invariant: a determination is a recommendation requiring human cosign.
+        requiresHumanCosign: true,
+        cobHumanCosigned: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-cob-005",
+      taskId: cobTaskId,
+      parentSpanId: "span-cob-004",
+      agentId: "coordination-of-benefits-agent",
+      agentName: cobName,
+      operation: "cob.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(cob0 + 140).toISOString(),
+      finishedAt: new Date(cob0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        patientRef: "cob-patient-003",
+        primaryCoverageId: "coverage-dad-hmo",
+        custodyDecreeApplied: true,
+        requiresHumanCosign: true,
         phiAccessed: true,
         synthetic: true
       }
