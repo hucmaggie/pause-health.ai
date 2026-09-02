@@ -94,6 +94,10 @@ export type GovernanceTask = {
   cobDecreeHonored?: boolean;
   cobRuleCited?: boolean;
   cobHumanCosigned?: boolean;
+  // Claims overpayment & recovery (within-lookback-window + reason-catalog-sourced + no-autonomous-clawback)
+  recoveryWithinLookback?: boolean;
+  recoveryReasonCited?: boolean;
+  recoveryClawbackHumanReviewed?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -591,6 +595,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A COB determination would autonomously adjudicate / pay a claim",
     reason:
       "A coordination-of-benefits determination was asserted to autonomously adjudicate, pay, or adjust a claim (requiresHumanCosign:false); a COB determination sets payer ORDER only — it is a RECOMMENDATION requiring human cosign before it drives a claim's payment, and the agent may NEVER autonomously adjudicate. Mirrors the Claims Adjudication Agent's no-autonomous-denial and the Utilization Review Agent's no-autonomous-denial posture — the safe answer is enforced"
+  },
+  {
+    policyId: "policy.recovery.within-lookback-window",
+    signal: "recoveryWithinLookback",
+    violatingValue: false,
+    violationHint: "Recovers an overpayment past its statutory lookback window",
+    reason:
+      "A claims-overpayment-recovery decision asserted a claim as recoverable while it was past its statutory lookback window (paid date + the reason's lookback days); an overpayment past its lookback window is NEVER recoverable — clawing back a payment beyond the statutory lookback is an unlawful recoupment under the ACA §6402 / CMS recovery rules / ERISA / state insurance code. Mirrors the Data Retention Agent's legal-hold-overrides-purge and the Utilization Review Agent's SLA-integrity posture — a window bounds the action"
+  },
+  {
+    policyId: "policy.recovery.reason-catalog-sourced",
+    signal: "recoveryReasonCited",
+    violatingValue: false,
+    violationHint: "A recovery doesn't cite a recorded recovery reason",
+    reason:
+      "A claims-overpayment-recovery decision did not cite a recorded recovery reason from the catalog (an ad-hoc / un-sourced clawback, a missing or off-catalog reason id); every recovery must trace to a defined recovery reason (duplicate-payment, cob-primary-elsewhere, retroactive-termination, pricing-error, services-not-rendered) — the agent may not recover an overpayment on an ad-hoc, un-sourced reason. Mirrors the Data Retention Agent's schedule-sourced and the Claims Adjudication Agent's edit-catalog-sourced posture"
+  },
+  {
+    policyId: "policy.recovery.no-autonomous-clawback",
+    signal: "recoveryClawbackHumanReviewed",
+    violatingValue: false,
+    violationHint: "Executes an autonomous / unreviewed clawback",
+    reason:
+      "A claims-overpayment-recovery decision asserted an autonomous / unreviewed clawback (a recoverable determination not gated on human review); a recovery may NEVER be executed autonomously — a recoverable overpayment is a RECOMMENDATION requiring human review with member/provider notice (requiresHumanReview:true), and an offset/clawback only happens after a human reviews it. Mirrors the Fraud, Waste & Abuse Agent's no-autonomous-denial and the Data Retention Agent's no-autonomous-purge posture — the safe answer is enforced"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

@@ -1525,6 +1525,38 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "payer-operations"
+  },
+  {
+    id: "overpayment-recovery-agent",
+    name: "Claims Overpayment & Recovery Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side post-payment integrity piece:
+    // POST /api/agents/overpayment-recovery/tasks (card at /.well-known/
+    // agent.json). A DETERMINISTIC (no-Claude) agent for a health-plan / TPA —
+    // given a PAID claim (paid vs correct amount, recovery reason, paid date), it
+    // computes the overpayment, cites the governing recovery reason, derives the
+    // recovery deadline from the reason's statutory lookback window, and classifies
+    // the claim as recoverable / not-recoverable-within-window / no-overpayment. It
+    // NEVER autonomously claws back or offsets a payment — a recoverable overpayment
+    // is a RECOMMENDATION requiring human review with member/provider notice, and a
+    // claim past its lookback window is NEVER recoverable. It is distinct from the
+    // Claims Adjudication Assistant (first-pass PRE-payment adjudication), the FWA
+    // Detection agent (suspected fraud patterns), and the Coordination of Benefits
+    // agent (which decides payer ORDER) — this is POST-payment recovery of a
+    // legitimate overpayment already made. REUSES the existing payer-operations tier.
+    endpoint: "/api/agents/overpayment-recovery",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Evaluates a PAID claim for a health-plan / TPA — computes the overpayment (paid − correct), cites the governing recovery reason, derives the recovery deadline from the reason's statutory lookback, and classifies as recoverable / not-recoverable-within-window / no-overpayment. Companion to the Claims Adjudication (pre-payment), FWA Detection (suspected fraud), and Coordination of Benefits (payer order) agents — this is POST-payment recovery",
+      "Evaluation is DETERMINISTIC — a pure function of the claim's amounts + dates + the request's own asOfDate (no randomness, no clock); the recovery deadline is derived from the paid date + the reason's lookback window, and the same claim always yields the same overpayment + cited reason + recoverability",
+      "A recovery must be WITHIN the statutory lookback window — an overpayment past its window (paid date + lookback days) is NEVER recoverable; a clawback asserted past the window is blocked at the Agent Fabric governance boundary (policy.recovery.within-lookback-window), because recouping beyond the statutory lookback is an unlawful recoupment. Mirrors the Data Retention Agent's legal-hold-overrides-purge — a window bounds the action",
+      "Every recovery must cite a recorded recovery reason — an ad-hoc / un-sourced clawback is blocked (policy.recovery.reason-catalog-sourced); and a clawback is never executed autonomously — a recoverable overpayment is a RECOMMENDATION requiring human review with member/provider notice, and an autonomous / unreviewed clawback is blocked (policy.recovery.no-autonomous-clawback). Mirrors the FWA Agent's no-autonomous-denial and the Data Retention Agent's no-autonomous-purge posture",
+      "Runs against ILLUSTRATIVE synthetic recovery reason catalog + lookback windows + reason ids — clearly labeled; NOT a certified payment-integrity system (real overpayment recovery is governed by the ACA §6402 60-day rule, CMS recovery rules, ERISA, and state insurance code)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
   }
 ];
 
@@ -1600,7 +1632,8 @@ const POLICIES: PolicyRecord[] = [
       "master-patient-index-agent",
       "break-the-glass-agent",
       "records-retention-agent",
-      "coordination-of-benefits-agent"
+      "coordination-of-benefits-agent",
+      "overpayment-recovery-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2414,6 +2447,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Coordination of Benefits Agent may NEVER autonomously adjudicate, pay, or adjust a claim — an order-of-benefits determination sets payer ORDER only, and it is a RECOMMENDATION requiring human cosign (requiresHumanCosign:true) before it drives a claim's payment. A determination that asserts an autonomous adjudication is rejected before it can leave the fabric, so a COB recommendation can never become an unattended payment decision. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the Utilization Review Agent's no-autonomous-denial, and the Data Retention Agent's no-autonomous-purge posture — the safe answer is enforced. (In the prototype the COB rule catalog + payers are clearly-labeled illustrative synthetics; in production this is the customer's governed COB workflow with a human-in-the-loop cosign + a signed audit trail.)",
     appliesTo: ["coordination-of-benefits-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.recovery.within-lookback-window",
+    name: "A recovery must be within the statutory lookback window",
+    description:
+      "The Claims Overpayment & Recovery Agent may NEVER mark a claim recoverable once it is past its statutory lookback window (the paid date + the cited reason's lookback days) — an overpayment past its window is NEVER recoverable, no matter how large. A determination that asserts a clawback beyond the lookback is rejected before it can leave the fabric, so the fabric can never authorize an unlawful recoupment. Mirrors the Data Retention Agent's legal-hold-overrides-purge and the Utilization Review Agent's SLA-integrity — a window bounds the action. (In the prototype the recovery reasons + lookback windows are clearly-labeled illustrative synthetics; real recovery windows are governed by the ACA §6402, CMS recovery rules, ERISA, and state insurance code.)",
+    appliesTo: ["overpayment-recovery-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.recovery.reason-catalog-sourced",
+    name: "Every recovery must cite a recorded recovery reason",
+    description:
+      "Every recovery decision the Claims Overpayment & Recovery Agent produces must cite a recorded recovery reason from the catalog — there is no ad-hoc, un-sourced clawback. A determination with a missing or off-catalog reason id is rejected before it can leave the fabric, so a recovery can never be evidenced by anything other than a defined reason. Mirrors the Data Retention Agent's schedule-sourced and the Claims Adjudication Agent's edit-catalog-sourced posture — every decision traces to a defined source. (In the prototype the recovery reason catalog is a clearly-labeled illustrative synthetic; in production this is the customer's legally-reviewed recovery reason set.)",
+    appliesTo: ["overpayment-recovery-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.recovery.no-autonomous-clawback",
+    name: "A clawback is never autonomous — it is human-review-gated",
+    description:
+      "The Claims Overpayment & Recovery Agent may NEVER execute a clawback / offset autonomously — a recoverable overpayment is a RECOMMENDATION requiring human review with member/provider notice (requiresHumanReview:true), and an offset only happens after a human reviews it. A determination that asserts an autonomous / unreviewed clawback is rejected before it can leave the fabric, so a recovery recommendation can never become an unattended recoupment. Mirrors the Fraud, Waste & Abuse Agent's no-autonomous-denial, the Data Retention Agent's no-autonomous-purge, and the Coordination of Benefits Agent's no-autonomous-adjudication posture — the safe answer is enforced. (In the prototype the reason catalog + windows are clearly-labeled illustrative synthetics; in production this is the customer's governed recovery workflow with a human-in-the-loop review + notice + a signed audit trail.)",
+    appliesTo: ["overpayment-recovery-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -7073,6 +7133,118 @@ function store(): FabricStore {
         primaryCoverageId: "coverage-dad-hmo",
         custodyDecreeApplied: true,
         requiresHumanCosign: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedOverpaymentRecoveryTrace() {
+  const s = store();
+  const rec0 = Date.now() - 1000 * 60 * 1;
+  const recTaskId = "task-seed-overpayment-recovery-001";
+  const recName = "Claims Overpayment & Recovery Agent";
+  s.traces.push(
+    {
+      id: "span-recovery-001",
+      taskId: recTaskId,
+      agentId: "overpayment-recovery-agent",
+      agentName: recName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(rec0).toISOString(),
+      finishedAt: new Date(rec0 + 35).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-recovery-002",
+      taskId: recTaskId,
+      parentSpanId: "span-recovery-001",
+      agentId: "overpayment-recovery-agent",
+      agentName: recName,
+      operation: "recovery.receive-claim",
+      protocol: "a2a",
+      startedAt: new Date(rec0 + 35).toISOString(),
+      finishedAt: new Date(rec0 + 65).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        claimId: "recovery-claim-001",
+        recoveryReasonId: "reason.recovery.duplicate-payment",
+        // The honesty invariant: every recovery cites a recorded reason.
+        recoveryReasonCited: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-recovery-003",
+      taskId: recTaskId,
+      parentSpanId: "span-recovery-002",
+      agentId: "overpayment-recovery-agent",
+      agentName: recName,
+      operation: "recovery.evaluate",
+      protocol: "a2a",
+      startedAt: new Date(rec0 + 65).toISOString(),
+      finishedAt: new Date(rec0 + 105).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        claimId: "recovery-claim-001",
+        overpaymentAmount: 600,
+        recoverable: "recoverable",
+        recoveryDeadline: "2026-10-01T00:00:00.000Z",
+        // The honesty invariant: a recovery stays within its statutory lookback window.
+        recoveryWithinLookback: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-recovery-004",
+      taskId: recTaskId,
+      parentSpanId: "span-recovery-003",
+      agentId: "overpayment-recovery-agent",
+      agentName: recName,
+      operation: "recovery.recommend",
+      protocol: "a2a",
+      startedAt: new Date(rec0 + 105).toISOString(),
+      finishedAt: new Date(rec0 + 140).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        claimId: "recovery-claim-001",
+        overpaymentAmount: 600,
+        // The honesty invariant: a recoverable overpayment is a recommendation requiring human review.
+        requiresHumanReview: true,
+        recoveryClawbackHumanReviewed: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-recovery-005",
+      taskId: recTaskId,
+      parentSpanId: "span-recovery-004",
+      agentId: "overpayment-recovery-agent",
+      agentName: recName,
+      operation: "recovery.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(rec0 + 140).toISOString(),
+      finishedAt: new Date(rec0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        claimId: "recovery-claim-001",
+        recoveryReasonId: "reason.recovery.duplicate-payment",
+        overpaymentAmount: 600,
+        requiresHumanReview: true,
         phiAccessed: true,
         synthetic: true
       }
