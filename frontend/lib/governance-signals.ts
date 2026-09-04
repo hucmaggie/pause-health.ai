@@ -106,6 +106,10 @@ export type GovernanceTask = {
   labCriticalValueNotified?: boolean;
   labRangeCited?: boolean;
   labClinicianReviewed?: boolean;
+  // Good faith estimate (charge-master-sourced + expected-items-complete + estimate-not-binding)
+  gfeChargeMasterSourced?: boolean;
+  gfeExpectedItemsComplete?: boolean;
+  gfeEstimateNotBinding?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -675,6 +679,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Autonomously acts on an abnormal / critical result",
     reason:
       "A lab-result decision asserted an autonomous action on a non-normal result (an abnormal / critical result not gated on clinician review); the agent may NEVER autonomously act on a result — it does not order a test, prescribe, treat, or change a care plan, and every non-normal result is a flag escalated for clinician review (requiresClinicianReview:true). Mirrors the Utilization Review Agent's no-autonomous-denial and the Risk Adjustment Agent's no-autonomous-submission posture — the safe answer is enforced"
+  },
+  {
+    policyId: "policy.gfe.charge-master-sourced",
+    signal: "gfeChargeMasterSourced",
+    violatingValue: false,
+    violationHint: "A line item isn't priced from the charge master",
+    reason:
+      "A good-faith-estimate decision included a line item that is not charge-master-sourced (an off-catalog service id or an amount that doesn't match the charge master — an ad-hoc / fabricated charge); every priced line item must trace to a recorded charge-master entry at the catalog amount (established-visit, comprehensive consult, hormone panel, DEXA, pelvic ultrasound, HRT admin). Mirrors the Overpayment & Recovery Agent's reason-catalog-sourced and the Lab Result Agent's reference-range-sourced posture"
+  },
+  {
+    policyId: "policy.gfe.expected-items-complete",
+    signal: "gfeExpectedItemsComplete",
+    violatingValue: false,
+    violationHint: "The estimate omits a reasonably-expected item",
+    reason:
+      "A good-faith-estimate decision omitted a reasonably-expected item (the primary service or one of its expected co-items is missing from the line items) — an incomplete estimate UNDERSTATES the total and misleads the patient; the No Surprises Act (45 CFR 149.610) requires the convening provider to include items/services reasonably expected to be furnished. Mirrors the Care Coordination Handoff Agent's SBAR-completeness and the Lab Result Agent's critical-value-notified posture — a completeness obligation that cannot be skipped"
+  },
+  {
+    policyId: "policy.gfe.estimate-not-binding",
+    signal: "gfeEstimateNotBinding",
+    violatingValue: false,
+    violationHint: "The estimate is presented as a binding bill",
+    reason:
+      "A good-faith-estimate decision was presented as a binding / final bill (binding:true); a GFE is an ESTIMATE requiring patient confirmation, NEVER a final charge — and if the actual bill exceeds the GFE by $400 or more the patient has NSA dispute rights. Mirrors the Lab Result Agent's no-autonomous-clinical-action and the Financial Assistance Agent's no-autonomous-denial posture — the agent recommends, a human confirms"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

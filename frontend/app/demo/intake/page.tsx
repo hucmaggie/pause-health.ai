@@ -40,6 +40,7 @@ import { CoordinationOfBenefitsPanel } from "../../../components/coordination-of
 import { OverpaymentRecoveryPanel } from "../../../components/overpayment-recovery-panel";
 import { FinancialAssistancePanel } from "../../../components/financial-assistance-panel";
 import { LabResultPanel } from "../../../components/lab-result-panel";
+import { GoodFaithEstimatePanel } from "../../../components/good-faith-estimate-panel";
 import { SchedulingPanel } from "../../../components/scheduling-panel";
 import { SdohScreeningPanel } from "../../../components/sdoh-screening-panel";
 import { getAgentforceConfig } from "../../../lib/agentforce";
@@ -162,6 +163,7 @@ export default function IntakeDemoPage() {
       <OverpaymentRecoveryPanel />
 
       <FinancialAssistancePanel />
+      <GoodFaithEstimatePanel />
       <LabResultPanel />
 
       <section className="demo-grid">

@@ -1624,6 +1624,39 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "clinical-decision"
+  },
+  {
+    id: "good-faith-estimate-agent",
+    name: "Good Faith Estimate (No Surprises Act) Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the patient-access GFE piece:
+    // POST /api/agents/good-faith-estimate/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) patient-access agent, a sibling to the Benefits &
+    // Coverage Verification (EBV) and Patient Financial Assistance & Charity Care agents
+    // on the patient-access (benefits-verification) tier. Given a scheduled primary
+    // service + the expected line items (each a charge-master service id + quantity), it
+    // prices each line item from the charge master, verifies every reasonably-expected
+    // co-item for the primary service is included, sums the total, and returns a Good
+    // Faith Estimate that is an ESTIMATE (never a binding bill) requiring patient
+    // confirmation, with the NSA $400 dispute threshold recorded. It COMPLEMENTS — it
+    // does not duplicate — the EBV agent (plan eligibility + estimated COVERED cost) and
+    // the Financial Assistance agent (charity screening on the patient-responsibility
+    // remainder): this assembles the itemized SELF-PAY / uninsured estimate required
+    // BEFORE care under the No Surprises Act. REUSES the existing benefits-verification
+    // (patient-access) tier.
+    endpoint: "/api/agents/good-faith-estimate",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Assembles an itemized Good Faith Estimate of expected charges for a self-pay / uninsured patient BEFORE care — prices each expected line item from the charge master, verifies every reasonably-expected co-item for the primary service is included, sums the total, and returns an ESTIMATE (never a binding bill) with the No Surprises Act $400 dispute threshold recorded. A deterministic patient-access sibling to the Benefits & Coverage Verification (EBV) and Patient Financial Assistance & Charity Care agents; the third leg of the patient-access triad (plan eligibility → itemized self-pay estimate → charity screening)",
+      "The estimate is DETERMINISTIC — a pure function of the request's line items + the charge master (no randomness, no clock); the same request always yields the same total + completeness + sourcing flags",
+      "Every priced line item must be charge-master-sourced — an off-catalog service id or an amount that doesn't match the charge master is blocked at the Agent Fabric governance boundary (policy.gfe.charge-master-sourced); and the estimate must be COMPLETE — an estimate missing the primary service or a reasonably-expected co-item is blocked (policy.gfe.expected-items-complete), because the No Surprises Act (45 CFR 149.610) requires the convening provider to include items/services reasonably expected to be furnished, and an incomplete estimate understates the total and misleads the patient. Mirrors the Care Coordination Handoff Agent's SBAR-completeness and the Lab Result Agent's critical-value-notified posture",
+      "A GFE is an ESTIMATE requiring patient confirmation, NEVER a binding / final bill — a determination presented as a binding bill is blocked (policy.gfe.estimate-not-binding), and if the actual bill exceeds the GFE by $400 or more the patient has NSA dispute rights. Mirrors the Lab Result Agent's no-autonomous-clinical-action and the Financial Assistance Agent's no-autonomous-denial posture — the agent recommends, a human confirms",
+      "Runs against an ILLUSTRATIVE synthetic charge master + categories + amounts + expected-co-item rules — clearly labeled; NOT a certified hospital chargemaster, machine-readable price-transparency file, or a real provider's charges (a real GFE is governed by the No Surprises Act / 45 CFR 149.610, the provider's actual charges, and HHS guidance)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "benefits-verification"
   }
 ];
 
@@ -1702,7 +1735,8 @@ const POLICIES: PolicyRecord[] = [
       "coordination-of-benefits-agent",
       "overpayment-recovery-agent",
       "financial-assistance-agent",
-      "lab-result-agent"
+      "lab-result-agent",
+      "good-faith-estimate-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2597,6 +2631,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Lab Result & Critical-Value Notification Agent may NEVER autonomously act on a result — it does not order a test, prescribe, treat, or change a care plan. Any abnormal / critical result is a flag escalated for clinician review (requiresClinicianReview:true). A determination that asserts an autonomous action on a non-normal result (a non-normal result not gated on clinician review) is rejected before it can leave the fabric, so a result recommendation can never become an unattended clinical action. Mirrors the Utilization Review Agent's no-autonomous-denial, the Risk Adjustment Agent's no-autonomous-submission, and the Prior Authorization Agent's clinician-approval posture — the safe answer is enforced. (In the prototype the analyte catalog is a clearly-labeled illustrative synthetic; in production this is the health system's governed result-management workflow with a clinician-in-the-loop review + a signed audit trail.)",
     appliesTo: ["lab-result-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.gfe.charge-master-sourced",
+    name: "Every line item must be priced from the charge master",
+    description:
+      "Every priced line item the Good Faith Estimate Agent produces must trace to a recorded charge-master entry at the catalog amount — there are no ad-hoc, fabricated, or off-schedule charges. A determination with an off-catalog service id or an amount that doesn't match the charge master is rejected before it can leave the fabric, so a GFE can never quote a charge that isn't in the charge master. Mirrors the Overpayment & Recovery Agent's reason-catalog-sourced and the Lab Result Agent's reference-range-sourced posture — every figure traces to a defined source. (In the prototype the charge master is a clearly-labeled illustrative synthetic; in production this is the provider's actual chargemaster / price-transparency file.)",
+    appliesTo: ["good-faith-estimate-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.gfe.expected-items-complete",
+    name: "The estimate must include all reasonably-expected items",
+    description:
+      "The Good Faith Estimate Agent's estimate must include the primary service AND every reasonably-expected co-item for it — an incomplete estimate that omits an expected item UNDERSTATES the total and misleads the patient. The No Surprises Act (45 CFR 149.610) requires the convening provider to include items/services reasonably expected to be furnished. A determination missing the primary or an expected co-item is rejected before it can leave the fabric, so the fabric can never issue a materially incomplete estimate. This is the load-bearing gate — it mirrors the Care Coordination Handoff Agent's SBAR-completeness and the Lab Result Agent's critical-value-notified: a completeness obligation that cannot be skipped. (In the prototype the expected-co-item rules are clearly-labeled illustrative synthetics.)",
+    appliesTo: ["good-faith-estimate-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.gfe.estimate-not-binding",
+    name: "A GFE is an estimate — never a binding bill",
+    description:
+      "A Good Faith Estimate is an ESTIMATE requiring patient confirmation, NEVER a final / binding charge — and if the actual bill exceeds the GFE by $400 or more the patient has No Surprises Act dispute rights. A determination presented as a binding bill (binding:true) is rejected before it can leave the fabric, so a GFE can never become an unattended binding charge. Mirrors the Lab Result Agent's no-autonomous-clinical-action and the Financial Assistance Agent's no-autonomous-denial posture — the agent recommends, a human confirms. (In the prototype the charge master is a clearly-labeled illustrative synthetic; in production this is the provider's governed patient-estimate workflow with a financial-counselor confirmation + a signed audit trail.)",
+    appliesTo: ["good-faith-estimate-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -7593,6 +7654,114 @@ function store(): FabricStore {
         analyteId: "analyte.potassium",
         classification: "critical-high",
         requiresProviderNotification: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedGoodFaithEstimateTrace() {
+  const s = store();
+  const gfe0 = Date.now() - 1000 * 60 * 1;
+  const gfeTaskId = "task-seed-good-faith-estimate-001";
+  const gfeName = "Good Faith Estimate (No Surprises Act) Agent";
+  s.traces.push(
+    {
+      id: "span-gfe-001",
+      taskId: gfeTaskId,
+      agentId: "good-faith-estimate-agent",
+      agentName: gfeName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(gfe0).toISOString(),
+      finishedAt: new Date(gfe0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-gfe-002",
+      taskId: gfeTaskId,
+      parentSpanId: "span-gfe-001",
+      agentId: "good-faith-estimate-agent",
+      agentName: gfeName,
+      operation: "gfe.receive-request",
+      protocol: "a2a",
+      startedAt: new Date(gfe0 + 30).toISOString(),
+      finishedAt: new Date(gfe0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        patientRef: "gfe-patient-001",
+        primaryServiceId: "svc.menopause-consult-comprehensive",
+        lineItemCount: 2,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-gfe-003",
+      taskId: gfeTaskId,
+      parentSpanId: "span-gfe-002",
+      agentId: "good-faith-estimate-agent",
+      agentName: gfeName,
+      operation: "gfe.price",
+      protocol: "a2a",
+      startedAt: new Date(gfe0 + 60).toISOString(),
+      finishedAt: new Date(gfe0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        patientRef: "gfe-patient-001",
+        totalEstimate: 580,
+        // The honesty invariant: every line item is charge-master-sourced.
+        gfeChargeMasterSourced: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-gfe-004",
+      taskId: gfeTaskId,
+      parentSpanId: "span-gfe-003",
+      agentId: "good-faith-estimate-agent",
+      agentName: gfeName,
+      operation: "gfe.assemble",
+      protocol: "a2a",
+      startedAt: new Date(gfe0 + 100).toISOString(),
+      finishedAt: new Date(gfe0 + 135).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        patientRef: "gfe-patient-001",
+        totalEstimate: 580,
+        // The honesty invariant: the estimate is complete + is not a binding bill.
+        gfeExpectedItemsComplete: true,
+        gfeEstimateNotBinding: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-gfe-005",
+      taskId: gfeTaskId,
+      parentSpanId: "span-gfe-004",
+      agentId: "good-faith-estimate-agent",
+      agentName: gfeName,
+      operation: "gfe.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(gfe0 + 135).toISOString(),
+      finishedAt: new Date(gfe0 + 175).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        patientRef: "gfe-patient-001",
+        primaryServiceId: "svc.menopause-consult-comprehensive",
+        totalEstimate: 580,
         phiAccessed: true,
         synthetic: true
       }
