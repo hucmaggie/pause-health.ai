@@ -102,6 +102,10 @@ export type GovernanceTask = {
   ecaGatedOnScreening?: boolean;
   finAssistScheduleCited?: boolean;
   finAssistHumanReviewed?: boolean;
+  // Lab result & critical-value notification (critical-value-notified + reference-range-sourced + no-autonomous-clinical-action)
+  labCriticalValueNotified?: boolean;
+  labRangeCited?: boolean;
+  labClinicianReviewed?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -647,6 +651,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Autonomously denies charity care",
     reason:
       "A patient-financial-assistance decision asserted an autonomous denial (a not-eligible determination not gated on human review); a denial of charity care may NEVER be issued autonomously — a not-eligible determination is a RECOMMENDATION requiring human review with written notice + appeal rights under IRS 501(r)(4) (requiresHumanReview:true), and granting charity is a benefit but denying it is legally consequential. Mirrors the Overpayment & Recovery Agent's no-autonomous-clawback, the Utilization Review Agent's no-autonomous-denial, and the Claims Adjudication Agent's no-autonomous-denial posture — the safe answer is enforced"
+  },
+  {
+    policyId: "policy.lab.critical-value-notified",
+    signal: "labCriticalValueNotified",
+    violatingValue: false,
+    violationHint: "Suppresses a critical (panic) lab value without notification",
+    reason:
+      "A lab-result decision asserted a CRITICAL (panic) value that does NOT require provider notification (a suppressed / auto-closed critical result); a critical value may NEVER be suppressed — CLIA §493.1291(g) requires the laboratory to immediately alert the responsible provider of a critical value, so every critical result must trigger mandatory clinician notification (requiresProviderNotification:true). Mirrors the Care Coordination Handoff Agent's SBAR-completeness posture — a life-safety obligation that cannot be skipped"
+  },
+  {
+    policyId: "policy.lab.reference-range-sourced",
+    signal: "labRangeCited",
+    violatingValue: false,
+    violationHint: "A classification doesn't cite a recorded reference range",
+    reason:
+      "A lab-result decision did not cite a recorded analyte reference range from the catalog (an ad-hoc / un-sourced result interpretation, a missing or off-catalog analyte id); every classification must trace to a defined analyte reference range + critical thresholds (potassium, sodium, glucose, calcium, hemoglobin) — the agent may not interpret a result without a cited range. Mirrors the Overpayment & Recovery Agent's reason-catalog-sourced and the Data Retention Agent's schedule-sourced posture"
+  },
+  {
+    policyId: "policy.lab.no-autonomous-clinical-action",
+    signal: "labClinicianReviewed",
+    violatingValue: false,
+    violationHint: "Autonomously acts on an abnormal / critical result",
+    reason:
+      "A lab-result decision asserted an autonomous action on a non-normal result (an abnormal / critical result not gated on clinician review); the agent may NEVER autonomously act on a result — it does not order a test, prescribe, treat, or change a care plan, and every non-normal result is a flag escalated for clinician review (requiresClinicianReview:true). Mirrors the Utilization Review Agent's no-autonomous-denial and the Risk Adjustment Agent's no-autonomous-submission posture — the safe answer is enforced"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

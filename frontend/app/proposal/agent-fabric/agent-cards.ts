@@ -78,6 +78,13 @@ export const agentCards: AgentCard[] = [
       "Takes the structured intake over A2A, reasons over symptoms + cycle + safety screen + age band, and returns one of six care pathways with rationale and red-flag flags. Falls back to a deterministic Pause policy engine when ANTHROPIC_API_KEY is unset or the API call fails."
   },
   {
+    name: "Agentforce Lab Result & Critical-Value Notification",
+    role: "Clinical-decision agent",
+    tier: "clinical-decision",
+    detail:
+      "A DETERMINISTIC clinical-decision sibling of the Care Router. Classifies a discrete diagnostic lab result (analyte + value) against the analyte's reference range + critical thresholds as normal / abnormal-high / abnormal-low / critical-high / critical-low, flags mandatory clinician notification for a critical (panic) value, and flags clinician review for any abnormal result — a pure function of the value + the catalog range (no randomness, no clock). A CRITICAL value can NEVER be suppressed or auto-closed (governance genuinely blocks a critical result flagged as not requiring notification via policy.lab.critical-value-notified — CLIA §493.1291), every classification must cite a recorded reference range (policy.lab.reference-range-sourced), and the agent NEVER autonomously acts on a result — a non-normal result is escalated for clinician review (policy.lab.no-autonomous-clinical-action). Distinct from Remote Patient Monitoring (RPM streams), Clinical Summary (chart summarization), and Care Gap Closure (preventive measures). The analyte catalog + reference ranges are ILLUSTRATIVE synthetics, clearly labeled — NOT a certified laboratory information system (real ranges are method-/instrument-/population-specific and set by the laboratory's medical director under CLIA / 42 CFR 493)."
+  },
+  {
     name: "Pause Care Plan (Anthropic Claude Sonnet 4.5)",
     role: "Post-visit care plan + progress summary (clinical decision)",
     tier: "clinical-decision",

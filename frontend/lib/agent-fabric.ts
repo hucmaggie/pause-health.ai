@@ -1591,6 +1591,39 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "benefits-verification"
+  },
+  {
+    id: "lab-result-agent",
+    name: "Lab Result & Critical-Value Notification Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the clinical result-management piece:
+    // POST /api/agents/lab-result/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) clinical-decision agent, a sibling to the live-Claude
+    // Care Router — given a discrete lab result (analyte id + numeric value + unit), it
+    // classifies the value against the analyte's reference range + critical thresholds
+    // as normal / abnormal-high / abnormal-low / critical-high / critical-low, flags
+    // whether the result requires mandatory clinician notification (a CRITICAL / panic
+    // value), and flags whether it requires clinician review. It NEVER autonomously acts
+    // on a result (no order, prescription, treatment, or care-plan change — an abnormal /
+    // critical result is escalated to a clinician), and a CRITICAL value can NEVER be
+    // suppressed or auto-closed (CLIA §493.1291). It is distinct from the Remote Patient
+    // Monitoring agent (continuous wearable / RPM streams), the Clinical Summary agent
+    // (chart summarization), and the Care Gap Closure agent (missing preventive
+    // measures) — this manages DISCRETE diagnostic LAB results + critical-value
+    // notification. REUSES the existing clinical-decision tier.
+    endpoint: "/api/agents/lab-result",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Classifies a discrete diagnostic lab result for a clinician — computes normal / abnormal-high / abnormal-low / critical-high / critical-low against the analyte's reference range + critical thresholds, flags mandatory clinician notification for a critical (panic) value, and flags clinician review for any abnormal result. A deterministic clinical-decision sibling to the Care Router; distinct from Remote Patient Monitoring (RPM streams), Clinical Summary (chart summarization), and Care Gap Closure (preventive measures)",
+      "Classification is DETERMINISTIC — a pure function of the value + the analyte's catalog range (no randomness, no clock); critical thresholds take precedence over the reference range, so the same result always yields the same classification + notification + review flags",
+      "A CRITICAL (panic) value must trigger mandatory clinician notification — it can NEVER be suppressed or auto-closed; a critical result asserted as not requiring notification is blocked at the Agent Fabric governance boundary (policy.lab.critical-value-notified), because CLIA §493.1291(g) requires the laboratory to immediately alert the responsible provider. Mirrors the Care Coordination Handoff Agent's SBAR-completeness — a life-safety obligation that cannot be skipped",
+      "Every classification must cite a recorded analyte reference range — an ad-hoc / un-sourced result interpretation is blocked (policy.lab.reference-range-sourced); and the agent never autonomously acts on a result — an abnormal / critical result is a flag escalated for clinician review (requiresClinicianReview:true), and an autonomous action on a non-normal result is blocked (policy.lab.no-autonomous-clinical-action). Mirrors the Overpayment & Recovery Agent's reason-catalog-sourced and the Utilization Review Agent's no-autonomous-denial posture",
+      "Runs against an ILLUSTRATIVE synthetic analyte catalog + reference ranges + units + critical thresholds — clearly labeled; NOT a certified laboratory information system or CLIA-validated critical-value policy (real ranges are method-/instrument-/population-specific and set by the laboratory's medical director under CLIA / 42 CFR 493)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "clinical-decision"
   }
 ];
 
@@ -1668,7 +1701,8 @@ const POLICIES: PolicyRecord[] = [
       "records-retention-agent",
       "coordination-of-benefits-agent",
       "overpayment-recovery-agent",
-      "financial-assistance-agent"
+      "financial-assistance-agent",
+      "lab-result-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2536,6 +2570,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Patient Financial Assistance & Charity Care Agent may NEVER issue a denial of charity care autonomously — a not-eligible determination is a RECOMMENDATION requiring human review with written notice + appeal rights under IRS 501(r)(4) (requiresHumanReview:true). Granting full or partial charity is a benefit (a safe output), but a DENIAL is legally consequential; a determination that asserts an autonomous / unreviewed denial is rejected before it can leave the fabric, so a not-eligible recommendation can never become an unattended denial. Mirrors the Overpayment & Recovery Agent's no-autonomous-clawback, the Utilization Review Agent's no-autonomous-denial, and the Claims Adjudication Agent's no-autonomous-denial posture — the safe answer is enforced. (In the prototype the FAP schedule + FPL table are clearly-labeled illustrative synthetics; in production this is the hospital's governed FAP workflow with a human-in-the-loop determination + notice + a signed audit trail.)",
     appliesTo: ["financial-assistance-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.lab.critical-value-notified",
+    name: "A critical (panic) value must be notified — never suppressed",
+    description:
+      "The Lab Result & Critical-Value Notification Agent may NEVER suppress or auto-close a CRITICAL (panic) value — every critical result must trigger mandatory clinician notification (requiresProviderNotification:true). CLIA §493.1291(g) requires the laboratory to immediately alert the responsible provider of a critical value. A determination that asserts a critical value as not requiring notification is rejected before it can leave the fabric, so the fabric can never let a life-threatening result go unnotified. Mirrors the Care Coordination Handoff Agent's SBAR-completeness — a life-safety obligation that cannot be skipped. (In the prototype the analyte catalog + critical thresholds are clearly-labeled illustrative synthetics; real critical-value policies are CLIA-validated and set by the laboratory's medical director.)",
+    appliesTo: ["lab-result-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.lab.reference-range-sourced",
+    name: "Every classification must cite a recorded reference range",
+    description:
+      "Every classification the Lab Result & Critical-Value Notification Agent produces must cite a recorded analyte reference range + critical thresholds from the catalog — there is no ad-hoc, un-sourced result interpretation. A determination with a missing or off-catalog analyte id is rejected before it can leave the fabric, so a result can never be interpreted against anything other than a defined reference range. Mirrors the Overpayment & Recovery Agent's reason-catalog-sourced and the Data Retention Agent's schedule-sourced posture — every decision traces to a defined source. (In the prototype the analyte catalog is a clearly-labeled illustrative synthetic; in production this is the laboratory's CLIA-validated reference-range set.)",
+    appliesTo: ["lab-result-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.lab.no-autonomous-clinical-action",
+    name: "No autonomous clinical action — results are clinician-review-gated",
+    description:
+      "The Lab Result & Critical-Value Notification Agent may NEVER autonomously act on a result — it does not order a test, prescribe, treat, or change a care plan. Any abnormal / critical result is a flag escalated for clinician review (requiresClinicianReview:true). A determination that asserts an autonomous action on a non-normal result (a non-normal result not gated on clinician review) is rejected before it can leave the fabric, so a result recommendation can never become an unattended clinical action. Mirrors the Utilization Review Agent's no-autonomous-denial, the Risk Adjustment Agent's no-autonomous-submission, and the Prior Authorization Agent's clinician-approval posture — the safe answer is enforced. (In the prototype the analyte catalog is a clearly-labeled illustrative synthetic; in production this is the health system's governed result-management workflow with a clinician-in-the-loop review + a signed audit trail.)",
+    appliesTo: ["lab-result-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -7419,6 +7480,119 @@ function store(): FabricStore {
         assistanceTier: "full-charity",
         tierId: "fap.tier.full-charity",
         discountPct: 100,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedLabResultTrace() {
+  const s = store();
+  const lab0 = Date.now() - 1000 * 60 * 1;
+  const labTaskId = "task-seed-lab-result-001";
+  const labName = "Lab Result & Critical-Value Notification Agent";
+  s.traces.push(
+    {
+      id: "span-lab-001",
+      taskId: labTaskId,
+      agentId: "lab-result-agent",
+      agentName: labName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(lab0).toISOString(),
+      finishedAt: new Date(lab0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-lab-002",
+      taskId: labTaskId,
+      parentSpanId: "span-lab-001",
+      agentId: "lab-result-agent",
+      agentName: labName,
+      operation: "lab.receive-result",
+      protocol: "a2a",
+      startedAt: new Date(lab0 + 30).toISOString(),
+      finishedAt: new Date(lab0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        patientRef: "lab-patient-002",
+        analyteId: "analyte.potassium",
+        value: 6.8,
+        // The honesty invariant: every classification cites a recorded reference range.
+        labRangeCited: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-lab-003",
+      taskId: labTaskId,
+      parentSpanId: "span-lab-002",
+      agentId: "lab-result-agent",
+      agentName: labName,
+      operation: "lab.classify",
+      protocol: "a2a",
+      startedAt: new Date(lab0 + 60).toISOString(),
+      finishedAt: new Date(lab0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        patientRef: "lab-patient-002",
+        analyteId: "analyte.potassium",
+        classification: "critical-high",
+        isCritical: true,
+        // The honesty invariant: a critical value must be notified — never suppressed.
+        labCriticalValueNotified: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-lab-004",
+      taskId: labTaskId,
+      parentSpanId: "span-lab-003",
+      agentId: "lab-result-agent",
+      agentName: labName,
+      operation: "lab.recommend",
+      protocol: "a2a",
+      startedAt: new Date(lab0 + 100).toISOString(),
+      finishedAt: new Date(lab0 + 135).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        patientRef: "lab-patient-002",
+        classification: "critical-high",
+        requiresProviderNotification: true,
+        // The honesty invariant: the agent never autonomously acts — a clinician reviews.
+        labClinicianReviewed: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-lab-005",
+      taskId: labTaskId,
+      parentSpanId: "span-lab-004",
+      agentId: "lab-result-agent",
+      agentName: labName,
+      operation: "lab.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(lab0 + 135).toISOString(),
+      finishedAt: new Date(lab0 + 175).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        patientRef: "lab-patient-002",
+        analyteId: "analyte.potassium",
+        classification: "critical-high",
+        requiresProviderNotification: true,
         phiAccessed: true,
         synthetic: true
       }

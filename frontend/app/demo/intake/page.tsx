@@ -39,6 +39,7 @@ import { RecordsRetentionPanel } from "../../../components/records-retention-pan
 import { CoordinationOfBenefitsPanel } from "../../../components/coordination-of-benefits-panel";
 import { OverpaymentRecoveryPanel } from "../../../components/overpayment-recovery-panel";
 import { FinancialAssistancePanel } from "../../../components/financial-assistance-panel";
+import { LabResultPanel } from "../../../components/lab-result-panel";
 import { SchedulingPanel } from "../../../components/scheduling-panel";
 import { SdohScreeningPanel } from "../../../components/sdoh-screening-panel";
 import { getAgentforceConfig } from "../../../lib/agentforce";
@@ -161,6 +162,7 @@ export default function IntakeDemoPage() {
       <OverpaymentRecoveryPanel />
 
       <FinancialAssistancePanel />
+      <LabResultPanel />
 
       <section className="demo-grid">
         <article className="card">
