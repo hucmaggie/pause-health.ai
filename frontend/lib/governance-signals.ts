@@ -98,6 +98,10 @@ export type GovernanceTask = {
   recoveryWithinLookback?: boolean;
   recoveryReasonCited?: boolean;
   recoveryClawbackHumanReviewed?: boolean;
+  // Patient financial assistance & charity care (no-eca-before-screening + fap-schedule-sourced + no-autonomous-denial)
+  ecaGatedOnScreening?: boolean;
+  finAssistScheduleCited?: boolean;
+  finAssistHumanReviewed?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -619,6 +623,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Executes an autonomous / unreviewed clawback",
     reason:
       "A claims-overpayment-recovery decision asserted an autonomous / unreviewed clawback (a recoverable determination not gated on human review); a recovery may NEVER be executed autonomously — a recoverable overpayment is a RECOMMENDATION requiring human review with member/provider notice (requiresHumanReview:true), and an offset/clawback only happens after a human reviews it. Mirrors the Fraud, Waste & Abuse Agent's no-autonomous-denial and the Data Retention Agent's no-autonomous-purge posture — the safe answer is enforced"
+  },
+  {
+    policyId: "policy.finassist.no-eca-before-screening",
+    signal: "ecaGatedOnScreening",
+    violatingValue: false,
+    violationHint: "Runs a collection action before financial screening is complete",
+    reason:
+      "A patient-financial-assistance decision asserted an extraordinary collection action (ECA — collections, credit reporting, a lien) while financial-assistance screening was NOT complete; under IRS 501(r)(6) a hospital must make reasonable efforts to determine FAP (charity-care) eligibility BEFORE any ECA — a collection action may never precede screening. Mirrors the Data Retention Agent's legal-hold-overrides-purge and the Overpayment & Recovery Agent's within-lookback-window posture — a legal precondition bounds the action"
+  },
+  {
+    policyId: "policy.finassist.fap-schedule-sourced",
+    signal: "finAssistScheduleCited",
+    violatingValue: false,
+    violationHint: "An eligibility decision doesn't cite a recorded FAP tier",
+    reason:
+      "A patient-financial-assistance decision did not cite a recorded FAP tier from the schedule (an ad-hoc / un-sourced eligibility decision, a missing or off-catalog tier id); every charity-care determination must trace to a defined FAP tier (full-charity, partial-charity, or not-eligible) or a recorded presumptive-eligibility reason — the agent may not grant or deny assistance on an ad-hoc, un-sourced basis. Mirrors the Data Retention Agent's schedule-sourced and the Overpayment & Recovery Agent's reason-catalog-sourced posture"
+  },
+  {
+    policyId: "policy.finassist.no-autonomous-denial",
+    signal: "finAssistHumanReviewed",
+    violatingValue: false,
+    violationHint: "Autonomously denies charity care",
+    reason:
+      "A patient-financial-assistance decision asserted an autonomous denial (a not-eligible determination not gated on human review); a denial of charity care may NEVER be issued autonomously — a not-eligible determination is a RECOMMENDATION requiring human review with written notice + appeal rights under IRS 501(r)(4) (requiresHumanReview:true), and granting charity is a benefit but denying it is legally consequential. Mirrors the Overpayment & Recovery Agent's no-autonomous-clawback, the Utilization Review Agent's no-autonomous-denial, and the Claims Adjudication Agent's no-autonomous-denial posture — the safe answer is enforced"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

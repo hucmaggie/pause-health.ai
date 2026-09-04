@@ -1557,6 +1557,40 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "payer-operations"
+  },
+  {
+    id: "financial-assistance-agent",
+    name: "Patient Financial Assistance & Charity Care Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the patient-access / charity-care piece:
+    // POST /api/agents/financial-assistance/tasks (card at /.well-known/
+    // agent.json). A DETERMINISTIC (no-Claude) agent for a provider's patient
+    // financial experience — given a household size + annual income (+ the FPL year,
+    // an optional presumptive-eligibility signal, whether the FAP application is
+    // complete, and whether an extraordinary collection action is being requested), it
+    // computes the household's income as a percentage of the Federal Poverty Level,
+    // cites the governing FAP tier from a schedule, and classifies the patient as
+    // full-charity / partial-charity / not-eligible under an IRS 501(r) Financial
+    // Assistance Policy. It NEVER autonomously DENIES assistance (a not-eligible
+    // determination is a RECOMMENDATION requiring human review with written notice +
+    // appeal rights) and NEVER lets an extraordinary collection action proceed before
+    // financial screening is complete (501(r)(6)). It COMPLEMENTS, not duplicates, the
+    // Benefits & Coverage Verification / EBV agent (which verifies plan eligibility +
+    // estimates the covered visit cost): this screens the patient-responsibility
+    // remainder for CHARITY CARE. REUSES the existing benefits-verification tier.
+    endpoint: "/api/agents/financial-assistance",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Screens a self-pay / underinsured patient for hospital financial assistance (charity care) under an IRS 501(r) FAP — computes the household's income as a percentage of the Federal Poverty Level, cites the governing FAP tier, and classifies as full-charity / partial-charity / not-eligible with a discount percentage. A sibling to the Benefits & Coverage Verification / EBV agent on the patient-access tier: EBV verifies what the plan covers; this screens the patient-responsibility remainder for charity care",
+      "Screening is DETERMINISTIC — a pure function of the household size + income + FPL year + the request's own flags (no randomness, no clock); the FPL percentage is derived from the household size's FPL base, and the same household always yields the same tier + discount + eligibility",
+      "An extraordinary collection action (ECA — collections, credit reporting, a lien) may NEVER proceed before financial-assistance screening is complete — an ECA asserted before screening is blocked at the Agent Fabric governance boundary (policy.finassist.no-eca-before-screening), because IRS 501(r)(6) requires reasonable efforts to determine FAP eligibility before any ECA. Mirrors the Data Retention Agent's legal-hold-overrides-purge — a legal precondition bounds the action",
+      "Every determination must cite a recorded FAP tier or a presumptive-eligibility reason — an ad-hoc / un-sourced eligibility decision is blocked (policy.finassist.fap-schedule-sourced); and a denial of charity care is never autonomous — a not-eligible determination is a RECOMMENDATION requiring human review with written notice + appeal rights (501(r)(4)), and an autonomous denial is blocked (policy.finassist.no-autonomous-denial). Mirrors the Overpayment & Recovery Agent's reason-catalog-sourced + no-autonomous-clawback posture",
+      "Runs against ILLUSTRATIVE synthetic FAP tier schedule + discount percentages + FPL table + presumptive-eligibility reasons — clearly labeled; NOT a certified financial-assistance system (real hospital FAPs are governed by IRS 501(r) / 26 CFR 1.501(r), the HHS Federal Poverty Guidelines, and each hospital's Board-approved FAP + state charity-care law)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "benefits-verification"
   }
 ];
 
@@ -1633,7 +1667,8 @@ const POLICIES: PolicyRecord[] = [
       "break-the-glass-agent",
       "records-retention-agent",
       "coordination-of-benefits-agent",
-      "overpayment-recovery-agent"
+      "overpayment-recovery-agent",
+      "financial-assistance-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2474,6 +2509,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Claims Overpayment & Recovery Agent may NEVER execute a clawback / offset autonomously — a recoverable overpayment is a RECOMMENDATION requiring human review with member/provider notice (requiresHumanReview:true), and an offset only happens after a human reviews it. A determination that asserts an autonomous / unreviewed clawback is rejected before it can leave the fabric, so a recovery recommendation can never become an unattended recoupment. Mirrors the Fraud, Waste & Abuse Agent's no-autonomous-denial, the Data Retention Agent's no-autonomous-purge, and the Coordination of Benefits Agent's no-autonomous-adjudication posture — the safe answer is enforced. (In the prototype the reason catalog + windows are clearly-labeled illustrative synthetics; in production this is the customer's governed recovery workflow with a human-in-the-loop review + notice + a signed audit trail.)",
     appliesTo: ["overpayment-recovery-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.finassist.no-eca-before-screening",
+    name: "No extraordinary collection action before financial screening",
+    description:
+      "The Patient Financial Assistance & Charity Care Agent may NEVER let an extraordinary collection action (ECA — sending a bill to collections, credit reporting, a lien) proceed before financial-assistance (FAP / charity-care) screening is complete. Under IRS 501(r)(6) a hospital must make reasonable efforts to determine FAP eligibility BEFORE any ECA. A determination that asserts an ECA while screening is incomplete is rejected before it can leave the fabric, so the fabric can never authorize a collection action that precedes screening. Mirrors the Data Retention Agent's legal-hold-overrides-purge and the Overpayment & Recovery Agent's within-lookback-window — a legal precondition bounds the action. (In the prototype the FAP schedule + FPL table are clearly-labeled illustrative synthetics; real FAP + ECA rules are governed by IRS 501(r) / 26 CFR 1.501(r) and state charity-care law.)",
+    appliesTo: ["financial-assistance-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.finassist.fap-schedule-sourced",
+    name: "Every eligibility decision must cite a recorded FAP tier",
+    description:
+      "Every charity-care determination the Patient Financial Assistance & Charity Care Agent produces must cite a recorded FAP tier from the schedule (or a recorded presumptive-eligibility reason) — there is no ad-hoc, un-sourced eligibility decision. A determination with a missing or off-catalog tier id is rejected before it can leave the fabric, so assistance can never be granted or denied on anything other than a defined tier. Mirrors the Data Retention Agent's schedule-sourced and the Overpayment & Recovery Agent's reason-catalog-sourced posture — every decision traces to a defined source. (In the prototype the FAP tier schedule is a clearly-labeled illustrative synthetic; in production this is the hospital's Board-approved Financial Assistance Policy.)",
+    appliesTo: ["financial-assistance-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.finassist.no-autonomous-denial",
+    name: "A charity-care denial is never autonomous — it is human-review-gated",
+    description:
+      "The Patient Financial Assistance & Charity Care Agent may NEVER issue a denial of charity care autonomously — a not-eligible determination is a RECOMMENDATION requiring human review with written notice + appeal rights under IRS 501(r)(4) (requiresHumanReview:true). Granting full or partial charity is a benefit (a safe output), but a DENIAL is legally consequential; a determination that asserts an autonomous / unreviewed denial is rejected before it can leave the fabric, so a not-eligible recommendation can never become an unattended denial. Mirrors the Overpayment & Recovery Agent's no-autonomous-clawback, the Utilization Review Agent's no-autonomous-denial, and the Claims Adjudication Agent's no-autonomous-denial posture — the safe answer is enforced. (In the prototype the FAP schedule + FPL table are clearly-labeled illustrative synthetics; in production this is the hospital's governed FAP workflow with a human-in-the-loop determination + notice + a signed audit trail.)",
+    appliesTo: ["financial-assistance-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -7240,11 +7302,123 @@ function store(): FabricStore {
       finishedAt: new Date(rec0 + 180).toISOString(),
       durationMs: 40,
       status: "ok",
-      attributes: {
+      attributes:       {
         claimId: "recovery-claim-001",
         recoveryReasonId: "reason.recovery.duplicate-payment",
         overpaymentAmount: 600,
         requiresHumanReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedFinancialAssistanceTrace() {
+  const s = store();
+  const fin0 = Date.now() - 1000 * 60 * 1;
+  const finTaskId = "task-seed-financial-assistance-001";
+  const finName = "Patient Financial Assistance & Charity Care Agent";
+  s.traces.push(
+    {
+      id: "span-finassist-001",
+      taskId: finTaskId,
+      agentId: "financial-assistance-agent",
+      agentName: finName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(fin0).toISOString(),
+      finishedAt: new Date(fin0 + 35).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-finassist-002",
+      taskId: finTaskId,
+      parentSpanId: "span-finassist-001",
+      agentId: "financial-assistance-agent",
+      agentName: finName,
+      operation: "finassist.receive-application",
+      protocol: "a2a",
+      startedAt: new Date(fin0 + 35).toISOString(),
+      finishedAt: new Date(fin0 + 65).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        patientRef: "finassist-patient-001",
+        householdSize: 3,
+        // The honesty invariant: a collection action never precedes screening.
+        ecaGatedOnScreening: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-finassist-003",
+      taskId: finTaskId,
+      parentSpanId: "span-finassist-002",
+      agentId: "financial-assistance-agent",
+      agentName: finName,
+      operation: "finassist.evaluate",
+      protocol: "a2a",
+      startedAt: new Date(fin0 + 65).toISOString(),
+      finishedAt: new Date(fin0 + 105).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        patientRef: "finassist-patient-001",
+        fplPercent: 116,
+        assistanceTier: "full-charity",
+        tierId: "fap.tier.full-charity",
+        // The honesty invariant: every determination cites a recorded FAP tier.
+        finAssistScheduleCited: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-finassist-004",
+      taskId: finTaskId,
+      parentSpanId: "span-finassist-003",
+      agentId: "financial-assistance-agent",
+      agentName: finName,
+      operation: "finassist.recommend",
+      protocol: "a2a",
+      startedAt: new Date(fin0 + 105).toISOString(),
+      finishedAt: new Date(fin0 + 140).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        patientRef: "finassist-patient-001",
+        assistanceTier: "full-charity",
+        discountPct: 100,
+        // The honesty invariant: a denial is never autonomous (this grant needs no denial).
+        finAssistHumanReviewed: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-finassist-005",
+      taskId: finTaskId,
+      parentSpanId: "span-finassist-004",
+      agentId: "financial-assistance-agent",
+      agentName: finName,
+      operation: "finassist.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(fin0 + 140).toISOString(),
+      finishedAt: new Date(fin0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        patientRef: "finassist-patient-001",
+        assistanceTier: "full-charity",
+        tierId: "fap.tier.full-charity",
+        discountPct: 100,
         phiAccessed: true,
         synthetic: true
       }
