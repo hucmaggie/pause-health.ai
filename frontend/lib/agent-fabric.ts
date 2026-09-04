@@ -1657,6 +1657,38 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "benefits-verification"
+  },
+  {
+    id: "balance-billing-agent",
+    name: "Balance Billing Protection (No Surprises Act) Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side NSA balance-billing piece:
+    // POST /api/agents/balance-billing/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) payer & plan operations agent. Given a claim (its
+    // protection basis — the service setting / provider network status — plus the service
+    // type, whether it is ancillary, the billed charge, the in-network allowed / QPA, and
+    // whether a valid notice-and-consent waiver was obtained), it decides whether the No
+    // Surprises Act PROHIBITS balance billing, computes the patient's cost-share BASIS
+    // (in-network QPA for a protected claim, never the billed charge), and computes the
+    // balance-bill amount (0 + prohibited for a protected claim). It is distinct from the
+    // Claims Adjudication (per-claim edits), Coordination of Benefits (payer order),
+    // Overpayment & Recovery (post-payment clawback), Utilization Review (medical
+    // necessity), and FWA (fraud) agents; and it is the CLAIM-time complement to the
+    // patient-access Good Faith Estimate agent (the two sides of the No Surprises Act).
+    // REUSES the existing payer-operations tier.
+    endpoint: "/api/agents/balance-billing",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Decides whether the No Surprises Act prohibits balance-billing an out-of-network claim — resolves the protection basis (emergency, out-of-network at an in-network facility, air ambulance, ground ambulance, in-network), applies any effective notice-and-consent waiver (valid only for a waivable, non-ancillary service), computes the patient's cost-share BASIS (in-network QPA for a protected claim), and computes the balance-bill amount (0 + prohibited for a protected claim). A deterministic payer-plane agent; the claim-time complement to the Good Faith Estimate agent",
+      "The determination is DETERMINISTIC — a pure function of the request + the basis catalog (no randomness, no clock); the same claim always yields the same protection + cost-share basis + balance-bill flags",
+      "Every determination must cite a recorded protection basis — an ad-hoc / un-sourced protection call is blocked at the Agent Fabric governance boundary (policy.balancebill.protection-basis-sourced); and for a PROTECTED claim the patient's cost-share must be computed on the in-network (QPA) basis, never the out-of-network billed charge — a protected patient's cost-share based on the billed charge over-charges them and is blocked (policy.balancebill.cost-share-in-network-basis, 45 CFR 149.110–149.130). Mirrors the Overpayment & Recovery Agent's reason-catalog-sourced + within-lookback-window posture",
+      "A PROTECTED claim can NEVER be balance-billed — the difference between the billed charge and the allowed amount may not be billed to the patient, and a balance bill allowed on a protected claim is blocked (policy.balancebill.no-autonomous-balance-bill); a permitted balance bill on a NON-protected claim (a valid waiver, ground ambulance) requires human review. Mirrors the Overpayment & Recovery Agent's no-autonomous-clawback and the Lab Result Agent's no-autonomous-clinical-action posture",
+      "Runs against ILLUSTRATIVE synthetic protection bases + waiver rules + ancillary handling + QPA amounts — clearly labeled; NOT a certified No Surprises Act engine (a real determination uses the actual Qualifying Payment Amount, the federal IDR process, the notice-and-consent requirements, and the provider's network contracts under 45 CFR 149)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
   }
 ];
 
@@ -1736,7 +1768,8 @@ const POLICIES: PolicyRecord[] = [
       "overpayment-recovery-agent",
       "financial-assistance-agent",
       "lab-result-agent",
-      "good-faith-estimate-agent"
+      "good-faith-estimate-agent",
+      "balance-billing-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2658,6 +2691,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "A Good Faith Estimate is an ESTIMATE requiring patient confirmation, NEVER a final / binding charge — and if the actual bill exceeds the GFE by $400 or more the patient has No Surprises Act dispute rights. A determination presented as a binding bill (binding:true) is rejected before it can leave the fabric, so a GFE can never become an unattended binding charge. Mirrors the Lab Result Agent's no-autonomous-clinical-action and the Financial Assistance Agent's no-autonomous-denial posture — the agent recommends, a human confirms. (In the prototype the charge master is a clearly-labeled illustrative synthetic; in production this is the provider's governed patient-estimate workflow with a financial-counselor confirmation + a signed audit trail.)",
     appliesTo: ["good-faith-estimate-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.balancebill.protection-basis-sourced",
+    name: "Every determination must cite a recorded protection basis",
+    description:
+      "Every balance-billing determination the Balance Billing Protection Agent produces must cite a recorded No Surprises Act protection basis from the catalog (emergency, out-of-network at an in-network facility, air ambulance, ground ambulance, in-network) — there is no ad-hoc, un-sourced protection call. A determination with a missing or off-catalog basis id is rejected before it can leave the fabric, so protection can never be decided against anything other than a defined basis. Mirrors the Overpayment & Recovery Agent's reason-catalog-sourced and the Good Faith Estimate Agent's charge-master-sourced posture — every decision traces to a defined source. (In the prototype the basis catalog is a clearly-labeled illustrative synthetic; in production this is the payer's NSA-configured protection logic under 45 CFR 149.)",
+    appliesTo: ["balance-billing-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.balancebill.cost-share-in-network-basis",
+    name: "A protected patient's cost-share is on the in-network (QPA) basis",
+    description:
+      "For a PROTECTED claim, the Balance Billing Protection Agent must compute the patient's cost-sharing on the in-network (Qualifying Payment Amount) basis — NEVER the out-of-network billed charge. The No Surprises Act (45 CFR 149.110–149.130) requires cost-sharing for a protected service to be based on the recognized amount (the QPA); basing it on the billed charge over-charges the patient. A determination that bases a protected patient's cost-share on the billed charge is rejected before it can leave the fabric, so a protected patient can never be over-charged. This is the load-bearing gate — it mirrors the Overpayment & Recovery Agent's within-lookback-window: a legal basis bounds the dollar figure. (In the prototype the QPA amounts are clearly-labeled illustrative synthetics.)",
+    appliesTo: ["balance-billing-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.balancebill.no-autonomous-balance-bill",
+    name: "A protected claim is never balance-billed",
+    description:
+      "A PROTECTED claim can NEVER be balance-billed — the difference between the billed charge and the allowed amount may not be billed to the patient, and a balance bill is never issued autonomously against a protected patient. A determination that allows a balance bill on a protected claim is rejected before it can leave the fabric, so an unlawful balance bill can never be issued to a protected patient; a permitted balance bill on a NON-protected claim (a valid notice-and-consent waiver, an out-of-network ground ambulance) is a RECOMMENDATION requiring human review (requiresHumanReview:true). Mirrors the Overpayment & Recovery Agent's no-autonomous-clawback and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off. (In the prototype the protection bases + waiver rules are clearly-labeled illustrative synthetics; in production this is the payer's governed NSA workflow with a human-in-the-loop review + a signed audit trail.)",
+    appliesTo: ["balance-billing-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -7762,6 +7822,117 @@ function store(): FabricStore {
         patientRef: "gfe-patient-001",
         primaryServiceId: "svc.menopause-consult-comprehensive",
         totalEstimate: 580,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedBalanceBillingTrace() {
+  const s = store();
+  const bb0 = Date.now() - 1000 * 60 * 1;
+  const bbTaskId = "task-seed-balance-billing-001";
+  const bbName = "Balance Billing Protection (No Surprises Act) Agent";
+  s.traces.push(
+    {
+      id: "span-bb-001",
+      taskId: bbTaskId,
+      agentId: "balance-billing-agent",
+      agentName: bbName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(bb0).toISOString(),
+      finishedAt: new Date(bb0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-bb-002",
+      taskId: bbTaskId,
+      parentSpanId: "span-bb-001",
+      agentId: "balance-billing-agent",
+      agentName: bbName,
+      operation: "balancebill.receive-claim",
+      protocol: "a2a",
+      startedAt: new Date(bb0 + 30).toISOString(),
+      finishedAt: new Date(bb0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        claimRef: "bb-claim-001",
+        patientRef: "bb-patient-001",
+        basisId: "basis.emergency",
+        // The honesty invariant: every determination cites a recorded protection basis.
+        balanceBillBasisCited: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-bb-003",
+      taskId: bbTaskId,
+      parentSpanId: "span-bb-002",
+      agentId: "balance-billing-agent",
+      agentName: bbName,
+      operation: "balancebill.evaluate",
+      protocol: "a2a",
+      startedAt: new Date(bb0 + 60).toISOString(),
+      finishedAt: new Date(bb0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        claimRef: "bb-claim-001",
+        protected: true,
+        costShareBasis: "in-network-qpa",
+        // The honesty invariant: a protected patient's cost-share is on the in-network basis.
+        balanceBillCostShareInNetwork: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-bb-004",
+      taskId: bbTaskId,
+      parentSpanId: "span-bb-003",
+      agentId: "balance-billing-agent",
+      agentName: bbName,
+      operation: "balancebill.recommend",
+      protocol: "a2a",
+      startedAt: new Date(bb0 + 100).toISOString(),
+      finishedAt: new Date(bb0 + 135).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        claimRef: "bb-claim-001",
+        balanceBillProhibited: true,
+        balanceBillAmount: 0,
+        // The honesty invariant: a protected claim is never balance-billed.
+        balanceBillProhibitionHonored: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-bb-005",
+      taskId: bbTaskId,
+      parentSpanId: "span-bb-004",
+      agentId: "balance-billing-agent",
+      agentName: bbName,
+      operation: "balancebill.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(bb0 + 135).toISOString(),
+      finishedAt: new Date(bb0 + 175).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        claimRef: "bb-claim-001",
+        basisId: "basis.emergency",
+        balanceBillProhibited: true,
         phiAccessed: true,
         synthetic: true
       }

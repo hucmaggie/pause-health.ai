@@ -110,6 +110,10 @@ export type GovernanceTask = {
   gfeChargeMasterSourced?: boolean;
   gfeExpectedItemsComplete?: boolean;
   gfeEstimateNotBinding?: boolean;
+  // Balance billing protection (protection-basis-sourced + cost-share-in-network-basis + no-autonomous-balance-bill)
+  balanceBillBasisCited?: boolean;
+  balanceBillCostShareInNetwork?: boolean;
+  balanceBillProhibitionHonored?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -703,6 +707,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "The estimate is presented as a binding bill",
     reason:
       "A good-faith-estimate decision was presented as a binding / final bill (binding:true); a GFE is an ESTIMATE requiring patient confirmation, NEVER a final charge — and if the actual bill exceeds the GFE by $400 or more the patient has NSA dispute rights. Mirrors the Lab Result Agent's no-autonomous-clinical-action and the Financial Assistance Agent's no-autonomous-denial posture — the agent recommends, a human confirms"
+  },
+  {
+    policyId: "policy.balancebill.protection-basis-sourced",
+    signal: "balanceBillBasisCited",
+    violatingValue: false,
+    violationHint: "A protection decision doesn't cite a recorded basis",
+    reason:
+      "A balance-billing decision did not cite a recorded No Surprises Act protection basis (an ad-hoc / un-sourced protection call, a missing or off-catalog basis id); every determination must trace to a defined protection basis (emergency, out-of-network at an in-network facility, air ambulance, ground ambulance, in-network). Mirrors the Overpayment & Recovery Agent's reason-catalog-sourced and the Good Faith Estimate Agent's charge-master-sourced posture"
+  },
+  {
+    policyId: "policy.balancebill.cost-share-in-network-basis",
+    signal: "balanceBillCostShareInNetwork",
+    violatingValue: false,
+    violationHint: "A protected patient's cost-share is based on the billed charge",
+    reason:
+      "A balance-billing decision based a PROTECTED patient's cost-share on the out-of-network billed charge instead of the in-network (Qualifying Payment Amount) basis; for a protected claim the patient's cost-sharing must be computed on the recognized in-network amount (QPA), never the billed charge — basing it on the billed charge over-charges the patient (45 CFR 149.110–149.130). Mirrors the Overpayment & Recovery Agent's within-lookback-window posture — a legal basis bounds the dollar figure"
+  },
+  {
+    policyId: "policy.balancebill.no-autonomous-balance-bill",
+    signal: "balanceBillProhibitionHonored",
+    violatingValue: false,
+    violationHint: "A balance bill is allowed on a protected claim",
+    reason:
+      "A balance-billing decision allowed a balance bill on a PROTECTED claim; a protected claim can NEVER be balance-billed — the difference between the billed charge and the allowed amount may not be billed to the patient, and a balance bill is never issued autonomously against a protected patient. Mirrors the Overpayment & Recovery Agent's no-autonomous-clawback and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
