@@ -1534,6 +1534,43 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "data-plane"
   },
   {
+    id: "minimum-necessary-agent",
+    name: "Minimum Necessary (HIPAA) Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the MuleSoft control-plane / data-substrate
+    // minimum-necessary service: POST /api/agents/minimum-necessary/tasks (card at
+    // /.well-known/agent.json). A DETERMINISTIC (no-Claude) data-substrate agent.
+    // Given a disclosure request (a requestor role, a purpose-of-use, the specific
+    // fields requested — each mapped to a field CATEGORY — and the record scope:
+    // single-patient / cohort / bulk), it DETERMINISTICALLY resolves the governing
+    // purpose-of-use rule and decides per field whether it is within the
+    // minimum-necessary scope for that purpose (release) or beyond it (withhold),
+    // yielding a disclosure limited to the minimum necessary (45 CFR 164.502(b) /
+    // 164.514(d)). Treatment / to-the-individual / authorized / required-by-law
+    // purposes are EXEMPT from the standard. It COMPLEMENTS the other platform
+    // agents — distinct from the Consent & Preferences Management agent (WHETHER a
+    // patient may be contacted / data used for a scope), the De-Identification agent
+    // (whether a dataset is no longer PHI), the Master Patient Index
+    // (identity/dedup), the Break-the-Glass agent (emergency PHI access), and the
+    // Data Retention agent (records disposition): this decides HOW MUCH of an
+    // identified patient's PHI a given purpose-of-use may see. REUSES the existing
+    // data-plane tier (platform plane). The purpose-of-use catalog + role + category
+    // mappings are ILLUSTRATIVE synthetics, NOT a certified minimum-necessary engine.
+    endpoint: "/api/agents/minimum-necessary",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "The minimum-necessary layer of the data substrate — decides whether a PHI disclosure is limited to the minimum necessary for its stated purpose-of-use + requestor role (45 CFR 164.502(b) / 164.514(d)), releasing only the permitted field categories and withholding the rest, complementing (not duplicating) the Consent & Preferences Management agent (whether a patient may be contacted / data used), the De-Identification agent (whether a dataset is no longer PHI), the Master Patient Index (identity/dedup), the Break-the-Glass agent (emergency PHI access), and the Data Retention agent (records disposition)",
+      "Determinations are DETERMINISTIC — a pure function of the request + the purpose-of-use catalog (no randomness, no clock); the same request always yields the same field decisions + released/withheld sets + flags",
+      "Every disclosure decision must cite a recorded purpose-of-use — an ad-hoc / un-sourced disclosure is blocked at the Agent Fabric governance boundary (policy.minnec.purpose-of-use-sourced); and every RELEASED field must be within the purpose's permitted categories — releasing an out-of-scope field over-discloses PHI and is blocked (policy.minnec.minimum-necessary-scoped, the load-bearing privacy gate). Mirrors the De-Identification Agent's method-cited + no-release-of-reidentifiable posture",
+      "An over-scope (narrowed) or bulk / cohort disclosure is a RECOMMENDATION requiring human review — it is never autonomously released; a not-minimum-necessary or bulk determination that does not require human review is blocked (policy.minnec.no-autonomous-over-disclosure). Mirrors the De-Identification Agent's no-release-of-reidentifiable and the Balance Billing Agent's no-autonomous-balance-bill posture",
+      "Runs against an ILLUSTRATIVE synthetic purpose-of-use catalog + requestor roles + field categories — clearly labeled; NOT a certified minimum-necessary engine (a real determination uses the covered entity's role-based access policies and its minimum-necessary standard under 45 CFR 164.502(b) / 164.514(d))"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
+  },
+  {
     id: "coordination-of-benefits-agent",
     name: "Coordination of Benefits Agent",
     kind: "agentforce",
@@ -1844,7 +1881,8 @@ const POLICIES: PolicyRecord[] = [
       "lab-result-agent",
       "good-faith-estimate-agent",
       "balance-billing-agent",
-      "immunization-agent"
+      "immunization-agent",
+      "minimum-necessary-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2685,6 +2723,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Immunization Forecasting Agent may NEVER administer, order, or record a vaccine autonomously — a due / overdue vaccine is a RECOMMENDATION requiring a clinician order (requiresClinicianOrder:true). A determination that reports due / overdue vaccines but does not require a clinician order is rejected before it can leave the fabric, so an immunization forecast can never become an unattended administration. Mirrors the Lab Result Agent's no-autonomous-clinical-action and the Balance Billing Agent's no-autonomous-balance-bill posture — the safe answer is enforced. (In the prototype the schedule + intervals are clearly-labeled illustrative synthetics; in production this is the customer's governed immunization workflow with a clinician order + a signed audit trail.)",
     appliesTo: ["immunization-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.minnec.purpose-of-use-sourced",
+    name: "Every disclosure decision must cite a recorded purpose-of-use",
+    description:
+      "Every determination the Minimum Necessary Agent produces must cite a recorded purpose-of-use rule from the catalog — there is no ad-hoc, un-sourced disclosure. A determination with a missing or off-catalog purpose id is rejected before it can leave the fabric, so a PHI disclosure can never rest on anything other than a defined purpose-of-use. Mirrors the De-Identification Agent's method-cited and the Data Retention Agent's schedule-sourced posture — every decision traces to a defined source. (In the prototype the purpose-of-use catalog is a clearly-labeled illustrative synthetic; in production this is the covered entity's role-based access policies under 45 CFR 164.502(b) / 164.514(d).)",
+    appliesTo: ["minimum-necessary-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.minnec.minimum-necessary-scoped",
+    name: "A released field is never beyond the minimum-necessary scope",
+    description:
+      "The Minimum Necessary Agent may NEVER release a field whose category is beyond what the stated purpose-of-use permits — every released field must be within the purpose's allowed categories (unless the purpose is minimum-necessary exempt: treatment, disclosure to the individual, an authorized disclosure, or one required by law). A determination that releases an out-of-scope field is rejected before it can leave the fabric, so the fabric can never over-disclose PHI beyond the minimum necessary. This is the load-bearing privacy gate — it mirrors the De-Identification Agent's no-release-of-reidentifiable: a privacy obligation that cannot be skipped. (In the prototype the purpose + category mappings are clearly-labeled illustrative synthetics; in production this is the covered entity's minimum-necessary standard under 45 CFR 164.502(b) / 164.514(d).)",
+    appliesTo: ["minimum-necessary-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.minnec.no-autonomous-over-disclosure",
+    name: "An over-scope / bulk disclosure is never autonomously released",
+    description:
+      "The Minimum Necessary Agent may NEVER autonomously release an over-scope (narrowed) or bulk / cohort disclosure — a request that is not minimum-necessary as submitted (fields had to be withheld) or that is a bulk / cohort scope is a RECOMMENDATION requiring human review (requiresHumanReview:true). A determination that is not-minimum-necessary or bulk but does not require human review is rejected before it can leave the fabric, so an over-broad or bulk PHI disclosure can never become an unattended release. Mirrors the De-Identification Agent's no-release-of-reidentifiable and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off. (In the prototype the purpose + scope rules are clearly-labeled illustrative synthetics; in production this is the customer's governed disclosure workflow with a human-in-the-loop review + a signed audit trail.)",
+    appliesTo: ["minimum-necessary-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -8282,6 +8347,115 @@ function store(): FabricStore {
       attributes: {
         patientRef: "imm-patient-001",
         requiresClinicianOrder: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedMinimumNecessaryTrace() {
+  const s = store();
+  const mn0 = Date.now() - 1000 * 60 * 1;
+  const mnTaskId = "task-seed-minimum-necessary-001";
+  const mnName = "Minimum Necessary (HIPAA) Agent";
+  s.traces.push(
+    {
+      id: "span-mn-001",
+      taskId: mnTaskId,
+      agentId: "minimum-necessary-agent",
+      agentName: mnName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(mn0).toISOString(),
+      finishedAt: new Date(mn0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mn-002",
+      taskId: mnTaskId,
+      parentSpanId: "span-mn-001",
+      agentId: "minimum-necessary-agent",
+      agentName: mnName,
+      operation: "minnec.receive-request",
+      protocol: "a2a",
+      startedAt: new Date(mn0 + 30).toISOString(),
+      finishedAt: new Date(mn0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "mn-request-001",
+        purposeId: "purpose.payment",
+        requestorRole: "billing-specialist",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mn-003",
+      taskId: mnTaskId,
+      parentSpanId: "span-mn-002",
+      agentId: "minimum-necessary-agent",
+      agentName: mnName,
+      operation: "minnec.scope",
+      protocol: "a2a",
+      startedAt: new Date(mn0 + 60).toISOString(),
+      finishedAt: new Date(mn0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "mn-request-001",
+        releasedCount: 4,
+        withheldCount: 1,
+        minimumNecessary: false,
+        // The honesty invariants: the purpose is sourced and every released field is in scope.
+        minNecPurposeSourced: true,
+        minNecScoped: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mn-004",
+      taskId: mnTaskId,
+      parentSpanId: "span-mn-003",
+      agentId: "minimum-necessary-agent",
+      agentName: mnName,
+      operation: "minnec.decide",
+      protocol: "a2a",
+      startedAt: new Date(mn0 + 100).toISOString(),
+      finishedAt: new Date(mn0 + 135).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        requestRef: "mn-request-001",
+        requiresHumanReview: true,
+        // The honesty invariant: a narrowed / bulk disclosure is never autonomously released.
+        minNecNoAutonomousOverDisclosure: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mn-005",
+      taskId: mnTaskId,
+      parentSpanId: "span-mn-004",
+      agentId: "minimum-necessary-agent",
+      agentName: mnName,
+      operation: "minnec.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(mn0 + 135).toISOString(),
+      finishedAt: new Date(mn0 + 175).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "mn-request-001",
+        requiresHumanReview: true,
         phiAccessed: true,
         synthetic: true
       }

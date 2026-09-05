@@ -37,6 +37,7 @@ import { MasterPatientIndexPanel } from "../../../components/master-patient-inde
 import { BreakTheGlassPanel } from "../../../components/break-the-glass-panel";
 import { RecordsRetentionPanel } from "../../../components/records-retention-panel";
 import { DeidentificationPanel } from "../../../components/deidentification-panel";
+import { MinimumNecessaryPanel } from "../../../components/minimum-necessary-panel";
 import { CoordinationOfBenefitsPanel } from "../../../components/coordination-of-benefits-panel";
 import { OverpaymentRecoveryPanel } from "../../../components/overpayment-recovery-panel";
 import { FinancialAssistancePanel } from "../../../components/financial-assistance-panel";
@@ -162,6 +163,7 @@ export default function IntakeDemoPage() {
       <RecordsRetentionPanel />
 
       <DeidentificationPanel />
+      <MinimumNecessaryPanel />
 
       <CoordinationOfBenefitsPanel />
 

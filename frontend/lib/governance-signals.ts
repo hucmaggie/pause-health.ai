@@ -122,6 +122,10 @@ export type GovernanceTask = {
   immunizationScheduleCited?: boolean;
   immunizationContraindicationHonored?: boolean;
   immunizationNoAutonomousAdministration?: boolean;
+  // Minimum Necessary (purpose-of-use-sourced + minimum-necessary-scoped + no-autonomous-over-disclosure)
+  minNecPurposeSourced?: boolean;
+  minNecScoped?: boolean;
+  minNecNoAutonomousOverDisclosure?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -787,6 +791,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Due / overdue vaccines without a required clinician order",
     reason:
       "An immunization forecast reported due / overdue vaccines but did not require a clinician order; a due / overdue vaccine is a RECOMMENDATION requiring a clinician order — the agent never administers, orders, or records a vaccine autonomously. Mirrors the Lab Result Agent's no-autonomous-clinical-action and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.minnec.purpose-of-use-sourced",
+    signal: "minNecPurposeSourced",
+    violatingValue: false,
+    violationHint: "A disclosure cites no recorded purpose-of-use",
+    reason:
+      "A minimum-necessary determination cited no recorded purpose-of-use (an ad-hoc / un-sourced disclosure, a missing or off-catalog purpose id); every disclosure decision must trace to a defined purpose-of-use rule. Mirrors the De-Identification Agent's method-cited and the Data Retention Agent's schedule-sourced posture"
+  },
+  {
+    policyId: "policy.minnec.minimum-necessary-scoped",
+    signal: "minNecScoped",
+    violatingValue: false,
+    violationHint: "A released field is beyond the minimum-necessary scope",
+    reason:
+      "A minimum-necessary determination RELEASED a field whose category is beyond what the stated purpose-of-use permits; no field beyond the minimum necessary may be disclosed — releasing an out-of-scope field over-discloses PHI (45 CFR 164.502(b) / 164.514(d)). Mirrors the De-Identification Agent's no-release-of-reidentifiable posture — a privacy obligation that cannot be skipped"
+  },
+  {
+    policyId: "policy.minnec.no-autonomous-over-disclosure",
+    signal: "minNecNoAutonomousOverDisclosure",
+    violatingValue: false,
+    violationHint: "An over-scope / bulk disclosure without a required human review",
+    reason:
+      "A minimum-necessary determination that is not-minimum-necessary as submitted (fields had to be withheld) or that is a bulk / cohort disclosure did not require human review; an over-scope or bulk disclosure is a RECOMMENDATION requiring human review — it is never autonomously released. Mirrors the De-Identification Agent's no-release-of-reidentifiable and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
