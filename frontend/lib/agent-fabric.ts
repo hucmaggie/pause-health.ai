@@ -1835,6 +1835,42 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "clinical-decision"
+  },
+  {
+    id: "timely-filing-agent",
+    name: "Timely Filing Compliance Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side timely-filing piece: POST
+    // /api/agents/timely-filing/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) claims / payer-operations agent for a health-plan
+    // / TPA / provider billing office — given a claim (a date of service, a
+    // submission date, and the cited payer filing-limit rule), it DETERMINISTICALLY
+    // computes the filing DEADLINE (date of service + the rule's limit in days),
+    // compares the submission date to it, computes how many days late an untimely
+    // claim is, honors a recognized filing-limit EXCEPTION when one is claimed, and
+    // decides the disposition (accept / appeal-with-exception / write-off-review).
+    // It NEVER autonomously writes off the balance — an untimely claim is a
+    // RECOMMENDATION requiring human review. It COMPLEMENTS the other
+    // payer-operations agents — distinct from the Claims Adjudication Assistant
+    // (per-claim edits / medical-necessity adjudication), the Coordination of
+    // Benefits agent (payer ORDER across coverages), the Claims Overpayment &
+    // Recovery agent (POST-payment clawback), the FWA Detection agent (suspected
+    // fraud), and the Utilization Review agent (medical necessity): this decides one
+    // narrow, purely temporal question — was the claim FILED IN TIME. REUSES the
+    // existing payer-operations tier.
+    endpoint: "/api/agents/timely-filing",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Decides whether a claim was filed within its payer's timely-filing limit for a health-plan / TPA / billing office — computes the deadline (date of service + the rule's limit days), compares the submission date, computes how many days late an untimely claim is, honors a recognized exception when claimed, and decides the disposition (accept / appeal-with-exception / write-off-review). Companion to the Claims Adjudication (per-claim edits), Coordination of Benefits (payer order), Overpayment Recovery (post-payment clawback), FWA Detection (fraud), and Utilization Review (medical necessity) agents — this decides one narrow, purely temporal question: was the claim FILED IN TIME",
+      "The decision is DETERMINISTIC — a pure function of the claim's dates + the cited rule (no randomness, no clock); the deadline is computed from the date of service + the rule's limit days, and the same claim always yields the same deadline + timely flag + disposition",
+      "Every timeliness decision must cite a recorded filing-limit rule — an ad-hoc / un-sourced limit is blocked at the Agent Fabric governance boundary (policy.timelyfiling.filing-limit-sourced); and the deadline must equal the computed date of service + limit — a guessed / hidden deadline is blocked (policy.timelyfiling.deadline-computed, the load-bearing correctness gate). Mirrors the Overpayment Recovery Agent's reason-catalog-sourced and the Good Faith Estimate Agent's math-consistent posture",
+      "An untimely claim is a RECOMMENDATION (appeal with an exception, or a write-off decision) requiring human review — the agent NEVER autonomously writes off the balance or bills the patient; a determination that marks a claim written-off, or reports an untimely claim without requiring review, is blocked (policy.timelyfiling.no-autonomous-write-off). Mirrors the Overpayment Recovery Agent's no-autonomous-clawback and the Balance Billing Agent's no-autonomous-balance-bill posture",
+      "Runs against ILLUSTRATIVE synthetic filing-limit rules + day windows + exception catalog — clearly labeled; NOT a certified timely-filing engine (real limits are governed by each payer's provider contract, Medicare — generally 12 months / 42 CFR 424.44 — state Medicaid rules, and state prompt-pay law)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
   }
 ];
 
@@ -1919,7 +1955,8 @@ const POLICIES: PolicyRecord[] = [
       "balance-billing-agent",
       "immunization-agent",
       "minimum-necessary-agent",
-      "audit-log-integrity-agent"
+      "audit-log-integrity-agent",
+      "timely-filing-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2814,6 +2851,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Audit Log Integrity Agent may NEVER delete, rewrite, re-seal, or otherwise 'repair' an audit entry — it VERIFIES and FLAGS only; a broken log is flagged for human forensic review (requiresForensicReview:true). A determination that claims it repaired / mutated the log is rejected before it can leave the fabric, so the audit trail — the evidence — can never be altered by the agent that checks it. Mirrors the Data Retention Agent's no-autonomous-purge and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off. (In the prototype the entries are clearly-labeled illustrative synthetics; in production this is the customer's append-only audit store with a human-in-the-loop forensic workflow.)",
     appliesTo: ["audit-log-integrity-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.timelyfiling.filing-limit-sourced",
+    name: "Every timeliness decision cites a recorded filing-limit rule",
+    description:
+      "The Timely Filing Agent may NEVER decide a claim's timeliness without citing a recorded payer filing-limit rule from the catalog — a missing or off-catalog rule id is an ad-hoc / un-sourced limit and is not a real deadline. A determination with no recorded rule is rejected before it can leave the fabric. Mirrors the Overpayment Recovery Agent's reason-catalog-sourced and the Data Retention Agent's schedule-sourced posture. (In the prototype the filing-limit catalog is a clearly-labeled illustrative synthetic; in production the limit comes from the payer's provider contract, Medicare / Medicaid rules, and state prompt-pay law.)",
+    appliesTo: ["timely-filing-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.timelyfiling.deadline-computed",
+    name: "The filing deadline is computed, never guessed",
+    description:
+      "The Timely Filing Agent's stated deadline may NEVER differ from the computed date of service + the rule's limit in days — a guessed / hidden deadline is how a claim is wrongly called timely or untimely. A determination whose deadline does not match the recomputed deadline is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Good Faith Estimate Agent's math-consistent posture. (Time is taken as data — no clock; the deadline is a pure function of the date of service + the limit days.)",
+    appliesTo: ["timely-filing-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.timelyfiling.no-autonomous-write-off",
+    name: "An untimely claim is never autonomously written off",
+    description:
+      "The Timely Filing Agent may NEVER autonomously write off an untimely claim, adjust it to zero, or bill the patient — an untimely claim is a RECOMMENDATION (file an appeal with a recognized exception, or route to a write-off decision) requiring human review (requiresHumanReview:true). A determination that marks a claim written-off, or that reports an untimely claim without requiring human review, is rejected before it can leave the fabric. Mirrors the Overpayment Recovery Agent's no-autonomous-clawback and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off. (In the prototype the disposition is a clearly-labeled illustrative synthetic; in production the write-off / appeal workflow is the plan's / provider's human-in-the-loop process.)",
+    appliesTo: ["timely-filing-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -8628,6 +8692,115 @@ function store(): FabricStore {
       attributes: {
         logRef: "audit-log-001",
         verified: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedTimelyFilingTrace() {
+  const s = store();
+  const tf0 = Date.now() - 1000 * 60 * 1;
+  const tfTaskId = "task-seed-timely-filing-001";
+  const tfName = "Timely Filing Compliance Agent";
+  s.traces.push(
+    {
+      id: "span-tf-001",
+      taskId: tfTaskId,
+      agentId: "timely-filing-agent",
+      agentName: tfName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(tf0).toISOString(),
+      finishedAt: new Date(tf0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-tf-002",
+      taskId: tfTaskId,
+      parentSpanId: "span-tf-001",
+      agentId: "timely-filing-agent",
+      agentName: tfName,
+      operation: "timelyfiling.receive-claim",
+      protocol: "a2a",
+      startedAt: new Date(tf0 + 30).toISOString(),
+      finishedAt: new Date(tf0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        claimRef: "claim-tf-002",
+        filingRuleId: "rule.filing.commercial-90day",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-tf-003",
+      taskId: tfTaskId,
+      parentSpanId: "span-tf-002",
+      agentId: "timely-filing-agent",
+      agentName: tfName,
+      operation: "timelyfiling.compute-deadline",
+      protocol: "a2a",
+      startedAt: new Date(tf0 + 60).toISOString(),
+      finishedAt: new Date(tf0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        claimRef: "claim-tf-002",
+        deadline: "2026-04-10",
+        daysLate: 52,
+        timely: false,
+        // The honesty invariants: sourced rule + a computed (not guessed) deadline.
+        timelyFilingRuleSourced: true,
+        timelyFilingDeadlineComputed: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-tf-004",
+      taskId: tfTaskId,
+      parentSpanId: "span-tf-003",
+      agentId: "timely-filing-agent",
+      agentName: tfName,
+      operation: "timelyfiling.decide",
+      protocol: "a2a",
+      startedAt: new Date(tf0 + 100).toISOString(),
+      finishedAt: new Date(tf0 + 135).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        claimRef: "claim-tf-002",
+        disposition: "appeal-with-exception",
+        requiresHumanReview: true,
+        // The honesty invariant: never an autonomous write-off.
+        timelyFilingNoAutonomousWriteOff: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-tf-005",
+      taskId: tfTaskId,
+      parentSpanId: "span-tf-004",
+      agentId: "timely-filing-agent",
+      agentName: tfName,
+      operation: "timelyfiling.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(tf0 + 135).toISOString(),
+      finishedAt: new Date(tf0 + 175).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        claimRef: "claim-tf-002",
+        disposition: "appeal-with-exception",
         phiAccessed: true,
         synthetic: true
       }

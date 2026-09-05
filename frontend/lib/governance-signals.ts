@@ -130,6 +130,10 @@ export type GovernanceTask = {
   auditLogHashChainVerified?: boolean;
   auditLogSequenceComplete?: boolean;
   auditLogNoAutonomousRedaction?: boolean;
+  // Timely Filing (filing-limit-sourced + deadline-computed + no-autonomous-write-off)
+  timelyFilingRuleSourced?: boolean;
+  timelyFilingDeadlineComputed?: boolean;
+  timelyFilingNoAutonomousWriteOff?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -843,6 +847,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An audit log was autonomously redacted / repaired",
     reason:
       "An audit-log integrity determination claimed it repaired / rewrote / re-sealed the log; the agent VERIFIES and FLAGS — it never deletes, rewrites, or repairs an audit entry (that would destroy evidence), and a broken log is flagged for human forensic review. Mirrors the Data Retention Agent's no-autonomous-purge and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.timelyfiling.filing-limit-sourced",
+    signal: "timelyFilingRuleSourced",
+    violatingValue: false,
+    violationHint: "A timeliness decision with no recorded filing-limit rule",
+    reason:
+      "A timely-filing determination cited no recorded payer filing-limit rule (a missing or off-catalog rule id); an ad-hoc / un-sourced limit is not a real deadline. Mirrors the Overpayment Recovery Agent's reason-catalog-sourced and the Data Retention Agent's schedule-sourced posture"
+  },
+  {
+    policyId: "policy.timelyfiling.deadline-computed",
+    signal: "timelyFilingDeadlineComputed",
+    violatingValue: false,
+    violationHint: "A filing deadline that does not match the computed date of service + limit",
+    reason:
+      "A timely-filing determination's stated deadline does not equal the date of service + the rule's limit in days; a guessed / hidden deadline is how a claim is wrongly called timely or untimely. The load-bearing correctness gate — mirrors the Good Faith Estimate Agent's math-consistent"
+  },
+  {
+    policyId: "policy.timelyfiling.no-autonomous-write-off",
+    signal: "timelyFilingNoAutonomousWriteOff",
+    violatingValue: false,
+    violationHint: "An untimely claim autonomously written off or not routed for review",
+    reason:
+      "A timely-filing determination marked the claim written-off, or reported an untimely claim without requiring human review; an untimely claim is a RECOMMENDATION (appeal with an exception, or a write-off decision) requiring human review — the agent never autonomously writes off the balance or bills the patient. Mirrors the Overpayment Recovery Agent's no-autonomous-clawback and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

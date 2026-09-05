@@ -39,6 +39,7 @@ import { RecordsRetentionPanel } from "../../../components/records-retention-pan
 import { DeidentificationPanel } from "../../../components/deidentification-panel";
 import { MinimumNecessaryPanel } from "../../../components/minimum-necessary-panel";
 import { AuditLogIntegrityPanel } from "../../../components/audit-log-integrity-panel";
+import { TimelyFilingPanel } from "../../../components/timely-filing-panel";
 import { CoordinationOfBenefitsPanel } from "../../../components/coordination-of-benefits-panel";
 import { OverpaymentRecoveryPanel } from "../../../components/overpayment-recovery-panel";
 import { FinancialAssistancePanel } from "../../../components/financial-assistance-panel";
@@ -170,6 +171,7 @@ export default function IntakeDemoPage() {
       <CoordinationOfBenefitsPanel />
 
       <OverpaymentRecoveryPanel />
+      <TimelyFilingPanel />
 
       <FinancialAssistancePanel />
       <GoodFaithEstimatePanel />
