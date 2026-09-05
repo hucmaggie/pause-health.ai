@@ -39,6 +39,7 @@ import { RecordsRetentionPanel } from "../../../components/records-retention-pan
 import { DeidentificationPanel } from "../../../components/deidentification-panel";
 import { MinimumNecessaryPanel } from "../../../components/minimum-necessary-panel";
 import { AuditLogIntegrityPanel } from "../../../components/audit-log-integrity-panel";
+import { AccountingOfDisclosuresPanel } from "../../../components/accounting-of-disclosures-panel";
 import { TimelyFilingPanel } from "../../../components/timely-filing-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { CoordinationOfBenefitsPanel } from "../../../components/coordination-of-benefits-panel";
@@ -169,6 +170,7 @@ export default function IntakeDemoPage() {
       <DeidentificationPanel />
       <MinimumNecessaryPanel />
       <AuditLogIntegrityPanel />
+      <AccountingOfDisclosuresPanel />
 
       <CoordinationOfBenefitsPanel />
 

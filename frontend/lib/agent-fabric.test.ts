@@ -438,13 +438,14 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // Management agent, the Master Patient Index / Identity Resolution agent,
     // the Break-the-Glass / Emergency Access Governance agent, the Data
     // Retention & Records Lifecycle Management agent, the De-Identification
-    // & Safe Harbor agent, the Minimum Necessary agent, and the Audit Log
-    // Integrity agent), the payer & plan-operations plane (incl. the Timely
+    // & Safe Harbor agent, the Minimum Necessary agent, the Audit Log
+    // Integrity agent, and the Accounting of Disclosures / HIPAA §164.528
+    // agent), the payer & plan-operations plane (incl. the Timely
     // Filing Compliance agent), the patient & clinical plane (incl. the
     // Controlled Substance / PDMP Safety Check agent, and the Advance
     // Beneficiary Notice / Medicare ABN agent), and the commercial plane
     // (incl. the Provider Contracting agent).
-    expect(listAgents()).toHaveLength(63);
+    expect(listAgents()).toHaveLength(64);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

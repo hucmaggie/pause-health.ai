@@ -142,6 +142,10 @@ export type GovernanceTask = {
   abnCoverageRuleSourced?: boolean;
   abnRequiredWhenNoncovered?: boolean;
   abnNoAutonomousBeneficiaryLiability?: boolean;
+  // Accounting of Disclosures / HIPAA §164.528 (purpose-category-sourced + accountable-disclosures-complete + no-autonomous-suppression)
+  accountingPurposeSourced?: boolean;
+  accountingDisclosuresComplete?: boolean;
+  accountingNoAutonomousSuppression?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -927,6 +931,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Beneficiary billed for a non-covered service without a valid ABN, or liability auto-assigned",
     reason:
       "An advance-beneficiary-notice determination assigned patient financial liability autonomously (autoAssignedLiability:true), billed the beneficiary for a likely-non-covered service WITHOUT a valid pre-service ABN, or assigned liability on a non-covered / excluded service without requiring human review; the beneficiary may be billed for a non-covered service ONLY with a valid pre-service ABN (the GA modifier), otherwise the PROVIDER is liable (the GZ modifier), and every liability decision is a RECOMMENDATION requiring human review. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Timely Filing Agent's no-autonomous-write-off posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.accounting.purpose-category-sourced",
+    signal: "accountingPurposeSourced",
+    violatingValue: false,
+    violationHint: "A disclosure cites an off-catalog purpose-of-disclosure",
+    reason:
+      "An accounting-of-disclosures determination classified a disclosure whose purpose-of-disclosure is off-catalog (a missing or unrecognized purpose id); an ad-hoc purpose cannot be correctly classified as accountable or excluded under §164.528. Mirrors the Minimum Necessary Agent's purpose-of-use-sourced and the Data Retention Agent's schedule-sourced posture"
+  },
+  {
+    policyId: "policy.accounting.accountable-disclosures-complete",
+    signal: "accountingDisclosuresComplete",
+    violatingValue: false,
+    violationHint: "An accountable, in-window disclosure was dropped from the accounting",
+    reason:
+      "An accounting-of-disclosures determination omitted an accountable, in-window disclosure (a non-TPO, non-authorized disclosure within the lookback window classified as anything other than in-accounting); dropping an accountable disclosure understates the accounting and defeats the patient's §164.528 right. The load-bearing completeness gate — mirrors the Good Faith Estimate Agent's expected-items-complete and the Audit Log Integrity Agent's sequence-complete"
+  },
+  {
+    policyId: "policy.accounting.no-autonomous-suppression",
+    signal: "accountingNoAutonomousSuppression",
+    violatingValue: false,
+    violationHint: "A logged disclosure was autonomously suppressed / the accounting auto-released",
+    reason:
+      "An accounting-of-disclosures determination claimed it suppressed / redacted / deleted a logged disclosure (autonomousSuppression:true), or did not require privacy-officer review before release; the agent CLASSIFIES and ASSEMBLES — it never deletes or suppresses a logged disclosure (that would falsify the accounting and destroy evidence), and the accounting is a RECOMMENDATION requiring privacy-officer review. Mirrors the Audit Log Integrity Agent's no-autonomous-redaction and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

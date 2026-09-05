@@ -1607,6 +1607,46 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "data-plane"
   },
   {
+    id: "accounting-of-disclosures-agent",
+    name: "Accounting of Disclosures (HIPAA §164.528) Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the MuleSoft control-plane / data-substrate
+    // accounting-of-disclosures service: POST /api/agents/accounting-of-disclosures/tasks
+    // (card at /.well-known/agent.json). A DETERMINISTIC (no-Claude) data-substrate
+    // agent that answers a patient's HIPAA §164.528 RIGHT to an accounting of who
+    // their PHI was disclosed to, and for what non-TPO purpose, over the prior years.
+    // Given an accounting request (a patient reference, an as-of date, a lookback
+    // window in years, and the patient's disclosure log — each disclosure a date, a
+    // recipient, and the cited purpose-of-disclosure), it DETERMINISTICALLY classifies
+    // each disclosure (in-accounting / excluded-TPO / excluded-authorized /
+    // out-of-window) against the §164.528 accountability rules (treatment / payment /
+    // operations and patient-authorized disclosures are EXCLUDED; non-TPO disclosures
+    // — public-health mandates, law enforcement, judicial orders, research without
+    // authorization — ARE accountable), filters to the lookback window (as-of date −
+    // lookback years), and assembles the accounting, NEVER autonomously suppressing a
+    // logged disclosure. It COMPLEMENTS the other platform agents — distinct from the
+    // Consent agent (whether a patient may be contacted / data used), the Minimum
+    // Necessary agent (how much PHI a purpose may see), the De-Identification agent
+    // (whether a dataset is still PHI), the Data Retention agent (records disposition),
+    // and the Audit Log Integrity agent (whether the audit TRAIL is tamper-evident):
+    // this answers WHO the patient's PHI was disclosed to. REUSES the existing
+    // data-plane tier (platform plane). The purpose catalog + accountability rules are
+    // ILLUSTRATIVE, NOT a certified §164.528 system.
+    endpoint: "/api/agents/accounting-of-disclosures",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "The accounting-of-disclosures layer of the data substrate — given a patient's disclosure log, classifies each disclosure (in-accounting / excluded-TPO / excluded-authorized / out-of-window) against the §164.528 accountability rules, filters to the lookback window, and assembles the accounting of every accountable (non-TPO, non-authorized) disclosure. Complements (not duplicates) the Consent agent (whether a patient may be contacted / data used), the Minimum Necessary agent (how much PHI a purpose may see), the De-Identification agent (whether a dataset is still PHI), the Data Retention agent (records disposition), and the Audit Log Integrity agent (whether the audit TRAIL is tamper-evident) — this answers WHO the patient's PHI was disclosed to",
+      "The accounting is DETERMINISTIC — a pure function of the request's own fields (no randomness, no clock); the window is the as-of date − the lookback years, and the same log always yields the same classification + accounting + counts",
+      "Every disclosure's purpose must trace to a recorded catalog — an off-catalog purpose can't be correctly classified and is blocked at the Agent Fabric governance boundary (policy.accounting.purpose-category-sourced); and every accountable, in-window disclosure must appear in the accounting — dropping one understates the accounting and is blocked (policy.accounting.accountable-disclosures-complete, the load-bearing completeness gate). Mirrors the Minimum Necessary Agent's purpose-of-use-sourced and the Audit Log Integrity Agent's sequence-complete posture",
+      "The agent CLASSIFIES and ASSEMBLES — it NEVER deletes, redacts, or suppresses a logged disclosure (that would falsify the accounting and destroy evidence); a determination that suppresses a disclosure or auto-releases the accounting is blocked (policy.accounting.no-autonomous-suppression), and the assembled accounting is a recommendation requiring privacy-officer review. Mirrors the Audit Log Integrity Agent's no-autonomous-redaction and the Minimum Necessary Agent's no-autonomous-over-disclosure posture",
+      "Runs against an ILLUSTRATIVE synthetic purpose catalog + accountability rules — clearly labeled; NOT a certified accounting-of-disclosures system (a real accounting is governed by HIPAA §164.528 — the full exclusion set, the six-year window, and the electronic-health-record disclosure rules — and the covered entity's Notice of Privacy Practices)"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
+  },
+  {
     id: "coordination-of-benefits-agent",
     name: "Coordination of Benefits Agent",
     kind: "agentforce",
@@ -2035,7 +2075,8 @@ const POLICIES: PolicyRecord[] = [
       "audit-log-integrity-agent",
       "timely-filing-agent",
       "controlled-substance-agent",
-      "advance-beneficiary-notice-agent"
+      "advance-beneficiary-notice-agent",
+      "accounting-of-disclosures-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3011,6 +3052,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Advance Beneficiary Notice Agent may NEVER autonomously assign patient financial liability — the beneficiary may be billed for a likely-non-covered service ONLY when a valid pre-service ABN is on file (the GA modifier); without a valid ABN the PROVIDER is liable (the GZ modifier / write-off), and every non-covered / excluded determination is a RECOMMENDATION requiring human review (requiresHumanReview:true). A determination that auto-assigns liability, bills the beneficiary for a non-covered service without a valid ABN, or assigns liability without requiring human review, is rejected before it can leave the fabric. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Timely Filing Agent's no-autonomous-write-off posture — the harmful action is enforced-off. (In the prototype the modifier logic is a clearly-labeled illustrative synthetic; in production the liability workflow is the provider's human-in-the-loop billing process under Form CMS-R-131.)",
     appliesTo: ["advance-beneficiary-notice-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.accounting.purpose-category-sourced",
+    name: "Every disclosure's purpose traces to the recorded catalog",
+    description:
+      "The Accounting of Disclosures Agent may NEVER classify a disclosure whose purpose-of-disclosure is off-catalog (a missing or unrecognized purpose id) — an ad-hoc purpose cannot be correctly decided as accountable or excluded under §164.528. A determination classifying an off-catalog purpose is rejected before it can leave the fabric. Mirrors the Minimum Necessary Agent's purpose-of-use-sourced and the Data Retention Agent's schedule-sourced posture. (In the prototype the purpose catalog is a clearly-labeled illustrative synthetic; in production the purpose taxonomy comes from the covered entity's Notice of Privacy Practices and the §164.528 exclusion set.)",
+    appliesTo: ["accounting-of-disclosures-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.accounting.accountable-disclosures-complete",
+    name: "Every accountable, in-window disclosure appears in the accounting",
+    description:
+      "The Accounting of Disclosures Agent may NEVER omit an accountable, in-window disclosure from the accounting — a non-TPO, non-authorized disclosure within the lookback window MUST appear (classified in-accounting). A determination that drops an accountable, in-window disclosure understates the accounting and defeats the patient's §164.528 right, and is rejected before it can leave the fabric. This is the load-bearing completeness gate. Mirrors the Good Faith Estimate Agent's expected-items-complete and the Audit Log Integrity Agent's sequence-complete posture. (Treatment / payment / operations and patient-authorized disclosures are legitimately excluded; only accountable disclosures are required.)",
+    appliesTo: ["accounting-of-disclosures-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.accounting.no-autonomous-suppression",
+    name: "A logged disclosure is never autonomously suppressed",
+    description:
+      "The Accounting of Disclosures Agent may NEVER delete, redact, or suppress a logged disclosure (autonomousSuppression:true) — that would falsify the accounting and destroy evidence — and it may never release the accounting without privacy-officer review (requiresPrivacyOfficerReview:true). A determination that suppresses a logged disclosure, or that does not require privacy-officer review, is rejected before it can leave the fabric. Mirrors the Audit Log Integrity Agent's no-autonomous-redaction and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off. (In the prototype the release workflow is a clearly-labeled illustrative synthetic; in production release is the privacy officer's human-in-the-loop process under §164.528.)",
+    appliesTo: ["accounting-of-disclosures-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -9151,6 +9219,116 @@ function store(): FabricStore {
       attributes: {
         requestRef: "abn-req-002",
         disposition: "issue-abn-before-service",
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedAccountingTrace() {
+  const s = store();
+  const ac0 = Date.now() - 1000 * 60 * 1;
+  const acTaskId = "task-seed-accounting-of-disclosures-001";
+  const acName = "Accounting of Disclosures (HIPAA §164.528) Agent";
+  s.traces.push(
+    {
+      id: "span-ac-001",
+      taskId: acTaskId,
+      agentId: "accounting-of-disclosures-agent",
+      agentName: acName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ac0).toISOString(),
+      finishedAt: new Date(ac0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ac-002",
+      taskId: acTaskId,
+      parentSpanId: "span-ac-001",
+      agentId: "accounting-of-disclosures-agent",
+      agentName: acName,
+      operation: "accounting.receive-log",
+      protocol: "a2a",
+      startedAt: new Date(ac0 + 30).toISOString(),
+      finishedAt: new Date(ac0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "acct-req-001",
+        patientRef: "patient-acct-001",
+        totalDisclosures: 5,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ac-003",
+      taskId: acTaskId,
+      parentSpanId: "span-ac-002",
+      agentId: "accounting-of-disclosures-agent",
+      agentName: acName,
+      operation: "accounting.classify",
+      protocol: "a2a",
+      startedAt: new Date(ac0 + 60).toISOString(),
+      finishedAt: new Date(ac0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "acct-req-001",
+        accountableCount: 2,
+        excludedCount: 2,
+        outOfWindowCount: 1,
+        // The honesty invariants: sourced purposes + a complete accounting.
+        accountingPurposeSourced: true,
+        accountingDisclosuresComplete: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ac-004",
+      taskId: acTaskId,
+      parentSpanId: "span-ac-003",
+      agentId: "accounting-of-disclosures-agent",
+      agentName: acName,
+      operation: "accounting.assemble",
+      protocol: "a2a",
+      startedAt: new Date(ac0 + 100).toISOString(),
+      finishedAt: new Date(ac0 + 135).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        requestRef: "acct-req-001",
+        accountableCount: 2,
+        requiresPrivacyOfficerReview: true,
+        // The honesty invariant: never an autonomous suppression.
+        accountingNoAutonomousSuppression: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ac-005",
+      taskId: acTaskId,
+      parentSpanId: "span-ac-004",
+      agentId: "accounting-of-disclosures-agent",
+      agentName: acName,
+      operation: "accounting.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(ac0 + 135).toISOString(),
+      finishedAt: new Date(ac0 + 175).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "acct-req-001",
+        accountableCount: 2,
         phiAccessed: true,
         synthetic: true
       }
