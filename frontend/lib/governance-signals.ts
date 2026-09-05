@@ -126,6 +126,10 @@ export type GovernanceTask = {
   minNecPurposeSourced?: boolean;
   minNecScoped?: boolean;
   minNecNoAutonomousOverDisclosure?: boolean;
+  // Audit Log Integrity (hash-chain-verified + sequence-complete + no-autonomous-redaction)
+  auditLogHashChainVerified?: boolean;
+  auditLogSequenceComplete?: boolean;
+  auditLogNoAutonomousRedaction?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -815,6 +819,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An over-scope / bulk disclosure without a required human review",
     reason:
       "A minimum-necessary determination that is not-minimum-necessary as submitted (fields had to be withheld) or that is a bulk / cohort disclosure did not require human review; an over-scope or bulk disclosure is a RECOMMENDATION requiring human review — it is never autonomously released. Mirrors the De-Identification Agent's no-release-of-reidentifiable and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.auditlog.hash-chain-verified",
+    signal: "auditLogHashChainVerified",
+    violatingValue: false,
+    violationHint: "An audit log marked verified over a broken hash chain",
+    reason:
+      "An audit-log integrity determination marked a log VERIFIED while its hash chain is not intact (a recomputed hash or a prevHash link does not match); a single broken link is tampering, and a verified label over a broken chain HIDES it. Mirrors the Minimum Necessary Agent's minimum-necessary-scoped posture — an integrity obligation that cannot be skipped"
+  },
+  {
+    policyId: "policy.auditlog.sequence-complete",
+    signal: "auditLogSequenceComplete",
+    violatingValue: false,
+    violationHint: "An audit log marked verified with a sequence gap",
+    reason:
+      "An audit-log integrity determination marked a log VERIFIED while its sequence is not complete (a gap in the sequence numbers); a gap means an entry was deleted, and a verified label over a gap HIDES the deleted record. The load-bearing completeness gate for a tamper-evident audit trail"
+  },
+  {
+    policyId: "policy.auditlog.no-autonomous-redaction",
+    signal: "auditLogNoAutonomousRedaction",
+    violatingValue: false,
+    violationHint: "An audit log was autonomously redacted / repaired",
+    reason:
+      "An audit-log integrity determination claimed it repaired / rewrote / re-sealed the log; the agent VERIFIES and FLAGS — it never deletes, rewrites, or repairs an audit entry (that would destroy evidence), and a broken log is flagged for human forensic review. Mirrors the Data Retention Agent's no-autonomous-purge and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

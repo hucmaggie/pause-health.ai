@@ -1571,6 +1571,42 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "data-plane"
   },
   {
+    id: "audit-log-integrity-agent",
+    name: "Audit Log Integrity (Tamper-Evidence) Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the MuleSoft control-plane / data-substrate
+    // audit-log-integrity service: POST /api/agents/audit-log-integrity/tasks (card
+    // at /.well-known/agent.json). A DETERMINISTIC (no-Claude) data-substrate agent.
+    // Every agent on the fabric writes a HIPAA audit span; THIS agent verifies the
+    // audit trail itself. Given an audit log (an ordered list of entries, each with a
+    // sequence number, actor, action, target, timestamp, the prior entry's hash, and
+    // its own hash), it DETERMINISTICALLY recomputes each entry's hash and the chain
+    // links, checks the sequence numbers for gaps, and decides whether the log is
+    // verified (hash chain intact AND sequence complete), flagging any break for human
+    // forensic review while NEVER rewriting the log itself. It COMPLEMENTS the other
+    // platform agents — distinct from the Consent agent (whether a patient may be
+    // contacted / data used), the De-Identification agent (whether a dataset is no
+    // longer PHI), the Minimum Necessary agent (how much PHI a purpose may see), the
+    // Master Patient Index (identity/dedup), the Break-the-Glass agent (emergency PHI
+    // access), and the Data Retention agent (records disposition): this verifies that
+    // the AUDIT TRAIL of everything the fabric did has not been tampered with. REUSES
+    // the existing data-plane tier (platform plane). The hash is an ILLUSTRATIVE
+    // non-cryptographic FNV-1a, NOT a certified tamper-evidence system.
+    endpoint: "/api/agents/audit-log-integrity",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "The tamper-evidence layer of the data substrate — verifies that an audit trail is intact by recomputing its hash chain and checking its sequence numbers for gaps, deciding whether the log is verified (hash chain intact AND sequence complete), complementing (not duplicating) the Consent agent (whether a patient may be contacted / data used), the De-Identification agent (whether a dataset is no longer PHI), the Minimum Necessary agent (how much PHI a purpose may see), the Master Patient Index (identity/dedup), the Break-the-Glass agent (emergency PHI access), and the Data Retention agent (records disposition)",
+      "Verification is DETERMINISTIC — a pure function of the log's entries (no randomness, no clock); the same log always yields the same verified / hash-chain / sequence result",
+      "A log may be marked verified only if its hash chain is intact — asserting a verified log over a broken chain hides tampering and is blocked at the Agent Fabric governance boundary (policy.auditlog.hash-chain-verified); and only if its sequence is complete — asserting a verified log with a sequence gap hides a deleted entry and is blocked (policy.auditlog.sequence-complete, the load-bearing completeness gate). Mirrors the Minimum Necessary Agent's minimum-necessary-scoped posture",
+      "The agent VERIFIES and FLAGS — it NEVER deletes, rewrites, or repairs an audit entry (that would destroy evidence); a determination that claims it repaired / mutated the log is blocked (policy.auditlog.no-autonomous-redaction), and a broken log is flagged for human forensic review. Mirrors the Data Retention Agent's no-autonomous-purge and the Minimum Necessary Agent's no-autonomous-over-disclosure posture",
+      "Runs against an ILLUSTRATIVE synthetic NON-cryptographic FNV-1a hash chain — clearly labeled; NOT a certified tamper-evidence system (a real control uses a cryptographic hash such as SHA-256, append-only / WORM storage, and signed checkpoints)"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
+  },
+  {
     id: "coordination-of-benefits-agent",
     name: "Coordination of Benefits Agent",
     kind: "agentforce",
@@ -1882,7 +1918,8 @@ const POLICIES: PolicyRecord[] = [
       "good-faith-estimate-agent",
       "balance-billing-agent",
       "immunization-agent",
-      "minimum-necessary-agent"
+      "minimum-necessary-agent",
+      "audit-log-integrity-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2750,6 +2787,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Minimum Necessary Agent may NEVER autonomously release an over-scope (narrowed) or bulk / cohort disclosure — a request that is not minimum-necessary as submitted (fields had to be withheld) or that is a bulk / cohort scope is a RECOMMENDATION requiring human review (requiresHumanReview:true). A determination that is not-minimum-necessary or bulk but does not require human review is rejected before it can leave the fabric, so an over-broad or bulk PHI disclosure can never become an unattended release. Mirrors the De-Identification Agent's no-release-of-reidentifiable and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off. (In the prototype the purpose + scope rules are clearly-labeled illustrative synthetics; in production this is the customer's governed disclosure workflow with a human-in-the-loop review + a signed audit trail.)",
     appliesTo: ["minimum-necessary-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.auditlog.hash-chain-verified",
+    name: "An audit log is never marked verified over a broken hash chain",
+    description:
+      "The Audit Log Integrity Agent may NEVER mark a log VERIFIED while its hash chain is not intact — every entry's recomputed hash must match and every link's prevHash must match the prior entry's hash. A determination that asserts a verified log over a broken chain is rejected before it can leave the fabric, so tampering can never be hidden behind a verified label. Mirrors the Minimum Necessary Agent's minimum-necessary-scoped posture — an integrity obligation that cannot be skipped. (In the prototype the hash is a clearly-labeled illustrative non-cryptographic FNV-1a; in production this is a cryptographic hash — SHA-256 — over an append-only / WORM store with signed checkpoints.)",
+    appliesTo: ["audit-log-integrity-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.auditlog.sequence-complete",
+    name: "An audit log is never marked verified with a sequence gap",
+    description:
+      "The Audit Log Integrity Agent may NEVER mark a log VERIFIED while its sequence numbers are not contiguous — a gap means an entry was deleted, which the hash chain alone would not catch if the deletion were at the tail. A determination that asserts a verified log with a sequence gap is rejected before it can leave the fabric, so a deleted audit record can never be hidden behind a verified label. This is the load-bearing completeness gate for a tamper-evident audit trail. (In the prototype the sequence check is a clearly-labeled illustrative synthetic; in production this is enforced by an append-only, monotonically-sequenced audit store.)",
+    appliesTo: ["audit-log-integrity-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.auditlog.no-autonomous-redaction",
+    name: "An audit log is never autonomously redacted or repaired",
+    description:
+      "The Audit Log Integrity Agent may NEVER delete, rewrite, re-seal, or otherwise 'repair' an audit entry — it VERIFIES and FLAGS only; a broken log is flagged for human forensic review (requiresForensicReview:true). A determination that claims it repaired / mutated the log is rejected before it can leave the fabric, so the audit trail — the evidence — can never be altered by the agent that checks it. Mirrors the Data Retention Agent's no-autonomous-purge and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off. (In the prototype the entries are clearly-labeled illustrative synthetics; in production this is the customer's append-only audit store with a human-in-the-loop forensic workflow.)",
+    appliesTo: ["audit-log-integrity-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -8456,6 +8520,114 @@ function store(): FabricStore {
       attributes: {
         requestRef: "mn-request-001",
         requiresHumanReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedAuditLogIntegrityTrace() {
+  const s = store();
+  const al0 = Date.now() - 1000 * 60 * 1;
+  const alTaskId = "task-seed-audit-log-integrity-001";
+  const alName = "Audit Log Integrity (Tamper-Evidence) Agent";
+  s.traces.push(
+    {
+      id: "span-al-001",
+      taskId: alTaskId,
+      agentId: "audit-log-integrity-agent",
+      agentName: alName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(al0).toISOString(),
+      finishedAt: new Date(al0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-al-002",
+      taskId: alTaskId,
+      parentSpanId: "span-al-001",
+      agentId: "audit-log-integrity-agent",
+      agentName: alName,
+      operation: "auditlog.receive-log",
+      protocol: "a2a",
+      startedAt: new Date(al0 + 30).toISOString(),
+      finishedAt: new Date(al0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        logRef: "audit-log-001",
+        entryCount: 5,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-al-003",
+      taskId: alTaskId,
+      parentSpanId: "span-al-002",
+      agentId: "audit-log-integrity-agent",
+      agentName: alName,
+      operation: "auditlog.verify",
+      protocol: "a2a",
+      startedAt: new Date(al0 + 60).toISOString(),
+      finishedAt: new Date(al0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        logRef: "audit-log-001",
+        verified: true,
+        brokenLinks: 0,
+        sequenceGaps: 0,
+        // The honesty invariants: verified only over an intact chain + complete sequence.
+        auditLogHashChainVerified: true,
+        auditLogSequenceComplete: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-al-004",
+      taskId: alTaskId,
+      parentSpanId: "span-al-003",
+      agentId: "audit-log-integrity-agent",
+      agentName: alName,
+      operation: "auditlog.attest",
+      protocol: "a2a",
+      startedAt: new Date(al0 + 100).toISOString(),
+      finishedAt: new Date(al0 + 135).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        logRef: "audit-log-001",
+        requiresForensicReview: false,
+        // The honesty invariant: the log is never autonomously redacted / repaired.
+        auditLogNoAutonomousRedaction: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-al-005",
+      taskId: alTaskId,
+      parentSpanId: "span-al-004",
+      agentId: "audit-log-integrity-agent",
+      agentName: alName,
+      operation: "auditlog.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(al0 + 135).toISOString(),
+      finishedAt: new Date(al0 + 175).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        logRef: "audit-log-001",
+        verified: true,
         phiAccessed: true,
         synthetic: true
       }
