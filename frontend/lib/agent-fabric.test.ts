@@ -418,7 +418,7 @@ describe("Validated-instrument assessment · Assessment agent", () => {
 });
 
 describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
-  it("brings the registry to fifty-six agents", () => {
+  it("brings the registry to fifty-seven agents", () => {
     // Sanity count guard: the funnel + intake + assessment + benefits +
     // financial-assistance + good-faith-estimate + lab-result +
     // scheduling + care-gap-closure + care-plan + medication-adherence +
@@ -435,10 +435,11 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // adverse-event-reporting + data-sharing-tefca + risk-adjustment agents,
     // the Care Router, the platform substrate (incl. the Consent & Preferences
     // Management agent, the Master Patient Index / Identity Resolution agent,
-    // the Break-the-Glass / Emergency Access Governance agent, and the Data
-    // Retention & Records Lifecycle Management agent), and the commercial plane
+    // the Break-the-Glass / Emergency Access Governance agent, the Data
+    // Retention & Records Lifecycle Management agent, and the De-Identification
+    // & Safe Harbor agent), and the commercial plane
     // (incl. the Provider Contracting agent).
-    expect(listAgents()).toHaveLength(56);
+    expect(listAgents()).toHaveLength(57);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

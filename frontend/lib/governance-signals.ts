@@ -114,6 +114,10 @@ export type GovernanceTask = {
   balanceBillBasisCited?: boolean;
   balanceBillCostShareInNetwork?: boolean;
   balanceBillProhibitionHonored?: boolean;
+  // De-identification & Safe Harbor (all-categories-screened + method-cited + no-release-of-reidentifiable)
+  deidAllCategoriesScreened?: boolean;
+  deidMethodCited?: boolean;
+  deidNoReleaseOfReidentifiable?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -731,6 +735,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A balance bill is allowed on a protected claim",
     reason:
       "A balance-billing decision allowed a balance bill on a PROTECTED claim; a protected claim can NEVER be balance-billed — the difference between the billed charge and the allowed amount may not be billed to the patient, and a balance bill is never issued autonomously against a protected patient. Mirrors the Overpayment & Recovery Agent's no-autonomous-clawback and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.deid.all-categories-screened",
+    signal: "deidAllCategoriesScreened",
+    violatingValue: false,
+    violationHint: "A de-identification screen skipped a Safe Harbor category",
+    reason:
+      "A de-identification determination did not screen all eighteen HIPAA Safe Harbor identifier categories (a category was neither present as a field nor attested absent); an incomplete screen may hide a re-identifying identifier, so a dataset cannot be claimed de-identified without accounting for every category (45 CFR 164.514(b)(2)). Mirrors the Good Faith Estimate Agent's expected-items-complete and the Lab Result Agent's critical-value-notified posture — a completeness obligation that cannot be skipped"
+  },
+  {
+    policyId: "policy.deid.method-cited",
+    signal: "deidMethodCited",
+    violatingValue: false,
+    violationHint: "A de-identification decision cites no recognized method",
+    reason:
+      "A de-identification determination did not cite a recognized method — neither HIPAA Safe Harbor (§164.514(b)(2)) nor a qualified Expert Determination with a cited determination reference (§164.514(b)(1)); there is no ad-hoc, un-cited de-identification. Mirrors the Data Retention Agent's schedule-sourced and the Balance Billing Agent's protection-basis-sourced posture — every decision traces to a defined method"
+  },
+  {
+    policyId: "policy.deid.no-release-of-reidentifiable",
+    signal: "deidNoReleaseOfReidentifiable",
+    violatingValue: false,
+    violationHint: "A dataset with a remaining identifier was marked de-identified / released",
+    reason:
+      "A de-identification determination marked a dataset de-identified / release-approved while an identifier category still remains (a retained identifier, or a generalization that does not satisfy Safe Harbor); a re-identifiable dataset is NOT de-identified and may never be released as de-identified — releasing re-identifiable data requires human review under a data use agreement. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Master Patient Index Agent's no-autonomous-merge posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

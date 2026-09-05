@@ -1495,6 +1495,45 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "data-plane"
   },
   {
+    id: "deidentification-agent",
+    name: "De-Identification & Safe Harbor Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the MuleSoft control-plane / data-substrate
+    // de-identification service: POST /api/agents/deidentification/tasks (card at
+    // /.well-known/agent.json). A DETERMINISTIC (no-Claude) data-substrate agent.
+    // Given a dataset described by its FIELDS (each a name, the Safe Harbor
+    // identifier category it maps to — or non-identifier — and the action taken:
+    // removed / generalized / retained), the chosen de-identification METHOD
+    // (safe-harbor or expert-determination), the categories attested absent, and
+    // (for expert determination) the cited determination reference, it
+    // DETERMINISTICALLY screens the dataset against the eighteen HIPAA Safe Harbor
+    // identifier categories (45 CFR 164.514(b)(2)), computes which categories
+    // remain identifiable after the field actions, computes whether all eighteen
+    // categories were screened, validates the method citation, and decides whether
+    // the dataset qualifies as de-identified. It COMPLEMENTS the other platform
+    // agents — distinct from the Consent & Preferences Management agent (consent
+    // scopes), the Master Patient Index (identity/dedup), the Break-the-Glass
+    // agent (emergency PHI access), the Data Retention agent (records disposition),
+    // and the Data-Sharing / TEFCA agent (interoperability exchange): this decides
+    // whether a dataset is DE-IDENTIFIED (no longer PHI) under Safe Harbor before a
+    // secondary use / disclosure. It is a control-plane / data-substrate service
+    // (platform plane). The category catalog + generalization rules are ILLUSTRATIVE
+    // synthetics, NOT a certified de-identification engine.
+    endpoint: "/api/agents/deidentification",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "The de-identification layer of the data substrate — screens a dataset's fields against the eighteen HIPAA Safe Harbor identifier categories (45 CFR 164.514(b)(2)) and decides whether the dataset qualifies as de-identified, complementing (not duplicating) the Consent & Preferences Management agent (consent scopes), the Master Patient Index (identity/dedup), the Break-the-Glass agent (emergency PHI access), the Data Retention agent (records disposition), and the Data-Sharing / TEFCA agent (interoperability exchange)",
+      "Determinations are DETERMINISTIC — a pure function of the dataset's fields + the category catalog (no randomness, no clock); the same dataset always yields the same de-identification decision + remaining identifier categories + release flag",
+      "A de-identification determination must screen ALL eighteen Safe Harbor categories — an incomplete screen that skips a category is blocked at the Agent Fabric governance boundary (policy.deid.all-categories-screened); and it must cite a recognized method — Safe Harbor or a qualified Expert Determination with a cited reference — an ad-hoc / un-cited de-identification is blocked (policy.deid.method-cited). Mirrors the Good Faith Estimate Agent's expected-items-complete and the Data Retention Agent's schedule-sourced posture",
+      "A re-identifiable dataset is NEVER released as de-identified — a dataset that still contains a remaining identifier (a retained identifier, or a generalization that does not satisfy Safe Harbor) marked de-identified / release-approved is blocked (policy.deid.no-release-of-reidentifiable); a not-de-identified dataset is a completed determination requiring human review under a data use agreement. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Master Patient Index Agent's no-autonomous-merge posture",
+      "Runs against an ILLUSTRATIVE synthetic Safe Harbor category catalog + generalization rules — clearly labeled; NOT a certified de-identification engine (a real determination applies the full Safe Harbor method including the actual-knowledge clause, or a qualified statistician's Expert Determination under 45 CFR 164.514(b))"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
+  },
+  {
     id: "coordination-of-benefits-agent",
     name: "Coordination of Benefits Agent",
     kind: "agentforce",
@@ -1764,6 +1803,7 @@ const POLICIES: PolicyRecord[] = [
       "master-patient-index-agent",
       "break-the-glass-agent",
       "records-retention-agent",
+      "deidentification-agent",
       "coordination-of-benefits-agent",
       "overpayment-recovery-agent",
       "financial-assistance-agent",
@@ -2556,6 +2596,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Data Retention & Records Lifecycle Management Agent may NEVER execute a destructive purge autonomously — an eligible-for-purge disposition is a RECOMMENDATION requiring human approval (requiresHumanApproval:true), and a purge only happens after a human approves it. A disposition that asserts an autonomous / unapproved purge is rejected before it can leave the fabric, so a records-retention recommendation can never become an unattended deletion. Mirrors the Master Patient Index Agent's no-autonomous-merge, the Break-the-Glass Agent's minimum-necessary-time-boxed, and the Population Health Agent's no-autonomous-care-decision posture — the safe answer is enforced. (In the prototype the schedules + periods are clearly-labeled illustrative synthetics; in production this is the customer's governed records-disposition workflow with a human-in-the-loop approval + a signed audit trail.)",
     appliesTo: ["records-retention-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.deid.all-categories-screened",
+    name: "A de-identification screen must cover all eighteen Safe Harbor categories",
+    description:
+      "Every de-identification determination the De-Identification & Safe Harbor Agent produces must screen ALL EIGHTEEN HIPAA Safe Harbor identifier categories (45 CFR 164.514(b)(2)) — every category must be accounted for, either present as a field or explicitly attested absent. A determination whose screen skips a category is rejected before it can leave the fabric, because an un-screened category may hide a re-identifying identifier, so a dataset can never be claimed de-identified against an incomplete screen. This is the load-bearing completeness gate — it mirrors the Good Faith Estimate Agent's expected-items-complete and the Lab Result Agent's critical-value-notified: a completeness obligation that cannot be skipped. (In the prototype the category catalog is a clearly-labeled illustrative synthetic; in production this is the full Safe Harbor method including the actual-knowledge clause.)",
+    appliesTo: ["deidentification-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.deid.method-cited",
+    name: "A de-identification decision must cite a recognized method",
+    description:
+      "Every de-identification determination the De-Identification & Safe Harbor Agent produces must cite a recognized method — either HIPAA Safe Harbor (§164.514(b)(2)) or a qualified Expert Determination with a cited determination reference (§164.514(b)(1)) — there is no ad-hoc, un-cited de-identification. A determination with an un-recognized method, or an expert determination that cites no reference, is rejected before it can leave the fabric, so a de-identification claim can never rest on an undocumented method. Mirrors the Data Retention Agent's schedule-sourced and the Balance Billing Agent's protection-basis-sourced posture — every decision traces to a defined method. (In the prototype the method handling is a clearly-labeled illustrative synthetic; in production this is the customer's governed de-identification method + expert-determination record.)",
+    appliesTo: ["deidentification-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.deid.no-release-of-reidentifiable",
+    name: "A re-identifiable dataset is never released as de-identified",
+    description:
+      "The De-Identification & Safe Harbor Agent may NEVER mark a dataset de-identified / release-approved while an identifier category still remains (a retained identifier, or a generalization that does not satisfy Safe Harbor) — a re-identifiable dataset is NOT de-identified and may never be released as de-identified. A determination that asserts a remaining identifier alongside a de-identified / released dataset is rejected before it can leave the fabric, so re-identifiable data can never leave the fabric labeled de-identified; releasing re-identifiable data requires human review under a data use agreement (requiresHumanReview:true). Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Master Patient Index Agent's no-autonomous-merge posture — the harmful action is enforced-off. (In the prototype the category catalog + generalization rules are clearly-labeled illustrative synthetics; in production this is the customer's governed de-identification workflow with a human-in-the-loop review + a signed audit trail.)",
+    appliesTo: ["deidentification-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -7933,6 +8000,117 @@ function store(): FabricStore {
         claimRef: "bb-claim-001",
         basisId: "basis.emergency",
         balanceBillProhibited: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedDeidentificationTrace() {
+  const s = store();
+  const dd0 = Date.now() - 1000 * 60 * 1;
+  const ddTaskId = "task-seed-deidentification-001";
+  const ddName = "De-Identification & Safe Harbor Agent";
+  s.traces.push(
+    {
+      id: "span-deid-001",
+      taskId: ddTaskId,
+      agentId: "deidentification-agent",
+      agentName: ddName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(dd0).toISOString(),
+      finishedAt: new Date(dd0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-deid-002",
+      taskId: ddTaskId,
+      parentSpanId: "span-deid-001",
+      agentId: "deidentification-agent",
+      agentName: ddName,
+      operation: "deid.receive-dataset",
+      protocol: "a2a",
+      startedAt: new Date(dd0 + 30).toISOString(),
+      finishedAt: new Date(dd0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        datasetRef: "deid-dataset-001",
+        method: "safe-harbor",
+        fieldCount: 6,
+        // The honesty invariant: a recognized method is cited.
+        deidMethodCited: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-deid-003",
+      taskId: ddTaskId,
+      parentSpanId: "span-deid-002",
+      agentId: "deidentification-agent",
+      agentName: ddName,
+      operation: "deid.screen",
+      protocol: "a2a",
+      startedAt: new Date(dd0 + 60).toISOString(),
+      finishedAt: new Date(dd0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        datasetRef: "deid-dataset-001",
+        categoriesScreened: 18,
+        // The honesty invariant: all eighteen Safe Harbor categories are screened.
+        deidAllCategoriesScreened: true,
+        remainingIdentifierCategories: 0,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-deid-004",
+      taskId: ddTaskId,
+      parentSpanId: "span-deid-003",
+      agentId: "deidentification-agent",
+      agentName: ddName,
+      operation: "deid.determine",
+      protocol: "a2a",
+      startedAt: new Date(dd0 + 100).toISOString(),
+      finishedAt: new Date(dd0 + 135).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        datasetRef: "deid-dataset-001",
+        deidentified: true,
+        releaseApproved: true,
+        // The honesty invariant: a re-identifiable dataset is never released.
+        deidNoReleaseOfReidentifiable: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-deid-005",
+      taskId: ddTaskId,
+      parentSpanId: "span-deid-004",
+      agentId: "deidentification-agent",
+      agentName: ddName,
+      operation: "deid.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(dd0 + 135).toISOString(),
+      finishedAt: new Date(dd0 + 175).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        datasetRef: "deid-dataset-001",
+        method: "safe-harbor",
+        deidentified: true,
         phiAccessed: true,
         synthetic: true
       }
