@@ -1728,6 +1728,40 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "payer-operations"
+  },
+  {
+    id: "immunization-agent",
+    name: "Immunization Forecasting (ACIP) Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the clinical-decision immunization-forecasting
+    // piece: POST /api/agents/immunization/tasks (card at /.well-known/
+    // agent.json). A DETERMINISTIC (no-Claude) clinical-decision agent. Given a
+    // patient (a synthetic reference, a birth date, an immunization history, and
+    // any recorded contraindications) evaluated against a provided asOfDate, it
+    // computes the patient's age and forecasts each vaccine (up-to-date / due /
+    // overdue / contraindicated / not-indicated) against an ACIP-style schedule
+    // (influenza, Tdap booster, zoster/RZV at 50+, pneumococcal at 65+, COVID-19),
+    // citing the governing schedule rule + the next-due date. A contraindicated
+    // vaccine is NEVER recommended; a due / overdue vaccine is a RECOMMENDATION
+    // requiring a clinician order — never autonomously administered. It COMPLEMENTS
+    // the other clinical / care agents — distinct from the Care Gap Closure agent
+    // (broad missing preventive measures), the Lab Result agent (discrete
+    // diagnostic results), the Care Plan agent (the longitudinal plan), and the
+    // Care Router (triage): this forecasts the specific vaccine schedule. REUSES the
+    // existing clinical-decision tier.
+    endpoint: "/api/agents/immunization",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Forecasts a patient's vaccines against an ACIP-style schedule (up-to-date / due / overdue / contraindicated / not-indicated) — computes age from the birth date + asOfDate, then per schedule rule (influenza, Tdap booster, zoster/RZV at 50+, pneumococcal at 65+, COVID-19) applies age-eligibility, dose-series / booster-interval logic, and recorded contraindications, citing the governing schedule rule + the next-due date. A deterministic clinical-decision agent; distinct from the Care Gap Closure, Lab Result, Care Plan, and Care Router agents",
+      "The forecast is DETERMINISTIC — a pure function of the request + its own asOfDate + the schedule catalog (no randomness, no clock); the same patient always yields the same forecast + cited rules + next-due dates",
+      "Every forecast entry must cite a recorded ACIP schedule rule — an ad-hoc / un-sourced recommendation is blocked at the Agent Fabric governance boundary (policy.immunization.schedule-sourced); and a vaccine the patient is contraindicated for is NEVER recommended — it is withheld and flagged, and a recommended contraindicated vaccine is blocked (policy.immunization.contraindication-honored, the load-bearing safety gate). Mirrors the Lab Result Agent's reference-range-sourced + critical-value-notified posture",
+      "A due / overdue vaccine is a RECOMMENDATION requiring a clinician order — the agent never administers, orders, or records a vaccine autonomously; a determination with due / overdue vaccines that does not require a clinician order is blocked (policy.immunization.no-autonomous-administration). Mirrors the Lab Result Agent's no-autonomous-clinical-action and the Balance Billing Agent's no-autonomous-balance-bill posture",
+      "Runs against an ILLUSTRATIVE synthetic ACIP-style schedule + age-eligibility + dose intervals — clearly labeled; NOT a certified immunization forecaster (a real forecast uses the current ACIP recommendations, the CDC immunization schedules, and the patient's full clinical context)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "clinical-decision"
   }
 ];
 
@@ -1809,7 +1843,8 @@ const POLICIES: PolicyRecord[] = [
       "financial-assistance-agent",
       "lab-result-agent",
       "good-faith-estimate-agent",
-      "balance-billing-agent"
+      "balance-billing-agent",
+      "immunization-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2623,6 +2658,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The De-Identification & Safe Harbor Agent may NEVER mark a dataset de-identified / release-approved while an identifier category still remains (a retained identifier, or a generalization that does not satisfy Safe Harbor) — a re-identifiable dataset is NOT de-identified and may never be released as de-identified. A determination that asserts a remaining identifier alongside a de-identified / released dataset is rejected before it can leave the fabric, so re-identifiable data can never leave the fabric labeled de-identified; releasing re-identifiable data requires human review under a data use agreement (requiresHumanReview:true). Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Master Patient Index Agent's no-autonomous-merge posture — the harmful action is enforced-off. (In the prototype the category catalog + generalization rules are clearly-labeled illustrative synthetics; in production this is the customer's governed de-identification workflow with a human-in-the-loop review + a signed audit trail.)",
     appliesTo: ["deidentification-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.immunization.schedule-sourced",
+    name: "Every vaccine recommendation must cite a recorded schedule rule",
+    description:
+      "Every per-vaccine forecast the Immunization Forecasting Agent produces must cite a recorded ACIP schedule rule from the catalog — there is no ad-hoc, un-sourced vaccine recommendation. A forecast with a missing or off-catalog rule id is rejected before it can leave the fabric, so an immunization recommendation can never rest on anything other than a defined schedule rule. Mirrors the Lab Result Agent's reference-range-sourced and the Data Retention Agent's schedule-sourced posture — every decision traces to a defined source. (In the prototype the schedule catalog is a clearly-labeled illustrative synthetic; in production this is the current ACIP recommendations + CDC immunization schedules.)",
+    appliesTo: ["immunization-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.immunization.contraindication-honored",
+    name: "A contraindicated vaccine is never recommended",
+    description:
+      "The Immunization Forecasting Agent may NEVER recommend (due / overdue) a vaccine for which the patient has a recorded contraindication — a contraindicated vaccine is withheld and flagged for clinician review, never recommended. A forecast that recommends a contraindicated vaccine is rejected before it can leave the fabric, so the fabric can never surface a recommendation that would endanger the patient. This is the load-bearing patient-safety gate — it mirrors the Lab Result Agent's critical-value-notified: a clinical-safety obligation that cannot be skipped. (In the prototype the schedule + contraindication handling are clearly-labeled illustrative synthetics; in production this is the current ACIP contraindications + the patient's full clinical context.)",
+    appliesTo: ["immunization-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.immunization.no-autonomous-administration",
+    name: "A vaccine is never autonomously administered — it is clinician-order-gated",
+    description:
+      "The Immunization Forecasting Agent may NEVER administer, order, or record a vaccine autonomously — a due / overdue vaccine is a RECOMMENDATION requiring a clinician order (requiresClinicianOrder:true). A determination that reports due / overdue vaccines but does not require a clinician order is rejected before it can leave the fabric, so an immunization forecast can never become an unattended administration. Mirrors the Lab Result Agent's no-autonomous-clinical-action and the Balance Billing Agent's no-autonomous-balance-bill posture — the safe answer is enforced. (In the prototype the schedule + intervals are clearly-labeled illustrative synthetics; in production this is the customer's governed immunization workflow with a clinician order + a signed audit trail.)",
+    appliesTo: ["immunization-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -8111,6 +8173,115 @@ function store(): FabricStore {
         datasetRef: "deid-dataset-001",
         method: "safe-harbor",
         deidentified: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedImmunizationTrace() {
+  const s = store();
+  const im0 = Date.now() - 1000 * 60 * 1;
+  const imTaskId = "task-seed-immunization-001";
+  const imName = "Immunization Forecasting (ACIP) Agent";
+  s.traces.push(
+    {
+      id: "span-imm-001",
+      taskId: imTaskId,
+      agentId: "immunization-agent",
+      agentName: imName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(im0).toISOString(),
+      finishedAt: new Date(im0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-imm-002",
+      taskId: imTaskId,
+      parentSpanId: "span-imm-001",
+      agentId: "immunization-agent",
+      agentName: imName,
+      operation: "immunization.receive-patient",
+      protocol: "a2a",
+      startedAt: new Date(im0 + 30).toISOString(),
+      finishedAt: new Date(im0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        patientRef: "imm-patient-001",
+        ageYears: 52,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-imm-003",
+      taskId: imTaskId,
+      parentSpanId: "span-imm-002",
+      agentId: "immunization-agent",
+      agentName: imName,
+      operation: "immunization.forecast",
+      protocol: "a2a",
+      startedAt: new Date(im0 + 60).toISOString(),
+      finishedAt: new Date(im0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        patientRef: "imm-patient-001",
+        dueCount: 1,
+        overdueCount: 2,
+        contraindicatedCount: 0,
+        // The honesty invariants: every recommendation is schedule-sourced and no
+        // contraindicated vaccine is recommended.
+        immunizationScheduleCited: true,
+        immunizationContraindicationHonored: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-imm-004",
+      taskId: imTaskId,
+      parentSpanId: "span-imm-003",
+      agentId: "immunization-agent",
+      agentName: imName,
+      operation: "immunization.recommend",
+      protocol: "a2a",
+      startedAt: new Date(im0 + 100).toISOString(),
+      finishedAt: new Date(im0 + 135).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        patientRef: "imm-patient-001",
+        requiresClinicianOrder: true,
+        // The honesty invariant: a due / overdue vaccine is never autonomously administered.
+        immunizationNoAutonomousAdministration: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-imm-005",
+      taskId: imTaskId,
+      parentSpanId: "span-imm-004",
+      agentId: "immunization-agent",
+      agentName: imName,
+      operation: "immunization.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(im0 + 135).toISOString(),
+      finishedAt: new Date(im0 + 175).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        patientRef: "imm-patient-001",
+        requiresClinicianOrder: true,
         phiAccessed: true,
         synthetic: true
       }

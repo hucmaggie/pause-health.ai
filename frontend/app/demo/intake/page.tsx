@@ -41,6 +41,7 @@ import { CoordinationOfBenefitsPanel } from "../../../components/coordination-of
 import { OverpaymentRecoveryPanel } from "../../../components/overpayment-recovery-panel";
 import { FinancialAssistancePanel } from "../../../components/financial-assistance-panel";
 import { LabResultPanel } from "../../../components/lab-result-panel";
+import { ImmunizationPanel } from "../../../components/immunization-panel";
 import { GoodFaithEstimatePanel } from "../../../components/good-faith-estimate-panel";
 import { BalanceBillingPanel } from "../../../components/balance-billing-panel";
 import { SchedulingPanel } from "../../../components/scheduling-panel";
@@ -170,6 +171,7 @@ export default function IntakeDemoPage() {
       <GoodFaithEstimatePanel />
       <BalanceBillingPanel />
       <LabResultPanel />
+      <ImmunizationPanel />
 
       <section className="demo-grid">
         <article className="card">

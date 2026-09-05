@@ -118,6 +118,10 @@ export type GovernanceTask = {
   deidAllCategoriesScreened?: boolean;
   deidMethodCited?: boolean;
   deidNoReleaseOfReidentifiable?: boolean;
+  // Immunization forecasting (schedule-sourced + contraindication-honored + no-autonomous-administration)
+  immunizationScheduleCited?: boolean;
+  immunizationContraindicationHonored?: boolean;
+  immunizationNoAutonomousAdministration?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -759,6 +763,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A dataset with a remaining identifier was marked de-identified / released",
     reason:
       "A de-identification determination marked a dataset de-identified / release-approved while an identifier category still remains (a retained identifier, or a generalization that does not satisfy Safe Harbor); a re-identifiable dataset is NOT de-identified and may never be released as de-identified — releasing re-identifiable data requires human review under a data use agreement. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Master Patient Index Agent's no-autonomous-merge posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.immunization.schedule-sourced",
+    signal: "immunizationScheduleCited",
+    violatingValue: false,
+    violationHint: "A vaccine recommendation cites no recorded schedule rule",
+    reason:
+      "An immunization forecast produced a vaccine recommendation that does not cite a recorded ACIP schedule rule (an ad-hoc / un-sourced recommendation, a missing or off-catalog rule id); every forecast entry must trace to a defined schedule rule. Mirrors the Lab Result Agent's reference-range-sourced and the Data Retention Agent's schedule-sourced posture"
+  },
+  {
+    policyId: "policy.immunization.contraindication-honored",
+    signal: "immunizationContraindicationHonored",
+    violatingValue: false,
+    violationHint: "A contraindicated vaccine was recommended",
+    reason:
+      "An immunization forecast RECOMMENDED (due / overdue) a vaccine for which the patient has a recorded contraindication; a contraindicated vaccine must be withheld and flagged, never recommended — recommending it is a patient-safety hazard. Mirrors the Lab Result Agent's critical-value-notified posture — a clinical-safety obligation that cannot be skipped"
+  },
+  {
+    policyId: "policy.immunization.no-autonomous-administration",
+    signal: "immunizationNoAutonomousAdministration",
+    violatingValue: false,
+    violationHint: "Due / overdue vaccines without a required clinician order",
+    reason:
+      "An immunization forecast reported due / overdue vaccines but did not require a clinician order; a due / overdue vaccine is a RECOMMENDATION requiring a clinician order — the agent never administers, orders, or records a vaccine autonomously. Mirrors the Lab Result Agent's no-autonomous-clinical-action and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
