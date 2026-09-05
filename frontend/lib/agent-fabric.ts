@@ -1913,6 +1913,46 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "subrogation-agent",
+    name: "Subrogation / Third-Party Liability Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side subrogation / TPL piece: POST
+    // /api/agents/subrogation/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) claims / payer-operations agent for a health-plan
+    // / TPA. When a plan pays claims for an injury caused by a LIABLE THIRD PARTY
+    // (an auto accident, a slip-and-fall, a defective product, a work injury), the
+    // plan generally has a subrogation / reimbursement RIGHT to recover its payments
+    // out of the third party's settlement. Given a subrogation case (whether the
+    // claim is injury-related, the accident type, whether a liable third party is
+    // identified, what the plan PAID, the cited subrogation basis, the settlement
+    // amount if known, and whether the made-whole / common-fund doctrines apply), it
+    // DETERMINISTICALLY decides eligibility, computes a BOUNDED recoverable amount
+    // (never more than the plan paid, never more than the settlement, barred by the
+    // made-whole doctrine, reduced by the common-fund attorney-fee share), and
+    // decides the disposition — NEVER autonomously asserting a lien or reducing the
+    // member's recovery. It COMPLEMENTS the other payer-operations agents — distinct
+    // from the Claims Adjudication Assistant (per-claim edits / medical necessity),
+    // the Coordination of Benefits agent (the ORDER of coverages that both cover the
+    // member), the Claims Overpayment & Recovery agent (POST-payment clawback of the
+    // plan's OWN overpayment), the Timely Filing agent (was the claim filed in time),
+    // and the FWA agent (suspected fraud): this recovers the plan's injury-claim
+    // payments from a LIABLE THIRD PARTY's settlement. REUSES the existing
+    // payer-operations tier.
+    endpoint: "/api/agents/subrogation",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Decides whether a plan has a subrogation / third-party-liability interest in a liable third party's settlement for injury claims it paid — decides eligibility (injury-related AND a liable third party AND a real accident AND a recovery-allowing basis), computes a BOUNDED recoverable amount (capped at the plan's paid amount, capped again at the settlement, barred by the made-whole doctrine, reduced by the common-fund attorney-fee share), and decides the disposition (no-subrogation-interest / notify-made-whole-bar / assert-lien-with-review). Companion to the Claims Adjudication (per-claim edits), Coordination of Benefits (payer order), Overpayment Recovery (post-payment clawback of the plan's OWN overpayment), Timely Filing (was the claim filed in time), and FWA Detection (fraud) agents — this recovers the plan's injury-claim payments from a LIABLE THIRD PARTY's settlement",
+      "The determination is DETERMINISTIC — a pure function of the case's own fields (no randomness, no clock); the recoverable is computed and bounded from the plan's paid amount, the settlement, and the doctrine reductions, and the same case always yields the same eligibility + recoverable + disposition",
+      "Every recovery decision must cite a recorded subrogation basis — an ad-hoc / un-sourced basis is blocked at the Agent Fabric governance boundary (policy.subrogation.basis-sourced); and the recoverable must never exceed the plan's paid amount or the settlement — a lien asserted as PROFIT rather than reimbursement is blocked (policy.subrogation.recoverable-within-paid, the load-bearing correctness gate). Mirrors the Overpayment Recovery Agent's reason-catalog-sourced and the Good Faith Estimate Agent's math-consistent posture",
+      "A subrogation interest is a RECOMMENDATION requiring a subrogation specialist / plan counsel to review — the agent NEVER autonomously asserts or perfects a lien, reduces the member's settlement, or recovers funds; a determination that auto-asserts a lien, or finds an interest without requiring review, is blocked (policy.subrogation.no-autonomous-lien). Mirrors the Overpayment Recovery Agent's no-autonomous-clawback and the Balance Billing Agent's no-autonomous-balance-bill posture",
+      "Runs against ILLUSTRATIVE synthetic subrogation bases + made-whole / common-fund reductions — clearly labeled; NOT a certified subrogation engine (real subrogation is governed by the plan document — for a self-funded ERISA plan, 29 U.S.C. §1132(a)(3) and cases such as US Airways v. McCutchen and Montanile — state subrogation / made-whole / common-fund law, and state workers-compensation statutes)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
+  },
+  {
     id: "controlled-substance-agent",
     name: "Controlled Substance / PDMP Safety Check Agent",
     kind: "agentforce",
@@ -2076,7 +2116,8 @@ const POLICIES: PolicyRecord[] = [
       "timely-filing-agent",
       "controlled-substance-agent",
       "advance-beneficiary-notice-agent",
-      "accounting-of-disclosures-agent"
+      "accounting-of-disclosures-agent",
+      "subrogation-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3079,6 +3120,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Accounting of Disclosures Agent may NEVER delete, redact, or suppress a logged disclosure (autonomousSuppression:true) — that would falsify the accounting and destroy evidence — and it may never release the accounting without privacy-officer review (requiresPrivacyOfficerReview:true). A determination that suppresses a logged disclosure, or that does not require privacy-officer review, is rejected before it can leave the fabric. Mirrors the Audit Log Integrity Agent's no-autonomous-redaction and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off. (In the prototype the release workflow is a clearly-labeled illustrative synthetic; in production release is the privacy officer's human-in-the-loop process under §164.528.)",
     appliesTo: ["accounting-of-disclosures-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.subrogation.basis-sourced",
+    name: "Every subrogation recovery decision cites a recorded legal basis",
+    description:
+      "The Subrogation Agent may NEVER decide a recovery on an off-catalog subrogation basis (a missing or unrecognized basis id) — a subrogation interest exists only under a recorded legal basis (an ERISA plan reimbursement clause, a state subrogation statute, a workers-comp lien, a contractual reimbursement provision), and an ad-hoc / un-sourced basis is not a real legal right. A determination citing an off-catalog basis is rejected before it can leave the fabric. Mirrors the Claims Overpayment & Recovery Agent's reason-catalog-sourced and the Timely Filing Agent's filing-limit-sourced posture. (In the prototype the basis catalog is a clearly-labeled illustrative synthetic; in production the bases come from the plan document and state subrogation law.)",
+    appliesTo: ["subrogation-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.subrogation.recoverable-within-paid",
+    name: "The recoverable never exceeds what the plan paid or the settlement",
+    description:
+      "The Subrogation Agent's asserted recoverable amount may NEVER be negative, exceed the plan's paid amount, or exceed the third-party settlement — a subrogation lien is REIMBURSEMENT, not profit: the plan may recover at most what it PAID, and never more than the member actually received in settlement. A determination whose recoverable breaches this bound is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Good Faith Estimate Agent's math-consistent and the Timely Filing Agent's deadline-computed posture. (The made-whole and common-fund doctrines further reduce the recoverable; the illustrative reductions are clearly labeled.)",
+    appliesTo: ["subrogation-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.subrogation.no-autonomous-lien",
+    name: "A subrogation lien is never autonomously asserted",
+    description:
+      "The Subrogation Agent may NEVER autonomously assert or perfect a lien, reduce the member's settlement, or recover funds (autoAssertedLien:true), and may never find a subrogation interest (eligible:true) without requiring human review (requiresHumanReview:true) — a subrogation determination is a RECOMMENDATION requiring a subrogation specialist / plan counsel to review, because asserting a lien against a member's personal-injury recovery is legally consequential and doctrine-sensitive (made-whole, common-fund). A determination that auto-asserts a lien, or finds an interest without requiring review, is rejected before it can leave the fabric. Mirrors the Claims Overpayment & Recovery Agent's no-autonomous-clawback and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off.",
+    appliesTo: ["subrogation-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -9329,6 +9397,119 @@ function store(): FabricStore {
       attributes: {
         requestRef: "acct-req-001",
         accountableCount: 2,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedSubrogationTrace() {
+  const s = store();
+  const su0 = Date.now() - 1000 * 60 * 1;
+  const suTaskId = "task-seed-subrogation-001";
+  const suName = "Subrogation / Third-Party Liability Agent";
+  s.traces.push(
+    {
+      id: "span-su-001",
+      taskId: suTaskId,
+      agentId: "subrogation-agent",
+      agentName: suName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(su0).toISOString(),
+      finishedAt: new Date(su0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-su-002",
+      taskId: suTaskId,
+      parentSpanId: "span-su-001",
+      agentId: "subrogation-agent",
+      agentName: suName,
+      operation: "subrogation.receive-case",
+      protocol: "a2a",
+      startedAt: new Date(su0 + 30).toISOString(),
+      finishedAt: new Date(su0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        caseRef: "subro-case-002",
+        patientRef: "patient-subro-002",
+        accidentType: "premises-liability",
+        planPaidAmount: 30000,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-su-003",
+      taskId: suTaskId,
+      parentSpanId: "span-su-002",
+      agentId: "subrogation-agent",
+      agentName: suName,
+      operation: "subrogation.assess-eligibility",
+      protocol: "a2a",
+      startedAt: new Date(su0 + 60).toISOString(),
+      finishedAt: new Date(su0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        caseRef: "subro-case-002",
+        eligible: true,
+        basisId: "basis.state-subrogation-statute",
+        // The honesty invariant: the recovery basis is sourced.
+        subrogationBasisSourced: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-su-004",
+      taskId: suTaskId,
+      parentSpanId: "span-su-003",
+      agentId: "subrogation-agent",
+      agentName: suName,
+      operation: "subrogation.compute-recoverable",
+      protocol: "a2a",
+      startedAt: new Date(su0 + 100).toISOString(),
+      finishedAt: new Date(su0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        caseRef: "subro-case-002",
+        planPaidAmount: 30000,
+        // 30000 − 33% common-fund attorney-fee reduction = 20100.
+        recoverableAmount: 20100,
+        disposition: "assert-lien-with-review",
+        requiresHumanReview: true,
+        // The honesty invariants: bounded recoverable + never an autonomous lien.
+        subrogationRecoverableWithinPaid: true,
+        subrogationNoAutonomousLien: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-su-005",
+      taskId: suTaskId,
+      parentSpanId: "span-su-004",
+      agentId: "subrogation-agent",
+      agentName: suName,
+      operation: "subrogation.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(su0 + 140).toISOString(),
+      finishedAt: new Date(su0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        caseRef: "subro-case-002",
+        recoverableAmount: 20100,
         phiAccessed: true,
         synthetic: true
       }

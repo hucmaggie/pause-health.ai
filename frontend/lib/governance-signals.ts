@@ -146,6 +146,10 @@ export type GovernanceTask = {
   accountingPurposeSourced?: boolean;
   accountingDisclosuresComplete?: boolean;
   accountingNoAutonomousSuppression?: boolean;
+  // Subrogation / Third-Party Liability (basis-sourced + recoverable-within-paid + no-autonomous-lien)
+  subrogationBasisSourced?: boolean;
+  subrogationRecoverableWithinPaid?: boolean;
+  subrogationNoAutonomousLien?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -955,6 +959,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A logged disclosure was autonomously suppressed / the accounting auto-released",
     reason:
       "An accounting-of-disclosures determination claimed it suppressed / redacted / deleted a logged disclosure (autonomousSuppression:true), or did not require privacy-officer review before release; the agent CLASSIFIES and ASSEMBLES — it never deletes or suppresses a logged disclosure (that would falsify the accounting and destroy evidence), and the accounting is a RECOMMENDATION requiring privacy-officer review. Mirrors the Audit Log Integrity Agent's no-autonomous-redaction and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.subrogation.basis-sourced",
+    signal: "subrogationBasisSourced",
+    violatingValue: false,
+    violationHint: "A subrogation recovery decision with no recorded legal basis",
+    reason:
+      "A subrogation / third-party-liability determination cited no recorded subrogation basis (a missing or off-catalog basis id); a subrogation interest exists only under a recorded legal basis (an ERISA plan reimbursement clause, a state subrogation statute, a workers-comp lien), and an ad-hoc / un-sourced basis is not a real legal right. Mirrors the Claims Overpayment & Recovery Agent's reason-catalog-sourced and the Timely Filing Agent's filing-limit-sourced posture"
+  },
+  {
+    policyId: "policy.subrogation.recoverable-within-paid",
+    signal: "subrogationRecoverableWithinPaid",
+    violatingValue: false,
+    violationHint: "A recoverable lien exceeding the plan's paid amount or the settlement",
+    reason:
+      "A subrogation / third-party-liability determination asserted a recoverable amount that is negative, exceeds the plan's paid amount, or exceeds the third-party settlement; a subrogation lien is REIMBURSEMENT, not profit — the plan may recover at most what it PAID and never more than the member's settlement. The load-bearing correctness gate — mirrors the Good Faith Estimate Agent's math-consistent and the Timely Filing Agent's deadline-computed"
+  },
+  {
+    policyId: "policy.subrogation.no-autonomous-lien",
+    signal: "subrogationNoAutonomousLien",
+    violatingValue: false,
+    violationHint: "A lien autonomously asserted, or an eligible case with no human review",
+    reason:
+      "A subrogation / third-party-liability determination autonomously asserted / perfected a lien (autoAssertedLien:true), or found a subrogation interest (eligible:true) without requiring human review; a subrogation determination is a RECOMMENDATION requiring a subrogation specialist / plan counsel to review, and the agent never autonomously asserts or perfects a lien, reduces the member's settlement, or recovers funds. Mirrors the Claims Overpayment & Recovery Agent's no-autonomous-clawback and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
