@@ -138,6 +138,10 @@ export type GovernanceTask = {
   controlledSubstanceGuidelineSourced?: boolean;
   controlledSubstanceMmeComputed?: boolean;
   controlledSubstanceNoAutonomousDecision?: boolean;
+  // Advance Beneficiary Notice / Medicare ABN (coverage-rule-sourced + abn-required-when-noncovered + no-autonomous-beneficiary-liability)
+  abnCoverageRuleSourced?: boolean;
+  abnRequiredWhenNoncovered?: boolean;
+  abnNoAutonomousBeneficiaryLiability?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -899,6 +903,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A controlled-substance decision auto-approved / auto-denied without review",
     reason:
       "A controlled-substance determination auto-decided (autoDecision:true), or reported an elevated / high-risk finding without requiring prescriber review; a risk finding is a RECOMMENDATION requiring prescriber review — the agent never autonomously approves, denies, dispenses, or writes the prescription. Mirrors the Immunization Agent's no-autonomous-administration and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.abn.coverage-rule-sourced",
+    signal: "abnCoverageRuleSourced",
+    violatingValue: false,
+    violationHint: "An ABN / coverage decision with no recorded Medicare coverage rule",
+    reason:
+      "An advance-beneficiary-notice determination cited no recorded Medicare coverage rule (a missing or off-catalog rule id); an ad-hoc / un-sourced coverage decision is not a real determination. Mirrors the Good Faith Estimate Agent's charge-master-sourced and the Timely Filing Agent's filing-limit-sourced posture"
+  },
+  {
+    policyId: "policy.abn.abn-required-when-noncovered",
+    signal: "abnRequiredWhenNoncovered",
+    violatingValue: false,
+    violationHint: "A likely-non-covered service marked as needing no ABN",
+    reason:
+      "An advance-beneficiary-notice determination assessed a service as likely NON-covered but did not require a signed pre-service ABN (abnRequired:false); a likely-denied Medicare service requires a signed ABN issued BEFORE the service, and understating this is how a surprise denial lands on the beneficiary. The load-bearing completeness gate — mirrors the Good Faith Estimate Agent's expected-items-complete"
+  },
+  {
+    policyId: "policy.abn.no-autonomous-beneficiary-liability",
+    signal: "abnNoAutonomousBeneficiaryLiability",
+    violatingValue: false,
+    violationHint: "Beneficiary billed for a non-covered service without a valid ABN, or liability auto-assigned",
+    reason:
+      "An advance-beneficiary-notice determination assigned patient financial liability autonomously (autoAssignedLiability:true), billed the beneficiary for a likely-non-covered service WITHOUT a valid pre-service ABN, or assigned liability on a non-covered / excluded service without requiring human review; the beneficiary may be billed for a non-covered service ONLY with a valid pre-service ABN (the GA modifier), otherwise the PROVIDER is liable (the GZ modifier), and every liability decision is a RECOMMENDATION requiring human review. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Timely Filing Agent's no-autonomous-write-off posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

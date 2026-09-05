@@ -1909,6 +1909,45 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "clinical-decision"
+  },
+  {
+    id: "advance-beneficiary-notice-agent",
+    name: "Advance Beneficiary Notice (Medicare ABN) Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the patient-access Medicare ABN piece: POST
+    // /api/agents/advance-beneficiary-notice/tasks (card at
+    // /.well-known/agent.json). A DETERMINISTIC (no-Claude) patient-access /
+    // benefits-verification agent. Given a proposed service (the cited Medicare
+    // coverage rule, whether the service meets its coverage criteria or exceeds a
+    // frequency limit, and whether an ABN was issued and signed BEFORE the
+    // service), it DETERMINISTICALLY assesses coverage (likely-covered /
+    // likely-non-covered / statutorily-excluded), decides whether a signed
+    // pre-service ABN (Form CMS-R-131) is required, computes whether a valid
+    // pre-service ABN is on file, decides whether the beneficiary may be billed,
+    // assigns the CMS liability modifier (GA / GZ / GY), and decides the
+    // disposition. It NEVER autonomously assigns patient financial liability — a
+    // non-covered / excluded determination is a RECOMMENDATION requiring human
+    // review. It COMPLEMENTS the other patient-access / financial agents — distinct
+    // from the Good Faith Estimate agent (the No Surprises Act self-pay estimate),
+    // the Balance Billing agent (the No Surprises Act claim-time surprise-bill
+    // prohibition), the Benefits & Coverage Verification (EBV) agent (plan
+    // eligibility), and the Financial Assistance agent (501(r) charity care): this
+    // decides one narrow Medicare question — is a signed pre-service ABN required
+    // before a likely-denied service, and may the beneficiary be billed. REUSES the
+    // existing benefits-verification tier.
+    endpoint: "/api/agents/advance-beneficiary-notice",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Decides, for a Medicare service likely to be denied as not-reasonable-and-necessary (or statutorily excluded), whether a signed pre-service ABN (Form CMS-R-131) is required, whether the beneficiary may be billed, and which CMS liability modifier applies (GA / GZ / GY) — assessing coverage from the cited rule, computing whether a valid pre-service ABN is on file, and deciding the disposition (proceed-covered / issue-abn-before-service / bill-beneficiary-with-abn / notify-statutory-exclusion). Companion to the Good Faith Estimate (NSA self-pay estimate), Balance Billing (NSA surprise-bill prohibition), Benefits & Coverage Verification (plan eligibility), and Financial Assistance (501(r) charity care) agents — this decides one narrow Medicare ABN question",
+      "The determination is DETERMINISTIC — a pure function of the request's own fields + the cited coverage rule (no randomness, no clock); the same service always yields the same coverage assessment + ABN requirement + modifier + disposition",
+      "Every non-coverage decision must cite a recorded Medicare coverage rule — an ad-hoc / un-sourced rule is blocked at the Agent Fabric governance boundary (policy.abn.coverage-rule-sourced); and a likely-non-covered service must require a signed pre-service ABN — a determination that marks it as needing no ABN is blocked (policy.abn.abn-required-when-noncovered, the load-bearing completeness gate). Mirrors the Good Faith Estimate Agent's charge-master-sourced + expected-items-complete posture",
+      "Patient financial liability is NEVER assigned autonomously — the beneficiary may be billed for a non-covered service ONLY with a valid pre-service ABN (the GA modifier), otherwise the PROVIDER is liable (the GZ modifier), and every liability decision requires human review; a determination that bills the beneficiary without a valid ABN, or auto-assigns liability, is blocked (policy.abn.no-autonomous-beneficiary-liability). Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Timely Filing Agent's no-autonomous-write-off posture",
+      "Runs against ILLUSTRATIVE synthetic Medicare coverage rules + categories + modifier logic — clearly labeled; NOT a certified Medicare coverage engine (real ABN decisions are governed by the Medicare NCD/LCD, the Social Security Act §1862(a), the CMS Medicare Claims Processing Manual Ch. 30, and Form CMS-R-131)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "benefits-verification"
   }
 ];
 
@@ -1995,7 +2034,8 @@ const POLICIES: PolicyRecord[] = [
       "minimum-necessary-agent",
       "audit-log-integrity-agent",
       "timely-filing-agent",
-      "controlled-substance-agent"
+      "controlled-substance-agent",
+      "advance-beneficiary-notice-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2944,6 +2984,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Controlled Substance Agent may NEVER autonomously approve, deny, dispense, or write a prescription — a risk finding is a RECOMMENDATION requiring prescriber review (requiresPrescriberReview:true for any elevated / high-risk finding). A determination that auto-decides (autoDecision:true), or that reports an elevated / high-risk finding without requiring prescriber review, is rejected before it can leave the fabric. Mirrors the Immunization Agent's no-autonomous-administration and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off. (In the prototype the PDMP history is a clearly-labeled illustrative synthetic; in production the prescribing decision is the prescriber's, informed by the state PDMP.)",
     appliesTo: ["controlled-substance-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.abn.coverage-rule-sourced",
+    name: "Every non-coverage decision cites a recorded Medicare coverage rule",
+    description:
+      "The Advance Beneficiary Notice Agent may NEVER decide a service's coverage / ABN requirement without citing a recorded Medicare coverage rule from the catalog — a missing or off-catalog rule id is an ad-hoc / un-sourced coverage decision and is not a real determination. A determination with no recorded rule is rejected before it can leave the fabric. Mirrors the Good Faith Estimate Agent's charge-master-sourced and the Timely Filing Agent's filing-limit-sourced posture. (In the prototype the coverage catalog is a clearly-labeled illustrative synthetic; in production coverage comes from the Medicare NCD/LCD and the Social Security Act §1862(a).)",
+    appliesTo: ["advance-beneficiary-notice-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.abn.abn-required-when-noncovered",
+    name: "A likely-non-covered service requires a signed pre-service ABN",
+    description:
+      "When the Advance Beneficiary Notice Agent assesses a service as likely NON-covered, it must require a signed ABN (Form CMS-R-131) issued BEFORE the service (abnRequired:true) — a determination that a likely-denied Medicare service needs no ABN understates the beneficiary's financial exposure and is how a surprise denial lands on the patient. A likely-non-covered determination with abnRequired:false is rejected before it can leave the fabric. This is the load-bearing completeness gate. Mirrors the Good Faith Estimate Agent's expected-items-complete posture. (In the prototype the coverage assessment is a clearly-labeled illustrative synthetic; in production it is governed by the Medicare NCD/LCD and the CMS Medicare Claims Processing Manual Ch. 30.)",
+    appliesTo: ["advance-beneficiary-notice-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.abn.no-autonomous-beneficiary-liability",
+    name: "Patient financial liability is never assigned autonomously",
+    description:
+      "The Advance Beneficiary Notice Agent may NEVER autonomously assign patient financial liability — the beneficiary may be billed for a likely-non-covered service ONLY when a valid pre-service ABN is on file (the GA modifier); without a valid ABN the PROVIDER is liable (the GZ modifier / write-off), and every non-covered / excluded determination is a RECOMMENDATION requiring human review (requiresHumanReview:true). A determination that auto-assigns liability, bills the beneficiary for a non-covered service without a valid ABN, or assigns liability without requiring human review, is rejected before it can leave the fabric. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Timely Filing Agent's no-autonomous-write-off posture — the harmful action is enforced-off. (In the prototype the modifier logic is a clearly-labeled illustrative synthetic; in production the liability workflow is the provider's human-in-the-loop billing process under Form CMS-R-131.)",
+    appliesTo: ["advance-beneficiary-notice-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -8975,6 +9042,115 @@ function store(): FabricStore {
       attributes: {
         requestRef: "cs-request-002",
         riskLevel: "high",
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedAbnTrace() {
+  const s = store();
+  const abn0 = Date.now() - 1000 * 60 * 1;
+  const abnTaskId = "task-seed-advance-beneficiary-notice-001";
+  const abnName = "Advance Beneficiary Notice (Medicare ABN) Agent";
+  s.traces.push(
+    {
+      id: "span-abn-001",
+      taskId: abnTaskId,
+      agentId: "advance-beneficiary-notice-agent",
+      agentName: abnName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(abn0).toISOString(),
+      finishedAt: new Date(abn0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-abn-002",
+      taskId: abnTaskId,
+      parentSpanId: "span-abn-001",
+      agentId: "advance-beneficiary-notice-agent",
+      agentName: abnName,
+      operation: "abn.receive-request",
+      protocol: "a2a",
+      startedAt: new Date(abn0 + 30).toISOString(),
+      finishedAt: new Date(abn0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "abn-req-002",
+        coverageRuleId: "rule.abn.vitamin-d-testing",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-abn-003",
+      taskId: abnTaskId,
+      parentSpanId: "span-abn-002",
+      agentId: "advance-beneficiary-notice-agent",
+      agentName: abnName,
+      operation: "abn.assess-coverage",
+      protocol: "a2a",
+      startedAt: new Date(abn0 + 60).toISOString(),
+      finishedAt: new Date(abn0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "abn-req-002",
+        coverageAssessment: "likely-non-covered",
+        abnRequired: true,
+        // The honesty invariants: sourced coverage rule + ABN required when non-covered.
+        abnCoverageRuleSourced: true,
+        abnRequiredWhenNoncovered: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-abn-004",
+      taskId: abnTaskId,
+      parentSpanId: "span-abn-003",
+      agentId: "advance-beneficiary-notice-agent",
+      agentName: abnName,
+      operation: "abn.decide-liability",
+      protocol: "a2a",
+      startedAt: new Date(abn0 + 100).toISOString(),
+      finishedAt: new Date(abn0 + 135).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        requestRef: "abn-req-002",
+        modifier: "GZ",
+        disposition: "issue-abn-before-service",
+        requiresHumanReview: true,
+        // The honesty invariant: never an autonomous beneficiary-liability assignment.
+        abnNoAutonomousBeneficiaryLiability: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-abn-005",
+      taskId: abnTaskId,
+      parentSpanId: "span-abn-004",
+      agentId: "advance-beneficiary-notice-agent",
+      agentName: abnName,
+      operation: "abn.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(abn0 + 135).toISOString(),
+      finishedAt: new Date(abn0 + 175).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "abn-req-002",
+        disposition: "issue-abn-before-service",
         phiAccessed: true,
         synthetic: true
       }

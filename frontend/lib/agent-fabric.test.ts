@@ -441,9 +441,10 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // & Safe Harbor agent, the Minimum Necessary agent, and the Audit Log
     // Integrity agent), the payer & plan-operations plane (incl. the Timely
     // Filing Compliance agent), the patient & clinical plane (incl. the
-    // Controlled Substance / PDMP Safety Check agent), and the commercial
-    // plane (incl. the Provider Contracting agent).
-    expect(listAgents()).toHaveLength(62);
+    // Controlled Substance / PDMP Safety Check agent, and the Advance
+    // Beneficiary Notice / Medicare ABN agent), and the commercial plane
+    // (incl. the Provider Contracting agent).
+    expect(listAgents()).toHaveLength(63);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

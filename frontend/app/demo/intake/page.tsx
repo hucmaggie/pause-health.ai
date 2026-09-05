@@ -48,6 +48,7 @@ import { LabResultPanel } from "../../../components/lab-result-panel";
 import { ImmunizationPanel } from "../../../components/immunization-panel";
 import { GoodFaithEstimatePanel } from "../../../components/good-faith-estimate-panel";
 import { BalanceBillingPanel } from "../../../components/balance-billing-panel";
+import { AdvanceBeneficiaryNoticePanel } from "../../../components/advance-beneficiary-notice-panel";
 import { SchedulingPanel } from "../../../components/scheduling-panel";
 import { SdohScreeningPanel } from "../../../components/sdoh-screening-panel";
 import { getAgentforceConfig } from "../../../lib/agentforce";
@@ -177,6 +178,7 @@ export default function IntakeDemoPage() {
       <FinancialAssistancePanel />
       <GoodFaithEstimatePanel />
       <BalanceBillingPanel />
+      <AdvanceBeneficiaryNoticePanel />
       <LabResultPanel />
       <ImmunizationPanel />
       <ControlledSubstancePanel />
