@@ -40,6 +40,7 @@ import { DeidentificationPanel } from "../../../components/deidentification-pane
 import { MinimumNecessaryPanel } from "../../../components/minimum-necessary-panel";
 import { AuditLogIntegrityPanel } from "../../../components/audit-log-integrity-panel";
 import { TimelyFilingPanel } from "../../../components/timely-filing-panel";
+import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { CoordinationOfBenefitsPanel } from "../../../components/coordination-of-benefits-panel";
 import { OverpaymentRecoveryPanel } from "../../../components/overpayment-recovery-panel";
 import { FinancialAssistancePanel } from "../../../components/financial-assistance-panel";
@@ -178,6 +179,7 @@ export default function IntakeDemoPage() {
       <BalanceBillingPanel />
       <LabResultPanel />
       <ImmunizationPanel />
+      <ControlledSubstancePanel />
 
       <section className="demo-grid">
         <article className="card">

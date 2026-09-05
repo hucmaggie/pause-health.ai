@@ -1871,6 +1871,44 @@ const REGISTRY: AgentSeed[] = [
     ],
     provider: "Salesforce",
     governanceTier: "payer-operations"
+  },
+  {
+    id: "controlled-substance-agent",
+    name: "Controlled Substance / PDMP Safety Check Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the clinical-decision controlled-substance /
+    // PDMP piece: POST /api/agents/controlled-substance/tasks (card at
+    // /.well-known/agent.json). A DETERMINISTIC (no-Claude) clinical-decision
+    // agent. Given a proposed controlled-substance prescription (a drug, its
+    // class, its dose in MME/day, days supply, prescriber, pharmacy) and the
+    // patient's active PDMP history, it DETERMINISTICALLY sums the total opioid
+    // MME/day (proposed + concurrent), flags a concurrent opioid+benzodiazepine
+    // combination and multi-prescriber / multi-pharmacy patterns, compares the
+    // total against the cited guideline's caution (50) and high-risk (90)
+    // MME/day thresholds, and classifies the risk (low / elevated / high). A
+    // risk finding is a RECOMMENDATION requiring prescriber review — the agent
+    // never autonomously approves, denies, dispenses, or writes the
+    // prescription. It COMPLEMENTS the other clinical / medication agents —
+    // distinct from the Formulary & DUR Review agent (plan-level coverage / step
+    // therapy / DUR alerts), the Medication Adherence agent (taking an
+    // already-prescribed drug), the Prior Authorization agent (assembling a PA
+    // package), and the Immunization agent (vaccine schedule): this screens the
+    // TOTAL controlled-substance burden across ALL prescribers per the PDMP.
+    // REUSES the existing clinical-decision tier. The MME thresholds + figures
+    // are ILLUSTRATIVE, NOT a certified PDMP or clinical decision support.
+    endpoint: "/api/agents/controlled-substance",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Screens a proposed controlled-substance prescription against the patient's PDMP history for a prescriber / pharmacy — sums the total opioid MME/day (proposed + concurrent), flags a concurrent opioid+benzodiazepine combination and multi-prescriber / multi-pharmacy patterns, compares the total against the guideline's caution (50) and high-risk (90) MME/day thresholds, and classifies the risk (low / elevated / high). A deterministic clinical-decision agent; distinct from the Formulary & DUR Review, Medication Adherence, Prior Authorization, and Immunization agents — this screens the TOTAL controlled-substance burden across ALL prescribers",
+      "The risk finding is DETERMINISTIC — a pure function of the request's data + the cited guideline (no randomness, no clock); the total MME/day is the sum of the proposed opioid contribution + the concurrent opioid MME/day, and the same request always yields the same total + risk + disposition",
+      "Every risk threshold must cite a recorded guideline — an ad-hoc / un-sourced threshold is blocked at the Agent Fabric governance boundary (policy.controlledsubstance.guideline-sourced); and the total MME/day must equal the computed proposed + concurrent sum — a guessed / hidden dose is blocked (policy.controlledsubstance.mme-computed, the load-bearing correctness gate). Mirrors the Immunization Agent's schedule-sourced and the Timely Filing Agent's deadline-computed posture",
+      "A controlled-substance risk finding is a RECOMMENDATION requiring prescriber review — the agent never autonomously approves, denies, dispenses, or writes the prescription; a determination that auto-decides, or reports an elevated / high-risk finding without requiring review, is blocked (policy.controlledsubstance.no-autonomous-prescribing-decision). Mirrors the Immunization Agent's no-autonomous-administration and the Lab Result Agent's no-autonomous-clinical-action posture",
+      "Runs against an ILLUSTRATIVE synthetic MME threshold catalog + drug classes + MME/day figures — clearly labeled; NOT a certified PDMP or clinical decision support (real monitoring uses the state PDMP, the CDC MME conversion factors, the CDC 2022 opioid-prescribing guideline, and the prescriber's clinical judgment)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "clinical-decision"
   }
 ];
 
@@ -1956,7 +1994,8 @@ const POLICIES: PolicyRecord[] = [
       "immunization-agent",
       "minimum-necessary-agent",
       "audit-log-integrity-agent",
-      "timely-filing-agent"
+      "timely-filing-agent",
+      "controlled-substance-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -2878,6 +2917,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Timely Filing Agent may NEVER autonomously write off an untimely claim, adjust it to zero, or bill the patient — an untimely claim is a RECOMMENDATION (file an appeal with a recognized exception, or route to a write-off decision) requiring human review (requiresHumanReview:true). A determination that marks a claim written-off, or that reports an untimely claim without requiring human review, is rejected before it can leave the fabric. Mirrors the Overpayment Recovery Agent's no-autonomous-clawback and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off. (In the prototype the disposition is a clearly-labeled illustrative synthetic; in production the write-off / appeal workflow is the plan's / provider's human-in-the-loop process.)",
     appliesTo: ["timely-filing-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.controlledsubstance.guideline-sourced",
+    name: "Every controlled-substance risk finding cites a recorded guideline",
+    description:
+      "The Controlled Substance Agent may NEVER produce a risk finding without citing a recorded guideline from the catalog — a missing or off-catalog guideline id is an ad-hoc / un-sourced MME threshold and is not a real clinical standard. A determination with no recorded guideline is rejected before it can leave the fabric. Mirrors the Immunization Agent's schedule-sourced and the Lab Result Agent's reference-range-sourced posture. (In the prototype the guideline catalog is a clearly-labeled illustrative synthetic; in production the thresholds come from the CDC 2022 Clinical Practice Guideline for Prescribing Opioids and the state PDMP.)",
+    appliesTo: ["controlled-substance-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.controlledsubstance.mme-computed",
+    name: "The total MME/day is computed, never guessed",
+    description:
+      "The Controlled Substance Agent's stated total MME/day may NEVER differ from the computed proposed opioid contribution + the concurrent opioid MME/day — a guessed / hidden dose is how an over-threshold prescription is wrongly called safe. A determination whose total does not match the recomputed sum is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Timely Filing Agent's deadline-computed and the Good Faith Estimate Agent's math-consistent posture. (The MME figures are illustrative — a real screen uses the CDC MME conversion factors — but the SUM is always exact.)",
+    appliesTo: ["controlled-substance-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.controlledsubstance.no-autonomous-prescribing-decision",
+    name: "A controlled-substance risk finding never makes an autonomous prescribing decision",
+    description:
+      "The Controlled Substance Agent may NEVER autonomously approve, deny, dispense, or write a prescription — a risk finding is a RECOMMENDATION requiring prescriber review (requiresPrescriberReview:true for any elevated / high-risk finding). A determination that auto-decides (autoDecision:true), or that reports an elevated / high-risk finding without requiring prescriber review, is rejected before it can leave the fabric. Mirrors the Immunization Agent's no-autonomous-administration and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off. (In the prototype the PDMP history is a clearly-labeled illustrative synthetic; in production the prescribing decision is the prescriber's, informed by the state PDMP.)",
+    appliesTo: ["controlled-substance-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -8801,6 +8867,114 @@ function store(): FabricStore {
       attributes: {
         claimRef: "claim-tf-002",
         disposition: "appeal-with-exception",
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedControlledSubstanceTrace() {
+  const s = store();
+  const cs0 = Date.now() - 1000 * 60 * 1;
+  const csTaskId = "task-seed-controlled-substance-001";
+  const csName = "Controlled Substance / PDMP Safety Check Agent";
+  s.traces.push(
+    {
+      id: "span-cs-001",
+      taskId: csTaskId,
+      agentId: "controlled-substance-agent",
+      agentName: csName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(cs0).toISOString(),
+      finishedAt: new Date(cs0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-cs-002",
+      taskId: csTaskId,
+      parentSpanId: "span-cs-001",
+      agentId: "controlled-substance-agent",
+      agentName: csName,
+      operation: "controlledsubstance.receive-request",
+      protocol: "a2a",
+      startedAt: new Date(cs0 + 30).toISOString(),
+      finishedAt: new Date(cs0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "cs-request-002",
+        guidelineId: "guideline.cdc-2022-mme",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-cs-003",
+      taskId: csTaskId,
+      parentSpanId: "span-cs-002",
+      agentId: "controlled-substance-agent",
+      agentName: csName,
+      operation: "controlledsubstance.compute-mme",
+      protocol: "a2a",
+      startedAt: new Date(cs0 + 60).toISOString(),
+      finishedAt: new Date(cs0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "cs-request-002",
+        totalMmePerDay: 100,
+        riskLevel: "high",
+        // The honesty invariants: sourced guideline + a computed (not guessed) MME total.
+        controlledSubstanceGuidelineSourced: true,
+        controlledSubstanceMmeComputed: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-cs-004",
+      taskId: csTaskId,
+      parentSpanId: "span-cs-003",
+      agentId: "controlled-substance-agent",
+      agentName: csName,
+      operation: "controlledsubstance.classify",
+      protocol: "a2a",
+      startedAt: new Date(cs0 + 100).toISOString(),
+      finishedAt: new Date(cs0 + 135).toISOString(),
+      durationMs: 35,
+      status: "ok",
+      attributes: {
+        requestRef: "cs-request-002",
+        disposition: "prescriber-review",
+        requiresPrescriberReview: true,
+        // The honesty invariant: never an autonomous prescribing decision.
+        controlledSubstanceNoAutonomousDecision: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-cs-005",
+      taskId: csTaskId,
+      parentSpanId: "span-cs-004",
+      agentId: "controlled-substance-agent",
+      agentName: csName,
+      operation: "controlledsubstance.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(cs0 + 135).toISOString(),
+      finishedAt: new Date(cs0 + 175).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "cs-request-002",
+        riskLevel: "high",
         phiAccessed: true,
         synthetic: true
       }

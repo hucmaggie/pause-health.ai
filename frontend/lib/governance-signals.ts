@@ -134,6 +134,10 @@ export type GovernanceTask = {
   timelyFilingRuleSourced?: boolean;
   timelyFilingDeadlineComputed?: boolean;
   timelyFilingNoAutonomousWriteOff?: boolean;
+  // Controlled Substance / PDMP (guideline-sourced + mme-computed + no-autonomous-prescribing-decision)
+  controlledSubstanceGuidelineSourced?: boolean;
+  controlledSubstanceMmeComputed?: boolean;
+  controlledSubstanceNoAutonomousDecision?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -871,6 +875,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An untimely claim autonomously written off or not routed for review",
     reason:
       "A timely-filing determination marked the claim written-off, or reported an untimely claim without requiring human review; an untimely claim is a RECOMMENDATION (appeal with an exception, or a write-off decision) requiring human review — the agent never autonomously writes off the balance or bills the patient. Mirrors the Overpayment Recovery Agent's no-autonomous-clawback and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.controlledsubstance.guideline-sourced",
+    signal: "controlledSubstanceGuidelineSourced",
+    violatingValue: false,
+    violationHint: "A controlled-substance risk finding with no recorded guideline",
+    reason:
+      "A controlled-substance determination cited no recorded guideline (a missing or off-catalog guideline id); an ad-hoc / un-sourced MME threshold is not a real clinical standard. Mirrors the Immunization Agent's schedule-sourced and the Lab Result Agent's reference-range-sourced posture"
+  },
+  {
+    policyId: "policy.controlledsubstance.mme-computed",
+    signal: "controlledSubstanceMmeComputed",
+    violatingValue: false,
+    violationHint: "A total MME/day that does not match the computed proposed + concurrent sum",
+    reason:
+      "A controlled-substance determination's stated total MME/day does not equal the proposed opioid contribution + the concurrent opioid MME/day; a guessed / hidden dose is how an over-threshold prescription is wrongly called safe. The load-bearing correctness gate — mirrors the Timely Filing Agent's deadline-computed and the Good Faith Estimate Agent's math-consistent"
+  },
+  {
+    policyId: "policy.controlledsubstance.no-autonomous-prescribing-decision",
+    signal: "controlledSubstanceNoAutonomousDecision",
+    violatingValue: false,
+    violationHint: "A controlled-substance decision auto-approved / auto-denied without review",
+    reason:
+      "A controlled-substance determination auto-decided (autoDecision:true), or reported an elevated / high-risk finding without requiring prescriber review; a risk finding is a RECOMMENDATION requiring prescriber review — the agent never autonomously approves, denies, dispenses, or writes the prescription. Mirrors the Immunization Agent's no-autonomous-administration and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
