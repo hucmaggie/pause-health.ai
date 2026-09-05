@@ -310,8 +310,8 @@ export default function AboutPage() {
               software, with the last decade spent in solution-engineering
               and enterprise-architecture roles at the platform companies
               this prototype talks to every day &mdash; currently
-              Principal Agentforce / Data Cloud Activation Solution
-              Engineer at Salesforce (TMT vertical, Dec 2025&ndash;), with
+              Principal, Agentic Builder &mdash; TMT Agentic Builders &amp;
+              Forward Deploy Engineers at Salesforce (Dec 2025&ndash;), with
               earlier stints as Principal Integration Architect at First
               American, Sr Staff Solution Engineer at VMware Tanzu,
               Principal Platform Solution Engineer at MuleSoft, ISV
