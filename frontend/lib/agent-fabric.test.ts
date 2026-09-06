@@ -445,8 +445,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // agent), the patient & clinical plane (incl. the
     // Controlled Substance / PDMP Safety Check agent, and the Advance
     // Beneficiary Notice / Medicare ABN agent), and the commercial plane
-    // (incl. the Provider Contracting agent).
-    expect(listAgents()).toHaveLength(65);
+    // (incl. the Provider Contracting agent, and the Deal Desk / Quote
+    // Approval (CPQ) agent).
+    expect(listAgents()).toHaveLength(66);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

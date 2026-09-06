@@ -475,6 +475,13 @@ export const agentCards: AgentCard[] = [
     tier: "commercial-operations",
     detail:
       "Manages signed provider-org and employer accounts post-close: health scoring, renewal and QBR drafts, churn-risk and expansion signals. Never commits a contract or pricing change without a human account owner. Like pipeline management, it runs strictly on the commercial CRM plane and never touches patient PHI."
+  },
+  {
+    name: "Agentforce Deal Desk / Quote Approval (CPQ)",
+    role: "Commercial plane · deal desk (PHI-separated)",
+    tier: "commercial-operations",
+    detail:
+      "Validates a proposed enterprise quote's pricing and discounting against the deal-desk guardrail catalog: prices each line, sums the list/net/discount totals, computes the effective blended discount, and decides auto-approve (every line within guardrail) vs. escalate to a human deal-desk owner (any line out of guardrail). Every line prices from the catalog, the totals must add up, and an out-of-guardrail discount is never autonomously approved. Runs on the commercial CRM plane and never touches patient PHI."
   }
 ];
 

@@ -150,6 +150,10 @@ export type GovernanceTask = {
   subrogationBasisSourced?: boolean;
   subrogationRecoverableWithinPaid?: boolean;
   subrogationNoAutonomousLien?: boolean;
+  // Deal Desk / Quote Approval (pricing-catalog-sourced + discount-math-consistent + no-autonomous-out-of-guardrail-approval)
+  dealDeskCatalogSourced?: boolean;
+  dealDeskMathConsistent?: boolean;
+  dealDeskNoAutonomousApproval?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -983,6 +987,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A lien autonomously asserted, or an eligible case with no human review",
     reason:
       "A subrogation / third-party-liability determination autonomously asserted / perfected a lien (autoAssertedLien:true), or found a subrogation interest (eligible:true) without requiring human review; a subrogation determination is a RECOMMENDATION requiring a subrogation specialist / plan counsel to review, and the agent never autonomously asserts or perfects a lien, reduces the member's settlement, or recovers funds. Mirrors the Claims Overpayment & Recovery Agent's no-autonomous-clawback and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.dealdesk.pricing-catalog-sourced",
+    signal: "dealDeskCatalogSourced",
+    violatingValue: false,
+    violationHint: "A quote line prices an off-catalog product",
+    reason:
+      "A deal-desk quote decision priced a line whose product is off-catalog (a missing or unrecognized product id); an ad-hoc product cannot be correctly priced or guardrailed against the recorded price book. Mirrors the Provider Contracting Agent's contract-type-catalog-sourced and the Good Faith Estimate Agent's charge-master-sourced posture"
+  },
+  {
+    policyId: "policy.dealdesk.discount-math-consistent",
+    signal: "dealDeskMathConsistent",
+    violatingValue: false,
+    violationHint: "A quote's totals do not equal the recomputed line sums",
+    reason:
+      "A deal-desk quote decision's list / net / discount totals or effective discount do not equal the recomputed sums of its line items; a guessed / hidden total is how an out-of-guardrail quote is dressed up as compliant. The load-bearing correctness gate — mirrors the Good Faith Estimate Agent's math-consistent and the Subrogation Agent's recoverable-within-paid"
+  },
+  {
+    policyId: "policy.dealdesk.no-autonomous-out-of-guardrail-approval",
+    signal: "dealDeskNoAutonomousApproval",
+    violatingValue: false,
+    violationHint: "An out-of-guardrail quote marked auto-approved",
+    reason:
+      "A deal-desk quote decision auto-approved (autoApproved:true) — or did not require deal-desk approval for — a quote with a line whose discount exceeds its product's max auto-approve guardrail; an out-of-guardrail discount is a RECOMMENDATION that must escalate to a human deal-desk owner, never an autonomous approval. Mirrors the Account Management Agent's human-owner-before-contract-change and the Provider Contracting Agent's no-autonomous-term-change posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

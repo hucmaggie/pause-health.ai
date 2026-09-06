@@ -12,6 +12,7 @@ import { FwaDetectionPanel } from "../../../components/fwa-detection-panel";
 import { TrialPaymentsPanel } from "../../../components/trial-payments-panel";
 import { UtilizationReviewPanel } from "../../../components/utilization-review-panel";
 import { ProviderContractingPanel } from "../../../components/provider-contracting-panel";
+import { DealDeskPanel } from "../../../components/deal-desk-panel";
 import { CareCoordinationHandoffPanel } from "../../../components/care-coordination-handoff-panel";
 import { AdverseEventReportingPanel } from "../../../components/adverse-event-reporting-panel";
 import { DataSharingTefcaPanel } from "../../../components/data-sharing-tefca-panel";
@@ -153,6 +154,7 @@ export default function IntakeDemoPage() {
       <UtilizationReviewPanel />
 
       <ProviderContractingPanel />
+      <DealDeskPanel />
 
       <CareCoordinationHandoffPanel />
 

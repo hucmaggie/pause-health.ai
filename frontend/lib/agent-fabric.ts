@@ -1258,6 +1258,44 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "commercial-operations"
   },
   {
+    id: "deal-desk-agent",
+    name: "Deal Desk / Quote Approval Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for Pause's OWN go-to-market deal-desk workflow: POST
+    // /api/agents/deal-desk/tasks (card at /.well-known/agent.json). A DETERMINISTIC
+    // (no-Claude) agent on the strictly PHI-separated commercial-operations plane.
+    // This is Pause's own quoting tooling (selling the platform to health systems /
+    // payers / employers), NOT a patient-facing agent — it runs on Sales Cloud
+    // commercial data only and never reads, joins, or derives patient PHI. Given a
+    // proposed quote (an account reference and a set of line items, each a product,
+    // its list price, a quantity, and a proposed discount %), it DETERMINISTICALLY
+    // prices each line, sums the list / net / discount totals, computes the effective
+    // blended discount, checks each line's discount against its product's max
+    // auto-approve guardrail, and decides whether the quote AUTO-APPROVES (every line
+    // within guardrail) or must ESCALATE to a human deal-desk owner (any line out of
+    // guardrail) — NEVER autonomously approving an out-of-guardrail discount. It
+    // COMPLEMENTS the other commercial-operations agents — distinct from the Pipeline
+    // Management agent (the B2B opportunity pipeline / forecast roll-up), the Account
+    // Management agent (post-close renewals / expansion / health), and the Provider
+    // Contracting agent (the payer↔provider network CONTRACT): this validates a
+    // proposed SALES QUOTE's pricing + discounting against the deal-desk guardrails.
+    // REUSES the existing commercial-operations tier; it is on the commercial no-PHI
+    // policy, NOT the HIPAA-audit policy (it never touches PHI).
+    endpoint: "/api/agents/deal-desk",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Validates a proposed B2B enterprise quote against the deal-desk pricing / discount-guardrail catalog — prices each line, sums the list / net / discount totals, computes the effective blended discount, checks each line's discount against its product's max auto-approve guardrail, and decides whether the quote auto-approves (every line within guardrail) or must escalate to a human deal-desk owner (any line out of guardrail). Companion to the Pipeline Management (opportunity pipeline / forecast), Account Management (post-close renewals / expansion), and Provider Contracting (payer↔provider network contract) agents — this validates a proposed SALES QUOTE's pricing + discounting",
+      "The decision is DETERMINISTIC — a pure function of the quote's own line items + the catalog (no randomness, no clock); the totals + effective discount are computed from the lines, and the same quote always yields the same totals + guardrail result + disposition",
+      "Every line must price from the recorded pricing catalog — an ad-hoc / off-catalog product is blocked at the Agent Fabric governance boundary (policy.dealdesk.pricing-catalog-sourced); and the quote totals must equal the recomputed line sums — a guessed / hidden total is blocked (policy.dealdesk.discount-math-consistent, the load-bearing correctness gate). Mirrors the Provider Contracting Agent's contract-type-catalog-sourced and the Good Faith Estimate Agent's math-consistent posture",
+      "An out-of-guardrail discount is NEVER autonomously approved — a quote with any line whose discount exceeds its product's max auto-approve guardrail must escalate to a human deal-desk owner; a determination that auto-approves an out-of-guardrail quote is blocked (policy.dealdesk.no-autonomous-out-of-guardrail-approval). Mirrors the Account Management Agent's human-owner-before-contract-change and the Provider Contracting Agent's no-autonomous-term-change posture",
+      "Runs against ILLUSTRATIVE synthetic Pause-Health product catalog + guardrail percentages — clearly labeled; NOT a certified CPQ / pricing system (real quoting is governed by the company's CPQ — e.g. Salesforce Revenue Cloud — its approved price book, and its deal-desk / finance discount-approval matrix). Because it operates on commercial quote data rather than patient PHI, this agent lives on the commercial-operations plane (NOT patient-care)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "commercial-operations"
+  },
+  {
     id: "care-coordination-handoff-agent",
     name: "Care Coordination Handoff Agent",
     kind: "agentforce",
@@ -3537,7 +3575,12 @@ const POLICIES: PolicyRecord[] = [
     name: "Commercial plane is PHI-free",
     description:
       "Commercial-operations agents (pipeline, account management, provider contracting) run on Sales Cloud commercial data only. They may not read, join, or derive patient PHI — the commercial plane and the clinical/PHI plane are strictly separated, and any cross-plane read is blocked. (This is also why these agents are NOT on the HIPAA audit policy: they never touch PHI.)",
-    appliesTo: ["pipeline-management-agent", "account-management-agent", "provider-contracting-agent"],
+    appliesTo: [
+      "pipeline-management-agent",
+      "account-management-agent",
+      "provider-contracting-agent",
+      "deal-desk-agent"
+    ],
     enforcement: "block",
     status: "enforced"
   },
@@ -3583,6 +3626,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "Every VBC contract's quality-gate threshold and spend-drift tolerance must trace to a defined BENCHMARK_METHODOLOGIES catalog entry (methodology.mssp-shared-savings-my2026, methodology.ma-star-vbc-my2026, methodology.commercial-vbc-my2026, methodology.bundled-episode-flat-benchmark) — a bespoke / opaque / 'we-picked-a-number' benchmark is rejected before it can leave the fabric. An opaque benchmark polluts every downstream shared-savings / bonus / clawback calculation. Mirrors the Quality-Measure Attribution Agent's methodology-catalog-sourced posture.",
     appliesTo: ["provider-contracting-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.dealdesk.pricing-catalog-sourced",
+    name: "Every quote line prices from the recorded catalog",
+    description:
+      "The Deal Desk Agent may NEVER price a quote line whose product is off-catalog (a missing or unrecognized product id) — an ad-hoc product cannot be correctly priced or guardrailed against the recorded price book. A decision pricing an off-catalog product is rejected before it can leave the fabric. Mirrors the Provider Contracting Agent's contract-type-catalog-sourced and the Good Faith Estimate Agent's charge-master-sourced posture. (In the prototype the product catalog is a clearly-labeled illustrative synthetic; in production the price book comes from the company's CPQ — e.g. Salesforce Revenue Cloud.)",
+    appliesTo: ["deal-desk-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.dealdesk.discount-math-consistent",
+    name: "The quote totals equal the computed line sums",
+    description:
+      "The Deal Desk Agent's list / net / discount totals and effective discount must equal the recomputed sums of the quote's line items — a guessed / hidden total is how an out-of-guardrail quote is dressed up as compliant. A decision whose totals do not add up is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Good Faith Estimate Agent's math-consistent and the Subrogation Agent's recoverable-within-paid posture.",
+    appliesTo: ["deal-desk-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.dealdesk.no-autonomous-out-of-guardrail-approval",
+    name: "An out-of-guardrail discount is never autonomously approved",
+    description:
+      "The Deal Desk Agent may NEVER auto-approve (autoApproved:true) a quote with any line whose discount exceeds its product's max auto-approve guardrail — an out-of-guardrail discount is a RECOMMENDATION that must escalate to a human deal-desk owner (requiresDealDeskApproval:true). A within-guardrail quote is genuinely auto-approvable (a standard-discount quote does not need a human); only an out-of-guardrail exception is gated. A decision that auto-approves an out-of-guardrail quote is rejected before it can leave the fabric. Mirrors the Account Management Agent's human-owner-before-contract-change and the Provider Contracting Agent's no-autonomous-term-change posture — the harmful action is enforced-off.",
+    appliesTo: ["deal-desk-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -9511,6 +9581,118 @@ function store(): FabricStore {
         caseRef: "subro-case-002",
         recoverableAmount: 20100,
         phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedDealDeskTrace() {
+  const s = store();
+  const dd0 = Date.now() - 1000 * 60 * 1;
+  const ddTaskId = "task-seed-deal-desk-001";
+  const ddName = "Deal Desk / Quote Approval Agent";
+  s.traces.push(
+    {
+      id: "span-dd-001",
+      taskId: ddTaskId,
+      agentId: "deal-desk-agent",
+      agentName: ddName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(dd0).toISOString(),
+      finishedAt: new Date(dd0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // Commercial plane — no PHI accessed.
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-dd-002",
+      taskId: ddTaskId,
+      parentSpanId: "span-dd-001",
+      agentId: "deal-desk-agent",
+      agentName: ddName,
+      operation: "dealdesk.receive-quote",
+      protocol: "a2a",
+      startedAt: new Date(dd0 + 30).toISOString(),
+      finishedAt: new Date(dd0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        quoteRef: "quote-002",
+        accountRef: "account-cascade-systems",
+        lineCount: 2,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-dd-003",
+      taskId: ddTaskId,
+      parentSpanId: "span-dd-002",
+      agentId: "deal-desk-agent",
+      agentName: ddName,
+      operation: "dealdesk.validate-pricing",
+      protocol: "a2a",
+      startedAt: new Date(dd0 + 60).toISOString(),
+      finishedAt: new Date(dd0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        quoteRef: "quote-002",
+        listTotal: 285000,
+        netTotal: 216000,
+        effectiveDiscountPct: 24.21,
+        // The honesty invariants: catalog-sourced pricing + consistent math.
+        dealDeskCatalogSourced: true,
+        dealDeskMathConsistent: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-dd-004",
+      taskId: ddTaskId,
+      parentSpanId: "span-dd-003",
+      agentId: "deal-desk-agent",
+      agentName: ddName,
+      operation: "dealdesk.decide-approval",
+      protocol: "a2a",
+      startedAt: new Date(dd0 + 100).toISOString(),
+      finishedAt: new Date(dd0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        quoteRef: "quote-002",
+        withinGuardrail: false,
+        disposition: "escalate-to-deal-desk",
+        requiresDealDeskApproval: true,
+        // The honesty invariant: an out-of-guardrail quote is never auto-approved.
+        dealDeskNoAutonomousApproval: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-dd-005",
+      taskId: ddTaskId,
+      parentSpanId: "span-dd-004",
+      agentId: "deal-desk-agent",
+      agentName: ddName,
+      operation: "dealdesk.record-audit",
+      protocol: "a2a",
+      startedAt: new Date(dd0 + 140).toISOString(),
+      finishedAt: new Date(dd0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        quoteRef: "quote-002",
+        disposition: "escalate-to-deal-desk",
+        phiAccessed: false,
         synthetic: true
       }
     }
