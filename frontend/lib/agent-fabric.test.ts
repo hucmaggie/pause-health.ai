@@ -448,9 +448,11 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // Calculation agent, and the OIG Exclusion / Sanctions Screening agent),
     // the commercial plane (incl. the Provider Contracting agent, and the Deal
     // Desk / Quote Approval (CPQ) agent), and the platform & data substrate
-    // (incl. the Right of Access / HIPAA §164.524 agent, and the Amendment /
-    // Correction / HIPAA §164.526 agent — completing the patient-rights trilogy).
-    expect(listAgents()).toHaveLength(70);
+    // (incl. the Right of Access / HIPAA §164.524 agent, the Amendment /
+    // Correction / HIPAA §164.526 agent — completing the patient-rights trilogy
+    // — and the Information Blocking / Cures Act 45 CFR Part 171 agent, its
+    // enforcement flip-side).
+    expect(listAgents()).toHaveLength(71);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

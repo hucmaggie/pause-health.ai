@@ -170,6 +170,10 @@ export type GovernanceTask = {
   amendmentGroundSourced?: boolean;
   amendmentDeadlineComputed?: boolean;
   amendmentNoAutonomousWrite?: boolean;
+  // Information Blocking (21st Century Cures Act / 45 CFR Part 171) (exception-sourced + determination-not-overstated + no-autonomous-block-or-release)
+  blockingExceptionSourced?: boolean;
+  blockingDeterminationNotOverstated?: boolean;
+  blockingNoAutonomousBlockOrRelease?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1123,6 +1127,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An amendment made / denied autonomously, or with no human review",
     reason:
       "An amendment (§164.526) determination autonomously amended the record (autoAmended:true — a data write to the medical record that ripples to every holder the PHI was shared with), denied the request (autoDenied:true — a legal act carrying the patient's statement-of-disagreement rights), or did not require human review (requiresHumanReview:false); the agent ADJUDICATES — every determination is a RECOMMENDATION requiring a records / privacy officer to act on or review. Mirrors the Right of Access Agent's no-autonomous-denial-or-release and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.information-blocking.exception-sourced",
+    signal: "blockingExceptionSourced",
+    violatingValue: false,
+    violationHint: "An information-blocking exception claimed off-catalog",
+    reason:
+      "An information-blocking (45 CFR Part 171) determination claimed an exception that is off-catalog — a practice escapes the Cures Act information-blocking rule only on a recorded exception (preventing harm, privacy, security, infeasibility, health IT performance, content & manner, fees, licensing), and an ad-hoc / un-sourced exception is not a lawful basis to interfere with EHI. Mirrors the Right of Access Agent's ground-sourced and the Amendment Agent's ground-sourced posture"
+  },
+  {
+    policyId: "policy.information-blocking.determination-not-overstated",
+    signal: "blockingDeterminationNotOverstated",
+    violatingValue: false,
+    violationHint: "An exception reported as met while a required condition is missing",
+    reason:
+      "An information-blocking (45 CFR Part 171) determination reported an exception as satisfied (or under-reported its missing conditions) when a required condition of that exception is not met; each exception's conditions must ALL be satisfied, and an overstated 'exception met' is how unlawful interference is dressed up as a compliant practice. The load-bearing correctness gate — mirrors the OIG Exclusion Agent's match-not-overstated and the Member Cost-Share Agent's math-consistent"
+  },
+  {
+    policyId: "policy.information-blocking.no-autonomous-block-or-release",
+    signal: "blockingNoAutonomousBlockOrRelease",
+    violatingValue: false,
+    violationHint: "EHI withheld or released autonomously, or with no compliance review",
+    reason:
+      "An information-blocking (45 CFR Part 171) determination autonomously withheld EHI (autoBlockedEhi:true — which could itself be information blocking, or delay urgent care), force-released EHI (autoReleasedEhi:true — which could breach privacy), or did not require compliance review (requiresComplianceReview:false); the agent ADJUDICATES — every determination is a RECOMMENDATION requiring a compliance officer to confirm and act. Mirrors the OIG Exclusion Agent's no-autonomous-block-or-clear and the Right of Access Agent's no-autonomous-denial-or-release posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

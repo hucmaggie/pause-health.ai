@@ -1769,6 +1769,52 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "data-plane"
   },
   {
+    id: "information-blocking-agent",
+    name: "Information Blocking (Cures Act / 45 CFR Part 171) Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the MuleSoft control-plane / data-substrate
+    // information-blocking service: POST /api/agents/information-blocking/tasks
+    // (card at /.well-known/agent.json). A DETERMINISTIC (no-Claude)
+    // data-substrate agent that adjudicates whether an actor's PRACTICE that
+    // interfered with the access, exchange, or use of electronic health
+    // information (EHI) is INFORMATION BLOCKING under the 21st Century Cures Act
+    // / 45 CFR Part 171, or fits one of the eight recorded regulatory EXCEPTIONS.
+    // It is the ENFORCEMENT FLIP-SIDE of the HIPAA patient-rights trilogy (Right
+    // of Access §164.524, Amendment §164.526, Accounting of Disclosures §164.528
+    // — the RIGHT to get / fix / audit your record): the information-blocking
+    // rule prohibits a provider, health-IT developer, or HIE/HIN from
+    // INTERFERING with EHI access. UNLIKE the recent agents there is NO date math
+    // and NO dollar waterfall — the heart is a CONDITIONS-SATISFACTION classifier.
+    // Given a practice review (an actor reference + type, the EHI request type,
+    // whether the practice actually interfered, an optional claimed exception,
+    // and the set of exception CONDITIONS the actor asserts are satisfied), it
+    // DETERMINISTICALLY checks the claimed exception against the recorded catalog
+    // (preventing harm, privacy, security, infeasibility, health IT performance,
+    // content & manner, fees, licensing) and verifies EVERY required condition is
+    // met, then decides the disposition (not-information-blocking-no-interference
+    // / not-information-blocking-exception-met /
+    // potential-information-blocking-needs-review), NEVER autonomously withholding
+    // EHI (which could itself be information blocking) or force-releasing it
+    // (which could breach privacy). It COMPLEMENTS — it does not duplicate — the
+    // HIPAA privacy agents: they grant a patient's RIGHTS to their record; this
+    // enforces that an actor does not INTERFERE with EHI access. REUSES the
+    // existing data-plane tier (platform plane). The exception catalog + condition
+    // sets are ILLUSTRATIVE, NOT certified compliance counsel.
+    endpoint: "/api/agents/information-blocking",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "The information-blocking layer of the data substrate — given a practice review, checks the claimed 45 CFR Part 171 exception against the recorded catalog and verifies every required condition is satisfied, then decides the disposition (not-information-blocking-no-interference / not-information-blocking-exception-met / potential-information-blocking-needs-review). It is the ENFORCEMENT FLIP-SIDE of the HIPAA patient-rights trilogy (Right of Access §164.524, Amendment §164.526, Accounting of Disclosures §164.528 — the RIGHT to get / fix / audit your record): the Cures Act rule prohibits a provider, health-IT developer, or HIE/HIN from INTERFERING with EHI access, exchange, or use unless a recorded exception fully applies",
+      "The determination is DETERMINISTIC — a pure function of the request's own fields (no randomness, no clock, and — unlike the recent agents — no date math and no dollar waterfall; it is a conditions-satisfaction classifier); the same practice review always yields the same exception analysis + disposition",
+      "Every claimed exception must trace to the recorded 45 CFR Part 171 catalog — an off-catalog exception is not a lawful basis to interfere with EHI and is blocked at the Agent Fabric governance boundary (policy.information-blocking.exception-sourced); and an exception may be reported as MET only when EVERY required condition is satisfied — an overstated exception that skipped a condition is blocked (policy.information-blocking.determination-not-overstated, the load-bearing correctness gate). Mirrors the Right of Access Agent's ground-sourced and the OIG Exclusion Agent's match-not-overstated posture",
+      "The agent ADJUDICATES — it NEVER withholds EHI (which could itself be information blocking, or delay urgent care) or force-releases EHI (which could breach privacy) on its own; a determination that auto-blocks / auto-releases EHI or is not review-gated is blocked (policy.information-blocking.no-autonomous-block-or-release), and every determination is a recommendation requiring a compliance officer to confirm and act. Mirrors the OIG Exclusion Agent's no-autonomous-block-or-clear and the Right of Access Agent's no-autonomous-denial-or-release posture",
+      "Runs against an ILLUSTRATIVE synthetic exception catalog + condition sets — clearly labeled; NOT certified information-blocking compliance counsel (real analysis is governed by the 21st Century Cures Act and 45 CFR Part 171 — the full text of the eight exceptions and every sub-condition — the ONC / ASTP rules, and OIG enforcement / disincentives)"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
+  },
+  {
     id: "coordination-of-benefits-agent",
     name: "Coordination of Benefits Agent",
     kind: "agentforce",
@@ -2314,7 +2360,8 @@ const POLICIES: PolicyRecord[] = [
       "subrogation-agent",
       "right-of-access-agent",
       "member-cost-share-agent",
-      "amendment-request-agent"
+      "amendment-request-agent",
+      "information-blocking-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3353,6 +3400,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Amendment / Correction Agent may NEVER deny a request (or assert a denial ground) that is off-catalog — a §164.526 denial is permitted only on a recorded statutory ground (the covered entity did not create the PHI and the originator is available; the PHI is not part of the designated record set; the PHI is not available for access under §164.524; or the PHI is already accurate and complete), and an ad-hoc / un-sourced ground is not a lawful basis to refuse a patient's amendment. A denied determination that cites an off-catalog ground is rejected before it can leave the fabric. Mirrors the Right of Access Agent's ground-sourced and the Accounting of Disclosures Agent's purpose-category-sourced posture. (In the prototype the ground catalog is a clearly-labeled illustrative synthetic; in production the grounds are the full §164.526 set.)",
     appliesTo: ["amendment-request-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.information-blocking.exception-sourced",
+    name: "Every claimed information-blocking exception traces to the recorded catalog",
+    description:
+      "The Information Blocking Agent may NEVER claim an exception that is off-catalog — a practice escapes the 21st Century Cures Act information-blocking rule only on a recorded 45 CFR Part 171 exception (preventing harm §171.201, privacy §171.202, security §171.203, infeasibility §171.204, health IT performance §171.205, content & manner §171.301, fees §171.302, licensing §171.303), and an ad-hoc / un-sourced exception is not a lawful basis to interfere with EHI. A determination that claims an off-catalog exception is rejected before it can leave the fabric. Mirrors the Right of Access Agent's ground-sourced and the Amendment Agent's ground-sourced posture. (In the prototype the exception catalog is a clearly-labeled illustrative synthetic; in production the exceptions are the full 45 CFR Part 171 set.)",
+    appliesTo: ["information-blocking-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.information-blocking.determination-not-overstated",
+    name: "An exception is never reported as met unless every condition is satisfied",
+    description:
+      "The Information Blocking Agent may report a 45 CFR Part 171 exception as SATISFIED only when EVERY required condition of that exception is met — reporting an exception as met (or under-reporting its missing conditions) when a condition is missing is how unlawful interference with EHI is dressed up as a compliant practice. A determination whose exceptionSatisfied / missingConditions fails the recomputation from the claimed exception + the asserted conditions is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the OIG Exclusion Agent's match-not-overstated and the Member Cost-Share Agent's math-consistent posture.",
+    appliesTo: ["information-blocking-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.information-blocking.no-autonomous-block-or-release",
+    name: "EHI is never autonomously withheld or released",
+    description:
+      "The Information Blocking Agent may NEVER withhold EHI (autoBlockedEhi:true — which could itself be information blocking, or delay urgent care), force-release EHI (autoReleasedEhi:true — which could breach privacy), or skip compliance review (requiresComplianceReview:true) — the agent ADJUDICATES, and every determination is a RECOMMENDATION requiring a compliance officer to confirm and act. A determination that auto-blocks / auto-releases EHI, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the OIG Exclusion Agent's no-autonomous-block-or-clear and the Right of Access Agent's no-autonomous-denial-or-release posture — the harmful action is enforced-off.",
+    appliesTo: ["information-blocking-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -10379,6 +10453,116 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous amendment / denial.
         amendmentNoAutonomousWrite: true,
         requiresHumanReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedInformationBlockingTrace() {
+  const s = store();
+  const ib0 = Date.now() - 1000 * 60 * 1;
+  const ibTaskId = "task-seed-information-blocking-001";
+  const ibName = "Information Blocking (Cures Act / 45 CFR Part 171) Agent";
+  s.traces.push(
+    {
+      id: "span-ib-001",
+      taskId: ibTaskId,
+      agentId: "information-blocking-agent",
+      agentName: ibName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ib0).toISOString(),
+      finishedAt: new Date(ib0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ib-002",
+      taskId: ibTaskId,
+      parentSpanId: "span-ib-001",
+      agentId: "information-blocking-agent",
+      agentName: ibName,
+      operation: "blocking.receive-practice",
+      protocol: "a2a",
+      startedAt: new Date(ib0 + 30).toISOString(),
+      finishedAt: new Date(ib0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "ib-001",
+        actorRef: "provider-2201",
+        ehiRequestType: "access",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ib-003",
+      taskId: ibTaskId,
+      parentSpanId: "span-ib-002",
+      agentId: "information-blocking-agent",
+      agentName: ibName,
+      operation: "blocking.assess-exception",
+      protocol: "a2a",
+      startedAt: new Date(ib0 + 60).toISOString(),
+      finishedAt: new Date(ib0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "ib-001",
+        claimedExceptionId: "exception.privacy",
+        // The honesty invariant: the claimed exception traces to the catalog.
+        blockingExceptionSourced: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ib-004",
+      taskId: ibTaskId,
+      parentSpanId: "span-ib-003",
+      agentId: "information-blocking-agent",
+      agentName: ibName,
+      operation: "blocking.check-conditions",
+      protocol: "a2a",
+      startedAt: new Date(ib0 + 100).toISOString(),
+      finishedAt: new Date(ib0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "ib-001",
+        disposition: "not-information-blocking-exception-met",
+        exceptionSatisfied: true,
+        // The honesty invariant: exception met only when every condition is.
+        blockingDeterminationNotOverstated: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ib-005",
+      taskId: ibTaskId,
+      parentSpanId: "span-ib-004",
+      agentId: "information-blocking-agent",
+      agentName: ibName,
+      operation: "blocking.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(ib0 + 140).toISOString(),
+      finishedAt: new Date(ib0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "ib-001",
+        disposition: "not-information-blocking-exception-met",
+        // The honesty invariant: never an autonomous block / release.
+        blockingNoAutonomousBlockOrRelease: true,
+        requiresComplianceReview: true,
         phiAccessed: true,
         synthetic: true
       }
