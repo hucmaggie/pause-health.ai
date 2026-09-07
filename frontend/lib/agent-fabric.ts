@@ -1728,6 +1728,47 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "data-plane"
   },
   {
+    id: "amendment-request-agent",
+    name: "Amendment / Correction (HIPAA §164.526) Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the MuleSoft control-plane / data-substrate
+    // amendment / correction service: POST /api/agents/amendment-request/tasks
+    // (card at /.well-known/agent.json). A DETERMINISTIC (no-Claude)
+    // data-substrate agent that adjudicates a patient's HIPAA §164.526 RIGHT to
+    // request an AMENDMENT / CORRECTION of their PHI, and BY WHEN. It CAPSTONES
+    // the HIPAA PATIENT-RIGHTS TRILOGY — the third sibling to the Right of Access
+    // agent (§164.524 — GET a copy) and the Accounting of Disclosures agent
+    // (§164.528 — WHO it was disclosed to); this answers the §164.526 right to
+    // FIX the record. Given an amendment request (a patient reference, the record
+    // and request type, the request date, an as-of date, whether the PHI is in a
+    // designated record set, whether the CE created the PHI and whether the
+    // originator is available, whether the PHI is available for access under
+    // §164.524, whether the PHI is already accurate and complete, and whether the
+    // single 30-day extension was invoked), it DETERMINISTICALLY computes the
+    // §164.526 response deadline (request date + 60 days, or + 90 with the
+    // extension, via pure UTC date math — dates as data, NO Date.now()), derives
+    // which denial ground (if any) applies against the recorded catalog
+    // (not-originator, not-in-designated-record-set, not-available-for-access,
+    // accurate-and-complete), and decides the disposition (recommend-accept /
+    // recommend-deny), NEVER autonomously amending the record (a data write) or
+    // issuing a denial (a legal act with statement-of-disagreement rights).
+    // REUSES the existing data-plane tier (platform plane). The denial-ground
+    // catalog + 60/90-day math are ILLUSTRATIVE, NOT a certified HIM system.
+    endpoint: "/api/agents/amendment-request",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "The amendment / correction layer of the data substrate — given a patient's §164.526 amendment request, computes the response deadline (60 days, + 30 with the single extension), derives which statutory denial ground (if any) applies against the recorded catalog (not-originator / not-in-designated-record-set / not-available-for-access / accurate-and-complete), and decides the disposition (recommend-accept / recommend-deny with statement-of-disagreement rights). CAPSTONES the HIPAA patient-rights trilogy alongside the Right of Access agent (§164.524 — GET a copy) and the Accounting of Disclosures agent (§164.528 — WHO it was disclosed to) — this answers the §164.526 right to FIX the record, and BY WHEN",
+      "The determination is DETERMINISTIC — a pure function of the request's own fields (no randomness, no clock — dates taken as data); the deadline is the request date + 60 (or + 90 with the extension), and the same request always yields the same deadline + ground + disposition",
+      "Every denial must trace to the recorded §164.526 ground catalog — an off-catalog ground is not a lawful basis to refuse a patient's amendment and is blocked at the Agent Fabric governance boundary (policy.amendment.ground-sourced); and the response deadline must equal the request date + 60/90 days — a guessed / mis-stated deadline is blocked (policy.amendment.deadline-computed, the load-bearing correctness gate). Mirrors the Right of Access Agent's ground-sourced and deadline-computed posture",
+      "The agent ADJUDICATES — it NEVER amends the record (a data write to the medical record that ripples to every downstream holder) or issues a denial (a legal act with statement-of-disagreement rights) on its own; a determination that auto-amends / auto-denies or is not review-gated is blocked (policy.amendment.no-autonomous-write-or-denial), and every determination is a recommendation requiring a records / privacy officer to act on or review. Mirrors the Right of Access Agent's no-autonomous-denial-or-release and the Minimum Necessary Agent's no-autonomous-over-disclosure posture",
+      "Runs against an ILLUSTRATIVE synthetic denial-ground catalog + 60/90-day math — clearly labeled; NOT a certified HIM system (real amendment is governed by HIPAA §164.526 — the full denial grounds, the written-denial + statement-of-disagreement + rebuttal process, and the duty to notify other holders of an accepted amendment — and the covered entity's Notice of Privacy Practices)"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
+  },
+  {
     id: "coordination-of-benefits-agent",
     name: "Coordination of Benefits Agent",
     kind: "agentforce",
@@ -2272,7 +2313,8 @@ const POLICIES: PolicyRecord[] = [
       "accounting-of-disclosures-agent",
       "subrogation-agent",
       "right-of-access-agent",
-      "member-cost-share-agent"
+      "member-cost-share-agent",
+      "amendment-request-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3302,6 +3344,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Right of Access Agent may NEVER release the record (autoReleased:true) or issue a denial on its own, and may never skip human review (requiresHumanReview:true) — the agent ADJUDICATES; releasing the record is a privacy risk and a denial is a legal act with appeal rights, so every determination is a RECOMMENDATION requiring a records / privacy officer to fulfill or review. A determination that auto-releases the record, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Accounting of Disclosures Agent's no-autonomous-suppression and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off.",
     appliesTo: ["right-of-access-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.amendment.ground-sourced",
+    name: "Every amendment denial traces to a recorded §164.526 ground",
+    description:
+      "The Amendment / Correction Agent may NEVER deny a request (or assert a denial ground) that is off-catalog — a §164.526 denial is permitted only on a recorded statutory ground (the covered entity did not create the PHI and the originator is available; the PHI is not part of the designated record set; the PHI is not available for access under §164.524; or the PHI is already accurate and complete), and an ad-hoc / un-sourced ground is not a lawful basis to refuse a patient's amendment. A denied determination that cites an off-catalog ground is rejected before it can leave the fabric. Mirrors the Right of Access Agent's ground-sourced and the Accounting of Disclosures Agent's purpose-category-sourced posture. (In the prototype the ground catalog is a clearly-labeled illustrative synthetic; in production the grounds are the full §164.526 set.)",
+    appliesTo: ["amendment-request-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.amendment.deadline-computed",
+    name: "The amendment response deadline is computed, not guessed",
+    description:
+      "The Amendment / Correction Agent's §164.526 response deadline must equal the request date + 60 days (+ 30 more when the single extension is invoked, with written notice). A guessed / mis-stated deadline is how an amendment request quietly runs past its §164.526 legal clock, and a determination whose deadline (or days-until) fails the recomputation from its own fields is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Right of Access Agent's deadline-computed and the Timely Filing Agent's deadline-computed posture.",
+    appliesTo: ["amendment-request-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.amendment.no-autonomous-write-or-denial",
+    name: "The record is never autonomously amended or denied",
+    description:
+      "The Amendment / Correction Agent may NEVER amend the record (autoAmended:true — a data write to the medical record that ripples to every downstream holder the PHI was shared with), issue a denial on its own (autoDenied:true — a legal act carrying the patient's right to submit a statement of disagreement), or skip human review (requiresHumanReview:true) — the agent ADJUDICATES, and every determination is a RECOMMENDATION requiring a records / privacy officer to act on or review. A determination that auto-amends / auto-denies, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Right of Access Agent's no-autonomous-denial-or-release and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off.",
+    appliesTo: ["amendment-request-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -10200,6 +10269,117 @@ function store(): FabricStore {
         exclusionNoAutonomousBlockOrClear: true,
         requiresComplianceReview: true,
         phiAccessed: false,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedAmendmentRequestTrace() {
+  const s = store();
+  const amd0 = Date.now() - 1000 * 60 * 1;
+  const amdTaskId = "task-seed-amendment-request-001";
+  const amdName = "Amendment / Correction (HIPAA §164.526) Agent";
+  s.traces.push(
+    {
+      id: "span-amd-001",
+      taskId: amdTaskId,
+      agentId: "amendment-request-agent",
+      agentName: amdName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(amd0).toISOString(),
+      finishedAt: new Date(amd0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-amd-002",
+      taskId: amdTaskId,
+      parentSpanId: "span-amd-001",
+      agentId: "amendment-request-agent",
+      agentName: amdName,
+      operation: "amendment.receive-request",
+      protocol: "a2a",
+      startedAt: new Date(amd0 + 30).toISOString(),
+      finishedAt: new Date(amd0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "amend-001",
+        patientRef: "patient-8842",
+        recordRef: "note-55210",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-amd-003",
+      taskId: amdTaskId,
+      parentSpanId: "span-amd-002",
+      agentId: "amendment-request-agent",
+      agentName: amdName,
+      operation: "amendment.assess-grounds",
+      protocol: "a2a",
+      startedAt: new Date(amd0 + 60).toISOString(),
+      finishedAt: new Date(amd0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "amend-001",
+        disposition: "recommend-accept",
+        deniedOnGround: null,
+        // The honesty invariant: no denial ground asserted for an accept.
+        amendmentGroundSourced: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-amd-004",
+      taskId: amdTaskId,
+      parentSpanId: "span-amd-003",
+      agentId: "amendment-request-agent",
+      agentName: amdName,
+      operation: "amendment.compute-deadline",
+      protocol: "a2a",
+      startedAt: new Date(amd0 + 100).toISOString(),
+      finishedAt: new Date(amd0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "amend-001",
+        responseDeadline: "2026-10-14",
+        daysUntilDeadline: 37,
+        // The honesty invariant: the deadline is request-date + 60 days.
+        amendmentDeadlineComputed: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-amd-005",
+      taskId: amdTaskId,
+      parentSpanId: "span-amd-004",
+      agentId: "amendment-request-agent",
+      agentName: amdName,
+      operation: "amendment.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(amd0 + 140).toISOString(),
+      finishedAt: new Date(amd0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "amend-001",
+        disposition: "recommend-accept",
+        // The honesty invariant: never an autonomous amendment / denial.
+        amendmentNoAutonomousWrite: true,
+        requiresHumanReview: true,
+        phiAccessed: true,
         synthetic: true
       }
     }

@@ -42,6 +42,7 @@ import { MinimumNecessaryPanel } from "../../../components/minimum-necessary-pan
 import { AuditLogIntegrityPanel } from "../../../components/audit-log-integrity-panel";
 import { AccountingOfDisclosuresPanel } from "../../../components/accounting-of-disclosures-panel";
 import { RightOfAccessPanel } from "../../../components/right-of-access-panel";
+import { AmendmentRequestPanel } from "../../../components/amendment-request-panel";
 import { TimelyFilingPanel } from "../../../components/timely-filing-panel";
 import { SubrogationPanel } from "../../../components/subrogation-panel";
 import { MemberCostSharePanel } from "../../../components/member-cost-share-panel";
@@ -178,6 +179,7 @@ export default function IntakeDemoPage() {
       <AuditLogIntegrityPanel />
       <AccountingOfDisclosuresPanel />
       <RightOfAccessPanel />
+      <AmendmentRequestPanel />
 
       <CoordinationOfBenefitsPanel />
 

@@ -166,6 +166,10 @@ export type GovernanceTask = {
   exclusionMatchSourced?: boolean;
   exclusionMatchNotOverstated?: boolean;
   exclusionNoAutonomousBlockOrClear?: boolean;
+  // Amendment / Correction (HIPAA §164.526) (ground-sourced + deadline-computed + no-autonomous-write-or-denial)
+  amendmentGroundSourced?: boolean;
+  amendmentDeadlineComputed?: boolean;
+  amendmentNoAutonomousWrite?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1095,6 +1099,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A payment blocked / a party cleared autonomously",
     reason:
       "An exclusion-screening determination autonomously blocked a payment (autoBlockedPayment:true), cleared a party (autoCleared:true), or did not require compliance review (requiresComplianceReview:false); the screening is a RECOMMENDATION — a compliance officer confirms the identity and acts, because a wrongful block denies a legitimate provider income and a wrongful clear risks paying a sanctioned party. Mirrors the Advance Beneficiary Notice Agent's no-autonomous-beneficiary-liability and the Member Cost-Share Agent's no-autonomous-member-charge posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.amendment.ground-sourced",
+    signal: "amendmentGroundSourced",
+    violatingValue: false,
+    violationHint: "An amendment denial on an off-catalog ground",
+    reason:
+      "An amendment (§164.526) determination denied the request (or asserted a denial ground) that is off-catalog — a §164.526 denial is permitted only on a recorded statutory ground (not-originator, not-in-designated-record-set, not-available-for-access, accurate-and-complete), and an ad-hoc / un-sourced ground is not a lawful basis to refuse a patient's amendment. Mirrors the Right of Access Agent's ground-sourced and the Accounting of Disclosures Agent's purpose-category-sourced posture"
+  },
+  {
+    policyId: "policy.amendment.deadline-computed",
+    signal: "amendmentDeadlineComputed",
+    violatingValue: false,
+    violationHint: "An amendment response deadline that isn't request-date + 60/90 days",
+    reason:
+      "An amendment (§164.526) determination's response deadline (or days-until) does not equal the request date + 60 days (+ 30 more when the single extension is invoked); a guessed / mis-stated deadline is how an amendment request quietly runs past its §164.526 legal clock. The load-bearing correctness gate — mirrors the Right of Access Agent's deadline-computed and the Timely Filing Agent's deadline-computed"
+  },
+  {
+    policyId: "policy.amendment.no-autonomous-write-or-denial",
+    signal: "amendmentNoAutonomousWrite",
+    violatingValue: false,
+    violationHint: "An amendment made / denied autonomously, or with no human review",
+    reason:
+      "An amendment (§164.526) determination autonomously amended the record (autoAmended:true — a data write to the medical record that ripples to every holder the PHI was shared with), denied the request (autoDenied:true — a legal act carrying the patient's statement-of-disagreement rights), or did not require human review (requiresHumanReview:false); the agent ADJUDICATES — every determination is a RECOMMENDATION requiring a records / privacy officer to act on or review. Mirrors the Right of Access Agent's no-autonomous-denial-or-release and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
