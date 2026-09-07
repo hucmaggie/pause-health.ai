@@ -2231,6 +2231,48 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "clinical-decision"
   },
   {
+    id: "drug-interaction-agent",
+    name: "Drug–Drug Interaction (DDI) Safety Check Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the clinical-decision drug-interaction piece:
+    // POST /api/agents/drug-interaction/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) clinical-decision agent. Given a proposed /
+    // new drug and the patient's active medication list, it DETERMINISTICALLY
+    // pairs the proposed drug with each active medication, looks up every
+    // recorded interaction in the knowledge base, ranks them by severity
+    // (contraindicated > major > moderate > minor), reports the overall severity
+    // + mechanism + management, and decides the disposition
+    // (no-interaction-detected / monitor / review-recommended / review-required /
+    // do-not-coadminister-needs-review). UNLIKE the recent platform agents there
+    // is NO date math, NO dollar waterfall, and NO single-record exception
+    // classifier — the heart is a PAIRWISE KNOWLEDGE-BASE LOOKUP + a SEVERITY
+    // RANKING. A finding is a RECOMMENDATION requiring a pharmacist / prescriber
+    // to act on or review — the agent never autonomously HOLDS / cancels the
+    // order or OVERRIDES the alert. It COMPLEMENTS the other clinical /
+    // medication agents — distinct from the Controlled Substance / PDMP agent
+    // (the TOTAL controlled-substance MME burden across prescribers), the
+    // Formulary & DUR Review agent (plan-level coverage / step therapy), the
+    // Medication Adherence agent (taking an already-prescribed drug), the Prior
+    // Authorization agent (assembling a PA package), and the Immunization agent
+    // (the vaccine schedule): this screens whether a NEW drug INTERACTS with what
+    // the patient already takes. REUSES the existing clinical-decision tier. The
+    // interaction knowledge base + severity assignments are ILLUSTRATIVE, NOT a
+    // certified clinical decision support system.
+    endpoint: "/api/agents/drug-interaction",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Screens a proposed / new drug against the patient's active medication list — pairs the proposed drug with each active medication, looks up every recorded interaction in the knowledge base, ranks them by severity (contraindicated / major / moderate / minor), reports the overall severity + mechanism + management, and decides the disposition (no-interaction-detected / monitor / review-recommended / review-required / do-not-coadminister-needs-review). A deterministic clinical-decision agent; distinct from the Controlled Substance / PDMP agent (the TOTAL controlled-substance MME burden), the Formulary & DUR Review, Medication Adherence, Prior Authorization, and Immunization agents — this screens whether a NEW drug INTERACTS with what the patient already takes",
+      "The finding is DETERMINISTIC — a pure function of the request's data (no randomness, no clock; no date math and no dollar waterfall — it is a pairwise knowledge-base lookup + severity ranking); the same proposed drug + active list always yields the same interactions + overall severity + disposition",
+      "Every reported interaction must trace to the recorded knowledge base with a matching pair + severity — a fabricated / off-catalog interaction is blocked at the Agent Fabric governance boundary (policy.ddi.interaction-sourced); and the overall severity must equal the highest cataloged severity among the detected interactions — an inflated (alert fatigue, wrongful cancellation) or suppressed (hidden contraindication) severity is blocked (policy.ddi.severity-consistent, the load-bearing correctness gate). Mirrors the Controlled Substance Agent's guideline-sourced and the Member Cost-Share Agent's math-consistent posture",
+      "The agent SCREENS — it NEVER holds / cancels the order (which could deny needed therapy) or overrides the alert (which could push through a contraindicated combination) on its own; a determination that auto-holds / auto-overrides or is not review-gated is blocked (policy.ddi.no-autonomous-hold-or-override), and every finding is a recommendation requiring a pharmacist / prescriber to act on or review. Mirrors the Controlled Substance Agent's no-autonomous-prescribing-decision and the Lab Result Agent's no-autonomous-clinical-action posture",
+      "Runs against an ILLUSTRATIVE synthetic interaction knowledge base + severity assignments — clearly labeled; NOT a certified clinical decision support system (real interaction checking uses a maintained compendium, normalized drug vocabularies like RxNorm, dose / route / timing context, patient-specific factors, and the pharmacist's / prescriber's clinical judgment)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "clinical-decision"
+  },
+  {
     id: "advance-beneficiary-notice-agent",
     name: "Advance Beneficiary Notice (Medicare ABN) Agent",
     kind: "agentforce",
@@ -2361,7 +2403,8 @@ const POLICIES: PolicyRecord[] = [
       "right-of-access-agent",
       "member-cost-share-agent",
       "amendment-request-agent",
-      "information-blocking-agent"
+      "information-blocking-agent",
+      "drug-interaction-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3310,6 +3353,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Controlled Substance Agent may NEVER autonomously approve, deny, dispense, or write a prescription — a risk finding is a RECOMMENDATION requiring prescriber review (requiresPrescriberReview:true for any elevated / high-risk finding). A determination that auto-decides (autoDecision:true), or that reports an elevated / high-risk finding without requiring prescriber review, is rejected before it can leave the fabric. Mirrors the Immunization Agent's no-autonomous-administration and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off. (In the prototype the PDMP history is a clearly-labeled illustrative synthetic; in production the prescribing decision is the prescriber's, informed by the state PDMP.)",
     appliesTo: ["controlled-substance-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.ddi.interaction-sourced",
+    name: "Every reported drug interaction traces to the recorded knowledge base",
+    description:
+      "The Drug Interaction Agent may NEVER report an interaction that is off-catalog, or dress a mismatched severity onto a recorded interaction — every flagged interaction must resolve in the recorded knowledge base with a matching drug pair + severity, because a fabricated interaction erodes clinician trust and drives alert fatigue. A determination that reports an off-catalog or mismatched interaction is rejected before it can leave the fabric. Mirrors the Controlled Substance Agent's guideline-sourced and the Immunization Agent's schedule-sourced posture. (In the prototype the interaction knowledge base is a clearly-labeled illustrative synthetic; in production it is a maintained drug-interaction compendium.)",
+    appliesTo: ["drug-interaction-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.ddi.severity-consistent",
+    name: "The overall severity is consistent with the detected interactions",
+    description:
+      "The Drug Interaction Agent's overall severity must equal the highest cataloged severity among the detected interactions — an INFLATED severity drives wrongful order cancellation and alert fatigue, and a SUPPRESSED severity hides a contraindication. A determination whose overall severity fails the recomputation from the detected interactions' catalog records is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Member Cost-Share Agent's math-consistent and the OIG Exclusion Agent's match-not-overstated posture.",
+    appliesTo: ["drug-interaction-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.ddi.no-autonomous-hold-or-override",
+    name: "The order is never autonomously held or the alert overridden",
+    description:
+      "The Drug Interaction Agent may NEVER hold / cancel the order (autoHeldOrder:true — which could deny needed therapy), override the interaction alert (autoOverrodeAlert:true — which could push through a contraindicated combination), or skip clinician review (requiresClinicianReview:true) — the agent SCREENS, and every finding is a RECOMMENDATION requiring a pharmacist / prescriber to act on or review. A determination that auto-holds / auto-overrides, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Controlled Substance Agent's no-autonomous-prescribing-decision and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off.",
+    appliesTo: ["drug-interaction-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -10563,6 +10633,116 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous block / release.
         blockingNoAutonomousBlockOrRelease: true,
         requiresComplianceReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedDrugInteractionTrace() {
+  const s = store();
+  const ddi0 = Date.now() - 1000 * 60 * 1;
+  const ddiTaskId = "task-seed-drug-interaction-001";
+  const ddiName = "Drug–Drug Interaction (DDI) Safety Check Agent";
+  s.traces.push(
+    {
+      id: "span-ddi-001",
+      taskId: ddiTaskId,
+      agentId: "drug-interaction-agent",
+      agentName: ddiName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ddi0).toISOString(),
+      finishedAt: new Date(ddi0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ddi-002",
+      taskId: ddiTaskId,
+      parentSpanId: "span-ddi-001",
+      agentId: "drug-interaction-agent",
+      agentName: ddiName,
+      operation: "ddi.receive-order",
+      protocol: "a2a",
+      startedAt: new Date(ddi0 + 30).toISOString(),
+      finishedAt: new Date(ddi0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "ddi-001",
+        patientRef: "patient-8842",
+        proposedDrug: "paroxetine",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ddi-003",
+      taskId: ddiTaskId,
+      parentSpanId: "span-ddi-002",
+      agentId: "drug-interaction-agent",
+      agentName: ddiName,
+      operation: "ddi.match-interactions",
+      protocol: "a2a",
+      startedAt: new Date(ddi0 + 60).toISOString(),
+      finishedAt: new Date(ddi0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "ddi-001",
+        interactionCount: 1,
+        // The honesty invariant: every interaction traces to the knowledge base.
+        ddiInteractionSourced: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ddi-004",
+      taskId: ddiTaskId,
+      parentSpanId: "span-ddi-003",
+      agentId: "drug-interaction-agent",
+      agentName: ddiName,
+      operation: "ddi.rank-severity",
+      protocol: "a2a",
+      startedAt: new Date(ddi0 + 100).toISOString(),
+      finishedAt: new Date(ddi0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "ddi-001",
+        overallSeverity: "major",
+        disposition: "review-required",
+        // The honesty invariant: overall severity matches the detected interactions.
+        ddiSeverityConsistent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-ddi-005",
+      taskId: ddiTaskId,
+      parentSpanId: "span-ddi-004",
+      agentId: "drug-interaction-agent",
+      agentName: ddiName,
+      operation: "ddi.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(ddi0 + 140).toISOString(),
+      finishedAt: new Date(ddi0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "ddi-001",
+        disposition: "review-required",
+        // The honesty invariant: never an autonomous hold / override.
+        ddiNoAutonomousHoldOrOverride: true,
+        requiresClinicianReview: true,
         phiAccessed: true,
         synthetic: true
       }

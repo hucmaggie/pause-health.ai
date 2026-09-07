@@ -49,6 +49,7 @@ import { SubrogationPanel } from "../../../components/subrogation-panel";
 import { MemberCostSharePanel } from "../../../components/member-cost-share-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
+import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
 import { CoordinationOfBenefitsPanel } from "../../../components/coordination-of-benefits-panel";
 import { OverpaymentRecoveryPanel } from "../../../components/overpayment-recovery-panel";
 import { FinancialAssistancePanel } from "../../../components/financial-assistance-panel";
@@ -198,6 +199,7 @@ export default function IntakeDemoPage() {
       <LabResultPanel />
       <ImmunizationPanel />
       <ControlledSubstancePanel />
+      <DrugInteractionPanel />
 
       <section className="demo-grid">
         <article className="card">

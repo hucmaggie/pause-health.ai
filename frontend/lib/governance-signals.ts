@@ -174,6 +174,10 @@ export type GovernanceTask = {
   blockingExceptionSourced?: boolean;
   blockingDeterminationNotOverstated?: boolean;
   blockingNoAutonomousBlockOrRelease?: boolean;
+  // Drug–Drug Interaction (DDI) Safety Check (interaction-sourced + severity-consistent + no-autonomous-hold-or-override)
+  ddiInteractionSourced?: boolean;
+  ddiSeverityConsistent?: boolean;
+  ddiNoAutonomousHoldOrOverride?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1151,6 +1155,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "EHI withheld or released autonomously, or with no compliance review",
     reason:
       "An information-blocking (45 CFR Part 171) determination autonomously withheld EHI (autoBlockedEhi:true — which could itself be information blocking, or delay urgent care), force-released EHI (autoReleasedEhi:true — which could breach privacy), or did not require compliance review (requiresComplianceReview:false); the agent ADJUDICATES — every determination is a RECOMMENDATION requiring a compliance officer to confirm and act. Mirrors the OIG Exclusion Agent's no-autonomous-block-or-clear and the Right of Access Agent's no-autonomous-denial-or-release posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.ddi.interaction-sourced",
+    signal: "ddiInteractionSourced",
+    violatingValue: false,
+    violationHint: "A reported drug interaction that isn't in the knowledge base",
+    reason:
+      "A drug–drug interaction determination reported an interaction that is off-catalog, or dressed a mismatched severity onto a recorded interaction — every flagged interaction must resolve in the recorded knowledge base with a matching pair + severity, because a fabricated interaction erodes clinician trust and drives alert fatigue. Mirrors the Controlled Substance Agent's guideline-sourced and the Immunization Agent's schedule-sourced posture"
+  },
+  {
+    policyId: "policy.ddi.severity-consistent",
+    signal: "ddiSeverityConsistent",
+    violatingValue: false,
+    violationHint: "An overall severity that doesn't match the detected interactions",
+    reason:
+      "A drug–drug interaction determination's overall severity does not equal the highest cataloged severity among the detected interactions; an INFLATED severity drives wrongful order cancellation and alert fatigue, and a SUPPRESSED severity hides a contraindication. The load-bearing correctness gate — mirrors the Member Cost-Share Agent's math-consistent and the OIG Exclusion Agent's match-not-overstated"
+  },
+  {
+    policyId: "policy.ddi.no-autonomous-hold-or-override",
+    signal: "ddiNoAutonomousHoldOrOverride",
+    violatingValue: false,
+    violationHint: "An order held or an alert overridden autonomously, or with no clinician review",
+    reason:
+      "A drug–drug interaction determination autonomously held / cancelled the order (autoHeldOrder:true — which could deny needed therapy), overrode the interaction alert (autoOverrodeAlert:true — which could push through a contraindicated combination), or did not require clinician review (requiresClinicianReview:false); the agent SCREENS — every finding is a RECOMMENDATION requiring a pharmacist / prescriber to act on or review. Mirrors the Controlled Substance Agent's no-autonomous-prescribing-decision and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

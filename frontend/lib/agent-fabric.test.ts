@@ -451,8 +451,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // (incl. the Right of Access / HIPAA §164.524 agent, the Amendment /
     // Correction / HIPAA §164.526 agent — completing the patient-rights trilogy
     // — and the Information Blocking / Cures Act 45 CFR Part 171 agent, its
-    // enforcement flip-side).
-    expect(listAgents()).toHaveLength(71);
+    // enforcement flip-side), plus the clinical Drug–Drug Interaction (DDI)
+    // Safety Check agent.
+    expect(listAgents()).toHaveLength(72);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
