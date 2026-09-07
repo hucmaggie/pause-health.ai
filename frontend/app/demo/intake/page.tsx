@@ -44,6 +44,7 @@ import { AccountingOfDisclosuresPanel } from "../../../components/accounting-of-
 import { RightOfAccessPanel } from "../../../components/right-of-access-panel";
 import { TimelyFilingPanel } from "../../../components/timely-filing-panel";
 import { SubrogationPanel } from "../../../components/subrogation-panel";
+import { MemberCostSharePanel } from "../../../components/member-cost-share-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { CoordinationOfBenefitsPanel } from "../../../components/coordination-of-benefits-panel";
 import { OverpaymentRecoveryPanel } from "../../../components/overpayment-recovery-panel";
@@ -182,6 +183,7 @@ export default function IntakeDemoPage() {
       <OverpaymentRecoveryPanel />
       <TimelyFilingPanel />
       <SubrogationPanel />
+      <MemberCostSharePanel />
 
       <FinancialAssistancePanel />
       <GoodFaithEstimatePanel />

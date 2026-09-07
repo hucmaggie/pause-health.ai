@@ -444,11 +444,12 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // Filing Compliance agent, and the Subrogation / Third-Party Liability
     // agent), the patient & clinical plane (incl. the
     // Controlled Substance / PDMP Safety Check agent, and the Advance
-    // Beneficiary Notice / Medicare ABN agent), the commercial plane
-    // (incl. the Provider Contracting agent, and the Deal Desk / Quote
-    // Approval (CPQ) agent), and the platform & data substrate (incl. the
-    // Right of Access / HIPAA §164.524 agent).
-    expect(listAgents()).toHaveLength(67);
+    // Beneficiary Notice / Medicare ABN agent, and the Member Cost-Share /
+    // EOB Calculation agent), the commercial plane (incl. the Provider
+    // Contracting agent, and the Deal Desk / Quote Approval (CPQ) agent), and
+    // the platform & data substrate (incl. the Right of Access / HIPAA
+    // §164.524 agent).
+    expect(listAgents()).toHaveLength(68);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

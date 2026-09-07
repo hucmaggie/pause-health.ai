@@ -2034,6 +2034,42 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "member-cost-share-agent",
+    name: "Member Cost-Share / EOB Calculation Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side member cost-share / EOB piece: POST
+    // /api/agents/member-cost-share/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) claims / payer-operations agent that splits an
+    // adjudicated in-network claim's ALLOWED AMOUNT into the member's cost-share
+    // (deductible + coinsurance) and the plan-paid portion, running the classic
+    // deductible → coinsurance → out-of-pocket-maximum WATERFALL against the
+    // member's plan benefit design + current accumulators — producing the EOB
+    // cost-share BREAKDOWN a claims system / human finalizes, NEVER autonomously
+    // posting a charge to the member. It COMPLEMENTS the other payer-operations
+    // agents — distinct from the Claims Adjudication agent (WHAT the allowed
+    // amount is — it produces the allowed amount this agent consumes), the
+    // Coordination of Benefits agent (the ORDER of coverages), the Subrogation
+    // agent (recovery from a liable third party), the Good Faith Estimate agent
+    // (the pre-service uninsured / self-pay estimate), and the Balance Billing
+    // agent (surprise-bill protection): this splits the ALREADY-adjudicated
+    // allowed amount into member vs. plan responsibility using the benefit design
+    // + accumulators. REUSES the existing payer-operations tier. The plan catalog
+    // + waterfall are ILLUSTRATIVE, NOT a certified claims / adjudication system.
+    endpoint: "/api/agents/member-cost-share",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Splits an adjudicated in-network claim's allowed amount into the member's cost-share (deductible + coinsurance) and the plan-paid portion — runs the deductible → coinsurance → out-of-pocket-maximum waterfall against the member's plan benefit design + current accumulators (deductible-met, OOP-met), capping the member at the remaining OOP maximum. Companion to the Claims Adjudication (produces the allowed amount), Coordination of Benefits (payer order), Subrogation (third-party recovery), Good Faith Estimate (pre-service uninsured estimate), and Balance Billing (surprise-bill protection) agents — this splits the ALREADY-adjudicated allowed amount into member vs. plan responsibility",
+      "The split is DETERMINISTIC — a pure function of the claim's own fields + the plan (no randomness, no clock); the deductible is applied first, the remainder is split by the coinsurance rate, and the member's total is capped at the remaining OOP maximum, so the same claim always yields the same member / plan split",
+      "The benefit design must trace to the recorded plan catalog — an off-catalog plan can't be correctly cost-shared and is blocked at the Agent Fabric governance boundary (policy.costshare.benefit-design-sourced); and the split must add up and stay bounded — the member + plan must equal the allowed amount, the member share must be non-negative and within the allowed / remaining OOP maximum, and a split that doesn't add up is blocked (policy.costshare.math-consistent, the load-bearing correctness gate). Mirrors the Good Faith Estimate Agent's charge-master-sourced + math-consistent and the Subrogation Agent's recoverable-within-paid posture",
+      "The EOB cost-share is an ESTIMATE / BREAKDOWN — the agent NEVER posts a charge, an invoice, or a balance to the member; a determination that posts a member charge, or that is not review-gated, is blocked (policy.costshare.no-autonomous-member-charge), and every breakdown is finalized by the claims system / a human. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Advance Beneficiary Notice Agent's no-autonomous-beneficiary-liability posture",
+      "Runs against an ILLUSTRATIVE synthetic plan catalog + deductible / coinsurance / OOP-max waterfall (no copays, tiering, family accumulators, or out-of-network penalties) — clearly labeled; NOT a certified claims / adjudication system (real cost-share is governed by the member's certificate of coverage / SBC, the payer's adjudication system, and applicable state / federal law)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
+  },
+  {
     id: "controlled-substance-agent",
     name: "Controlled Substance / PDMP Safety Check Agent",
     kind: "agentforce",
@@ -2199,7 +2235,8 @@ const POLICIES: PolicyRecord[] = [
       "advance-beneficiary-notice-agent",
       "accounting-of-disclosures-agent",
       "subrogation-agent",
-      "right-of-access-agent"
+      "right-of-access-agent",
+      "member-cost-share-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3256,6 +3293,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Subrogation Agent may NEVER autonomously assert or perfect a lien, reduce the member's settlement, or recover funds (autoAssertedLien:true), and may never find a subrogation interest (eligible:true) without requiring human review (requiresHumanReview:true) — a subrogation determination is a RECOMMENDATION requiring a subrogation specialist / plan counsel to review, because asserting a lien against a member's personal-injury recovery is legally consequential and doctrine-sensitive (made-whole, common-fund). A determination that auto-asserts a lien, or finds an interest without requiring review, is rejected before it can leave the fabric. Mirrors the Claims Overpayment & Recovery Agent's no-autonomous-clawback and the Balance Billing Agent's no-autonomous-balance-bill posture — the harmful action is enforced-off.",
     appliesTo: ["subrogation-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.costshare.benefit-design-sourced",
+    name: "Every cost-share computes from the recorded plan benefit design",
+    description:
+      "The Member Cost-Share Agent may NEVER compute a split from an off-catalog plan (a missing or unrecognized plan id) — the deductible, coinsurance rate, and out-of-pocket maximum must come from the member's recorded plan benefit design, and an ad-hoc plan cannot be correctly cost-shared. A determination computed from an off-catalog plan is rejected before it can leave the fabric. Mirrors the Good Faith Estimate Agent's charge-master-sourced and the Deal Desk Agent's pricing-catalog-sourced posture. (In the prototype the plan catalog is a clearly-labeled illustrative synthetic; in production the benefit design comes from the member's certificate of coverage / SBC and the payer's benefit configuration.)",
+    appliesTo: ["member-cost-share-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.costshare.math-consistent",
+    name: "The member / plan split adds up and stays bounded",
+    description:
+      "The Member Cost-Share Agent's split must add up and stay bounded — the member responsibility + the plan-paid must equal the allowed amount, the member share must be non-negative and never exceed the allowed amount or the remaining out-of-pocket maximum, and the member total must equal the deductible + coinsurance less the OOP-cap reduction. A split that doesn't add up is how a member is silently over-charged, and a determination whose split fails the recomputation is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Good Faith Estimate Agent's math-consistent and the Subrogation Agent's recoverable-within-paid posture.",
+    appliesTo: ["member-cost-share-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.costshare.no-autonomous-member-charge",
+    name: "A member charge is never autonomously posted",
+    description:
+      "The Member Cost-Share Agent may NEVER post a charge, an invoice, or a balance to the member (autoPostedCharge:true), and may never skip adjudication review (requiresAdjudicationReview:true) — the EOB cost-share is an ESTIMATE / BREAKDOWN, and the claims system / a human finalizes it. A determination that posts a member charge, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Advance Beneficiary Notice Agent's no-autonomous-beneficiary-liability posture — the harmful action is enforced-off.",
+    appliesTo: ["member-cost-share-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -9874,6 +9938,115 @@ function store(): FabricStore {
         requestRef: "access-002",
         disposition: "deny-unreviewable",
         requiresHumanReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedMemberCostShareTrace() {
+  const s = store();
+  const mcs0 = Date.now() - 1000 * 60 * 1;
+  const mcsTaskId = "task-seed-member-cost-share-001";
+  const mcsName = "Member Cost-Share / EOB Calculation Agent";
+  s.traces.push(
+    {
+      id: "span-mcs-001",
+      taskId: mcsTaskId,
+      agentId: "member-cost-share-agent",
+      agentName: mcsName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(mcs0).toISOString(),
+      finishedAt: new Date(mcs0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mcs-002",
+      taskId: mcsTaskId,
+      parentSpanId: "span-mcs-001",
+      agentId: "member-cost-share-agent",
+      agentName: mcsName,
+      operation: "costshare.receive-claim",
+      protocol: "a2a",
+      startedAt: new Date(mcs0 + 30).toISOString(),
+      finishedAt: new Date(mcs0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        claimRef: "claim-4471",
+        memberRef: "member-8842",
+        allowedAmount: 4000,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mcs-003",
+      taskId: mcsTaskId,
+      parentSpanId: "span-mcs-002",
+      agentId: "member-cost-share-agent",
+      agentName: mcsName,
+      operation: "costshare.load-benefits",
+      protocol: "a2a",
+      startedAt: new Date(mcs0 + 60).toISOString(),
+      finishedAt: new Date(mcs0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        claimRef: "claim-4471",
+        planId: "plan.silver-ppo",
+        // The honesty invariant: the benefit design traces to the recorded catalog.
+        costShareBenefitSourced: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mcs-004",
+      taskId: mcsTaskId,
+      parentSpanId: "span-mcs-003",
+      agentId: "member-cost-share-agent",
+      agentName: mcsName,
+      operation: "costshare.compute-cost-share",
+      protocol: "a2a",
+      startedAt: new Date(mcs0 + 100).toISOString(),
+      finishedAt: new Date(mcs0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        claimRef: "claim-4471",
+        memberResponsibility: 1200,
+        planPaid: 2800,
+        // The honesty invariants: the split adds up, and no autonomous member charge.
+        costShareMathConsistent: true,
+        costShareNoAutonomousCharge: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mcs-005",
+      taskId: mcsTaskId,
+      parentSpanId: "span-mcs-004",
+      agentId: "member-cost-share-agent",
+      agentName: mcsName,
+      operation: "costshare.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(mcs0 + 140).toISOString(),
+      finishedAt: new Date(mcs0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        claimRef: "claim-4471",
+        memberResponsibility: 1200,
+        requiresAdjudicationReview: true,
         phiAccessed: true,
         synthetic: true
       }

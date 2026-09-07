@@ -158,6 +158,10 @@ export type GovernanceTask = {
   accessGroundSourced?: boolean;
   accessDeadlineComputed?: boolean;
   accessNoAutonomousDenialOrRelease?: boolean;
+  // Member Cost-Share / EOB (benefit-design-sourced + math-consistent + no-autonomous-member-charge)
+  costShareBenefitSourced?: boolean;
+  costShareMathConsistent?: boolean;
+  costShareNoAutonomousCharge?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1039,6 +1043,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A record autonomously released, or a determination with no human review",
     reason:
       "A right-of-access determination autonomously released the record (autoReleased:true) or did not require human review (requiresHumanReview:false); the agent ADJUDICATES — it never releases the record (a privacy risk) or issues a denial (a legal act with appeal rights) on its own, and every determination is a RECOMMENDATION requiring a records / privacy officer to fulfill or review. Mirrors the Accounting of Disclosures Agent's no-autonomous-suppression and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.costshare.benefit-design-sourced",
+    signal: "costShareBenefitSourced",
+    violatingValue: false,
+    violationHint: "A cost-share computed from an off-catalog plan",
+    reason:
+      "A member cost-share determination computed the split from an off-catalog plan (a missing or unrecognized plan id); the deductible, coinsurance rate, and out-of-pocket maximum must come from the member's recorded plan benefit design, and an ad-hoc plan cannot be correctly cost-shared. Mirrors the Good Faith Estimate Agent's charge-master-sourced and the Deal Desk Agent's pricing-catalog-sourced posture"
+  },
+  {
+    policyId: "policy.costshare.math-consistent",
+    signal: "costShareMathConsistent",
+    violatingValue: false,
+    violationHint: "A cost-share split that doesn't add up or is unbounded",
+    reason:
+      "A member cost-share determination's split does not add up — the member responsibility + plan-paid ≠ the allowed amount, the member share is negative or exceeds the allowed / remaining OOP maximum, or the member total ≠ deductible + coinsurance less the OOP-cap reduction; a split that doesn't add up is how a member is silently over-charged. The load-bearing correctness gate — mirrors the Good Faith Estimate Agent's math-consistent and the Subrogation Agent's recoverable-within-paid"
+  },
+  {
+    policyId: "policy.costshare.no-autonomous-member-charge",
+    signal: "costShareNoAutonomousCharge",
+    violatingValue: false,
+    violationHint: "A member charge posted, or a determination with no adjudication review",
+    reason:
+      "A member cost-share determination posted a charge / invoice / balance to the member (autoPostedCharge:true) or did not require adjudication review (requiresAdjudicationReview:false); the EOB cost-share is an ESTIMATE / BREAKDOWN — the claims system / a human finalizes it, and the agent never posts a charge to the member. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Advance Beneficiary Notice Agent's no-autonomous-beneficiary-liability posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
