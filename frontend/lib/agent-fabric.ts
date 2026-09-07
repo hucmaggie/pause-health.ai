@@ -2070,6 +2070,42 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "exclusion-screening-agent",
+    name: "OIG Exclusion / Sanctions Screening Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side exclusion / sanctions-screening
+    // piece: POST /api/agents/exclusion-screening/tasks (card at
+    // /.well-known/agent.json). A DETERMINISTIC (no-Claude) claims /
+    // payer-operations agent that screens a party (a provider, a vendor, an
+    // employee) against the OIG List of Excluded Individuals / Entities (LEIE)
+    // BEFORE a plan pays or contracts with them, computing an HONEST match
+    // strength from explicit identifier signals — never OVERSTATING a name
+    // coincidence into a confirmed exclusion, and never autonomously blocking a
+    // payment or clearing a party. It COMPLEMENTS the other agents — distinct
+    // from the Provider Credentialing agent (whether a provider is QUALIFIED),
+    // the Claims Adjudication agent (the allowed amount), and the FWA agent
+    // (suspected fraud on a claim): this screens a party's IDENTITY against the
+    // OIG exclusion list to prevent an improper PAYMENT to a sanctioned party.
+    // REUSES the existing payer-operations tier. Deliberately NOT PHI-bearing
+    // (it screens a provider / vendor's identity against a public exclusion
+    // list, not a patient's health information) — so it is NOT on the
+    // HIPAA-audit policy. The exclusion catalog + match rules are ILLUSTRATIVE,
+    // NOT a certified exclusion-screening system.
+    endpoint: "/api/agents/exclusion-screening",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Screens a party (a provider / vendor / employee) against the OIG List of Excluded Individuals / Entities (LEIE) before a plan pays or contracts with them — required because the Social Security Act §1128 / §1128A(a)(6) and 42 CFR §1001 prohibit federal-program payment for items or services furnished, ordered, or prescribed by an OIG-excluded party. Given a screening request (a party reference and the party's identifiers — last name, first name, and optionally an NPI and a date of birth), it computes a match STRENGTH grounded in which identifiers actually matched (no-match / possible / probable / confirmed) and a recommended disposition. Companion to the Provider Credentialing (whether a provider is QUALIFIED), Claims Adjudication (the allowed amount), and FWA Detection (fraud) agents — this screens a party's IDENTITY against the exclusion list to prevent an improper PAYMENT",
+      "The match is DETERMINISTIC — a pure function of the request's own fields + the catalog (no randomness, no clock); a confirmed match requires an NPI match OR a full-name AND date-of-birth match, a full-name match with no DOB / NPI is probable, and a last-name coincidence the first name / DOB doesn't corroborate is possible — so the same party always yields the same match strength",
+      "A reported match must trace to a recorded LEIE record — a match asserted without a sourced exclusion record is blocked at the Agent Fabric governance boundary (policy.exclusion.match-record-sourced); and the reported match strength must never exceed what the identifier signals support — a name coincidence dressed up as a confirmed exclusion is blocked (policy.exclusion.match-not-overstated, the load-bearing correctness gate). Mirrors the Right of Access Agent's ground-sourced and the Member Cost-Share Agent's math-consistent posture",
+      "The screening is a RECOMMENDATION — the agent NEVER autonomously blocks a payment (which denies a legitimate provider income) or clears a party (which risks paying a sanctioned party); a determination that auto-blocks / auto-clears, or that is not review-gated, is blocked (policy.exclusion.no-autonomous-block-or-clear), and a compliance officer confirms the identity and acts. Mirrors the Advance Beneficiary Notice Agent's no-autonomous-beneficiary-liability and the Member Cost-Share Agent's no-autonomous-member-charge posture",
+      "Deliberately NOT PHI-bearing — it screens a provider / vendor's identity against a public exclusion list, not a patient's health information, so it is NOT on the HIPAA-audit policy. Runs against an ILLUSTRATIVE synthetic LEIE catalog + match rules (no fuzzy / phonetic matching, no monthly LEIE reload, no SAM.gov / state Medicaid exclusion lists, no reinstatement handling) — clearly labeled; NOT a certified exclusion-screening system (real screening is governed by the OIG LEIE, the OIG Special Advisory Bulletin on the effect of exclusion, and the payer's screening policy)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
+  },
+  {
     id: "controlled-substance-agent",
     name: "Controlled Substance / PDMP Safety Check Agent",
     kind: "agentforce",
@@ -3320,6 +3356,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Member Cost-Share Agent may NEVER post a charge, an invoice, or a balance to the member (autoPostedCharge:true), and may never skip adjudication review (requiresAdjudicationReview:true) — the EOB cost-share is an ESTIMATE / BREAKDOWN, and the claims system / a human finalizes it. A determination that posts a member charge, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Advance Beneficiary Notice Agent's no-autonomous-beneficiary-liability posture — the harmful action is enforced-off.",
     appliesTo: ["member-cost-share-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.exclusion.match-record-sourced",
+    name: "Every exclusion match traces to a recorded LEIE record",
+    description:
+      "The OIG Exclusion Screening Agent may NEVER report a match (anything other than no-match) without citing a matchedExclusionId that resolves in the recorded LEIE catalog — a match asserted without a sourced exclusion record is not a lawful basis to hold a payment. A determination that reports a match with no sourced record is rejected before it can leave the fabric. Mirrors the Right of Access Agent's ground-sourced and the Subrogation Agent's basis-sourced posture. (In the prototype the LEIE catalog is a clearly-labeled illustrative synthetic; in production the match traces to the OIG's monthly LEIE download and the party's verified identifiers.)",
+    appliesTo: ["exclusion-screening-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.exclusion.match-not-overstated",
+    name: "A match strength is never stronger than the signals support",
+    description:
+      "The OIG Exclusion Screening Agent's reported match strength must never exceed what the identifier signals support — a confirmed match requires an NPI match OR a full-name AND date-of-birth match, a full-name match with no DOB / NPI is at most probable, and a last-name coincidence the first name / DOB doesn't corroborate is at most possible. Overstating a match is how a legitimate provider's payment is wrongly held on a shared name, and a determination whose reported strength exceeds the recomputed supportable strength is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Member Cost-Share Agent's math-consistent and the Subrogation Agent's recoverable-within-paid posture.",
+    appliesTo: ["exclusion-screening-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.exclusion.no-autonomous-block-or-clear",
+    name: "A payment is never autonomously blocked, and a party is never autonomously cleared",
+    description:
+      "The OIG Exclusion Screening Agent may NEVER autonomously block a payment (autoBlockedPayment:true), clear a party (autoCleared:true), or skip compliance review (requiresComplianceReview:true) — the screening is a RECOMMENDATION, and a compliance officer confirms the identity and acts, because a wrongful block denies a legitimate provider income and a wrongful clear risks paying a sanctioned party. A determination that auto-blocks / auto-clears, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Advance Beneficiary Notice Agent's no-autonomous-beneficiary-liability and the Member Cost-Share Agent's no-autonomous-member-charge posture — the harmful action is enforced-off.",
+    appliesTo: ["exclusion-screening-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -10048,6 +10111,95 @@ function store(): FabricStore {
         memberResponsibility: 1200,
         requiresAdjudicationReview: true,
         phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedExclusionScreeningTrace() {
+  const s = store();
+  const exc0 = Date.now() - 1000 * 60 * 1;
+  const excTaskId = "task-seed-exclusion-screening-001";
+  const excName = "OIG Exclusion / Sanctions Screening Agent";
+  s.traces.push(
+    {
+      id: "span-exc-001",
+      taskId: excTaskId,
+      agentId: "exclusion-screening-agent",
+      agentName: excName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(exc0).toISOString(),
+      finishedAt: new Date(exc0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // NOT PHI-bearing — screens a provider's identity against a public list.
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-exc-002",
+      taskId: excTaskId,
+      parentSpanId: "span-exc-001",
+      agentId: "exclusion-screening-agent",
+      agentName: excName,
+      operation: "exclusion.receive-party",
+      protocol: "a2a",
+      startedAt: new Date(exc0 + 30).toISOString(),
+      finishedAt: new Date(exc0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        partyRef: "provider-3391",
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-exc-003",
+      taskId: excTaskId,
+      parentSpanId: "span-exc-002",
+      agentId: "exclusion-screening-agent",
+      agentName: excName,
+      operation: "exclusion.match-leie",
+      protocol: "a2a",
+      startedAt: new Date(exc0 + 60).toISOString(),
+      finishedAt: new Date(exc0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        partyRef: "provider-3391",
+        matchStrength: "confirmed",
+        matchedExclusionId: "leie-1001",
+        // The honesty invariants: the match is sourced and not overstated.
+        exclusionMatchSourced: true,
+        exclusionMatchNotOverstated: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-exc-004",
+      taskId: excTaskId,
+      parentSpanId: "span-exc-003",
+      agentId: "exclusion-screening-agent",
+      agentName: excName,
+      operation: "exclusion.recommend-disposition",
+      protocol: "a2a",
+      startedAt: new Date(exc0 + 100).toISOString(),
+      finishedAt: new Date(exc0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        partyRef: "provider-3391",
+        disposition: "recommend-block-pending-review",
+        // The honesty invariant: no autonomous payment block or clear.
+        exclusionNoAutonomousBlockOrClear: true,
+        requiresComplianceReview: true,
+        phiAccessed: false,
         synthetic: true
       }
     }

@@ -162,6 +162,10 @@ export type GovernanceTask = {
   costShareBenefitSourced?: boolean;
   costShareMathConsistent?: boolean;
   costShareNoAutonomousCharge?: boolean;
+  // OIG Exclusion / Sanctions Screening (match-record-sourced + match-not-overstated + no-autonomous-block-or-clear)
+  exclusionMatchSourced?: boolean;
+  exclusionMatchNotOverstated?: boolean;
+  exclusionNoAutonomousBlockOrClear?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1067,6 +1071,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A member charge posted, or a determination with no adjudication review",
     reason:
       "A member cost-share determination posted a charge / invoice / balance to the member (autoPostedCharge:true) or did not require adjudication review (requiresAdjudicationReview:false); the EOB cost-share is an ESTIMATE / BREAKDOWN — the claims system / a human finalizes it, and the agent never posts a charge to the member. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Advance Beneficiary Notice Agent's no-autonomous-beneficiary-liability posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.exclusion.match-record-sourced",
+    signal: "exclusionMatchSourced",
+    violatingValue: false,
+    violationHint: "An exclusion match with no sourced LEIE record",
+    reason:
+      "An exclusion-screening determination reported a match (not no-match) without citing a matchedExclusionId that resolves in the recorded LEIE catalog; a match asserted without a sourced exclusion record is not a lawful basis to hold a payment. Mirrors the Right of Access Agent's ground-sourced and the Subrogation Agent's basis-sourced posture"
+  },
+  {
+    policyId: "policy.exclusion.match-not-overstated",
+    signal: "exclusionMatchNotOverstated",
+    violatingValue: false,
+    violationHint: "A match strength stronger than the identifier signals support",
+    reason:
+      "An exclusion-screening determination reported a match strength stronger than its identifier signals support — a confirmed match requires an NPI match OR a full-name AND date-of-birth match, and a name coincidence must never be reported as confirmed; overstating a match is how a legitimate provider's payment is wrongly held on a shared name. The load-bearing correctness gate — mirrors the Member Cost-Share Agent's math-consistent and the Subrogation Agent's recoverable-within-paid"
+  },
+  {
+    policyId: "policy.exclusion.no-autonomous-block-or-clear",
+    signal: "exclusionNoAutonomousBlockOrClear",
+    violatingValue: false,
+    violationHint: "A payment blocked / a party cleared autonomously",
+    reason:
+      "An exclusion-screening determination autonomously blocked a payment (autoBlockedPayment:true), cleared a party (autoCleared:true), or did not require compliance review (requiresComplianceReview:false); the screening is a RECOMMENDATION — a compliance officer confirms the identity and acts, because a wrongful block denies a legitimate provider income and a wrongful clear risks paying a sanctioned party. Mirrors the Advance Beneficiary Notice Agent's no-autonomous-beneficiary-liability and the Member Cost-Share Agent's no-autonomous-member-charge posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

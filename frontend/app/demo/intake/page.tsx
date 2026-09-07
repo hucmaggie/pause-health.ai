@@ -45,6 +45,7 @@ import { RightOfAccessPanel } from "../../../components/right-of-access-panel";
 import { TimelyFilingPanel } from "../../../components/timely-filing-panel";
 import { SubrogationPanel } from "../../../components/subrogation-panel";
 import { MemberCostSharePanel } from "../../../components/member-cost-share-panel";
+import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { CoordinationOfBenefitsPanel } from "../../../components/coordination-of-benefits-panel";
 import { OverpaymentRecoveryPanel } from "../../../components/overpayment-recovery-panel";
@@ -184,6 +185,7 @@ export default function IntakeDemoPage() {
       <TimelyFilingPanel />
       <SubrogationPanel />
       <MemberCostSharePanel />
+      <ExclusionScreeningPanel />
 
       <FinancialAssistancePanel />
       <GoodFaithEstimatePanel />
