@@ -41,6 +41,7 @@ import { DeidentificationPanel } from "../../../components/deidentification-pane
 import { MinimumNecessaryPanel } from "../../../components/minimum-necessary-panel";
 import { AuditLogIntegrityPanel } from "../../../components/audit-log-integrity-panel";
 import { AccountingOfDisclosuresPanel } from "../../../components/accounting-of-disclosures-panel";
+import { RightOfAccessPanel } from "../../../components/right-of-access-panel";
 import { TimelyFilingPanel } from "../../../components/timely-filing-panel";
 import { SubrogationPanel } from "../../../components/subrogation-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
@@ -174,6 +175,7 @@ export default function IntakeDemoPage() {
       <MinimumNecessaryPanel />
       <AuditLogIntegrityPanel />
       <AccountingOfDisclosuresPanel />
+      <RightOfAccessPanel />
 
       <CoordinationOfBenefitsPanel />
 

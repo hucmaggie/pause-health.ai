@@ -1685,6 +1685,49 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "data-plane"
   },
   {
+    id: "right-of-access-agent",
+    name: "Right of Access (HIPAA §164.524) Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the MuleSoft control-plane / data-substrate
+    // right-of-access service: POST /api/agents/right-of-access/tasks (card at
+    // /.well-known/agent.json). A DETERMINISTIC (no-Claude) data-substrate agent
+    // that adjudicates a patient's HIPAA §164.524 RIGHT to GET a copy of their own
+    // PHI, and BY WHEN. Given an access request (a patient reference, the request
+    // type, the request date, an as-of date, whether the requested PHI is in a
+    // designated record set, an optional cited denial-ground / exception, and
+    // whether the single 30-day extension was invoked), it DETERMINISTICALLY
+    // computes the §164.524 response deadline (request date + 30 days, or + 60 with
+    // the extension, via pure UTC date math — dates as data, NO Date.now()),
+    // classifies any cited exception against the §164.524 grounds (unreviewable —
+    // psychotherapy notes, legal-proceeding compilation, CLIA-exempt lab; reviewable
+    // — endangerment, reference to another person), and decides the disposition
+    // (grant-in-full / deny-unreviewable / deny-reviewable-needs-review /
+    // not-accessible-outside-record-set), NEVER autonomously releasing the record or
+    // issuing a denial. It COMPLEMENTS the other platform agents — distinct from the
+    // Accounting of Disclosures agent (WHO the PHI was disclosed to, §164.528), the
+    // Consent agent (whether a patient may be contacted / data used), the Minimum
+    // Necessary agent (how much PHI a purpose may see), the De-Identification agent
+    // (whether a dataset is still PHI), the Data Retention agent (records
+    // disposition), and the Audit Log Integrity agent (whether the audit TRAIL is
+    // tamper-evident): this answers the patient's §164.524 RIGHT to GET a copy of
+    // their own record. REUSES the existing data-plane tier (platform plane). The
+    // exception catalog + 30/60-day math are ILLUSTRATIVE, NOT a certified HIM /
+    // release-of-information system.
+    endpoint: "/api/agents/right-of-access",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "The right-of-access layer of the data substrate — given a patient's access request, confirms the PHI is in a designated record set, computes the §164.524 response deadline (30 days, + 30 with the single extension), classifies any cited denial ground (unreviewable / reviewable) against the recorded exception catalog, and decides the disposition (grant-in-full / deny-unreviewable / deny-reviewable-needs-review / not-accessible-outside-record-set). Complements (not duplicates) the Accounting of Disclosures agent (WHO the PHI was disclosed to, §164.528), the Consent agent (whether a patient may be contacted / data used), the Minimum Necessary agent (how much PHI a purpose may see), and the Audit Log Integrity agent (whether the audit TRAIL is tamper-evident) — this answers the patient's §164.524 RIGHT to GET a copy of their own record, and BY WHEN",
+      "The determination is DETERMINISTIC — a pure function of the request's own fields (no randomness, no clock — dates taken as data); the deadline is the request date + 30 (or + 60 with the extension), and the same request always yields the same deadline + classification + disposition",
+      "Every cited denial ground must trace to the recorded §164.524 exception catalog — an off-catalog ground is not a lawful basis to withhold a patient's own record and is blocked at the Agent Fabric governance boundary (policy.access.ground-sourced); and the response deadline must equal the request date + 30/60 days — a guessed / mis-stated deadline is blocked (policy.access.deadline-computed, the load-bearing correctness gate). Mirrors the Accounting of Disclosures Agent's purpose-category-sourced and the Timely Filing Agent's deadline-computed posture",
+      "The agent ADJUDICATES — it NEVER releases the record (a privacy risk) or issues a denial (a legal act with appeal rights) on its own; a determination that auto-releases the record or is not review-gated is blocked (policy.access.no-autonomous-denial-or-release), and every determination is a recommendation requiring a records / privacy officer to fulfill or review. Mirrors the Accounting of Disclosures Agent's no-autonomous-suppression and the Minimum Necessary Agent's no-autonomous-over-disclosure posture",
+      "Runs against an ILLUSTRATIVE synthetic exception catalog + 30/60-day math — clearly labeled; NOT a certified release-of-information system (real access is governed by HIPAA §164.524 — the full set of grounds for denial, the reviewable-denial review process, the fee limits, and the designated-record-set definition — the HITECH electronic-copy rules, and the covered entity's Notice of Privacy Practices)"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
+  },
+  {
     id: "coordination-of-benefits-agent",
     name: "Coordination of Benefits Agent",
     kind: "agentforce",
@@ -2155,7 +2198,8 @@ const POLICIES: PolicyRecord[] = [
       "controlled-substance-agent",
       "advance-beneficiary-notice-agent",
       "accounting-of-disclosures-agent",
-      "subrogation-agent"
+      "subrogation-agent",
+      "right-of-access-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3158,6 +3202,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Accounting of Disclosures Agent may NEVER delete, redact, or suppress a logged disclosure (autonomousSuppression:true) — that would falsify the accounting and destroy evidence — and it may never release the accounting without privacy-officer review (requiresPrivacyOfficerReview:true). A determination that suppresses a logged disclosure, or that does not require privacy-officer review, is rejected before it can leave the fabric. Mirrors the Audit Log Integrity Agent's no-autonomous-redaction and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off. (In the prototype the release workflow is a clearly-labeled illustrative synthetic; in production release is the privacy officer's human-in-the-loop process under §164.528.)",
     appliesTo: ["accounting-of-disclosures-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.access.ground-sourced",
+    name: "Every denial ground traces to the recorded §164.524 catalog",
+    description:
+      "The Right of Access Agent may NEVER deny access (in part or full) on a cited ground that is off-catalog (a missing or unrecognized exception id) — a §164.524 denial is permitted only on a recorded statutory ground (psychotherapy notes, information compiled for a legal proceeding, a CLIA-exempt lab, an endangerment or reference-to-another-person reviewable ground), and an ad-hoc / un-sourced ground is not a lawful basis to withhold a patient's own record. A determination denying on an off-catalog ground is rejected before it can leave the fabric. Mirrors the Accounting of Disclosures Agent's purpose-category-sourced and the Minimum Necessary Agent's purpose-of-use-sourced posture. (In the prototype the exception catalog is a clearly-labeled illustrative synthetic; in production the grounds come from HIPAA §164.524 and the covered entity's Notice of Privacy Practices.)",
+    appliesTo: ["right-of-access-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.access.deadline-computed",
+    name: "The response deadline is the request date + 30/60 days",
+    description:
+      "The Right of Access Agent's response deadline must equal the request date + 30 days (+ 30 more when the single extension is invoked) — a guessed / mis-stated deadline is how an access request quietly runs past its §164.524 legal clock. A determination whose deadline (or days-until) does not match the recomputation from its own fields is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Timely Filing Agent's deadline-computed and the Good Faith Estimate Agent's math-consistent posture.",
+    appliesTo: ["right-of-access-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.access.no-autonomous-denial-or-release",
+    name: "The record is never autonomously released or denied",
+    description:
+      "The Right of Access Agent may NEVER release the record (autoReleased:true) or issue a denial on its own, and may never skip human review (requiresHumanReview:true) — the agent ADJUDICATES; releasing the record is a privacy risk and a denial is a legal act with appeal rights, so every determination is a RECOMMENDATION requiring a records / privacy officer to fulfill or review. A determination that auto-releases the record, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Accounting of Disclosures Agent's no-autonomous-suppression and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off.",
+    appliesTo: ["right-of-access-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -9693,6 +9764,117 @@ function store(): FabricStore {
         quoteRef: "quote-002",
         disposition: "escalate-to-deal-desk",
         phiAccessed: false,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedRightOfAccessTrace() {
+  const s = store();
+  const roa0 = Date.now() - 1000 * 60 * 1;
+  const roaTaskId = "task-seed-right-of-access-001";
+  const roaName = "Right of Access (HIPAA §164.524) Agent";
+  s.traces.push(
+    {
+      id: "span-roa-001",
+      taskId: roaTaskId,
+      agentId: "right-of-access-agent",
+      agentName: roaName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(roa0).toISOString(),
+      finishedAt: new Date(roa0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-roa-002",
+      taskId: roaTaskId,
+      parentSpanId: "span-roa-001",
+      agentId: "right-of-access-agent",
+      agentName: roaName,
+      operation: "access.receive-request",
+      protocol: "a2a",
+      startedAt: new Date(roa0 + 30).toISOString(),
+      finishedAt: new Date(roa0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "access-002",
+        patientRef: "patient-7310",
+        requestType: "copy",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-roa-003",
+      taskId: roaTaskId,
+      parentSpanId: "span-roa-002",
+      agentId: "right-of-access-agent",
+      agentName: roaName,
+      operation: "access.assess-grounds",
+      protocol: "a2a",
+      startedAt: new Date(roa0 + 60).toISOString(),
+      finishedAt: new Date(roa0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "access-002",
+        exceptionId: "exception.psychotherapy-notes",
+        exceptionType: "unreviewable",
+        // The honesty invariant: a denial cites a recorded §164.524 ground.
+        accessGroundSourced: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-roa-004",
+      taskId: roaTaskId,
+      parentSpanId: "span-roa-003",
+      agentId: "right-of-access-agent",
+      agentName: roaName,
+      operation: "access.compute-deadline",
+      protocol: "a2a",
+      startedAt: new Date(roa0 + 100).toISOString(),
+      finishedAt: new Date(roa0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "access-002",
+        responseDeadline: "2026-09-24",
+        daysUntilDeadline: 17,
+        disposition: "deny-unreviewable",
+        // The honesty invariants: the deadline is computed, and never an autonomous release.
+        accessDeadlineComputed: true,
+        accessNoAutonomousDenialOrRelease: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-roa-005",
+      taskId: roaTaskId,
+      parentSpanId: "span-roa-004",
+      agentId: "right-of-access-agent",
+      agentName: roaName,
+      operation: "access.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(roa0 + 140).toISOString(),
+      finishedAt: new Date(roa0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "access-002",
+        disposition: "deny-unreviewable",
+        requiresHumanReview: true,
+        phiAccessed: true,
         synthetic: true
       }
     }

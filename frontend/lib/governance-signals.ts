@@ -154,6 +154,10 @@ export type GovernanceTask = {
   dealDeskCatalogSourced?: boolean;
   dealDeskMathConsistent?: boolean;
   dealDeskNoAutonomousApproval?: boolean;
+  // Right of Access / HIPAA §164.524 (ground-sourced + deadline-computed + no-autonomous-denial-or-release)
+  accessGroundSourced?: boolean;
+  accessDeadlineComputed?: boolean;
+  accessNoAutonomousDenialOrRelease?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1011,6 +1015,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An out-of-guardrail quote marked auto-approved",
     reason:
       "A deal-desk quote decision auto-approved (autoApproved:true) — or did not require deal-desk approval for — a quote with a line whose discount exceeds its product's max auto-approve guardrail; an out-of-guardrail discount is a RECOMMENDATION that must escalate to a human deal-desk owner, never an autonomous approval. Mirrors the Account Management Agent's human-owner-before-contract-change and the Provider Contracting Agent's no-autonomous-term-change posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.access.ground-sourced",
+    signal: "accessGroundSourced",
+    violatingValue: false,
+    violationHint: "A denial cites an off-catalog §164.524 ground",
+    reason:
+      "A right-of-access determination denied (in part or full) on a cited ground that is off-catalog (a missing or unrecognized exception id); a §164.524 denial is permitted only on a recorded statutory ground, and an ad-hoc / un-sourced ground is not a lawful basis to withhold a patient's own record. Mirrors the Accounting of Disclosures Agent's purpose-category-sourced and the Minimum Necessary Agent's purpose-of-use-sourced posture"
+  },
+  {
+    policyId: "policy.access.deadline-computed",
+    signal: "accessDeadlineComputed",
+    violatingValue: false,
+    violationHint: "A response deadline that isn't request-date + 30/60 days",
+    reason:
+      "A right-of-access determination's response deadline (or days-until) does not equal the request date + 30 days (+ 30 more when the single extension is invoked); a guessed / mis-stated deadline is how an access request quietly runs past its §164.524 legal clock. The load-bearing correctness gate — mirrors the Timely Filing Agent's deadline-computed and the Good Faith Estimate Agent's math-consistent"
+  },
+  {
+    policyId: "policy.access.no-autonomous-denial-or-release",
+    signal: "accessNoAutonomousDenialOrRelease",
+    violatingValue: false,
+    violationHint: "A record autonomously released, or a determination with no human review",
+    reason:
+      "A right-of-access determination autonomously released the record (autoReleased:true) or did not require human review (requiresHumanReview:false); the agent ADJUDICATES — it never releases the record (a privacy risk) or issues a denial (a legal act with appeal rights) on its own, and every determination is a RECOMMENDATION requiring a records / privacy officer to fulfill or review. Mirrors the Accounting of Disclosures Agent's no-autonomous-suppression and the Minimum Necessary Agent's no-autonomous-over-disclosure posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
