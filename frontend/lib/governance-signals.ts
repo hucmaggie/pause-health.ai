@@ -218,6 +218,10 @@ export type GovernanceTask = {
   benchmarkCohortSourced?: boolean;
   benchmarkStatsConsistent?: boolean;
   benchmarkNoAutonomousTiering?: boolean;
+  // Household / Family-Unit Composition (links-sourced + partition-consistent + no-autonomous-merge)
+  householdLinksSourced?: boolean;
+  householdPartitionConsistent?: boolean;
+  householdNoAutonomousMerge?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1459,6 +1463,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A provider tiered / penalized / de-networked autonomously, or with no network review",
     reason:
       "A provider-benchmarking finding autonomously tiered the provider, adjusted their payment, or removed them from the network (autoTiered:true — each is a commercially consequential action that must be authorized) or did not require network review (requiresNetworkReview:false); the agent BENCHMARKS — every finding is a RECOMMENDATION requiring a network manager to confirm. Mirrors the Provider Contracting Agent's no-autonomous-term-change and the Timely Filing Agent's no-autonomous-write-off posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.household.links-sourced",
+    signal: "householdLinksSourced",
+    violatingValue: false,
+    violationHint: "A phantom relationship link, or a household that doesn't partition the members",
+    reason:
+      "A household-composition finding is not built from the submitted batch — every relationship link must connect two SUBMITTED members (no phantom relationship to a member not in the batch), and the households must PARTITION exactly the submitted members (each member in exactly one household, all covered, none invented). A phantom link or a dropped / invented member silently mis-groups a family. The sourced + completeness gate — mirrors the Enrollment Reconciliation Agent's reconciliation-complete and the Caseload Balancing Agent's assignment-complete"
+  },
+  {
+    policyId: "policy.household.partition-consistent",
+    signal: "householdPartitionConsistent",
+    violatingValue: false,
+    violationHint: "A grouping that doesn't match the connected components of the links",
+    reason:
+      "A household-composition finding's grouping does not add up — recomputing the union-find from the members + links must reproduce the reported households, household count, largest-household size, member count, and disposition. A wrong grouping (two unlinked members merged, or two linked members split apart) mis-applies a family accumulator or leaks one member's data to another. The load-bearing correctness gate — mirrors the Provider Benchmarking Agent's stats-consistent and the Claim Lifecycle Agent's transition-consistent"
+  },
+  {
+    policyId: "policy.household.no-autonomous-merge",
+    signal: "householdNoAutonomousMerge",
+    violatingValue: false,
+    violationHint: "Member records merged / enrollment changed autonomously, or with no steward review",
+    reason:
+      "A household-composition finding autonomously merged member records, changed enrollment, or applied a family accumulator (autoMerged:true — each is a consequential action that must be authorized) or did not require steward review (requiresStewardReview:false); the agent PROPOSES a grouping — every finding is a RECOMMENDATION requiring a data steward to confirm. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the Master-Patient-Index Agent's no-autonomous-merge posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

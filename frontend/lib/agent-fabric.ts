@@ -2433,6 +2433,58 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "household-composition-agent",
+    name: "Household / Family-Unit Composition Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side household-composition piece: POST
+    // /api/agents/household-composition/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) claims / payer-operations agent that takes a
+    // batch of plan MEMBERS plus a set of PAIRWISE relationship LINKS (shared
+    // subscriber, shared address, a tax-dependent tie) and groups the members
+    // into HOUSEHOLDS by computing the CONNECTED COMPONENTS of the relationship
+    // graph — so a member linked to a member linked to a third all land in ONE
+    // household even when the first and third are not directly linked
+    // (transitivity). UNLIKE the Provider Benchmarking agent's PERCENTILE / RANK
+    // STATISTICS, the Claim Lifecycle agent's FSM TRANSITION VALIDATION, the
+    // Medication Name Safety agent's STRING EDIT DISTANCE, the Schedule Conflict
+    // agent's GREEDY INTERVAL SELECTION, the Caseload Balancing agent's GREEDY
+    // BIN-PACKING, the Access Anomaly agent's SLIDING-WINDOW COUNTING, the
+    // Coverage Continuity agent's INTERVAL MERGING, the Care Pathway agent's
+    // TOPOLOGICAL ORDERING, the Enrollment Reconciliation agent's KEYED
+    // SET-DIFFERENCE, the Member Cost-Share agent's SEQUENTIAL dollar waterfall,
+    // the DDI agent's PAIRWISE KNOWLEDGE-BASE LOOKUP, or the Audit Log Integrity
+    // agent's HASH CHAIN — and CRUCIALLY distinct from the Master-Patient-Index
+    // agent's identity MATCHING (which links records of the SAME person across
+    // systems) — the heart of this service is UNION-FIND / DISJOINT-SET CONNECTED
+    // COMPONENTS: it clusters DIFFERENT people who share a household by taking the
+    // transitive closure of the relationship links. A household drives a family
+    // deductible / out-of-pocket maximum, household outreach, and consent scoping;
+    // a wrong grouping mis-applies a family accumulator or leaks one member's data
+    // to another. A determination is a RECOMMENDATION requiring a data steward to
+    // confirm — the agent never autonomously MERGES member records, changes
+    // enrollment, or applies a family accumulator. It COMPLEMENTS the other
+    // member / enrollment agents — distinct from the Master-Patient-Index agent
+    // (same-person matching), the Enrollment Reconciliation agent (WHO is enrolled
+    // via a set-difference), and the Coordination of Benefits agent (the ORDER of
+    // a member's coverages): this GROUPS distinct members into family units. It is
+    // PHI-bearing (the members are patients). REUSES the existing payer-operations
+    // tier. The members + links are ILLUSTRATIVE, NOT a certified enrollment / MDM
+    // system.
+    endpoint: "/api/agents/household-composition",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a batch of plan members plus a set of pairwise relationship links (shared subscriber, shared address, a tax-dependent tie) and groups the members into households by computing the connected components of the relationship graph — so a member linked to a member linked to a third all land in one household even when the first and third are not directly linked (transitivity) — reporting the households, the household count, the largest-household size, and the disposition (all-singletons / households-formed). A deterministic payer-operations agent; it COMPLEMENTS the Master-Patient-Index agent (which matches records of the SAME person), the Enrollment Reconciliation agent (WHO is enrolled via a keyed set-difference), and the Coordination of Benefits agent (the ORDER of a member's coverages) — this GROUPS distinct members into family units",
+      "The grouping is DETERMINISTIC — a pure function of the request's own members + links (no randomness, no clock; not a percentile, an FSM transition, an edit distance, an interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, a dollar waterfall, a pairwise KB lookup, or a hash chain but UNION-FIND / DISJOINT-SET CONNECTED COMPONENTS — the transitive closure of the relationship links); the same members + links always yield the same households, with deterministic household ids (assigned by each component's minimum member)",
+      "The grouping must be built from the submitted batch — every link must connect two submitted members (no phantom relationship), and the households must PARTITION exactly the submitted members (each member in exactly one household, all covered, none invented); a phantom link or a dropped / invented member is blocked at the Agent Fabric governance boundary (policy.household.links-sourced, the sourced + completeness gate); and the partition must be the correct connected components — recomputing the union-find must reproduce the reported households, counts, and disposition; a wrong grouping (two unlinked members merged, or two linked members split) is blocked (policy.household.partition-consistent, the load-bearing correctness gate). Mirrors the Enrollment Reconciliation Agent's reconciliation-complete + the Provider Benchmarking Agent's stats-consistent posture",
+      "The agent PROPOSES a household grouping — it NEVER merges member records, changes enrollment, or applies a family accumulator (each is a consequential action that must be authorized) on its own; a determination that auto-merges or is not review-gated is blocked (policy.household.no-autonomous-merge), and every grouping is confirmed by a data steward. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the Master-Patient-Index Agent's no-autonomous-merge posture",
+      "Runs against ILLUSTRATIVE synthetic members + links — clearly labeled; NOT a certified enrollment / MDM system (real household / family-unit composition uses the 834 subscriber / dependent structure, address normalization, tax-household rules, and a master-data-management steward's judgment). PHI-bearing — the members are patients"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
+  },
+  {
     id: "coverage-continuity-agent",
     name: "Creditable Coverage Continuity Agent",
     kind: "agentforce",
@@ -2869,7 +2921,8 @@ const POLICIES: PolicyRecord[] = [
       "caseload-balancing-agent",
       "schedule-conflict-agent",
       "medication-name-safety-agent",
-      "claim-lifecycle-agent"
+      "claim-lifecycle-agent",
+      "household-composition-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -4115,6 +4168,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Provider Benchmarking Agent may NEVER tier the provider, adjust their payment, or remove them from the network on its own (autoTiered:true — each is a commercially consequential action that must be authorized) or skip network review (requiresNetworkReview:true) — the agent BENCHMARKS, and every finding is a RECOMMENDATION requiring a network manager to confirm. A finding that auto-tiers, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Provider Contracting Agent's no-autonomous-term-change and the Timely Filing Agent's no-autonomous-write-off posture — the harmful action is enforced-off.",
     appliesTo: ["provider-benchmarking-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.household.links-sourced",
+    name: "The links + household partition are sourced and complete",
+    description:
+      "The Household Composition Agent's grouping must be built from the submitted batch: every relationship link must connect two SUBMITTED members (no phantom relationship to a member not in the batch), and the households must PARTITION exactly the submitted members — each member in exactly one household, all covered, none invented. A phantom link or a dropped / invented member silently mis-groups a family. A finding that references a phantom member or does not partition the batch is rejected before it can leave the fabric. This is the sourced + completeness gate. Mirrors the Enrollment Reconciliation Agent's reconciliation-complete and the Caseload Balancing Agent's assignment-complete posture.",
+    appliesTo: ["household-composition-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.household.partition-consistent",
+    name: "The partition is the correct connected components",
+    description:
+      "The Household Composition Agent's grouping must recompute exactly: recomputing the union-find / connected components from the members + links must reproduce the reported households (same ids, members, sizes), household count, largest-household size, member count, and disposition. A wrong grouping — two unlinked members merged, or two linked members split apart — mis-applies a family accumulator or leaks one member's data to another. A finding whose partition doesn't recompute is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Provider Benchmarking Agent's stats-consistent and the Claim Lifecycle Agent's transition-consistent posture.",
+    appliesTo: ["household-composition-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.household.no-autonomous-merge",
+    name: "Member records are never autonomously merged",
+    description:
+      "The Household Composition Agent may NEVER merge member records, change enrollment, or apply a family accumulator on its own (autoMerged:true — each is a consequential action that must be authorized) or skip steward review (requiresStewardReview:true) — the agent PROPOSES a grouping, and every finding is a RECOMMENDATION requiring a data steward to confirm. A finding that auto-merges, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the Master-Patient-Index Agent's no-autonomous-merge posture — the harmful action is enforced-off.",
+    appliesTo: ["household-composition-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -12576,6 +12656,114 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous tiering.
         benchmarkNoAutonomousTiering: true,
         requiresNetworkReview: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedHouseholdCompositionTrace() {
+  const s = store();
+  const hh0 = Date.now() - 1000 * 60 * 1;
+  const hhTaskId = "task-seed-household-composition-001";
+  const hhName = "Household / Family-Unit Composition Agent";
+  s.traces.push(
+    {
+      id: "span-household-composition-001",
+      taskId: hhTaskId,
+      agentId: "household-composition-agent",
+      agentName: hhName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(hh0).toISOString(),
+      finishedAt: new Date(hh0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-household-composition-002",
+      taskId: hhTaskId,
+      parentSpanId: "span-household-composition-001",
+      agentId: "household-composition-agent",
+      agentName: hhName,
+      operation: "household.receive-batch",
+      protocol: "a2a",
+      startedAt: new Date(hh0 + 30).toISOString(),
+      finishedAt: new Date(hh0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        batchRef: "hh-batch-001",
+        memberCount: 6,
+        linkCount: 3,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-household-composition-003",
+      taskId: hhTaskId,
+      parentSpanId: "span-household-composition-002",
+      agentId: "household-composition-agent",
+      agentName: hhName,
+      operation: "household.compute-components",
+      protocol: "a2a",
+      startedAt: new Date(hh0 + 60).toISOString(),
+      finishedAt: new Date(hh0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        batchRef: "hh-batch-001",
+        householdCount: 3,
+        largestHouseholdSize: 3,
+        // The honesty invariants: links sourced, partition exact.
+        householdLinksSourced: true,
+        householdPartitionConsistent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-household-composition-004",
+      taskId: hhTaskId,
+      parentSpanId: "span-household-composition-003",
+      agentId: "household-composition-agent",
+      agentName: hhName,
+      operation: "household.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(hh0 + 100).toISOString(),
+      finishedAt: new Date(hh0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        batchRef: "hh-batch-001",
+        disposition: "households-formed",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-household-composition-005",
+      taskId: hhTaskId,
+      parentSpanId: "span-household-composition-004",
+      agentId: "household-composition-agent",
+      agentName: hhName,
+      operation: "household.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(hh0 + 140).toISOString(),
+      finishedAt: new Date(hh0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        batchRef: "hh-batch-001",
+        // The honesty invariant: never an autonomous merge.
+        householdNoAutonomousMerge: true,
+        requiresStewardReview: true,
+        phiAccessed: true,
         synthetic: true
       }
     }

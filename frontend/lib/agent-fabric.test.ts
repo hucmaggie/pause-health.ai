@@ -459,9 +459,10 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // care-coordination Caseload Balancing agent, the care-coordination
     // Scheduling Conflict / Double-Booking Guard agent, the clinical
     // Medication Name Safety (LASA) agent, the payer-operations Claim
-    // Lifecycle / Status-Transition Guard agent, and the commercial-operations
-    // Provider Cost & Quality Percentile Benchmarking agent.
-    expect(listAgents()).toHaveLength(82);
+    // Lifecycle / Status-Transition Guard agent, the commercial-operations
+    // Provider Cost & Quality Percentile Benchmarking agent, and the
+    // payer-operations Household / Family-Unit Composition agent.
+    expect(listAgents()).toHaveLength(83);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
