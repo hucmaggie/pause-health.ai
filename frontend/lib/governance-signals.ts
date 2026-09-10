@@ -182,6 +182,10 @@ export type GovernanceTask = {
   mlrInputsSourced?: boolean;
   mlrAllocationConsistent?: boolean;
   mlrNoAutonomousDisbursement?: boolean;
+  // Eligibility & Enrollment (834) Reconciliation (reconciliation-complete + actions-sourced + no-autonomous-change)
+  reconciliationComplete?: boolean;
+  reconciliationActionsSourced?: boolean;
+  reconciliationNoAutonomousChange?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1207,6 +1211,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A rebate disbursed autonomously, or with no treasury review",
     reason:
       "A Medical Loss Ratio rebate determination autonomously disbursed the rebate (autoDisbursed:true — a movement of money to members that must be authorized) or did not require treasury review (requiresTreasuryReview:false); the agent CALCULATES — every determination is a RECOMMENDATION requiring a treasury / compliance reviewer to confirm and issue payment. Mirrors the Member Cost-Share Agent's no-autonomous-member-charge and the OIG Exclusion Agent's no-autonomous-block-or-clear posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.enrollment.reconciliation-complete",
+    signal: "reconciliationComplete",
+    violatingValue: false,
+    violationHint: "A reconciliation that drops, duplicates, or miscounts a member",
+    reason:
+      "An enrollment reconciliation determination does not account for every member exactly once — the per-kind counts must sum to the number of actions, the total-members count must equal the number of actions, the counts must match the actual per-kind tallies, and no member may appear twice. A dropped member is the worst failure mode (a terminated employee who keeps coverage, or a new hire who never gets enrolled). The load-bearing correctness gate — mirrors the Member Cost-Share Agent's math-consistent and the MLR Rebate Agent's allocation-consistent"
+  },
+  {
+    policyId: "policy.enrollment.actions-sourced",
+    signal: "reconciliationActionsSourced",
+    violatingValue: false,
+    violationHint: "A fabricated discrepancy or a mis-shaped reconciliation action",
+    reason:
+      "An enrollment reconciliation determination carries a fabricated discrepancy or a mis-shaped action — every UPDATE must carry at least one genuinely-differing field (each delta's source value actually differs from its carrier value), and every NO-CHANGE / ENROLL / TERMINATE must carry none; an 'update' whose fields don't actually differ, or a 'no-change' that hides a real difference, drives wrong enrollment writes. Mirrors the OIG Exclusion Agent's match-not-overstated and the Drug Interaction Agent's interaction-sourced posture"
+  },
+  {
+    policyId: "policy.enrollment.no-autonomous-change",
+    signal: "reconciliationNoAutonomousChange",
+    violatingValue: false,
+    violationHint: "An enrollment change applied autonomously, or with no benefits-admin review",
+    reason:
+      "An enrollment reconciliation determination autonomously applied the enrollment changes (autoApplied:true — enrolling / terminating / updating a member is a coverage decision that must be authorized) or did not require benefits-admin review (requiresBenefitsAdminReview:false); the agent RECONCILES — every determination is a RECOMMENDATION requiring a benefits administrator to confirm and post. Mirrors the Member Cost-Share Agent's no-autonomous-member-charge and the MLR Rebate Agent's no-autonomous-disbursement posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

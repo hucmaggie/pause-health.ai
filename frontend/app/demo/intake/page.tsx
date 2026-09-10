@@ -48,6 +48,7 @@ import { TimelyFilingPanel } from "../../../components/timely-filing-panel";
 import { SubrogationPanel } from "../../../components/subrogation-panel";
 import { MemberCostSharePanel } from "../../../components/member-cost-share-panel";
 import { MlrRebatePanel } from "../../../components/mlr-rebate-panel";
+import { EnrollmentReconciliationPanel } from "../../../components/enrollment-reconciliation-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -192,6 +193,7 @@ export default function IntakeDemoPage() {
       <SubrogationPanel />
       <MemberCostSharePanel />
       <MlrRebatePanel />
+      <EnrollmentReconciliationPanel />
       <ExclusionScreeningPanel />
 
       <FinancialAssistancePanel />

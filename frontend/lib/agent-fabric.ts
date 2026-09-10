@@ -2200,6 +2200,49 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "enrollment-reconciliation-agent",
+    name: "Eligibility & Enrollment (834) Reconciliation Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side enrollment-reconciliation piece:
+    // POST /api/agents/enrollment-reconciliation/tasks (card at
+    // /.well-known/agent.json). A DETERMINISTIC (no-Claude) claims /
+    // payer-operations agent that compares a group's SOURCE-OF-TRUTH enrollment
+    // roster (the employer / HR feed) against the CARRIER's current roster and
+    // produces the reconciliation actions (enroll / terminate / update /
+    // no-change) that bring the carrier into agreement. UNLIKE the Member
+    // Cost-Share agent's SEQUENTIAL dollar waterfall, the OIG Exclusion agent's
+    // identity MATCHING, the Drug Interaction agent's pairwise LOOKUP, or the MLR
+    // Rebate agent's RATIO + apportionment, the heart of this service is a KEYED
+    // SET-DIFFERENCE + a FIELD-LEVEL COMPARISON: it keys both rosters by member
+    // id, walks the UNION, and classifies each member (in source only → enroll;
+    // in carrier only → terminate; in both with a differing field → update, with
+    // the field deltas; in both and identical → no-change). A determination is a
+    // RECOMMENDATION requiring a benefits administrator to confirm and post — the
+    // agent never autonomously APPLIES an enrollment change. It COMPLEMENTS the
+    // other payer-operations agents — distinct from the Claims Adjudication agent
+    // (the allowed amount), the Member Cost-Share agent (splitting a claim), the
+    // Coordination of Benefits agent (the order of coverages), the MLR Rebate
+    // agent (a plan-year rebate), and the OIG Exclusion agent (screening a party
+    // against the sanctions list): this reconciles WHO is enrolled — the
+    // membership roster itself — between the employer and the carrier. It is
+    // PHI-bearing (the rosters reference members + their coverage). REUSES the
+    // existing payer-operations tier. The rosters + compared fields are
+    // ILLUSTRATIVE, NOT a certified 834 / enrollment system.
+    endpoint: "/api/agents/enrollment-reconciliation",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Compares a group's source-of-truth enrollment roster (the employer / HR feed) against the carrier's current roster and produces the reconciliation actions — enroll (in source only), terminate (in carrier only), update (in both with a differing field, listing the deltas), no-change (identical) — that bring the carrier into agreement. A deterministic payer-operations agent; distinct from the Claims Adjudication agent (the allowed amount), the Member Cost-Share agent (splitting a claim), the Coordination of Benefits, MLR Rebate, and OIG Exclusion agents — this reconciles WHO is enrolled, the membership roster itself, between the employer and the carrier",
+      "The reconciliation is DETERMINISTIC — a pure function of the two rosters (no randomness, no clock; not a dollar waterfall, an identity match, or a ratio but a KEYED SET-DIFFERENCE + a FIELD-LEVEL COMPARISON over the union of member ids); the same two rosters always yield the same actions",
+      "The reconciliation must account for every member EXACTLY once — the per-kind counts must sum to the number of actions, the total-members count must equal the number of actions, and no member may appear twice; a reconciliation that drops, duplicates, or miscounts a member (a terminated employee who keeps coverage, or a new hire who never gets enrolled) is blocked at the Agent Fabric governance boundary (policy.enrollment.reconciliation-complete, the load-bearing correctness gate); and every action must be sourced — every UPDATE must carry at least one genuinely-differing field and every NO-CHANGE / ENROLL / TERMINATE must carry none, so a fabricated discrepancy is blocked (policy.enrollment.actions-sourced). Mirrors the MLR Rebate Agent's allocation-consistent and the OIG Exclusion Agent's match-not-overstated posture",
+      "The reconciliation is a RECOMMENDATION — the agent NEVER applies an enrollment change to the system of record (enrolling / terminating / updating a member is a coverage decision that must be authorized); a determination that auto-applies, or is not review-gated, is blocked (policy.enrollment.no-autonomous-change), and every action is confirmed + posted by a benefits administrator. Mirrors the Member Cost-Share Agent's no-autonomous-member-charge and the MLR Rebate Agent's no-autonomous-disbursement posture",
+      "Runs against ILLUSTRATIVE synthetic rosters + compared fields — clearly labeled; NOT a certified 834 / enrollment system (real reconciliation uses the full X12 834 transaction set, effective-dating / retroactivity rules, dependent / COBRA / qualifying-event handling, and the carrier's eligibility system). PHI-bearing — the rosters reference members and their coverage"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
+  },
+  {
     id: "exclusion-screening-agent",
     name: "OIG Exclusion / Sanctions Screening Agent",
     kind: "agentforce",
@@ -2447,7 +2490,8 @@ const POLICIES: PolicyRecord[] = [
       "member-cost-share-agent",
       "amendment-request-agent",
       "information-blocking-agent",
-      "drug-interaction-agent"
+      "drug-interaction-agent",
+      "enrollment-reconciliation-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3450,6 +3494,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The MLR Rebate Agent may NEVER disburse / pay a rebate on its own (autoDisbursed:true — a movement of money to members that must be authorized) or skip treasury review (requiresTreasuryReview:true) — the agent CALCULATES, and every determination is a RECOMMENDATION requiring a treasury / compliance reviewer to confirm and issue payment. A determination that auto-disburses, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Member Cost-Share Agent's no-autonomous-member-charge and the OIG Exclusion Agent's no-autonomous-block-or-clear posture — the harmful action is enforced-off.",
     appliesTo: ["mlr-rebate-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.enrollment.reconciliation-complete",
+    name: "The reconciliation accounts for every member exactly once",
+    description:
+      "The Enrollment Reconciliation Agent must account for EVERY member present in either roster EXACTLY once — the per-kind counts must sum to the number of actions, the total-members count must equal the number of actions, the counts must match the actual per-kind tallies, and no member may appear twice. A reconciliation that drops, duplicates, or miscounts a member (a terminated employee who keeps coverage, or a new hire who never gets enrolled) is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Member Cost-Share Agent's math-consistent and the MLR Rebate Agent's allocation-consistent posture.",
+    appliesTo: ["enrollment-reconciliation-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.enrollment.actions-sourced",
+    name: "Every reconciliation action is sourced — no fabricated discrepancy",
+    description:
+      "The Enrollment Reconciliation Agent's every UPDATE action must carry at least one genuinely-differing field (each listed delta's source value actually differs from its carrier value), and every NO-CHANGE / ENROLL / TERMINATE must carry none. A fabricated discrepancy (an 'update' whose fields don't actually differ, or a 'no-change' that hides a real difference) drives wrong enrollment writes and is rejected before it can leave the fabric. Mirrors the OIG Exclusion Agent's match-not-overstated and the Drug Interaction Agent's interaction-sourced posture.",
+    appliesTo: ["enrollment-reconciliation-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.enrollment.no-autonomous-change",
+    name: "An enrollment change is never autonomously applied",
+    description:
+      "The Enrollment Reconciliation Agent may NEVER apply an enrollment change to the system of record (autoApplied:true — enrolling / terminating / updating a member is a coverage decision that must be authorized) or skip benefits-admin review (requiresBenefitsAdminReview:true) — the agent RECONCILES, and every determination is a RECOMMENDATION requiring a benefits administrator to confirm and post. A determination that auto-applies, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Member Cost-Share Agent's no-autonomous-member-charge and the MLR Rebate Agent's no-autonomous-disbursement posture — the harmful action is enforced-off.",
+    appliesTo: ["enrollment-reconciliation-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -10926,6 +10997,117 @@ function store(): FabricStore {
         mlrNoAutonomousDisbursement: true,
         requiresTreasuryReview: true,
         phiAccessed: false,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedEnrollmentReconciliationTrace() {
+  const s = store();
+  const recon0 = Date.now() - 1000 * 60 * 1;
+  const reconTaskId = "task-seed-enrollment-reconciliation-001";
+  const reconName = "Eligibility & Enrollment (834) Reconciliation Agent";
+  s.traces.push(
+    {
+      id: "span-recon-001",
+      taskId: reconTaskId,
+      agentId: "enrollment-reconciliation-agent",
+      agentName: reconName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(recon0).toISOString(),
+      finishedAt: new Date(recon0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-recon-002",
+      taskId: reconTaskId,
+      parentSpanId: "span-recon-001",
+      agentId: "enrollment-reconciliation-agent",
+      agentName: reconName,
+      operation: "enrollment.receive-rosters",
+      protocol: "a2a",
+      startedAt: new Date(recon0 + 30).toISOString(),
+      finishedAt: new Date(recon0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "recon-001",
+        groupRef: "group-4821",
+        totalMembers: 4,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-recon-003",
+      taskId: reconTaskId,
+      parentSpanId: "span-recon-002",
+      agentId: "enrollment-reconciliation-agent",
+      agentName: reconName,
+      operation: "enrollment.diff-rosters",
+      protocol: "a2a",
+      startedAt: new Date(recon0 + 60).toISOString(),
+      finishedAt: new Date(recon0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "recon-001",
+        enroll: 1,
+        terminate: 1,
+        update: 1,
+        noChange: 1,
+        // The honesty invariant: every member accounted for exactly once.
+        reconciliationComplete: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-recon-004",
+      taskId: reconTaskId,
+      parentSpanId: "span-recon-003",
+      agentId: "enrollment-reconciliation-agent",
+      agentName: reconName,
+      operation: "enrollment.classify-actions",
+      protocol: "a2a",
+      startedAt: new Date(recon0 + 100).toISOString(),
+      finishedAt: new Date(recon0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "recon-001",
+        // The honesty invariant: every action sourced (no fabricated discrepancy).
+        reconciliationActionsSourced: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-recon-005",
+      taskId: reconTaskId,
+      parentSpanId: "span-recon-004",
+      agentId: "enrollment-reconciliation-agent",
+      agentName: reconName,
+      operation: "enrollment.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(recon0 + 140).toISOString(),
+      finishedAt: new Date(recon0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "recon-001",
+        totalMembers: 4,
+        // The honesty invariant: never an autonomous enrollment change.
+        reconciliationNoAutonomousChange: true,
+        requiresBenefitsAdminReview: true,
+        phiAccessed: true,
         synthetic: true
       }
     }
