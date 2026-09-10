@@ -1351,6 +1351,55 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "commercial-operations"
   },
   {
+    id: "provider-benchmarking-agent",
+    name: "Provider Cost & Quality Percentile Benchmarking Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the provider-benchmarking workflow: POST
+    // /api/agents/provider-benchmarking/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) agent on the commercial-operations plane that
+    // takes a target provider's metric value plus a PEER COHORT and computes
+    // WHERE the provider falls in the DISTRIBUTION — its percentile rank, the
+    // cohort median, and a performance band — flagging an unfavorable band for
+    // network review. UNLIKE the Claim Lifecycle agent's FSM TRANSITION
+    // VALIDATION, the Medication Name Safety agent's STRING EDIT DISTANCE, the
+    // Schedule Conflict agent's GREEDY INTERVAL SELECTION, the Caseload Balancing
+    // agent's GREEDY BIN-PACKING, the Access Anomaly agent's SLIDING-WINDOW
+    // COUNTING, the Coverage Continuity agent's INTERVAL MERGING, the Care
+    // Pathway agent's TOPOLOGICAL ORDERING, the Enrollment Reconciliation agent's
+    // KEYED SET-DIFFERENCE, the Member Cost-Share agent's SEQUENTIAL dollar
+    // waterfall, the DDI agent's PAIRWISE KNOWLEDGE-BASE LOOKUP, the OIG
+    // Exclusion agent's EXACT identity MATCHING, or the Audit Log Integrity
+    // agent's HASH CHAIN — and UNLIKE the DATE-DEADLINE agents (Timely Filing,
+    // Right of Access, Amendment) that add N days to a single date — the heart of
+    // this service is PERCENTILE / RANK STATISTICS over a numeric distribution:
+    // sort the cohort, compute the target's percentile rank (midpoint method),
+    // the median, and a quartile band. It COMPLEMENTS the other provider /
+    // quality agents — distinct from the Provider Contracting agent (a single VBC
+    // benchmark-DRIFT vs a contract threshold), the HEDIS Quality agent (the
+    // measure RATES), the Quality-Measure Attribution agent (the DENOMINATOR),
+    // and the Provider Credentialing agent (network integrity): this ranks a
+    // provider within a peer DISTRIBUTION via percentile. A finding is a
+    // RECOMMENDATION requiring a network manager to confirm; the agent never
+    // autonomously TIERS, penalizes, or de-networks a provider. DELIBERATELY NOT
+    // PHI-BEARING — it operates on provider-level aggregate metrics, not patient
+    // PHI, so (like the OIG Exclusion agent) it is NOT on the HIPAA-audit policy.
+    // REUSES the existing commercial-operations tier. The cohorts are
+    // ILLUSTRATIVE, NOT a certified benchmarking system.
+    endpoint: "/api/agents/provider-benchmarking",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a target provider's metric value plus a peer cohort of providers' values and computes where the provider falls in the distribution — its percentile rank (midpoint method), the direction-adjusted effective percentile, the cohort median, and a performance band (top-quartile / above-median / below-median / bottom-quartile) — flagging an unfavorable band for network review. A deterministic commercial-operations agent; it COMPLEMENTS the Provider Contracting agent (a single VBC benchmark-DRIFT vs a contract threshold), the HEDIS Quality agent (the measure RATES), the Quality-Measure Attribution agent (the DENOMINATOR), and the Provider Credentialing agent (network integrity) — this ranks a provider within a peer DISTRIBUTION via percentile",
+      "The finding is DETERMINISTIC — a pure function of the request's own value + cohort + metric direction (no randomness, no clock; not an FSM transition, an edit distance, an interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, a dollar waterfall, a pairwise KB lookup, an exact identity match, or a hash chain but PERCENTILE / RANK STATISTICS over a numeric distribution — sort the cohort, compute the midpoint percentile rank, the median, and a quartile band); the same input always yields the same finding, and the metric direction (higher-is-better for quality, lower-is-better for cost) is honored so a higher effective percentile always means better",
+      "The peer cohort must be intact — every cohort member a well-formed { providerId, numeric value }, the reported cohort size equal to the actual cohort, the target value numeric; a phantom / omitted peer that mis-sizes the denominator is blocked at the Agent Fabric governance boundary (policy.benchmark.cohort-sourced, the sourced gate); and the statistics must be exact — recomputing the rank statistics from the cohort must reproduce the reported counts, percentile rank, effective percentile, median, band, and disposition; a miscomputed percentile or a band that doesn't follow is blocked (policy.benchmark.stats-consistent, the load-bearing correctness gate). Mirrors the Claim Lifecycle Agent's states-sourced + transition-consistent posture",
+      "The agent BENCHMARKS — it NEVER tiers the provider, adjusts their payment, or removes them from the network (each is a commercially consequential action that must be authorized) on its own; a finding that auto-tiers or is not review-gated is blocked (policy.benchmark.no-autonomous-tiering), and every finding is a recommendation requiring a network manager to confirm. Mirrors the Provider Contracting Agent's no-autonomous-term-change and the Timely Filing Agent's no-autonomous-write-off posture",
+      "Runs against ILLUSTRATIVE synthetic peer cohorts + metric values — clearly labeled; NOT a certified benchmarking system (real provider benchmarking uses risk / case-mix adjustment, statistically valid peer grouping, minimum denominators, confidence intervals, and the network team's judgment). Because it operates on provider-level aggregate metrics rather than patient PHI, this agent lives on the commercial-operations plane and is NOT PHI-bearing (NOT on the HIPAA-audit policy)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "commercial-operations"
+  },
+  {
     id: "deal-desk-agent",
     name: "Deal Desk / Quote Approval Agent",
     kind: "agentforce",
@@ -4039,6 +4088,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Claim Lifecycle Agent may NEVER advance the claim to the next status, post a payment, or finalize a denial on its own (autoAdvanced:true — each is a payer action that must be authorized) or skip adjuster review (requiresAdjusterReview:true) — the agent VALIDATES, and every finding is a RECOMMENDATION requiring an adjuster to confirm the transition. A finding that auto-advances, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Timely Filing Agent's no-autonomous-write-off and the Overpayment Recovery Agent's no-autonomous-clawback posture — the harmful action is enforced-off.",
     appliesTo: ["claim-lifecycle-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.benchmark.cohort-sourced",
+    name: "The peer cohort is sourced and intact",
+    description:
+      "The Provider Benchmarking Agent must keep its peer cohort intact: every cohort member a well-formed { providerId, numeric value }, the reported cohort size equal to the actual cohort, and the target value numeric. A phantom or omitted peer silently mis-sizes the denominator and misrepresents the percentile. A finding whose cohort is malformed or mis-sized is rejected before it can leave the fabric. This is the sourced gate. Mirrors the Claim Lifecycle Agent's states-sourced and the Access Anomaly Agent's events-sourced posture.",
+    appliesTo: ["provider-benchmarking-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.benchmark.stats-consistent",
+    name: "The rank statistics are exact",
+    description:
+      "The Provider Benchmarking Agent's finding must recompute exactly: recomputing the rank statistics from the cohort must reproduce the reported counts, percentile rank, direction-adjusted effective percentile, median, performance band, and disposition. A miscomputed percentile or a band that doesn't follow mis-tiers the provider — the whole point is the arithmetic. A finding whose statistics don't add up is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Claim Lifecycle Agent's transition-consistent and the Member Cost-Share Agent's math-consistent posture.",
+    appliesTo: ["provider-benchmarking-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.benchmark.no-autonomous-tiering",
+    name: "A provider is never autonomously tiered / penalized / de-networked",
+    description:
+      "The Provider Benchmarking Agent may NEVER tier the provider, adjust their payment, or remove them from the network on its own (autoTiered:true — each is a commercially consequential action that must be authorized) or skip network review (requiresNetworkReview:true) — the agent BENCHMARKS, and every finding is a RECOMMENDATION requiring a network manager to confirm. A finding that auto-tiers, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Provider Contracting Agent's no-autonomous-term-change and the Timely Filing Agent's no-autonomous-write-off posture — the harmful action is enforced-off.",
+    appliesTo: ["provider-benchmarking-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -12395,6 +12471,111 @@ function store(): FabricStore {
         claimNoAutonomousAdvance: true,
         requiresAdjusterReview: true,
         phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedProviderBenchmarkingTrace() {
+  const s = store();
+  const bmk0 = Date.now() - 1000 * 60 * 1;
+  const bmkTaskId = "task-seed-provider-benchmarking-001";
+  const bmkName = "Provider Cost & Quality Percentile Benchmarking Agent";
+  s.traces.push(
+    {
+      id: "span-provider-benchmarking-001",
+      taskId: bmkTaskId,
+      agentId: "provider-benchmarking-agent",
+      agentName: bmkName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(bmk0).toISOString(),
+      finishedAt: new Date(bmk0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // NOT PHI-bearing — provider-level aggregate metrics.
+        synthetic: true
+      }
+    },
+    {
+      id: "span-provider-benchmarking-002",
+      taskId: bmkTaskId,
+      parentSpanId: "span-provider-benchmarking-001",
+      agentId: "provider-benchmarking-agent",
+      agentName: bmkName,
+      operation: "benchmark.receive-metric",
+      protocol: "a2a",
+      startedAt: new Date(bmk0 + 30).toISOString(),
+      finishedAt: new Date(bmk0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        benchmarkRef: "bmk-002",
+        metricName: "risk-adjusted-cost-per-episode",
+        cohortSize: 9,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-provider-benchmarking-003",
+      taskId: bmkTaskId,
+      parentSpanId: "span-provider-benchmarking-002",
+      agentId: "provider-benchmarking-agent",
+      agentName: bmkName,
+      operation: "benchmark.compute-percentile",
+      protocol: "a2a",
+      startedAt: new Date(bmk0 + 60).toISOString(),
+      finishedAt: new Date(bmk0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        benchmarkRef: "bmk-002",
+        percentileRank: 88.89,
+        effectivePercentile: 11.11,
+        // The honesty invariants: cohort sourced, stats exact.
+        benchmarkCohortSourced: true,
+        benchmarkStatsConsistent: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-provider-benchmarking-004",
+      taskId: bmkTaskId,
+      parentSpanId: "span-provider-benchmarking-003",
+      agentId: "provider-benchmarking-agent",
+      agentName: bmkName,
+      operation: "benchmark.classify-band",
+      protocol: "a2a",
+      startedAt: new Date(bmk0 + 100).toISOString(),
+      finishedAt: new Date(bmk0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        benchmarkRef: "bmk-002",
+        performanceBand: "bottom-quartile",
+        disposition: "benchmark-review",
+        synthetic: true
+      }
+    },
+    {
+      id: "span-provider-benchmarking-005",
+      taskId: bmkTaskId,
+      parentSpanId: "span-provider-benchmarking-004",
+      agentId: "provider-benchmarking-agent",
+      agentName: bmkName,
+      operation: "benchmark.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(bmk0 + 140).toISOString(),
+      finishedAt: new Date(bmk0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        benchmarkRef: "bmk-002",
+        // The honesty invariant: never an autonomous tiering.
+        benchmarkNoAutonomousTiering: true,
+        requiresNetworkReview: true,
         synthetic: true
       }
     }

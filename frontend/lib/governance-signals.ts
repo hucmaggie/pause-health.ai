@@ -214,6 +214,10 @@ export type GovernanceTask = {
   claimStatesSourced?: boolean;
   claimTransitionConsistent?: boolean;
   claimNoAutonomousAdvance?: boolean;
+  // Provider Benchmarking / Percentile Rank (cohort-sourced + stats-consistent + no-autonomous-tiering)
+  benchmarkCohortSourced?: boolean;
+  benchmarkStatsConsistent?: boolean;
+  benchmarkNoAutonomousTiering?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1431,6 +1435,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A claim advanced / paid / finalized autonomously, or with no adjuster review",
     reason:
       "A claim-lifecycle finding autonomously advanced the claim, posted a payment, or finalized a denial (autoAdvanced:true — each is a payer action that must be authorized) or did not require adjuster review (requiresAdjusterReview:false); the agent VALIDATES — every finding is a RECOMMENDATION requiring an adjuster to confirm the transition. Mirrors the Timely Filing Agent's no-autonomous-write-off and the Overpayment Recovery Agent's no-autonomous-clawback posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.benchmark.cohort-sourced",
+    signal: "benchmarkCohortSourced",
+    violatingValue: false,
+    violationHint: "A phantom / omitted peer, a malformed cohort member, or a mis-sized denominator",
+    reason:
+      "A provider-benchmarking finding's peer cohort is not intact — every cohort member must be a well-formed { providerId, numeric value }, the reported cohort size must equal the actual cohort, and the target value must be numeric. A phantom or omitted peer silently mis-sizes the denominator and misrepresents the percentile. The sourced gate — mirrors the Claim Lifecycle Agent's states-sourced and the Access Anomaly Agent's events-sourced"
+  },
+  {
+    policyId: "policy.benchmark.stats-consistent",
+    signal: "benchmarkStatsConsistent",
+    violatingValue: false,
+    violationHint: "A miscomputed percentile / median, or a band / disposition that doesn't follow",
+    reason:
+      "A provider-benchmarking finding's statistics do not add up — recomputing the rank statistics from the cohort must reproduce the reported counts, percentile rank, direction-adjusted effective percentile, median, performance band, and disposition. A miscomputed percentile or a band that doesn't follow mis-tiers the provider — the whole point is the arithmetic. The load-bearing correctness gate — mirrors the Claim Lifecycle Agent's transition-consistent and the Member Cost-Share Agent's math-consistent"
+  },
+  {
+    policyId: "policy.benchmark.no-autonomous-tiering",
+    signal: "benchmarkNoAutonomousTiering",
+    violatingValue: false,
+    violationHint: "A provider tiered / penalized / de-networked autonomously, or with no network review",
+    reason:
+      "A provider-benchmarking finding autonomously tiered the provider, adjusted their payment, or removed them from the network (autoTiered:true — each is a commercially consequential action that must be authorized) or did not require network review (requiresNetworkReview:false); the agent BENCHMARKS — every finding is a RECOMMENDATION requiring a network manager to confirm. Mirrors the Provider Contracting Agent's no-autonomous-term-change and the Timely Filing Agent's no-autonomous-write-off posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

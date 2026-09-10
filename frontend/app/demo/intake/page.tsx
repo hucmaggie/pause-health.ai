@@ -56,6 +56,7 @@ import { CaseloadBalancingPanel } from "../../../components/caseload-balancing-p
 import { ScheduleConflictPanel } from "../../../components/schedule-conflict-panel";
 import { MedicationNameSafetyPanel } from "../../../components/medication-name-safety-panel";
 import { ClaimLifecyclePanel } from "../../../components/claim-lifecycle-panel";
+import { ProviderBenchmarkingPanel } from "../../../components/provider-benchmarking-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -207,6 +208,7 @@ export default function IntakeDemoPage() {
       <ScheduleConflictPanel />
       <MedicationNameSafetyPanel />
       <ClaimLifecyclePanel />
+      <ProviderBenchmarkingPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 
