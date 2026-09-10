@@ -2359,6 +2359,49 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "clinical-decision"
   },
   {
+    id: "care-pathway-agent",
+    name: "Care Pathway Sequencing Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the clinical-decision care-pathway-sequencing
+    // piece: POST /api/agents/care-pathway/tasks (card at
+    // /.well-known/agent.json). A DETERMINISTIC (no-Claude) clinical-decision
+    // agent that takes a clinical pathway's STEPS — each declaring the
+    // prerequisite steps that must precede it — and produces a valid EXECUTION
+    // ORDER that respects every dependency, detecting DEPENDENCY CYCLES (no valid
+    // order exists) and MISSING PREREQUISITES (a step depends on a step absent
+    // from the pathway). UNLIKE the Enrollment Reconciliation agent's KEYED
+    // SET-DIFFERENCE, the Member Cost-Share agent's SEQUENTIAL dollar waterfall,
+    // the OIG Exclusion agent's identity MATCHING, the Drug Interaction agent's
+    // pairwise LOOKUP, or the MLR Rebate agent's RATIO + apportionment, the heart
+    // of this service is a TOPOLOGICAL ORDERING (Kahn's algorithm) over a
+    // dependency graph + CYCLE DETECTION. It COMPLEMENTS the other clinical
+    // agents — distinct from the Care Plan agent (which AUTHORS a plan's goals /
+    // interventions / cadence from a template), the Transitions of Care and Care
+    // Coordination Handoff agents (moving a patient between settings / teams), the
+    // Prior Authorization agent (assembling a PA package), and the Drug
+    // Interaction / Controlled Substance agents (medication safety): this ORDERS
+    // the steps of a pathway so no step is scheduled before its prerequisites. A
+    // determination — a sequenced pathway, a detected cycle, or a missing
+    // prerequisite — is a RECOMMENDATION requiring a clinician to confirm and
+    // order; the agent never autonomously EXECUTES a step. It is PHI-bearing (the
+    // pathway references the patient). REUSES the existing clinical-decision tier.
+    // The pathways + steps are ILLUSTRATIVE, NOT a certified clinical pathway
+    // engine.
+    endpoint: "/api/agents/care-pathway",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Sequences a clinical pathway's steps — each declaring its prerequisite steps — into a valid execution order that respects every dependency, detecting dependency cycles (no valid order exists) and missing prerequisites (a step depends on a step absent from the pathway), and reporting each step's stage (0-based longest-prerequisite-chain depth). A deterministic clinical-decision agent; distinct from the Care Plan agent (which AUTHORS a plan from a template), the Transitions of Care / Care Coordination Handoff agents (moving a patient between settings / teams), and the Drug Interaction / Controlled Substance agents (medication safety) — this ORDERS the steps of a pathway so no step is scheduled before its prerequisites",
+      "The sequencing is DETERMINISTIC — a pure function of the pathway's steps (no randomness, no clock; not a set-difference, an identity match, a lookup, or a ratio but a TOPOLOGICAL ORDERING via Kahn's algorithm + CYCLE DETECTION, ties broken by step id); the same pathway always yields the same order",
+      "Every step id in the output must reference a submitted pathway step — a fabricated / dangling step id is blocked at the Agent Fabric governance boundary (policy.pathway.steps-sourced); and the sequence must be valid — when sequenced, the ordered steps are a complete permutation of the pathway and every step appears AFTER all its prerequisites (ordering a treatment step before its safety-screening prerequisite is the worst failure mode), and when un-sequenceable no order is asserted; a sequence that violates a prerequisite, drops a step, or asserts an impossible order is blocked (policy.pathway.sequence-valid, the load-bearing correctness gate). Mirrors the Enrollment Reconciliation Agent's reconciliation-complete and the Member Cost-Share Agent's math-consistent posture",
+      "The agent SEQUENCES — it NEVER executes / orders / administers a step (ordering a lab, a screening, or a therapy is a clinical action that must be authorized) on its own; a determination that auto-executes or is not review-gated is blocked (policy.pathway.no-autonomous-execution), and every determination is a recommendation requiring a clinician to confirm and order. Mirrors the Drug Interaction Agent's no-autonomous-hold-or-override and the Lab Result Agent's no-autonomous-clinical-action posture",
+      "Runs against ILLUSTRATIVE synthetic pathways + steps — clearly labeled; NOT a certified clinical pathway engine (real pathway management uses evidence-based order sets, the patient's clinical context, scheduling / timing constraints, and the care team's judgment). PHI-bearing — the pathway references the patient"
+    ],
+    provider: "Salesforce",
+    governanceTier: "clinical-decision"
+  },
+  {
     id: "advance-beneficiary-notice-agent",
     name: "Advance Beneficiary Notice (Medicare ABN) Agent",
     kind: "agentforce",
@@ -2491,7 +2534,8 @@ const POLICIES: PolicyRecord[] = [
       "amendment-request-agent",
       "information-blocking-agent",
       "drug-interaction-agent",
-      "enrollment-reconciliation-agent"
+      "enrollment-reconciliation-agent",
+      "care-pathway-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3521,6 +3565,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Enrollment Reconciliation Agent may NEVER apply an enrollment change to the system of record (autoApplied:true — enrolling / terminating / updating a member is a coverage decision that must be authorized) or skip benefits-admin review (requiresBenefitsAdminReview:true) — the agent RECONCILES, and every determination is a RECOMMENDATION requiring a benefits administrator to confirm and post. A determination that auto-applies, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Member Cost-Share Agent's no-autonomous-member-charge and the MLR Rebate Agent's no-autonomous-disbursement posture — the harmful action is enforced-off.",
     appliesTo: ["enrollment-reconciliation-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.pathway.steps-sourced",
+    name: "Every sequenced step is sourced — no fabricated step",
+    description:
+      "The Care Pathway Sequencing Agent's every step id appearing in the output — the ordered sequence, the stage map, the reported cycle members, the missing-prerequisite holders — must reference a step actually submitted in the pathway. A fabricated / dangling step id would order or flag care that doesn't exist and is rejected before it can leave the fabric. Mirrors the Drug Interaction Agent's interaction-sourced and the Enrollment Reconciliation Agent's actions-sourced posture.",
+    appliesTo: ["care-pathway-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.pathway.sequence-valid",
+    name: "The sequence respects every prerequisite",
+    description:
+      "The Care Pathway Sequencing Agent's determination must be consistent with its steps — when reported SEQUENCED, the ordered steps must be a complete permutation of the pathway's steps (none dropped or duplicated) and every step must appear AFTER all of its prerequisites (ordering a treatment step before its safety-screening prerequisite is the worst failure mode); when reported un-sequenceable (a dependency cycle or a missing prerequisite), no order may be asserted. A sequence that violates a prerequisite, drops a step, or asserts an impossible order is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Member Cost-Share Agent's math-consistent and the Enrollment Reconciliation Agent's reconciliation-complete posture.",
+    appliesTo: ["care-pathway-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.pathway.no-autonomous-execution",
+    name: "A pathway step is never autonomously executed",
+    description:
+      "The Care Pathway Sequencing Agent may NEVER execute / order / administer a step on its own (autoExecuted:true — ordering a lab, a screening, or a therapy is a clinical action that must be authorized) or skip clinician review (requiresClinicianReview:true) — the agent SEQUENCES, and every determination is a RECOMMENDATION requiring a clinician to confirm and order. A determination that auto-executes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Drug Interaction Agent's no-autonomous-hold-or-override and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off.",
+    appliesTo: ["care-pathway-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -11107,6 +11178,114 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous enrollment change.
         reconciliationNoAutonomousChange: true,
         requiresBenefitsAdminReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedCarePathwayTrace() {
+  const s = store();
+  const path0 = Date.now() - 1000 * 60 * 1;
+  const pathTaskId = "task-seed-care-pathway-001";
+  const pathName = "Care Pathway Sequencing Agent";
+  s.traces.push(
+    {
+      id: "span-pathway-001",
+      taskId: pathTaskId,
+      agentId: "care-pathway-agent",
+      agentName: pathName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(path0).toISOString(),
+      finishedAt: new Date(path0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-pathway-002",
+      taskId: pathTaskId,
+      parentSpanId: "span-pathway-001",
+      agentId: "care-pathway-agent",
+      agentName: pathName,
+      operation: "pathway.receive-steps",
+      protocol: "a2a",
+      startedAt: new Date(path0 + 30).toISOString(),
+      finishedAt: new Date(path0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "pathway-001",
+        pathwayRef: "menopause-workup-v1",
+        stepCount: 6,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-pathway-003",
+      taskId: pathTaskId,
+      parentSpanId: "span-pathway-002",
+      agentId: "care-pathway-agent",
+      agentName: pathName,
+      operation: "pathway.check-prerequisites",
+      protocol: "a2a",
+      startedAt: new Date(path0 + 60).toISOString(),
+      finishedAt: new Date(path0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "pathway-001",
+        // The honesty invariant: every step sourced (no fabricated / dangling step).
+        pathwayStepsSourced: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-pathway-004",
+      taskId: pathTaskId,
+      parentSpanId: "span-pathway-003",
+      agentId: "care-pathway-agent",
+      agentName: pathName,
+      operation: "pathway.topological-sort",
+      protocol: "a2a",
+      startedAt: new Date(path0 + 100).toISOString(),
+      finishedAt: new Date(path0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "pathway-001",
+        disposition: "sequenced",
+        stageCount: 5,
+        // The honesty invariant: the sequence respects every prerequisite.
+        pathwaySequenceValid: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-pathway-005",
+      taskId: pathTaskId,
+      parentSpanId: "span-pathway-004",
+      agentId: "care-pathway-agent",
+      agentName: pathName,
+      operation: "pathway.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(path0 + 140).toISOString(),
+      finishedAt: new Date(path0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "pathway-001",
+        // The honesty invariant: never an autonomous step execution.
+        pathwayNoAutonomousExecution: true,
+        requiresClinicianReview: true,
         phiAccessed: true,
         synthetic: true
       }

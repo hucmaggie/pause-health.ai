@@ -453,8 +453,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // — and the Information Blocking / Cures Act 45 CFR Part 171 agent, its
     // enforcement flip-side), plus the clinical Drug–Drug Interaction (DDI)
     // Safety Check agent, the payer Medical Loss Ratio (MLR) Rebate Calculation
-    // agent, and the payer Eligibility & Enrollment (834) Reconciliation agent.
-    expect(listAgents()).toHaveLength(74);
+    // agent, the payer Eligibility & Enrollment (834) Reconciliation agent, and
+    // the clinical Care Pathway Sequencing agent.
+    expect(listAgents()).toHaveLength(75);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

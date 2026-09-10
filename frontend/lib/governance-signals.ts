@@ -186,6 +186,10 @@ export type GovernanceTask = {
   reconciliationComplete?: boolean;
   reconciliationActionsSourced?: boolean;
   reconciliationNoAutonomousChange?: boolean;
+  // Care Pathway Sequencing (steps-sourced + sequence-valid + no-autonomous-execution)
+  pathwayStepsSourced?: boolean;
+  pathwaySequenceValid?: boolean;
+  pathwayNoAutonomousExecution?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1235,6 +1239,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An enrollment change applied autonomously, or with no benefits-admin review",
     reason:
       "An enrollment reconciliation determination autonomously applied the enrollment changes (autoApplied:true — enrolling / terminating / updating a member is a coverage decision that must be authorized) or did not require benefits-admin review (requiresBenefitsAdminReview:false); the agent RECONCILES — every determination is a RECOMMENDATION requiring a benefits administrator to confirm and post. Mirrors the Member Cost-Share Agent's no-autonomous-member-charge and the MLR Rebate Agent's no-autonomous-disbursement posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.pathway.steps-sourced",
+    signal: "pathwayStepsSourced",
+    violatingValue: false,
+    violationHint: "A fabricated / dangling step id in the sequencing output",
+    reason:
+      "A care pathway sequencing determination references a step id — in its ordered sequence, stage map, reported cycle members, or missing-prerequisite holders — that is not one of the submitted pathway steps; a fabricated / dangling step id would order or flag care that doesn't exist. Every referenced step id must resolve to a submitted step. Mirrors the Drug Interaction Agent's interaction-sourced and the Enrollment Reconciliation Agent's actions-sourced posture"
+  },
+  {
+    policyId: "policy.pathway.sequence-valid",
+    signal: "pathwaySequenceValid",
+    violatingValue: false,
+    violationHint: "A sequence that violates a prerequisite, drops a step, or asserts an impossible order",
+    reason:
+      "A care pathway sequencing determination is inconsistent with its steps — when reported SEQUENCED, the ordered steps must be a complete permutation of the pathway's steps (none dropped or duplicated) and every step must appear AFTER all of its prerequisites (ordering a treatment step before its safety-screening prerequisite is the worst failure mode); when reported un-sequenceable (a cycle or a missing prerequisite), no order may be asserted. The load-bearing correctness gate — mirrors the Member Cost-Share Agent's math-consistent and the Enrollment Reconciliation Agent's reconciliation-complete"
+  },
+  {
+    policyId: "policy.pathway.no-autonomous-execution",
+    signal: "pathwayNoAutonomousExecution",
+    violatingValue: false,
+    violationHint: "A pathway step executed autonomously, or with no clinician review",
+    reason:
+      "A care pathway sequencing determination autonomously executed a step (autoExecuted:true — ordering a lab, a screening, or a therapy is a clinical action that must be authorized) or did not require clinician review (requiresClinicianReview:false); the agent SEQUENCES — every determination is a RECOMMENDATION requiring a clinician to confirm and order. Mirrors the Drug Interaction Agent's no-autonomous-hold-or-override and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
