@@ -2174,6 +2174,54 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "claim-lifecycle-agent",
+    name: "Claim Lifecycle / Status-Transition Guard Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side claim-status-lifecycle piece:
+    // POST /api/agents/claim-lifecycle/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) claims / payer-operations agent that takes a
+    // claim's CURRENT status plus a REQUESTED next status and, against a
+    // claim-status STATE MACHINE, decides whether the transition is a LEGAL
+    // single step, whether the requested status is REACHABLE at all (and by what
+    // shortest path), or whether it can NEVER follow the current status. UNLIKE
+    // the Medication Name Safety agent's STRING EDIT DISTANCE, the Schedule
+    // Conflict agent's GREEDY INTERVAL SELECTION, the Caseload Balancing agent's
+    // GREEDY BIN-PACKING, the Access Anomaly agent's SLIDING-WINDOW COUNTING, the
+    // Coverage Continuity agent's INTERVAL MERGING, the Care Pathway agent's
+    // TOPOLOGICAL ORDERING (which orders a DAG's nodes), the Enrollment
+    // Reconciliation agent's KEYED SET-DIFFERENCE, the Member Cost-Share agent's
+    // SEQUENTIAL dollar waterfall, the DDI agent's PAIRWISE KNOWLEDGE-BASE LOOKUP,
+    // the OIG Exclusion agent's EXACT identity MATCHING, or the Audit Log
+    // Integrity agent's HASH CHAIN — and UNLIKE the DATE-DEADLINE agents (Timely
+    // Filing, Right of Access, Amendment) that add N days to a single date — the
+    // heart of this service is FINITE-STATE-MACHINE TRANSITION VALIDATION: a
+    // transition-table lookup plus a BREADTH-FIRST SEARCH over the state graph
+    // for reachability + the shortest legal path. It COMPLEMENTS the other claim
+    // agents — distinct from the Claims Adjudication Assistant (per-claim edits),
+    // the Coordination of Benefits agent (payer ORDER), the Overpayment Recovery
+    // agent (POST-payment clawback), the Timely Filing agent (was it FILED IN
+    // TIME), and the Subrogation agent (third-party liability): this validates one
+    // narrow, purely STRUCTURAL question — is this STATUS TRANSITION legal, and if
+    // not, is the target even reachable. A finding is a RECOMMENDATION requiring
+    // an adjuster to confirm; the agent never autonomously ADVANCES, PAYS, or
+    // FINALIZES a claim. It is PHI-bearing (the claim references a patient).
+    // REUSES the existing payer-operations tier. The state machine is
+    // ILLUSTRATIVE, NOT a certified claims-processing system.
+    endpoint: "/api/agents/claim-lifecycle",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a claim's current status plus a requested next status and, against a claim-status state machine, decides whether the transition is a legal single step (transition-allowed), whether the requested status is reachable at all and by what shortest path (transition-illegal-but-reachable), or whether it can never follow the current status (transition-unreachable). A deterministic payer-operations agent; it COMPLEMENTS the Claims Adjudication Assistant (per-claim edits), the Coordination of Benefits (payer order), the Overpayment Recovery (post-payment clawback), the Timely Filing (was it filed in time), and the Subrogation (third-party liability) agents — this validates one narrow, purely STRUCTURAL question: is this STATUS TRANSITION legal, and if not, is the target even reachable",
+      "The finding is DETERMINISTIC — a pure function of the request's own statuses + state machine (no randomness, no clock; not an edit distance, an interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, a dollar waterfall, a pairwise KB lookup, an exact identity match, or a hash chain but FINITE-STATE-MACHINE TRANSITION VALIDATION — a transition-table lookup plus a breadth-first search over the state graph for reachability + the shortest legal path); the same input always yields the same finding",
+      "Every status named in the finding — in the allowed-next set and in the shortest path — must be a defined state of the state machine, and every shortest-path step must be a real transition; a fabricated lifecycle state or an invented legal move is blocked at the Agent Fabric governance boundary (policy.claim.states-sourced, the sourced gate); and the transition logic must be exact — recomputing the transition table + BFS must reproduce the reported direct-edge flag, reachability flag, allowed-next set, shortest-path length + endpoints, and disposition; a wrong direct-edge flag (which would wave through an illegal transition that skips adjudication), a wrong reachability / path, or a bad disposition is blocked (policy.claim.transition-consistent, the load-bearing correctness gate). Mirrors the Care Pathway Agent's steps-sourced + sequence-valid posture",
+      "The agent VALIDATES — it NEVER advances the claim to the next status, posts a payment, or finalizes a denial (each is a payer action that must be authorized) on its own; a finding that auto-advances or is not review-gated is blocked (policy.claim.no-autonomous-advance), and every finding is a recommendation requiring an adjuster to confirm the transition. Mirrors the Timely Filing Agent's no-autonomous-write-off and the Overpayment Recovery Agent's no-autonomous-clawback posture",
+      "Runs against an ILLUSTRATIVE synthetic claim-status state machine — clearly labeled; NOT a certified claims-processing system (real claim-status management uses the X12 277 claim-status category / status codes, the payer's adjudication system, and the plan's business rules). PHI-bearing — the claim references a patient"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
+  },
+  {
     id: "subrogation-agent",
     name: "Subrogation / Third-Party Liability Agent",
     kind: "agentforce",
@@ -2771,7 +2819,8 @@ const POLICIES: PolicyRecord[] = [
       "access-anomaly-agent",
       "caseload-balancing-agent",
       "schedule-conflict-agent",
-      "medication-name-safety-agent"
+      "medication-name-safety-agent",
+      "claim-lifecycle-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3963,6 +4012,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Medication Name Safety Agent may NEVER substitute the drug for the nearest match, silently correct the order, or dispense on its own (autoSubstituted:true — each is a clinical action that must be authorized) or skip pharmacist review (requiresPharmacistReview:true) — the agent FLAGS, and every finding is a RECOMMENDATION requiring a pharmacist to confirm the intended medication. A finding that auto-substitutes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Drug–Drug Interaction Agent's no-autonomous-hold-or-override and the Schedule Conflict Agent's no-autonomous-booking posture — the harmful action is enforced-off.",
     appliesTo: ["medication-name-safety-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.claim.states-sourced",
+    name: "Every lifecycle state and transition is sourced from the state machine",
+    description:
+      "The Claim Lifecycle Agent must trace every status it names — in the allowed-next set and in the shortest path — to a defined state of the state machine, and every shortest-path step must be a real transition. A fabricated state invents a lifecycle stage that doesn't exist; a fabricated edge invents a legal move that isn't allowed. A finding that names an unsourced state or an invented transition is rejected before it can leave the fabric. This is the sourced gate. Mirrors the Care Pathway Agent's steps-sourced and the Medication Name Safety Agent's candidates-sourced posture.",
+    appliesTo: ["claim-lifecycle-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.claim.transition-consistent",
+    name: "The transition logic is exact",
+    description:
+      "The Claim Lifecycle Agent's finding must recompute exactly: recomputing the transition table + the BFS from the state machine must reproduce the reported direct-edge flag, the reachability flag, the allowed-next set, the shortest-path length + endpoints, and the disposition. A wrong direct-edge flag would wave through an illegal transition (e.g., draft → paid, skipping adjudication) or block a legal one; a wrong reachability / path would misroute the claim. A finding whose transition logic doesn't add up is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Care Pathway Agent's sequence-valid and the Medication Name Safety Agent's distances-consistent posture.",
+    appliesTo: ["claim-lifecycle-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.claim.no-autonomous-advance",
+    name: "A claim is never autonomously advanced / paid / finalized",
+    description:
+      "The Claim Lifecycle Agent may NEVER advance the claim to the next status, post a payment, or finalize a denial on its own (autoAdvanced:true — each is a payer action that must be authorized) or skip adjuster review (requiresAdjusterReview:true) — the agent VALIDATES, and every finding is a RECOMMENDATION requiring an adjuster to confirm the transition. A finding that auto-advances, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Timely Filing Agent's no-autonomous-write-off and the Overpayment Recovery Agent's no-autonomous-clawback posture — the harmful action is enforced-off.",
+    appliesTo: ["claim-lifecycle-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -12209,6 +12285,115 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous substitution.
         lasaNoAutonomousSubstitution: true,
         requiresPharmacistReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedClaimLifecycleTrace() {
+  const s = store();
+  const clm0 = Date.now() - 1000 * 60 * 1;
+  const clmTaskId = "task-seed-claim-lifecycle-001";
+  const clmName = "Claim Lifecycle / Status-Transition Guard Agent";
+  s.traces.push(
+    {
+      id: "span-claim-lifecycle-001",
+      taskId: clmTaskId,
+      agentId: "claim-lifecycle-agent",
+      agentName: clmName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(clm0).toISOString(),
+      finishedAt: new Date(clm0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-claim-lifecycle-002",
+      taskId: clmTaskId,
+      parentSpanId: "span-claim-lifecycle-001",
+      agentId: "claim-lifecycle-agent",
+      agentName: clmName,
+      operation: "claim.receive-transition",
+      protocol: "a2a",
+      startedAt: new Date(clm0 + 30).toISOString(),
+      finishedAt: new Date(clm0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        claimRef: "clm-002",
+        currentStatus: "draft",
+        requestedStatus: "paid",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-claim-lifecycle-003",
+      taskId: clmTaskId,
+      parentSpanId: "span-claim-lifecycle-002",
+      agentId: "claim-lifecycle-agent",
+      agentName: clmName,
+      operation: "claim.check-transition",
+      protocol: "a2a",
+      startedAt: new Date(clm0 + 60).toISOString(),
+      finishedAt: new Date(clm0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        claimRef: "clm-002",
+        directEdge: false,
+        // The honesty invariant: states sourced from the machine.
+        claimStatesSourced: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-claim-lifecycle-004",
+      taskId: clmTaskId,
+      parentSpanId: "span-claim-lifecycle-003",
+      agentId: "claim-lifecycle-agent",
+      agentName: clmName,
+      operation: "claim.compute-reachability",
+      protocol: "a2a",
+      startedAt: new Date(clm0 + 100).toISOString(),
+      finishedAt: new Date(clm0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        claimRef: "clm-002",
+        disposition: "transition-illegal-but-reachable",
+        pathLength: 4,
+        // The honesty invariant: transition logic exact.
+        claimTransitionConsistent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-claim-lifecycle-005",
+      taskId: clmTaskId,
+      parentSpanId: "span-claim-lifecycle-004",
+      agentId: "claim-lifecycle-agent",
+      agentName: clmName,
+      operation: "claim.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(clm0 + 140).toISOString(),
+      finishedAt: new Date(clm0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        claimRef: "clm-002",
+        // The honesty invariant: never an autonomous advance.
+        claimNoAutonomousAdvance: true,
+        requiresAdjusterReview: true,
         phiAccessed: true,
         synthetic: true
       }

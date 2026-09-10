@@ -210,6 +210,10 @@ export type GovernanceTask = {
   lasaCandidatesSourced?: boolean;
   lasaDistancesConsistent?: boolean;
   lasaNoAutonomousSubstitution?: boolean;
+  // Claim Lifecycle / Status-Transition Guard (states-sourced + transition-consistent + no-autonomous-advance)
+  claimStatesSourced?: boolean;
+  claimTransitionConsistent?: boolean;
+  claimNoAutonomousAdvance?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1403,6 +1407,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A drug substituted / corrected / dispensed autonomously, or with no pharmacist review",
     reason:
       "A medication-name-safety finding autonomously substituted, corrected, or dispensed a drug (autoSubstituted:true — each is a clinical action that must be authorized) or did not require pharmacist review (requiresPharmacistReview:false); the agent FLAGS — every finding is a RECOMMENDATION requiring a pharmacist to confirm the intended medication. Mirrors the Drug–Drug Interaction Agent's no-autonomous-hold-or-override and the Schedule Conflict Agent's no-autonomous-booking posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.claim.states-sourced",
+    signal: "claimStatesSourced",
+    violatingValue: false,
+    violationHint: "A fabricated lifecycle state or an invented legal transition not in the state machine",
+    reason:
+      "A claim-lifecycle finding names a status — in the allowed-next set or in the shortest path — that is not a defined state of the state machine, or a shortest-path step that is not a real transition. A fabricated state invents a lifecycle stage that doesn't exist; a fabricated edge invents a legal move that isn't allowed. The sourced gate — mirrors the Care Pathway Agent's steps-sourced and the Medication Name Safety Agent's candidates-sourced"
+  },
+  {
+    policyId: "policy.claim.transition-consistent",
+    signal: "claimTransitionConsistent",
+    violatingValue: false,
+    violationHint: "A wrong direct-edge / reachability flag, a wrong path length, or a bad disposition",
+    reason:
+      "A claim-lifecycle finding's transition logic does not add up — recomputing the transition table + the BFS from the machine must reproduce the reported direct-edge flag, the reachability flag, the allowed-next set, the shortest-path length + endpoints, and the disposition. A wrong direct-edge flag would wave through an illegal transition (skipping adjudication) or block a legal one; a wrong reachability / path would misroute the claim. The load-bearing correctness gate — mirrors the Care Pathway Agent's sequence-valid and the Medication Name Safety Agent's distances-consistent"
+  },
+  {
+    policyId: "policy.claim.no-autonomous-advance",
+    signal: "claimNoAutonomousAdvance",
+    violatingValue: false,
+    violationHint: "A claim advanced / paid / finalized autonomously, or with no adjuster review",
+    reason:
+      "A claim-lifecycle finding autonomously advanced the claim, posted a payment, or finalized a denial (autoAdvanced:true — each is a payer action that must be authorized) or did not require adjuster review (requiresAdjusterReview:false); the agent VALIDATES — every finding is a RECOMMENDATION requiring an adjuster to confirm the transition. Mirrors the Timely Filing Agent's no-autonomous-write-off and the Overpayment Recovery Agent's no-autonomous-clawback posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
