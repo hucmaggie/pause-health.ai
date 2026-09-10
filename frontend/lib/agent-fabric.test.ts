@@ -455,8 +455,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // Safety Check agent, the payer Medical Loss Ratio (MLR) Rebate Calculation
     // agent, the payer Eligibility & Enrollment (834) Reconciliation agent, the
     // clinical Care Pathway Sequencing agent, the payer Creditable Coverage
-    // Continuity agent, and the platform Access Anomaly Detection agent.
-    expect(listAgents()).toHaveLength(77);
+    // Continuity agent, the platform Access Anomaly Detection agent, and the
+    // care-coordination Caseload Balancing agent.
+    expect(listAgents()).toHaveLength(78);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

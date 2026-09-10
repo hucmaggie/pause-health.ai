@@ -198,6 +198,10 @@ export type GovernanceTask = {
   accessEventsSourced?: boolean;
   accessWindowCountConsistent?: boolean;
   accessNoAutonomousAction?: boolean;
+  // Caseload Balancing / Care-Manager Panel Assignment (assignment-complete + capacity-respected + no-autonomous-assignment)
+  caseloadAssignmentComplete?: boolean;
+  caseloadCapacityRespected?: boolean;
+  caseloadNoAutonomousAssignment?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1319,6 +1323,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An access / employment action taken autonomously, or with no privacy review",
     reason:
       "An access-anomaly finding autonomously took an access / employment action (autoLockedAccount:true or autoRevokedAccess:true — locking an account, revoking access, or disciplining a workforce member is an action that must be authorized) or did not require privacy review (requiresPrivacyReview:false); the agent MEASURES — every flag is a RECOMMENDATION requiring a privacy officer to review. Mirrors the Coverage Continuity Agent's no-autonomous-determination and the Audit Log Integrity Agent's no-autonomous-redaction posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.caseload.assignment-complete",
+    signal: "caseloadAssignmentComplete",
+    violatingValue: false,
+    violationHint: "A dropped or double-counted member — not accounted for exactly once",
+    reason:
+      "A caseload-balancing allocation does not account for every member exactly once — the assigned set and the waitlisted set must be disjoint and together cover every submitted member (no dropped member, no double-assignment), and the reported counts must match. A dropped member is a patient who falls through the cracks with no manager owning their care; a double-assigned member is confused ownership. The completeness gate — mirrors the Enrollment Reconciliation Agent's reconciliation-complete and the Accounting of Disclosures Agent's accountable-disclosures-complete"
+  },
+  {
+    policyId: "policy.caseload.capacity-respected",
+    signal: "caseloadCapacityRespected",
+    violatingValue: false,
+    violationHint: "An over-loaded manager, a miscounted load, or an unjust waitlist",
+    reason:
+      "A caseload-balancing allocation violates capacity — each manager's assigned acuity must equal the sum of their assigned members' acuities, must not exceed their capacity, and the remaining capacity must be exact; and every waitlisted member's acuity must exceed EVERY manager's final remaining capacity (a member waitlisted while a manager had room is a wrong, unsafe allocation). An over-loaded panel is a patient-safety risk. The load-bearing correctness gate — mirrors the Access Anomaly Agent's window-count-consistent and the Member Cost-Share Agent's math-consistent"
+  },
+  {
+    policyId: "policy.caseload.no-autonomous-assignment",
+    signal: "caseloadNoAutonomousAssignment",
+    violatingValue: false,
+    violationHint: "An assignment committed autonomously, or with no care-lead review",
+    reason:
+      "A caseload-balancing allocation autonomously committed an assignment (autoAssigned:true — committing an assignment, reassigning a patient, or overriding a manager's caseload is a care-ownership decision that must be authorized) or did not require care-lead review (requiresCareLeadReview:false); the agent RECOMMENDS — every allocation is a RECOMMENDATION requiring a care-management lead to confirm. Mirrors the Care Team Agent's no-autonomous-assignment and the Coverage Continuity Agent's no-autonomous-determination posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

@@ -891,6 +891,52 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "caseload-balancing-agent",
+    name: "Caseload Balancing (Care-Manager Panel Assignment) Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the care-coordination caseload-balancing piece:
+    // POST /api/agents/caseload-balancing/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) care-coordination agent that takes a panel of
+    // MEMBERS (each with an acuity weight) and a set of CARE MANAGERS (each with a
+    // weighted-slot CAPACITY) and ALLOCATES the members across the managers
+    // WITHOUT exceeding any manager's capacity — balancing the load and
+    // WAITLISTING the overflow. UNLIKE the Access Anomaly agent's SLIDING-WINDOW
+    // COUNTING, the Coverage Continuity agent's INTERVAL MERGING + GAP DETECTION,
+    // the Care Pathway agent's TOPOLOGICAL ORDERING, the Enrollment Reconciliation
+    // agent's KEYED SET-DIFFERENCE, the Member Cost-Share agent's SEQUENTIAL dollar
+    // waterfall, the OIG Exclusion agent's identity MATCHING, or the Audit Log
+    // Integrity agent's HASH CHAIN — and UNLIKE the DATE-DEADLINE agents (Timely
+    // Filing, Right of Access, Amendment) that add N days to a single date — the
+    // heart of this service is GREEDY ALLOCATION UNDER A CAPACITY CONSTRAINT (a
+    // bin-packing / worst-fit-decreasing assignment of weighted items into
+    // capacity-limited bins). It COMPLEMENTS the other care-coordination agents —
+    // distinct from the Care Team & Case Management agent (which assembles the team
+    // around ONE patient and picks that patient's case manager), the Complex Care
+    // Management agent (CCM time-tracking for ONE patient), the Transitions of Care
+    // agent (moving ONE patient), and the Population Health agent (which
+    // PRIORITIZES a panel): this ALLOCATES a whole panel across the managers'
+    // finite capacity — the balancing of caseloads. An allocation is a
+    // RECOMMENDATION requiring a care-management lead to confirm; the agent never
+    // autonomously COMMITS the assignment, reassigns a patient, or overrides a
+    // manager's caseload. It is PHI-bearing (the members reference the patients on
+    // the panel). REUSES the existing care-coordination tier. The members +
+    // managers + acuity + capacity are ILLUSTRATIVE, NOT a certified caseload /
+    // staffing system.
+    endpoint: "/api/agents/caseload-balancing",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a panel of members (each with an acuity weight) and a set of care managers (each with a weighted-slot capacity) and allocates the members across the managers without exceeding any manager's capacity — balancing the load and waitlisting the overflow. A deterministic care-coordination agent; distinct from the Care Team & Case Management agent (assembling the team around ONE patient), the Complex Care Management agent (CCM time-tracking for ONE patient), the Transitions of Care agent (moving ONE patient), and the Population Health agent (prioritizing a panel) — this ALLOCATES a whole panel across the managers' finite capacity",
+      "The allocation is DETERMINISTIC — a pure function of the request's own members + managers (no randomness, no clock; not a sliding-window count, an interval merge, a topological sort, a set-difference, a dollar waterfall, an identity match, or a hash chain but GREEDY ALLOCATION UNDER A CAPACITY CONSTRAINT — a worst-fit-decreasing bin-packing that processes members by descending acuity and places each into the manager with the greatest remaining capacity that can fit it, tie-broken by id); the same panel always yields the same assignment",
+      "Every member must be accounted for exactly once — the assigned set and the waitlisted set must be disjoint and together cover every submitted member (no dropped member, no double-assignment); a dropped or double-counted member is blocked at the Agent Fabric governance boundary (policy.caseload.assignment-complete, the completeness gate); and capacity must be respected — each manager's assigned acuity must equal the sum of their assigned members' acuities, must not exceed capacity, the remaining capacity must be exact, and every waitlist must be justified (the member's acuity exceeds every manager's final remaining capacity); an over-loaded manager, a miscounted load, or an unjust waitlist is blocked (policy.caseload.capacity-respected, the load-bearing correctness gate). Mirrors the Enrollment Reconciliation Agent's reconciliation-complete + the Member Cost-Share Agent's math-consistent posture",
+      "The agent RECOMMENDS — it NEVER commits an assignment, reassigns a patient, or overrides a manager's caseload (each is a care-ownership decision that must be authorized) on its own; an allocation that auto-commits or is not review-gated is blocked (policy.caseload.no-autonomous-assignment), and every allocation is a recommendation requiring a care-management lead to confirm. Mirrors the Care Team Agent's no-autonomous-assignment and the Coverage Continuity Agent's no-autonomous-determination posture",
+      "Runs against ILLUSTRATIVE synthetic members + managers + acuity + capacity — clearly labeled; NOT a certified caseload / staffing system (real panel assignment uses validated acuity instruments, care-manager licensure / specialty / language fit, geographic match, and continuity of an existing relationship). PHI-bearing — the members reference the patients on the panel"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "transitions-of-care-agent",
     name: "Discharge & Transitions of Care Agent",
     kind: "agentforce",
@@ -2629,7 +2675,8 @@ const POLICIES: PolicyRecord[] = [
       "enrollment-reconciliation-agent",
       "care-pathway-agent",
       "coverage-continuity-agent",
-      "access-anomaly-agent"
+      "access-anomaly-agent",
+      "caseload-balancing-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3740,6 +3787,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Access Anomaly Detection Agent may NEVER lock the actor's account, revoke their access, or discipline them on its own (autoLockedAccount:true / autoRevokedAccess:true — each is an access / employment action that must be authorized) or skip privacy review (requiresPrivacyReview:true) — the agent MEASURES, and every flag is a RECOMMENDATION requiring a privacy officer to review. A finding that auto-locks / auto-revokes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Coverage Continuity Agent's no-autonomous-determination and the Audit Log Integrity Agent's no-autonomous-redaction posture — the harmful action is enforced-off.",
     appliesTo: ["access-anomaly-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.caseload.assignment-complete",
+    name: "Every member is accounted for exactly once",
+    description:
+      "The Caseload Balancing Agent's allocation must account for EVERY submitted member exactly once — the assigned set and the waitlisted set must be disjoint and together cover every member (no dropped member, no double-assignment), and the reported counts must match. A dropped member is a patient who falls through the cracks with no manager owning their care; a double-assigned member is confused ownership. An allocation that drops or double-counts a member is rejected before it can leave the fabric. This is the completeness gate. Mirrors the Enrollment Reconciliation Agent's reconciliation-complete and the Accounting of Disclosures Agent's accountable-disclosures-complete posture.",
+    appliesTo: ["caseload-balancing-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.caseload.capacity-respected",
+    name: "No manager is over capacity, and the loads add up",
+    description:
+      "The Caseload Balancing Agent's allocation must respect every manager's capacity — each manager's assigned acuity must equal the sum of their assigned members' acuities, must not exceed their capacity, and the remaining capacity must be exact; and every waitlisted member's acuity must exceed EVERY manager's final remaining capacity (a member waitlisted while a manager had room is a wrong, unsafe allocation). An over-loaded panel is a patient-safety risk. An allocation that over-loads a manager, miscounts a load, or waitlists a member who fit is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Access Anomaly Agent's window-count-consistent and the Member Cost-Share Agent's math-consistent posture.",
+    appliesTo: ["caseload-balancing-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.caseload.no-autonomous-assignment",
+    name: "An assignment is never autonomously committed",
+    description:
+      "The Caseload Balancing Agent may NEVER commit an assignment, reassign a patient, or override a manager's caseload on its own (autoAssigned:true — each is a care-ownership decision that must be authorized) or skip care-lead review (requiresCareLeadReview:true) — the agent RECOMMENDS, and every allocation is a RECOMMENDATION requiring a care-management lead to confirm. An allocation that auto-commits, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Care Team Agent's no-autonomous-assignment and the Coverage Continuity Agent's no-autonomous-determination posture — the harmful action is enforced-off.",
+    appliesTo: ["caseload-balancing-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -11656,6 +11730,117 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous access action.
         accessNoAutonomousAction: true,
         requiresPrivacyReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedCaseloadBalancingTrace() {
+  const s = store();
+  const cbl0 = Date.now() - 1000 * 60 * 1;
+  const cblTaskId = "task-seed-caseload-balancing-001";
+  const cblName = "Caseload Balancing (Care-Manager Panel Assignment) Agent";
+  s.traces.push(
+    {
+      id: "span-caseload-001",
+      taskId: cblTaskId,
+      agentId: "caseload-balancing-agent",
+      agentName: cblName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(cbl0).toISOString(),
+      finishedAt: new Date(cbl0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-caseload-002",
+      taskId: cblTaskId,
+      parentSpanId: "span-caseload-001",
+      agentId: "caseload-balancing-agent",
+      agentName: cblName,
+      operation: "caseload.receive-panel",
+      protocol: "a2a",
+      startedAt: new Date(cbl0 + 30).toISOString(),
+      finishedAt: new Date(cbl0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "cbl-001",
+        panelRef: "panel-4821",
+        memberCount: 6,
+        managerCount: 3,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-caseload-003",
+      taskId: cblTaskId,
+      parentSpanId: "span-caseload-002",
+      agentId: "caseload-balancing-agent",
+      agentName: cblName,
+      operation: "caseload.allocate",
+      protocol: "a2a",
+      startedAt: new Date(cbl0 + 60).toISOString(),
+      finishedAt: new Date(cbl0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "cbl-001",
+        assignedCount: 6,
+        waitlistedCount: 0,
+        // The honesty invariants: every member accounted for once, capacity respected.
+        caseloadAssignmentComplete: true,
+        caseloadCapacityRespected: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-caseload-004",
+      taskId: cblTaskId,
+      parentSpanId: "span-caseload-003",
+      agentId: "caseload-balancing-agent",
+      agentName: cblName,
+      operation: "caseload.check-capacity",
+      protocol: "a2a",
+      startedAt: new Date(cbl0 + 100).toISOString(),
+      finishedAt: new Date(cbl0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "cbl-001",
+        disposition: "fully-assigned",
+        totalAssignedAcuity: 21,
+        totalCapacity: 24,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-caseload-005",
+      taskId: cblTaskId,
+      parentSpanId: "span-caseload-004",
+      agentId: "caseload-balancing-agent",
+      agentName: cblName,
+      operation: "caseload.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(cbl0 + 140).toISOString(),
+      finishedAt: new Date(cbl0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "cbl-001",
+        // The honesty invariant: never an autonomous assignment.
+        caseloadNoAutonomousAssignment: true,
+        requiresCareLeadReview: true,
         phiAccessed: true,
         synthetic: true
       }
