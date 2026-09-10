@@ -50,6 +50,7 @@ import { MemberCostSharePanel } from "../../../components/member-cost-share-pane
 import { MlrRebatePanel } from "../../../components/mlr-rebate-panel";
 import { EnrollmentReconciliationPanel } from "../../../components/enrollment-reconciliation-panel";
 import { CarePathwayPanel } from "../../../components/care-pathway-panel";
+import { CoverageContinuityPanel } from "../../../components/coverage-continuity-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -195,6 +196,7 @@ export default function IntakeDemoPage() {
       <MemberCostSharePanel />
       <MlrRebatePanel />
       <EnrollmentReconciliationPanel />
+      <CoverageContinuityPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 

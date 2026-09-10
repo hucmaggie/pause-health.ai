@@ -190,6 +190,10 @@ export type GovernanceTask = {
   pathwayStepsSourced?: boolean;
   pathwaySequenceValid?: boolean;
   pathwayNoAutonomousExecution?: boolean;
+  // Creditable Coverage Continuity (segments-sourced + math-consistent + no-autonomous-determination)
+  coverageSegmentsSourced?: boolean;
+  coverageMathConsistent?: boolean;
+  coverageNoAutonomousDetermination?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1263,6 +1267,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A pathway step executed autonomously, or with no clinician review",
     reason:
       "A care pathway sequencing determination autonomously executed a step (autoExecuted:true — ordering a lab, a screening, or a therapy is a clinical action that must be authorized) or did not require clinician review (requiresClinicianReview:false); the agent SEQUENCES — every determination is a RECOMMENDATION requiring a clinician to confirm and order. Mirrors the Drug Interaction Agent's no-autonomous-hold-or-override and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.coverage.segments-sourced",
+    signal: "coverageSegmentsSourced",
+    violatingValue: false,
+    violationHint: "A merged coverage span not backed by a submitted segment, or a dropped segment",
+    reason:
+      "A coverage continuity determination has a merged span that does not trace to submitted segments — each span's start / end must come from a real segment boundary, and every submitted segment must fall within a merged span. Fabricated coverage (a span not backed by a segment) would wrongly certify continuity; dropped coverage would wrongly find a break. Mirrors the Care Pathway Agent's steps-sourced and the Drug Interaction Agent's interaction-sourced posture"
+  },
+  {
+    policyId: "policy.coverage.math-consistent",
+    signal: "coverageMathConsistent",
+    violatingValue: false,
+    violationHint: "A miscounted covered-day total, a mis-measured gap, or a break flag off its threshold",
+    reason:
+      "A coverage continuity determination's math does not add up — the merged spans must be ordered + non-overlapping (each start ≤ end, strictly gapped from the previous), the total covered days must equal the sum of the spans' inclusive lengths, each reported gap must equal the exact day distance between consecutive spans, and the significant-break flag must equal whether any gap exceeds the threshold. A miscounted total, a mis-measured gap, or a mismatched break flag drives a wrong creditable-coverage determination. The load-bearing correctness gate — mirrors the Member Cost-Share Agent's math-consistent and the MLR Rebate Agent's allocation-consistent"
+  },
+  {
+    policyId: "policy.coverage.no-autonomous-determination",
+    signal: "coverageNoAutonomousDetermination",
+    violatingValue: false,
+    violationHint: "A coverage determination issued autonomously, or with no eligibility review",
+    reason:
+      "A coverage continuity determination autonomously issued a creditable-coverage determination (autoDetermined:true — issuing a determination, denying special enrollment, or imposing a late-enrollment penalty is a coverage decision that must be authorized) or did not require eligibility review (requiresEligibilityReview:false); the agent MEASURES — every determination is a RECOMMENDATION requiring an eligibility reviewer to confirm. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the MLR Rebate Agent's no-autonomous-disbursement posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

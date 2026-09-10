@@ -2243,6 +2243,49 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "coverage-continuity-agent",
+    name: "Creditable Coverage Continuity Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side coverage-continuity piece: POST
+    // /api/agents/coverage-continuity/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) claims / payer-operations agent that takes a
+    // member's COVERAGE SEGMENTS (each a start/end date), MERGES the overlapping
+    // / adjacent ones into continuous spans, totals the covered days, and
+    // measures the GAPS between spans — flagging a SIGNIFICANT BREAK in
+    // creditable coverage (a gap longer than 63 days, the HIPAA / ACA rule).
+    // UNLIKE the Care Pathway agent's TOPOLOGICAL ORDERING, the Enrollment
+    // Reconciliation agent's KEYED SET-DIFFERENCE, the Member Cost-Share agent's
+    // SEQUENTIAL dollar waterfall, the OIG Exclusion agent's identity MATCHING, or
+    // the MLR Rebate agent's RATIO + apportionment — and UNLIKE the DATE-DEADLINE
+    // agents (Timely Filing, Right of Access, Amendment) that add N days to a
+    // single date — the heart of this service is INTERVAL MERGING + GAP DETECTION
+    // over a set of date ranges. It COMPLEMENTS the other payer-operations agents
+    // — distinct from the Benefits Verification agent (is coverage active NOW),
+    // the Coordination of Benefits agent (the ORDER of concurrent coverages), the
+    // Enrollment Reconciliation agent (employer-vs-carrier roster drift), the
+    // Member Cost-Share agent (splitting a claim), and the MLR Rebate agent (a
+    // plan-year rebate): this measures the CONTINUITY of a member's coverage OVER
+    // TIME. A determination is a RECOMMENDATION requiring an eligibility reviewer
+    // to confirm; the agent never autonomously ISSUES a creditable-coverage
+    // determination, denies special enrollment, or imposes a late-enrollment
+    // penalty. It is PHI-bearing (the segments reference the member's coverage
+    // history). REUSES the existing payer-operations tier. The segments +
+    // threshold are ILLUSTRATIVE, NOT a certified creditable-coverage system.
+    endpoint: "/api/agents/coverage-continuity",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a member's coverage segments (each a start/end date from an employer, individual, or public plan), merges the overlapping / adjacent ones into continuous spans, totals the inclusive covered days, measures the gaps between consecutive spans, and flags a significant break in creditable coverage when a gap exceeds the threshold (63 days by the HIPAA / ACA rule). A deterministic payer-operations agent; distinct from the Benefits Verification agent (is coverage active NOW), the Coordination of Benefits agent (the ORDER of concurrent coverages), the Enrollment Reconciliation agent (roster drift), and the Member Cost-Share agent (splitting a claim) — this measures the CONTINUITY of coverage OVER TIME",
+      "The analysis is DETERMINISTIC — a pure function of the member's segments + the request's own asOfDate (time is data; no real clock; not a topological sort, a set-difference, a dollar waterfall, a ratio, or a single-date deadline but INTERVAL MERGING + GAP DETECTION over date ranges); the same segments always yield the same spans + gaps + determination",
+      "Every merged span must trace to submitted segments — each span boundary must come from a real segment boundary and every segment must fall within a span; fabricated coverage (a span not backed by a segment) or a dropped segment is blocked at the Agent Fabric governance boundary (policy.coverage.segments-sourced); and the coverage math must be exact — the total covered days must equal the sum of the spans' inclusive lengths, each gap must equal the exact distance between consecutive spans, and the significant-break flag must equal whether any gap exceeds the threshold; a miscounted total, a mis-measured gap, or a mismatched break flag is blocked (policy.coverage.math-consistent, the load-bearing correctness gate). Mirrors the Member Cost-Share Agent's math-consistent and the MLR Rebate Agent's allocation-consistent posture",
+      "The agent MEASURES — it NEVER issues a creditable-coverage determination, denies a special enrollment, or imposes a late-enrollment penalty (each is a coverage decision that must be authorized) on its own; a determination that auto-issues or is not review-gated is blocked (policy.coverage.no-autonomous-determination), and every determination is a recommendation requiring an eligibility reviewer to confirm. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the MLR Rebate Agent's no-autonomous-disbursement posture",
+      "Runs against ILLUSTRATIVE synthetic segments + threshold — clearly labeled; NOT a certified creditable-coverage system (real determination uses the certificate of creditable coverage, plan-specific rules, and the full HIPAA / ACA / Medicare Part D frameworks). PHI-bearing — the segments reference the member's coverage history"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
+  },
+  {
     id: "exclusion-screening-agent",
     name: "OIG Exclusion / Sanctions Screening Agent",
     kind: "agentforce",
@@ -2535,7 +2578,8 @@ const POLICIES: PolicyRecord[] = [
       "information-blocking-agent",
       "drug-interaction-agent",
       "enrollment-reconciliation-agent",
-      "care-pathway-agent"
+      "care-pathway-agent",
+      "coverage-continuity-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3592,6 +3636,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Care Pathway Sequencing Agent may NEVER execute / order / administer a step on its own (autoExecuted:true — ordering a lab, a screening, or a therapy is a clinical action that must be authorized) or skip clinician review (requiresClinicianReview:true) — the agent SEQUENCES, and every determination is a RECOMMENDATION requiring a clinician to confirm and order. A determination that auto-executes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Drug Interaction Agent's no-autonomous-hold-or-override and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off.",
     appliesTo: ["care-pathway-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.coverage.segments-sourced",
+    name: "Every merged coverage span is sourced — no fabricated coverage",
+    description:
+      "The Creditable Coverage Continuity Agent's every merged span must trace to submitted segments — each span's start / end must come from a real segment boundary, and every submitted segment must fall within a merged span. Fabricated coverage (a span not backed by a segment) would wrongly certify continuity; dropped coverage would wrongly find a break. A determination with an unsourced span or a dropped segment is rejected before it can leave the fabric. Mirrors the Care Pathway Agent's steps-sourced and the Drug Interaction Agent's interaction-sourced posture.",
+    appliesTo: ["coverage-continuity-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.coverage.math-consistent",
+    name: "The coverage math is exact",
+    description:
+      "The Creditable Coverage Continuity Agent's merged spans must be ordered + non-overlapping (each start ≤ end, strictly gapped from the previous), the total covered days must equal the sum of the spans' inclusive lengths, each reported gap must equal the exact day distance between consecutive spans, and the significant-break flag must equal whether any gap exceeds the threshold. A miscounted covered-day total, a mis-measured gap, or a break flag that doesn't match the threshold drives a wrong creditable-coverage determination and is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Member Cost-Share Agent's math-consistent and the MLR Rebate Agent's allocation-consistent posture.",
+    appliesTo: ["coverage-continuity-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.coverage.no-autonomous-determination",
+    name: "A coverage determination is never autonomously issued",
+    description:
+      "The Creditable Coverage Continuity Agent may NEVER issue a creditable-coverage determination, deny a special enrollment, or impose a late-enrollment penalty on its own (autoDetermined:true — each is a coverage decision that must be authorized) or skip eligibility review (requiresEligibilityReview:true) — the agent MEASURES, and every determination is a RECOMMENDATION requiring an eligibility reviewer to confirm. A determination that auto-issues, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the MLR Rebate Agent's no-autonomous-disbursement posture — the harmful action is enforced-off.",
+    appliesTo: ["coverage-continuity-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -11286,6 +11357,117 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous step execution.
         pathwayNoAutonomousExecution: true,
         requiresClinicianReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedCoverageContinuityTrace() {
+  const s = store();
+  const cov0 = Date.now() - 1000 * 60 * 1;
+  const covTaskId = "task-seed-coverage-continuity-001";
+  const covName = "Creditable Coverage Continuity Agent";
+  s.traces.push(
+    {
+      id: "span-coverage-001",
+      taskId: covTaskId,
+      agentId: "coverage-continuity-agent",
+      agentName: covName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(cov0).toISOString(),
+      finishedAt: new Date(cov0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-coverage-002",
+      taskId: covTaskId,
+      parentSpanId: "span-coverage-001",
+      agentId: "coverage-continuity-agent",
+      agentName: covName,
+      operation: "coverage.receive-segments",
+      protocol: "a2a",
+      startedAt: new Date(cov0 + 30).toISOString(),
+      finishedAt: new Date(cov0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "cov-001",
+        memberRef: "member-4821",
+        segmentCount: 2,
+        // The honesty invariant: every span sourced (no fabricated coverage).
+        coverageSegmentsSourced: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-coverage-003",
+      taskId: covTaskId,
+      parentSpanId: "span-coverage-002",
+      agentId: "coverage-continuity-agent",
+      agentName: covName,
+      operation: "coverage.merge-intervals",
+      protocol: "a2a",
+      startedAt: new Date(cov0 + 60).toISOString(),
+      finishedAt: new Date(cov0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "cov-001",
+        spanCount: 2,
+        totalCoveredDays: 352,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-coverage-004",
+      taskId: covTaskId,
+      parentSpanId: "span-coverage-003",
+      agentId: "coverage-continuity-agent",
+      agentName: covName,
+      operation: "coverage.detect-gaps",
+      protocol: "a2a",
+      startedAt: new Date(cov0 + 100).toISOString(),
+      finishedAt: new Date(cov0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "cov-001",
+        disposition: "continuous",
+        gapCount: 1,
+        hasSignificantBreak: false,
+        // The honesty invariant: the coverage math is exact.
+        coverageMathConsistent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-coverage-005",
+      taskId: covTaskId,
+      parentSpanId: "span-coverage-004",
+      agentId: "coverage-continuity-agent",
+      agentName: covName,
+      operation: "coverage.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(cov0 + 140).toISOString(),
+      finishedAt: new Date(cov0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "cov-001",
+        // The honesty invariant: never an autonomous coverage determination.
+        coverageNoAutonomousDetermination: true,
+        requiresEligibilityReview: true,
         phiAccessed: true,
         synthetic: true
       }
