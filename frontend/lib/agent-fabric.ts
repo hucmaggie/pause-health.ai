@@ -2544,6 +2544,52 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "clinical-decision"
   },
   {
+    id: "medication-name-safety-agent",
+    name: "Medication Name Safety (LASA) Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the clinical-decision medication-name-safety
+    // piece: POST /api/agents/medication-name-safety/tasks (card at
+    // /.well-known/agent.json). A DETERMINISTIC (no-Claude) clinical-decision
+    // agent that takes a PRESCRIBED / TYPED drug name plus a formulary CATALOG
+    // and, using EDIT DISTANCE, finds the nearest catalog name and flags a
+    // LOOK-ALIKE / SOUND-ALIKE (LASA) confusion — a name dangerously close to a
+    // DIFFERENT drug, or a near-miss misspelling — for a pharmacist. UNLIKE the
+    // Schedule Conflict agent's GREEDY INTERVAL SELECTION, the Caseload Balancing
+    // agent's GREEDY BIN-PACKING, the Access Anomaly agent's SLIDING-WINDOW
+    // COUNTING, the Coverage Continuity agent's INTERVAL MERGING, the Care
+    // Pathway agent's TOPOLOGICAL ORDERING, the Enrollment Reconciliation agent's
+    // KEYED SET-DIFFERENCE, the Member Cost-Share agent's SEQUENTIAL dollar
+    // waterfall, the DDI agent's PAIRWISE KNOWLEDGE-BASE LOOKUP, the OIG
+    // Exclusion agent's EXACT identity MATCHING (explicitly NO fuzzy matching),
+    // or the Audit Log Integrity agent's HASH CHAIN — and UNLIKE the DATE-
+    // DEADLINE agents (Timely Filing, Right of Access, Amendment) that add N days
+    // to a single date — the heart of this service is STRING EDIT DISTANCE (the
+    // classic Levenshtein dynamic-programming algorithm). It COMPLEMENTS the
+    // other medication agents — distinct from the DDI agent (whether two drugs
+    // INTERACT), the Formulary & DUR agent (whether a drug is COVERED /
+    // appropriate), the Controlled-Substance / PDMP agent (opioid MME safety),
+    // and the Medication Adherence agent (refill nudges): this catches a name
+    // that is CONFUSABLE with a different drug before it becomes a wrong-drug
+    // error. A finding is a RECOMMENDATION requiring a pharmacist to confirm the
+    // intended medication; the agent never autonomously SUBSTITUTES, CORRECTS, or
+    // DISPENSES a drug. It is PHI-bearing (the prescribed name is for a patient's
+    // medication order). REUSES the existing clinical-decision tier. The catalog
+    // + names are ILLUSTRATIVE, NOT a certified medication-safety system.
+    endpoint: "/api/agents/medication-name-safety",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a prescribed / typed drug name plus a formulary catalog and, using edit distance, finds the nearest catalog name and flags a look-alike / sound-alike (LASA) confusion — a name dangerously close to a different drug, or a near-miss misspelling — for a pharmacist. A deterministic clinical-decision agent; it COMPLEMENTS the DDI agent (whether two drugs INTERACT), the Formulary & DUR agent (whether a drug is COVERED), the Controlled-Substance / PDMP agent (opioid MME safety), and the Medication Adherence agent (refill nudges) — this catches a name CONFUSABLE with a different drug before it becomes a wrong-drug error",
+      "The finding is DETERMINISTIC — a pure function of the request's own name + catalog + threshold (no randomness, no clock; not a greedy interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, a dollar waterfall, a pairwise KB lookup, an exact identity match, or a hash chain but STRING EDIT DISTANCE — the classic Levenshtein dynamic-programming algorithm, the minimum single-character edits to turn one name into another); the same input always yields the same finding",
+      "Every candidate — the nearest match and every confusable look-alike — must trace to a real catalog drug (drugId in the catalog, echoed name matching); a fabricated or mislabeled candidate is blocked at the Agent Fabric governance boundary (policy.lasa.candidates-sourced, the sourced gate); and the distances must be exact — recomputing the Levenshtein distance to the catalog must reproduce the reported nearest match, every distance, the exact-match flag, the confusable set (exactly those within the threshold), and the disposition; a miscomputed distance, a wrong nearest match, an omitted look-alike, or a bad disposition is blocked (policy.lasa.distances-consistent, the load-bearing correctness gate). Mirrors the DDI Agent's interaction-sourced + severity-consistent posture",
+      "The agent FLAGS — it NEVER substitutes the drug for the nearest match, silently corrects the order, or dispenses (each is a clinical action that must be authorized) on its own; a finding that auto-substitutes or is not review-gated is blocked (policy.lasa.no-autonomous-substitution), and every finding is a recommendation requiring a pharmacist to confirm the intended medication. Mirrors the DDI Agent's no-autonomous-hold-or-override and the Schedule Conflict Agent's no-autonomous-booking posture",
+      "Runs against an ILLUSTRATIVE synthetic formulary catalog + names — clearly labeled; NOT a certified medication-safety system (real LASA safety uses the ISMP / FDA LASA lists, tall-man lettering, RxNorm / First Databank vocabularies, indication / dose context, and barcode scanning). PHI-bearing — the prescribed name is for a patient's medication order"
+    ],
+    provider: "Salesforce",
+    governanceTier: "clinical-decision"
+  },
+  {
     id: "care-pathway-agent",
     name: "Care Pathway Sequencing Agent",
     kind: "agentforce",
@@ -2724,7 +2770,8 @@ const POLICIES: PolicyRecord[] = [
       "coverage-continuity-agent",
       "access-anomaly-agent",
       "caseload-balancing-agent",
-      "schedule-conflict-agent"
+      "schedule-conflict-agent",
+      "medication-name-safety-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3889,6 +3936,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Scheduling Conflict Agent may NEVER book, cancel, or bump an appointment on its own (autoBooked:true — each is a scheduling action that must be authorized) or skip scheduler review (requiresSchedulerReview:true) — the agent RECOMMENDS, and every schedule is a RECOMMENDATION requiring a scheduler to confirm. A schedule that auto-books, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Appointment Scheduling Agent's governance posture — the harmful action is enforced-off.",
     appliesTo: ["schedule-conflict-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.lasa.candidates-sourced",
+    name: "Every look-alike candidate is sourced from the catalog",
+    description:
+      "The Medication Name Safety Agent must trace every candidate it names — the nearest match and every confusable look-alike — to a real catalog drug (its drugId in the catalog, its echoed name equal to that drug's catalog name). A fabricated candidate invents a look-alike that doesn't exist; a mislabeled one attaches the wrong name. A finding that names an unsourced or mislabeled candidate is rejected before it can leave the fabric. This is the sourced gate. Mirrors the Drug–Drug Interaction Agent's interaction-sourced and the Schedule Conflict Agent's intervals-sourced posture.",
+    appliesTo: ["medication-name-safety-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.lasa.distances-consistent",
+    name: "The edit distances and the finding are exact",
+    description:
+      "The Medication Name Safety Agent's finding must recompute exactly: recomputing the Levenshtein edit distance from the prescribed name to the catalog must reproduce the reported nearest match, every reported distance, the exact-match flag, the confusable set (exactly those within the threshold, not counting an exact match), and the disposition. A miscomputed distance, a wrong nearest match, an omitted or spurious look-alike, or a disposition that doesn't follow drives a wrong finding — the whole point is the arithmetic. A finding whose distances don't add up is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Schedule Conflict Agent's conflict-free and the Access Anomaly Agent's window-count-consistent posture.",
+    appliesTo: ["medication-name-safety-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.lasa.no-autonomous-substitution",
+    name: "A drug is never autonomously substituted / corrected / dispensed",
+    description:
+      "The Medication Name Safety Agent may NEVER substitute the drug for the nearest match, silently correct the order, or dispense on its own (autoSubstituted:true — each is a clinical action that must be authorized) or skip pharmacist review (requiresPharmacistReview:true) — the agent FLAGS, and every finding is a RECOMMENDATION requiring a pharmacist to confirm the intended medication. A finding that auto-substitutes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Drug–Drug Interaction Agent's no-autonomous-hold-or-override and the Schedule Conflict Agent's no-autonomous-booking posture — the harmful action is enforced-off.",
+    appliesTo: ["medication-name-safety-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -12024,6 +12098,117 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous booking.
         scheduleNoAutonomousBooking: true,
         requiresSchedulerReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedMedicationNameSafetyTrace() {
+  const s = store();
+  const mns0 = Date.now() - 1000 * 60 * 1;
+  const mnsTaskId = "task-seed-medication-name-safety-001";
+  const mnsName = "Medication Name Safety (LASA) Agent";
+  s.traces.push(
+    {
+      id: "span-med-name-safety-001",
+      taskId: mnsTaskId,
+      agentId: "medication-name-safety-agent",
+      agentName: mnsName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(mns0).toISOString(),
+      finishedAt: new Date(mns0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-med-name-safety-002",
+      taskId: mnsTaskId,
+      parentSpanId: "span-med-name-safety-001",
+      agentId: "medication-name-safety-agent",
+      agentName: mnsName,
+      operation: "lasa.receive-name",
+      protocol: "a2a",
+      startedAt: new Date(mns0 + 30).toISOString(),
+      finishedAt: new Date(mns0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "mns-002",
+        prescribedName: "premarin",
+        catalogSize: 10,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-med-name-safety-003",
+      taskId: mnsTaskId,
+      parentSpanId: "span-med-name-safety-002",
+      agentId: "medication-name-safety-agent",
+      agentName: mnsName,
+      operation: "lasa.compute-distances",
+      protocol: "a2a",
+      startedAt: new Date(mns0 + 60).toISOString(),
+      finishedAt: new Date(mns0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "mns-002",
+        nearestName: "premarin",
+        nearestDistance: 0,
+        confusableCount: 1,
+        // The honesty invariants: candidates sourced, distances exact.
+        lasaCandidatesSourced: true,
+        lasaDistancesConsistent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-med-name-safety-004",
+      taskId: mnsTaskId,
+      parentSpanId: "span-med-name-safety-003",
+      agentId: "medication-name-safety-agent",
+      agentName: mnsName,
+      operation: "lasa.flag-lookalike",
+      protocol: "a2a",
+      startedAt: new Date(mns0 + 100).toISOString(),
+      finishedAt: new Date(mns0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "mns-002",
+        disposition: "lasa-warning",
+        lookAlike: "primaxin",
+        lookAlikeDistance: 2,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-med-name-safety-005",
+      taskId: mnsTaskId,
+      parentSpanId: "span-med-name-safety-004",
+      agentId: "medication-name-safety-agent",
+      agentName: mnsName,
+      operation: "lasa.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(mns0 + 140).toISOString(),
+      finishedAt: new Date(mns0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "mns-002",
+        // The honesty invariant: never an autonomous substitution.
+        lasaNoAutonomousSubstitution: true,
+        requiresPharmacistReview: true,
         phiAccessed: true,
         synthetic: true
       }

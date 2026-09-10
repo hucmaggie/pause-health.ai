@@ -206,6 +206,10 @@ export type GovernanceTask = {
   scheduleIntervalsSourced?: boolean;
   scheduleConflictFree?: boolean;
   scheduleNoAutonomousBooking?: boolean;
+  // Medication Name Safety / LASA (candidates-sourced + distances-consistent + no-autonomous-substitution)
+  lasaCandidatesSourced?: boolean;
+  lasaDistancesConsistent?: boolean;
+  lasaNoAutonomousSubstitution?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1375,6 +1379,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An appointment booked / cancelled / bumped autonomously, or with no scheduler review",
     reason:
       "A scheduling-conflict determination autonomously booked, cancelled, or bumped an appointment (autoBooked:true — each is a scheduling action that must be authorized) or did not require scheduler review (requiresSchedulerReview:false); the agent RECOMMENDS — every schedule is a RECOMMENDATION requiring a scheduler to confirm. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Appointment Scheduling Agent's governance posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.lasa.candidates-sourced",
+    signal: "lasaCandidatesSourced",
+    violatingValue: false,
+    violationHint: "A fabricated or mislabeled look-alike candidate not backed by the catalog",
+    reason:
+      "A medication-name-safety finding names a candidate — the nearest match or a confusable look-alike — that does not trace to a catalog drug: every candidate's drugId must be in the catalog and its echoed name must equal that drug's catalog name. A fabricated candidate invents a look-alike that doesn't exist; a mislabeled one attaches the wrong name. The sourced gate — mirrors the Drug–Drug Interaction Agent's interaction-sourced and the Schedule Conflict Agent's intervals-sourced"
+  },
+  {
+    policyId: "policy.lasa.distances-consistent",
+    signal: "lasaDistancesConsistent",
+    violatingValue: false,
+    violationHint: "A miscomputed distance, a wrong nearest match, an omitted look-alike, or a bad disposition",
+    reason:
+      "A medication-name-safety finding's edit distances do not add up — recomputing the Levenshtein distance from the prescribed name to the catalog must reproduce the reported nearest match, every reported distance, the exact-match flag, the confusable set (exactly those within the threshold), and the disposition. A miscomputed distance, a wrong nearest match, an omitted or spurious look-alike, or a disposition that doesn't follow drives a wrong finding — the whole point is the arithmetic. The load-bearing correctness gate — mirrors the Schedule Conflict Agent's conflict-free and the Access Anomaly Agent's window-count-consistent"
+  },
+  {
+    policyId: "policy.lasa.no-autonomous-substitution",
+    signal: "lasaNoAutonomousSubstitution",
+    violatingValue: false,
+    violationHint: "A drug substituted / corrected / dispensed autonomously, or with no pharmacist review",
+    reason:
+      "A medication-name-safety finding autonomously substituted, corrected, or dispensed a drug (autoSubstituted:true — each is a clinical action that must be authorized) or did not require pharmacist review (requiresPharmacistReview:false); the agent FLAGS — every finding is a RECOMMENDATION requiring a pharmacist to confirm the intended medication. Mirrors the Drug–Drug Interaction Agent's no-autonomous-hold-or-override and the Schedule Conflict Agent's no-autonomous-booking posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
