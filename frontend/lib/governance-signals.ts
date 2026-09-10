@@ -202,6 +202,10 @@ export type GovernanceTask = {
   caseloadAssignmentComplete?: boolean;
   caseloadCapacityRespected?: boolean;
   caseloadNoAutonomousAssignment?: boolean;
+  // Schedule Conflict / Double-Booking Guard (intervals-sourced + conflict-free + no-autonomous-booking)
+  scheduleIntervalsSourced?: boolean;
+  scheduleConflictFree?: boolean;
+  scheduleNoAutonomousBooking?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1347,6 +1351,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An assignment committed autonomously, or with no care-lead review",
     reason:
       "A caseload-balancing allocation autonomously committed an assignment (autoAssigned:true — committing an assignment, reassigning a patient, or overriding a manager's caseload is a care-ownership decision that must be authorized) or did not require care-lead review (requiresCareLeadReview:false); the agent RECOMMENDS — every allocation is a RECOMMENDATION requiring a care-management lead to confirm. Mirrors the Care Team Agent's no-autonomous-assignment and the Coverage Continuity Agent's no-autonomous-determination posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.schedule.intervals-sourced",
+    signal: "scheduleIntervalsSourced",
+    violatingValue: false,
+    violationHint: "A fabricated / dropped appointment — not every request accounted for exactly once",
+    reason:
+      "A scheduling-conflict determination has an appointment — scheduled or waitlisted — that does not trace to a submitted request, or does not account for every request exactly once: every scheduled / conflicting appointment's id, member, start, and end must match a submitted interval, and the scheduled set and the conflict set must be disjoint and together cover every submitted request (no fabricated appointment, no dropped patient, no double-count). A fabricated appointment invents a booking; a dropped patient is turned away silently. The sourced + completeness gate — mirrors the Caseload Balancing Agent's assignment-complete and the Coverage Continuity Agent's segments-sourced"
+  },
+  {
+    policyId: "policy.schedule.conflict-free",
+    signal: "scheduleConflictFree",
+    violatingValue: false,
+    violationHint: "A double-booked resource, or a request waitlisted while it actually fit",
+    reason:
+      "A scheduling-conflict determination is not conflict-free — the scheduled appointments must be pairwise NON-overlapping (no double-booking on the resource), every waitlisted appointment must genuinely overlap the scheduled appointment named in its conflictsWith, and the counts must add up. A scheduled pair that overlaps double-books the resource; a request waitlisted while it actually fit turns a patient away for nothing. The load-bearing correctness gate — mirrors the Caseload Balancing Agent's capacity-respected and the Access Anomaly Agent's window-count-consistent"
+  },
+  {
+    policyId: "policy.schedule.no-autonomous-booking",
+    signal: "scheduleNoAutonomousBooking",
+    violatingValue: false,
+    violationHint: "An appointment booked / cancelled / bumped autonomously, or with no scheduler review",
+    reason:
+      "A scheduling-conflict determination autonomously booked, cancelled, or bumped an appointment (autoBooked:true — each is a scheduling action that must be authorized) or did not require scheduler review (requiresSchedulerReview:false); the agent RECOMMENDS — every schedule is a RECOMMENDATION requiring a scheduler to confirm. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Appointment Scheduling Agent's governance posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

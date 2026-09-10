@@ -53,6 +53,7 @@ import { CarePathwayPanel } from "../../../components/care-pathway-panel";
 import { CoverageContinuityPanel } from "../../../components/coverage-continuity-panel";
 import { AccessAnomalyPanel } from "../../../components/access-anomaly-panel";
 import { CaseloadBalancingPanel } from "../../../components/caseload-balancing-panel";
+import { ScheduleConflictPanel } from "../../../components/schedule-conflict-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -201,6 +202,7 @@ export default function IntakeDemoPage() {
       <CoverageContinuityPanel />
       <AccessAnomalyPanel />
       <CaseloadBalancingPanel />
+      <ScheduleConflictPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 

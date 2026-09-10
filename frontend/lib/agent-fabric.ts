@@ -937,6 +937,53 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "schedule-conflict-agent",
+    name: "Scheduling Conflict / Double-Booking Guard Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the care-coordination scheduling-integrity
+    // piece: POST /api/agents/schedule-conflict/tasks (card at /.well-known/
+    // agent.json). A DETERMINISTIC (no-Claude) care-coordination agent that
+    // takes a RESOURCE (a provider's clinic day, an infusion chair, an imaging
+    // machine) and a BATCH of requested appointment INTERVALS (each a start/end
+    // time for a patient) and computes the MAXIMUM CONFLICT-FREE SCHEDULE that
+    // fits without double-booking, WAITLISTING the requests that collide. UNLIKE
+    // the Caseload Balancing agent's GREEDY BIN-PACKING under a capacity
+    // constraint, the Access Anomaly agent's SLIDING-WINDOW COUNTING, the
+    // Coverage Continuity agent's INTERVAL MERGING + GAP DETECTION (that one
+    // MERGES overlapping intervals; THIS one SELECTS a maximum NON-overlapping
+    // subset), the Care Pathway agent's TOPOLOGICAL ORDERING, the Enrollment
+    // Reconciliation agent's KEYED SET-DIFFERENCE, the Member Cost-Share agent's
+    // SEQUENTIAL dollar waterfall, the OIG Exclusion agent's identity MATCHING,
+    // or the Audit Log Integrity agent's HASH CHAIN — and UNLIKE the DATE-
+    // DEADLINE agents (Timely Filing, Right of Access, Amendment) that add N
+    // days to a single date — the heart of this service is GREEDY INTERVAL
+    // SELECTION (the classic activity-selection algorithm: sort by earliest
+    // finish time and admit each interval that doesn't overlap the last
+    // admitted, provably maximizing the count of non-overlapping appointments).
+    // It COMPLEMENTS the Appointment Scheduling agent (which BOOKS a SINGLE slot
+    // and never double-books THAT slot): this validates a WHOLE BATCH for a
+    // resource, computes the conflict-free schedule + the waitlist, and hands it
+    // to a scheduler — the double-booking guard for a day, not the booker of one
+    // appointment. A schedule is a RECOMMENDATION requiring a scheduler to
+    // confirm; the agent never autonomously BOOKS, CANCELS, or BUMPS an
+    // appointment. It is PHI-bearing (the requests reference the patients being
+    // scheduled). REUSES the existing care-coordination tier. The resource +
+    // intervals are ILLUSTRATIVE, NOT a certified scheduling system.
+    endpoint: "/api/agents/schedule-conflict",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a resource (a provider's clinic day, an infusion chair, an imaging machine) and a batch of requested appointment intervals (each a start/end time for a patient) and computes the maximum conflict-free schedule that fits without double-booking, waitlisting the requests that collide. A deterministic care-coordination agent; it COMPLEMENTS the Appointment Scheduling agent (which BOOKS a SINGLE slot and never double-books THAT slot) — this validates a WHOLE BATCH for a resource and produces the conflict-free schedule + the waitlist",
+      "The schedule is DETERMINISTIC — a pure function of the request's own intervals (time is data: ISO strings or epoch-ms, no real clock; not a bin-packing, a sliding-window count, an interval MERGE, a topological sort, a set-difference, a dollar waterfall, an identity match, or a hash chain but GREEDY INTERVAL SELECTION — the classic activity-selection algorithm, sort by earliest finish and admit each interval that doesn't overlap the last admitted, provably maximizing the number of non-overlapping appointments); the same batch always yields the same schedule",
+      "Every scheduled / waitlisted appointment must trace to a submitted request (same id, member, start, end) and every request must be accounted for exactly once across the scheduled and conflict sets — a fabricated appointment, a dropped patient, or a double-count is blocked at the Agent Fabric governance boundary (policy.schedule.intervals-sourced, the sourced + completeness gate); and the schedule must be conflict-free — the scheduled appointments must be pairwise NON-overlapping (no double-booking), every waitlisted appointment must genuinely overlap the scheduled one it names, and the counts must add up; a double-booked resource or a request waitlisted while it actually fit is blocked (policy.schedule.conflict-free, the load-bearing correctness gate). Mirrors the Caseload Balancing Agent's assignment-complete + capacity-respected posture",
+      "The agent RECOMMENDS — it NEVER books, cancels, or bumps an appointment (each is a scheduling action that must be authorized) on its own; a schedule that auto-books or is not review-gated is blocked (policy.schedule.no-autonomous-booking), and every schedule is a recommendation requiring a scheduler to confirm. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Appointment Scheduling Agent's governance posture",
+      "Runs against ILLUSTRATIVE synthetic resource + intervals — clearly labeled; NOT a certified scheduling system (real scheduling uses provider availability calendars, appointment-type durations, buffer / turnover times, and room / equipment constraints). PHI-bearing — the requests reference the patients being scheduled"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "transitions-of-care-agent",
     name: "Discharge & Transitions of Care Agent",
     kind: "agentforce",
@@ -2676,7 +2723,8 @@ const POLICIES: PolicyRecord[] = [
       "care-pathway-agent",
       "coverage-continuity-agent",
       "access-anomaly-agent",
-      "caseload-balancing-agent"
+      "caseload-balancing-agent",
+      "schedule-conflict-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3814,6 +3862,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Caseload Balancing Agent may NEVER commit an assignment, reassign a patient, or override a manager's caseload on its own (autoAssigned:true — each is a care-ownership decision that must be authorized) or skip care-lead review (requiresCareLeadReview:true) — the agent RECOMMENDS, and every allocation is a RECOMMENDATION requiring a care-management lead to confirm. An allocation that auto-commits, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Care Team Agent's no-autonomous-assignment and the Coverage Continuity Agent's no-autonomous-determination posture — the harmful action is enforced-off.",
     appliesTo: ["caseload-balancing-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.schedule.intervals-sourced",
+    name: "Every appointment is sourced, and every request accounted for once",
+    description:
+      "The Scheduling Conflict Agent's schedule must trace every appointment — scheduled or waitlisted — to a submitted request (same id, member, start, end), and must account for every request exactly once across the scheduled set and the conflict set (disjoint, covering every request — no fabricated appointment, no dropped patient, no double-count). A fabricated appointment invents a booking; a dropped patient is turned away silently. A schedule that fabricates, drops, or double-counts an appointment is rejected before it can leave the fabric. This is the sourced + completeness gate. Mirrors the Caseload Balancing Agent's assignment-complete and the Coverage Continuity Agent's segments-sourced posture.",
+    appliesTo: ["schedule-conflict-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.schedule.conflict-free",
+    name: "The scheduled set is conflict-free, and every waitlist is justified",
+    description:
+      "The Scheduling Conflict Agent's scheduled appointments must be pairwise NON-overlapping (no double-booking on the resource), every waitlisted appointment must genuinely overlap the scheduled appointment named in its conflictsWith, and the counts must add up. A scheduled pair that overlaps double-books the resource; a request waitlisted while it actually fit turns a patient away for nothing. A schedule that double-books or waitlists a request that fit is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Caseload Balancing Agent's capacity-respected and the Access Anomaly Agent's window-count-consistent posture.",
+    appliesTo: ["schedule-conflict-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.schedule.no-autonomous-booking",
+    name: "An appointment is never autonomously booked / cancelled / bumped",
+    description:
+      "The Scheduling Conflict Agent may NEVER book, cancel, or bump an appointment on its own (autoBooked:true — each is a scheduling action that must be authorized) or skip scheduler review (requiresSchedulerReview:true) — the agent RECOMMENDS, and every schedule is a RECOMMENDATION requiring a scheduler to confirm. A schedule that auto-books, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Appointment Scheduling Agent's governance posture — the harmful action is enforced-off.",
+    appliesTo: ["schedule-conflict-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -11841,6 +11916,114 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous assignment.
         caseloadNoAutonomousAssignment: true,
         requiresCareLeadReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedScheduleConflictTrace() {
+  const s = store();
+  const scr0 = Date.now() - 1000 * 60 * 1;
+  const scrTaskId = "task-seed-schedule-conflict-001";
+  const scrName = "Scheduling Conflict / Double-Booking Guard Agent";
+  s.traces.push(
+    {
+      id: "span-schedule-conflict-001",
+      taskId: scrTaskId,
+      agentId: "schedule-conflict-agent",
+      agentName: scrName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(scr0).toISOString(),
+      finishedAt: new Date(scr0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-schedule-conflict-002",
+      taskId: scrTaskId,
+      parentSpanId: "span-schedule-conflict-001",
+      agentId: "schedule-conflict-agent",
+      agentName: scrName,
+      operation: "schedule.receive-requests",
+      protocol: "a2a",
+      startedAt: new Date(scr0 + 30).toISOString(),
+      finishedAt: new Date(scr0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "scr-002",
+        resourceRef: "provider-mscp-day-2026-03-03",
+        requestCount: 4,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-schedule-conflict-003",
+      taskId: scrTaskId,
+      parentSpanId: "span-schedule-conflict-002",
+      agentId: "schedule-conflict-agent",
+      agentName: scrName,
+      operation: "schedule.select-intervals",
+      protocol: "a2a",
+      startedAt: new Date(scr0 + 60).toISOString(),
+      finishedAt: new Date(scr0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "scr-002",
+        scheduledCount: 2,
+        conflictCount: 2,
+        // The honesty invariants: every appointment sourced, schedule conflict-free.
+        scheduleIntervalsSourced: true,
+        scheduleConflictFree: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-schedule-conflict-004",
+      taskId: scrTaskId,
+      parentSpanId: "span-schedule-conflict-003",
+      agentId: "schedule-conflict-agent",
+      agentName: scrName,
+      operation: "schedule.check-conflicts",
+      protocol: "a2a",
+      startedAt: new Date(scr0 + 100).toISOString(),
+      finishedAt: new Date(scr0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "scr-002",
+        disposition: "conflicts-waitlisted",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-schedule-conflict-005",
+      taskId: scrTaskId,
+      parentSpanId: "span-schedule-conflict-004",
+      agentId: "schedule-conflict-agent",
+      agentName: scrName,
+      operation: "schedule.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(scr0 + 140).toISOString(),
+      finishedAt: new Date(scr0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "scr-002",
+        // The honesty invariant: never an autonomous booking.
+        scheduleNoAutonomousBooking: true,
+        requiresSchedulerReview: true,
         phiAccessed: true,
         synthetic: true
       }
