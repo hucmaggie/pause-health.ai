@@ -2286,6 +2286,55 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "access-anomaly-agent",
+    name: "Access Anomaly Detection Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the MuleSoft control-plane / data-substrate
+    // access-anomaly-detection service: POST /api/agents/access-anomaly/tasks
+    // (card at /.well-known/agent.json). A DETERMINISTIC (no-Claude)
+    // data-substrate agent that implements the HIPAA Security Rule's
+    // information-system-activity-review safeguard (§164.308(a)(1)(ii)(D)):
+    // given an actor's PHI-ACCESS EVENTS (each a timestamped read of a patient
+    // record) plus a window length and a threshold, it COUNTS the accesses
+    // within a ROLLING TIME WINDOW, finds the PEAK number in any window of the
+    // configured length, and flags an ANOMALY when that peak exceeds the
+    // threshold (a possible snooping / breach pattern). UNLIKE the Coverage
+    // Continuity agent's INTERVAL MERGING + GAP DETECTION, the Care Pathway
+    // agent's TOPOLOGICAL ORDERING, the Enrollment Reconciliation agent's KEYED
+    // SET-DIFFERENCE, the Member Cost-Share agent's SEQUENTIAL dollar waterfall,
+    // the OIG Exclusion agent's identity MATCHING, or the Audit Log Integrity
+    // agent's HASH CHAIN — and UNLIKE the DATE-DEADLINE agents (Timely Filing,
+    // Right of Access, Amendment) that add N days to a single date — the heart
+    // of this service is SLIDING-WINDOW COUNTING over timestamped events (a
+    // two-pointer scan for the peak count in any fixed-length window). It
+    // COMPLEMENTS the other platform agents — distinct from the Audit Log
+    // Integrity agent (whether the audit TRAIL is tamper-evident), the
+    // Break-the-Glass agent (whether a single emergency access is authorized),
+    // the Minimum Necessary agent (how much PHI a purpose may see), the
+    // Accounting of Disclosures agent (WHO a patient's PHI was disclosed to),
+    // and the Consent agent (whether a patient may be contacted / data used):
+    // this detects an unusual VOLUME of accesses by one actor over time. A flag
+    // is a RECOMMENDATION requiring a privacy officer to review; the agent never
+    // autonomously LOCKS the actor's account, revokes their access, or
+    // disciplines them. It is PHI-bearing (the events reference the patients
+    // whose records were accessed). REUSES the existing data-plane tier
+    // (platform plane). The events + window + threshold are ILLUSTRATIVE, NOT a
+    // certified breach-detection / SIEM system.
+    endpoint: "/api/agents/access-anomaly",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "The information-system-activity-review layer of the data substrate — given an actor's PHI-access events plus a window length and a threshold, counts the accesses within a rolling time window, finds the peak number in any window of that length, and flags an anomalous access volume when the peak exceeds the threshold (a possible snooping / breach pattern under HIPAA §164.308(a)(1)(ii)(D)). Complements (not duplicates) the Audit Log Integrity agent (whether the audit TRAIL is tamper-evident), the Break-the-Glass agent (whether a single emergency access is authorized), the Minimum Necessary agent (how much PHI a purpose may see), the Accounting of Disclosures agent (WHO a patient's PHI was disclosed to), and the Consent agent (whether a patient may be contacted / data used) — this detects an unusual VOLUME of accesses by one actor over time",
+      "The detection is DETERMINISTIC — a pure function of the actor's events + the window + the threshold (time is data; no real clock; not an interval merge, a topological sort, a set-difference, a dollar waterfall, an identity match, or a hash chain but SLIDING-WINDOW COUNTING via a two-pointer scan); the same events always yield the same peak + finding, and the detection is WINDOWED (a high daily total spread into small bursts is NOT flagged), not a naive total count",
+      "Every event in the reported peak window must trace to a submitted access event — the peak window's event ids must be a subset of the submitted events and its count must equal the number of those ids; a fabricated peak event or a phantom count is blocked at the Agent Fabric governance boundary (policy.access.events-sourced); and the window count must be exact — recomputing the sliding-window peak must reproduce the reported count, the peak window's events must all fall within a span of at most windowMinutes, and the anomaly flag must equal whether the peak exceeds the threshold; a miscounted peak, an over-wide window, or a mismatched flag is blocked (policy.access.window-count-consistent, the load-bearing correctness gate). Mirrors the Coverage Continuity Agent's segments-sourced + math-consistent posture",
+      "The agent MEASURES — it NEVER locks the actor's account, revokes their access, or disciplines them (each is an access / employment action that must be authorized) on its own; a finding that auto-locks / auto-revokes, or that is not review-gated, is blocked (policy.access.no-autonomous-action), and every flag is a recommendation requiring a privacy officer to review. Mirrors the Coverage Continuity Agent's no-autonomous-determination and the Audit Log Integrity Agent's no-autonomous-redaction posture",
+      "Runs against ILLUSTRATIVE synthetic events + window + threshold — clearly labeled; NOT a certified breach-detection / SIEM system (real activity review uses the full audit trail, user-behavior analytics, role / relationship context — is there a treatment relationship? — and the privacy officer's judgment). PHI-bearing — the events reference the patients whose records were accessed"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
+  },
+  {
     id: "exclusion-screening-agent",
     name: "OIG Exclusion / Sanctions Screening Agent",
     kind: "agentforce",
@@ -2579,7 +2628,8 @@ const POLICIES: PolicyRecord[] = [
       "drug-interaction-agent",
       "enrollment-reconciliation-agent",
       "care-pathway-agent",
-      "coverage-continuity-agent"
+      "coverage-continuity-agent",
+      "access-anomaly-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -3663,6 +3713,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Creditable Coverage Continuity Agent may NEVER issue a creditable-coverage determination, deny a special enrollment, or impose a late-enrollment penalty on its own (autoDetermined:true — each is a coverage decision that must be authorized) or skip eligibility review (requiresEligibilityReview:true) — the agent MEASURES, and every determination is a RECOMMENDATION requiring an eligibility reviewer to confirm. A determination that auto-issues, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the MLR Rebate Agent's no-autonomous-disbursement posture — the harmful action is enforced-off.",
     appliesTo: ["coverage-continuity-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.access.events-sourced",
+    name: "Every counted access is sourced — no fabricated access",
+    description:
+      "The Access Anomaly Detection Agent's every event in the reported peak window must trace to a submitted access event — the peak window's event ids must be a subset of the submitted events and its count must equal the number of those ids. A fabricated access (an event in the peak not backed by a submitted one) would manufacture a false anomaly; a phantom count would overstate the spike. A finding with an unsourced peak event or a mismatched count is rejected before it can leave the fabric. Mirrors the Coverage Continuity Agent's segments-sourced and the Audit Log Integrity Agent's hash-chain-verified posture.",
+    appliesTo: ["access-anomaly-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.access.window-count-consistent",
+    name: "The window count is exact",
+    description:
+      "The Access Anomaly Detection Agent's reported peak must be the true maximum number of events in any window of the configured length — recomputing the sliding-window peak from the events must reproduce the reported peak count, the peak window's events must all fall within a span of at most windowMinutes, and the anomaly flag must equal whether the peak exceeds the threshold. A miscounted peak, a window wider than the configured length, or an anomaly flag that doesn't match the threshold drives a wrong finding and is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Coverage Continuity Agent's math-consistent and the Audit Log Integrity Agent's sequence-complete posture.",
+    appliesTo: ["access-anomaly-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.access.no-autonomous-action",
+    name: "An access action is never autonomously taken",
+    description:
+      "The Access Anomaly Detection Agent may NEVER lock the actor's account, revoke their access, or discipline them on its own (autoLockedAccount:true / autoRevokedAccess:true — each is an access / employment action that must be authorized) or skip privacy review (requiresPrivacyReview:true) — the agent MEASURES, and every flag is a RECOMMENDATION requiring a privacy officer to review. A finding that auto-locks / auto-revokes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Coverage Continuity Agent's no-autonomous-determination and the Audit Log Integrity Agent's no-autonomous-redaction posture — the harmful action is enforced-off.",
+    appliesTo: ["access-anomaly-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -11468,6 +11545,117 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous coverage determination.
         coverageNoAutonomousDetermination: true,
         requiresEligibilityReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedAccessAnomalyTrace() {
+  const s = store();
+  const aad0 = Date.now() - 1000 * 60 * 1;
+  const aadTaskId = "task-seed-access-anomaly-001";
+  const aadName = "Access Anomaly Detection Agent";
+  s.traces.push(
+    {
+      id: "span-access-anomaly-001",
+      taskId: aadTaskId,
+      agentId: "access-anomaly-agent",
+      agentName: aadName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(aad0).toISOString(),
+      finishedAt: new Date(aad0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-access-anomaly-002",
+      taskId: aadTaskId,
+      parentSpanId: "span-access-anomaly-001",
+      agentId: "access-anomaly-agent",
+      agentName: aadName,
+      operation: "access.receive-events",
+      protocol: "a2a",
+      startedAt: new Date(aad0 + 30).toISOString(),
+      finishedAt: new Date(aad0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "aad-001",
+        actorRef: "actor-3391",
+        eventCount: 24,
+        // The honesty invariant: every counted access sourced (no fabricated access).
+        accessEventsSourced: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-access-anomaly-003",
+      taskId: aadTaskId,
+      parentSpanId: "span-access-anomaly-002",
+      agentId: "access-anomaly-agent",
+      agentName: aadName,
+      operation: "access.scan-window",
+      protocol: "a2a",
+      startedAt: new Date(aad0 + 60).toISOString(),
+      finishedAt: new Date(aad0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "aad-001",
+        peakCount: 24,
+        windowMinutes: 60,
+        // The honesty invariant: the window count is exact.
+        accessWindowCountConsistent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-access-anomaly-004",
+      taskId: aadTaskId,
+      parentSpanId: "span-access-anomaly-003",
+      agentId: "access-anomaly-agent",
+      agentName: aadName,
+      operation: "access.flag-anomaly",
+      protocol: "a2a",
+      startedAt: new Date(aad0 + 100).toISOString(),
+      finishedAt: new Date(aad0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "aad-001",
+        disposition: "anomalous-access-volume",
+        hasAnomaly: true,
+        distinctPatients: 24,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-access-anomaly-005",
+      taskId: aadTaskId,
+      parentSpanId: "span-access-anomaly-004",
+      agentId: "access-anomaly-agent",
+      agentName: aadName,
+      operation: "access.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(aad0 + 140).toISOString(),
+      finishedAt: new Date(aad0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "aad-001",
+        // The honesty invariant: never an autonomous access action.
+        accessNoAutonomousAction: true,
+        requiresPrivacyReview: true,
         phiAccessed: true,
         synthetic: true
       }

@@ -454,9 +454,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // enforcement flip-side), plus the clinical Drug–Drug Interaction (DDI)
     // Safety Check agent, the payer Medical Loss Ratio (MLR) Rebate Calculation
     // agent, the payer Eligibility & Enrollment (834) Reconciliation agent, the
-    // clinical Care Pathway Sequencing agent, and the payer Creditable Coverage
-    // Continuity agent.
-    expect(listAgents()).toHaveLength(76);
+    // clinical Care Pathway Sequencing agent, the payer Creditable Coverage
+    // Continuity agent, and the platform Access Anomaly Detection agent.
+    expect(listAgents()).toHaveLength(77);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

@@ -194,6 +194,10 @@ export type GovernanceTask = {
   coverageSegmentsSourced?: boolean;
   coverageMathConsistent?: boolean;
   coverageNoAutonomousDetermination?: boolean;
+  // Access Anomaly Detection (events-sourced + window-count-consistent + no-autonomous-action)
+  accessEventsSourced?: boolean;
+  accessWindowCountConsistent?: boolean;
+  accessNoAutonomousAction?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1291,6 +1295,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A coverage determination issued autonomously, or with no eligibility review",
     reason:
       "A coverage continuity determination autonomously issued a creditable-coverage determination (autoDetermined:true — issuing a determination, denying special enrollment, or imposing a late-enrollment penalty is a coverage decision that must be authorized) or did not require eligibility review (requiresEligibilityReview:false); the agent MEASURES — every determination is a RECOMMENDATION requiring an eligibility reviewer to confirm. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the MLR Rebate Agent's no-autonomous-disbursement posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.access.events-sourced",
+    signal: "accessEventsSourced",
+    violatingValue: false,
+    violationHint: "A peak-window access event not backed by a submitted event, or a phantom count",
+    reason:
+      "An access-anomaly finding has a peak window whose events do not trace to submitted access events — the peak window's event ids must be a subset of the submitted events and its count must equal the number of those ids. A fabricated access (an event in the peak not backed by a submitted one) would manufacture a false anomaly; a phantom count would overstate the spike. Mirrors the Coverage Continuity Agent's segments-sourced and the Audit Log Integrity Agent's hash-chain-verified posture"
+  },
+  {
+    policyId: "policy.access.window-count-consistent",
+    signal: "accessWindowCountConsistent",
+    violatingValue: false,
+    violationHint: "A miscounted peak, an over-wide window, or an anomaly flag off its threshold",
+    reason:
+      "An access-anomaly finding's window count does not add up — recomputing the sliding-window peak from the events must reproduce the reported peak count, the peak window's events must all fall within a span of at most windowMinutes, and the anomaly flag must equal whether the peak exceeds the threshold. A miscounted peak, a window wider than the configured length, or a mismatched anomaly flag drives a wrong finding. The load-bearing correctness gate — mirrors the Coverage Continuity Agent's math-consistent and the Audit Log Integrity Agent's sequence-complete"
+  },
+  {
+    policyId: "policy.access.no-autonomous-action",
+    signal: "accessNoAutonomousAction",
+    violatingValue: false,
+    violationHint: "An access / employment action taken autonomously, or with no privacy review",
+    reason:
+      "An access-anomaly finding autonomously took an access / employment action (autoLockedAccount:true or autoRevokedAccess:true — locking an account, revoking access, or disciplining a workforce member is an action that must be authorized) or did not require privacy review (requiresPrivacyReview:false); the agent MEASURES — every flag is a RECOMMENDATION requiring a privacy officer to review. Mirrors the Coverage Continuity Agent's no-autonomous-determination and the Audit Log Integrity Agent's no-autonomous-redaction posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
