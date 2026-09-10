@@ -452,8 +452,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // Correction / HIPAA §164.526 agent — completing the patient-rights trilogy
     // — and the Information Blocking / Cures Act 45 CFR Part 171 agent, its
     // enforcement flip-side), plus the clinical Drug–Drug Interaction (DDI)
-    // Safety Check agent.
-    expect(listAgents()).toHaveLength(72);
+    // Safety Check agent and the payer Medical Loss Ratio (MLR) Rebate
+    // Calculation agent.
+    expect(listAgents()).toHaveLength(73);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

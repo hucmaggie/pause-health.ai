@@ -178,6 +178,10 @@ export type GovernanceTask = {
   ddiInteractionSourced?: boolean;
   ddiSeverityConsistent?: boolean;
   ddiNoAutonomousHoldOrOverride?: boolean;
+  // Medical Loss Ratio (MLR) Rebate Calculation (inputs-sourced + allocation-consistent + no-autonomous-disbursement)
+  mlrInputsSourced?: boolean;
+  mlrAllocationConsistent?: boolean;
+  mlrNoAutonomousDisbursement?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1179,6 +1183,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An order held or an alert overridden autonomously, or with no clinician review",
     reason:
       "A drug–drug interaction determination autonomously held / cancelled the order (autoHeldOrder:true — which could deny needed therapy), overrode the interaction alert (autoOverrodeAlert:true — which could push through a contraindicated combination), or did not require clinician review (requiresClinicianReview:false); the agent SCREENS — every finding is a RECOMMENDATION requiring a pharmacist / prescriber to act on or review. Mirrors the Controlled Substance Agent's no-autonomous-prescribing-decision and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.mlr.inputs-sourced",
+    signal: "mlrInputsSourced",
+    violatingValue: false,
+    violationHint: "An MLR standard that isn't the recorded one for the market",
+    reason:
+      "A Medical Loss Ratio rebate determination applied a standard that is off-catalog or does not match its market — the applicable standard (80% individual / small-group, 85% large-group) must resolve in the recorded MLR_STANDARDS catalog for the market, because a mis-stated standard wrongly triggers or wrongly avoids a rebate. Mirrors the Member Cost-Share Agent's benefit-design-sourced and the Good Faith Estimate Agent's charge-master-sourced posture"
+  },
+  {
+    policyId: "policy.mlr.allocation-consistent",
+    signal: "mlrAllocationConsistent",
+    violatingValue: false,
+    violationHint: "An MLR / rebate that doesn't add up or an apportionment that loses pennies",
+    reason:
+      "A Medical Loss Ratio rebate determination's MLR does not equal (claims + quality improvement) / (earned premium − taxes & fees), its total rebate does not equal max(0, standard − MLR) × earned premium, or the per-subscriber allocations do not sum EXACTLY (to the penny) to the total rebate (or an allocation is negative) — a rebate that doesn't add up, or an apportionment that loses / invents pennies, is a compliance and accounting defect. The load-bearing correctness gate — mirrors the Member Cost-Share Agent's math-consistent and the Risk Adjustment Agent's score-consistent"
+  },
+  {
+    policyId: "policy.mlr.no-autonomous-disbursement",
+    signal: "mlrNoAutonomousDisbursement",
+    violatingValue: false,
+    violationHint: "A rebate disbursed autonomously, or with no treasury review",
+    reason:
+      "A Medical Loss Ratio rebate determination autonomously disbursed the rebate (autoDisbursed:true — a movement of money to members that must be authorized) or did not require treasury review (requiresTreasuryReview:false); the agent CALCULATES — every determination is a RECOMMENDATION requiring a treasury / compliance reviewer to confirm and issue payment. Mirrors the Member Cost-Share Agent's no-autonomous-member-charge and the OIG Exclusion Agent's no-autonomous-block-or-clear posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

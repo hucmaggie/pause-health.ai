@@ -2157,6 +2157,49 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "mlr-rebate-agent",
+    name: "Medical Loss Ratio (MLR) Rebate Calculation Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side ACA Medical Loss Ratio piece: POST
+    // /api/agents/mlr-rebate/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) claims / payer-operations agent that computes a
+    // plan's Medical Loss Ratio for a market, decides whether it meets the ACA
+    // standard (80% individual / small-group, 85% large-group; 45 CFR Part 158),
+    // and — when it falls short — APPORTIONS the total rebate owed across the
+    // plan's subscribers penny-exactly (largest-remainder / Hamilton method).
+    // UNLIKE the Member Cost-Share agent's SEQUENTIAL dollar waterfall, the OIG
+    // Exclusion agent's identity MATCHING, or the Drug Interaction agent's
+    // pairwise LOOKUP, the heart of this service is a RATIO-vs-THRESHOLD test + an
+    // EXACT PROPORTIONAL APPORTIONMENT (the allocated cents sum EXACTLY to the
+    // total — no penny lost or invented). A determination is a RECOMMENDATION
+    // requiring a treasury / compliance reviewer to confirm and issue payment —
+    // the agent never autonomously DISBURSES a rebate. It COMPLEMENTS the other
+    // payer-operations agents — distinct from the Claims Adjudication agent (the
+    // allowed amount), the Member Cost-Share agent (splitting ONE claim's allowed
+    // amount into member vs. plan), the Coordination of Benefits agent (the order
+    // of coverages), the Overpayment & Recovery agent (clawing back an
+    // overpayment), and the Subrogation agent (third-party recovery): this
+    // computes a PLAN-YEAR-level rebate owed to subscribers under the ACA MLR
+    // rule and apportions it fairly. It is NOT PHI-bearing — it works on
+    // aggregate plan-year financials + a subscriber premium roster, no patient
+    // health information, so it is NOT on the HIPAA-audit policy. REUSES the
+    // existing payer-operations tier. The market standards + simplified MLR
+    // formula are ILLUSTRATIVE, NOT a certified MLR filing system.
+    endpoint: "/api/agents/mlr-rebate",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Computes a plan's Medical Loss Ratio for a market, decides whether it meets the ACA standard (80% individual / small-group, 85% large-group), and — when it falls short — apportions the total rebate owed across the plan's subscribers penny-exactly (largest-remainder method). A deterministic payer-operations agent; distinct from the Claims Adjudication agent (the allowed amount), the Member Cost-Share agent (splitting one claim), the Coordination of Benefits, Overpayment & Recovery, and Subrogation agents — this computes a PLAN-YEAR rebate owed to subscribers under the ACA MLR rule (45 CFR Part 158)",
+      "The determination is DETERMINISTIC — a pure function of the request's data + the market standard (no randomness, no clock; not a sequential waterfall or an identity match but a RATIO-vs-THRESHOLD test + an EXACT PROPORTIONAL APPORTIONMENT); the same plan year always yields the same MLR + rebate + apportionment",
+      "The applied standard must trace to the recorded market catalog — an off-catalog market or a mis-stated standard (wrongly triggering or avoiding a rebate) is blocked at the Agent Fabric governance boundary (policy.mlr.inputs-sourced); and the MLR must equal (claims + quality improvement) / (earned premium − taxes & fees), the total rebate must equal max(0, standard − MLR) × earned premium, and the per-subscriber allocations must sum EXACTLY to the total rebate — a rebate that doesn't add up or an apportionment that loses / invents pennies is blocked (policy.mlr.allocation-consistent, the load-bearing correctness gate). Mirrors the Member Cost-Share Agent's benefit-design-sourced + math-consistent posture",
+      "The rebate is a RECOMMENDATION — the agent NEVER disburses / pays a rebate on its own (a movement of money to members that must be authorized); a determination that auto-disburses, or is not review-gated, is blocked (policy.mlr.no-autonomous-disbursement), and every determination is confirmed + issued by a treasury / compliance reviewer. Mirrors the Member Cost-Share Agent's no-autonomous-member-charge and the OIG Exclusion Agent's no-autonomous-block-or-clear posture",
+      "Runs against an ILLUSTRATIVE synthetic set of ACA MLR standards + a simplified MLR formula (no NAIC MLR Annual Reporting Form, credibility adjustments, multi-year averaging, or permitted claim / premium adjustments) — clearly labeled; NOT a certified MLR filing system (real MLR reporting is governed by 45 CFR Part 158). NON-PHI — aggregate financials + a subscriber premium roster, no patient health information"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
+  },
+  {
     id: "exclusion-screening-agent",
     name: "OIG Exclusion / Sanctions Screening Agent",
     kind: "agentforce",
@@ -3380,6 +3423,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Drug Interaction Agent may NEVER hold / cancel the order (autoHeldOrder:true — which could deny needed therapy), override the interaction alert (autoOverrodeAlert:true — which could push through a contraindicated combination), or skip clinician review (requiresClinicianReview:true) — the agent SCREENS, and every finding is a RECOMMENDATION requiring a pharmacist / prescriber to act on or review. A determination that auto-holds / auto-overrides, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Controlled Substance Agent's no-autonomous-prescribing-decision and the Lab Result Agent's no-autonomous-clinical-action posture — the harmful action is enforced-off.",
     appliesTo: ["drug-interaction-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.mlr.inputs-sourced",
+    name: "The applicable MLR standard traces to the recorded market catalog",
+    description:
+      "The MLR Rebate Agent may NEVER apply a standard that is off-catalog or does not match its market — the applicable standard (80% individual / small-group, 85% large-group) must resolve in the recorded MLR_STANDARDS catalog for the market, because a mis-stated standard wrongly triggers or wrongly avoids a rebate. A determination that applies an off-catalog or mismatched standard is rejected before it can leave the fabric. Mirrors the Member Cost-Share Agent's benefit-design-sourced and the Good Faith Estimate Agent's charge-master-sourced posture. (In the prototype the standards + formula are clearly-labeled illustrative synthetics; in production MLR reporting is governed by 45 CFR Part 158.)",
+    appliesTo: ["mlr-rebate-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.mlr.allocation-consistent",
+    name: "The MLR, the rebate, and the apportionment are exact",
+    description:
+      "The MLR Rebate Agent's MLR must equal (claims + quality improvement) / (earned premium − taxes & fees), its total rebate must equal max(0, standard − MLR) × earned premium, and the per-subscriber allocations must sum EXACTLY (to the penny) to the total rebate with every allocation non-negative. A rebate that doesn't add up, or an apportionment that loses / invents pennies, is a compliance and accounting defect and is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Member Cost-Share Agent's math-consistent and the Risk Adjustment Agent's score-consistent posture.",
+    appliesTo: ["mlr-rebate-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.mlr.no-autonomous-disbursement",
+    name: "The rebate is never autonomously disbursed",
+    description:
+      "The MLR Rebate Agent may NEVER disburse / pay a rebate on its own (autoDisbursed:true — a movement of money to members that must be authorized) or skip treasury review (requiresTreasuryReview:true) — the agent CALCULATES, and every determination is a RECOMMENDATION requiring a treasury / compliance reviewer to confirm and issue payment. A determination that auto-disburses, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Member Cost-Share Agent's no-autonomous-member-charge and the OIG Exclusion Agent's no-autonomous-block-or-clear posture — the harmful action is enforced-off.",
+    appliesTo: ["mlr-rebate-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -10744,6 +10814,118 @@ function store(): FabricStore {
         ddiNoAutonomousHoldOrOverride: true,
         requiresClinicianReview: true,
         phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedMlrRebateTrace() {
+  const s = store();
+  const mlr0 = Date.now() - 1000 * 60 * 1;
+  const mlrTaskId = "task-seed-mlr-rebate-001";
+  const mlrName = "Medical Loss Ratio (MLR) Rebate Calculation Agent";
+  s.traces.push(
+    {
+      id: "span-mlr-001",
+      taskId: mlrTaskId,
+      agentId: "mlr-rebate-agent",
+      agentName: mlrName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(mlr0).toISOString(),
+      finishedAt: new Date(mlr0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // NON-PHI: aggregate plan-year financials, no patient health information.
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mlr-002",
+      taskId: mlrTaskId,
+      parentSpanId: "span-mlr-001",
+      agentId: "mlr-rebate-agent",
+      agentName: mlrName,
+      operation: "mlr.receive-financials",
+      protocol: "a2a",
+      startedAt: new Date(mlr0 + 30).toISOString(),
+      finishedAt: new Date(mlr0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        requestRef: "mlr-001",
+        planRef: "plan-ind-2025",
+        market: "individual",
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mlr-003",
+      taskId: mlrTaskId,
+      parentSpanId: "span-mlr-002",
+      agentId: "mlr-rebate-agent",
+      agentName: mlrName,
+      operation: "mlr.compute-ratio",
+      protocol: "a2a",
+      startedAt: new Date(mlr0 + 60).toISOString(),
+      finishedAt: new Date(mlr0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "mlr-001",
+        mlr: 0.7789,
+        meetsStandard: false,
+        // The honesty invariant: the standard traces to the market catalog.
+        mlrInputsSourced: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mlr-004",
+      taskId: mlrTaskId,
+      parentSpanId: "span-mlr-003",
+      agentId: "mlr-rebate-agent",
+      agentName: mlrName,
+      operation: "mlr.apportion-rebate",
+      protocol: "a2a",
+      startedAt: new Date(mlr0 + 100).toISOString(),
+      finishedAt: new Date(mlr0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "mlr-001",
+        totalRebate: 21100,
+        subscriberCount: 3,
+        // The honesty invariant: MLR + rebate + apportionment are exact.
+        mlrAllocationConsistent: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-mlr-005",
+      taskId: mlrTaskId,
+      parentSpanId: "span-mlr-004",
+      agentId: "mlr-rebate-agent",
+      agentName: mlrName,
+      operation: "mlr.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(mlr0 + 140).toISOString(),
+      finishedAt: new Date(mlr0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        requestRef: "mlr-001",
+        totalRebate: 21100,
+        // The honesty invariant: never an autonomous disbursement.
+        mlrNoAutonomousDisbursement: true,
+        requiresTreasuryReview: true,
+        phiAccessed: false,
         synthetic: true
       }
     }
