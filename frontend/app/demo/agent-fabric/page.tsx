@@ -1,6 +1,13 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { DemoShell } from "../../../components/demo-shell";
@@ -96,6 +103,24 @@ const TEST_INTAKES: Record<string, Record<string, string>> = {
   }
 };
 
+// Shared inline-style objects for the agent cards, so the 100+ rendered cards
+// stay visually consistent without repeating the same literals per card.
+const cardMetaStyle: CSSProperties = {
+  color: "var(--brand)",
+  fontWeight: 600,
+  fontSize: "0.8rem",
+  margin: 0
+};
+const summaryStyle: CSSProperties = {
+  cursor: "pointer",
+  fontWeight: 600,
+  fontSize: "0.82rem"
+};
+const detailListStyle: CSSProperties = {
+  marginTop: "0.4rem",
+  paddingLeft: "1.1rem"
+};
+
 function AgentFabricConsoleInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -120,6 +145,8 @@ function AgentFabricConsoleInner() {
   const [spans, setSpans] = useState<TraceSpan[]>([]);
   const [running, setRunning] = useState<string | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
+  // Free-text filter for the (now 100+) Agent Registry — matches name, tier, or endpoint.
+  const [registryQuery, setRegistryQuery] = useState<string>("");
 
   // --- Governance pre-flight panel state ---
   const [govAgentId, setGovAgentId] = useState<string>("");
@@ -275,18 +302,31 @@ function AgentFabricConsoleInner() {
     return map;
   }, [policies]);
 
-  // Group the registry by plane (patient/clinical, payer & plan operations,
-  // platform, commercial) so the PHI boundary is visible instead of a flat
-  // list of raw tier slugs.
+  // Agents matching the free-text registry filter (name / tier / endpoint).
+  const filteredAgents = useMemo(() => {
+    const q = registryQuery.trim().toLowerCase();
+    if (!q) return agents;
+    return agents.filter(
+      (a) =>
+        a.name.toLowerCase().includes(q) ||
+        tierLabel(a.governanceTier).toLowerCase().includes(q) ||
+        a.governanceTier.toLowerCase().includes(q) ||
+        a.endpoint.toLowerCase().includes(q)
+    );
+  }, [agents, registryQuery]);
+
+  // Group the (filtered) registry by plane (patient/clinical, payer & plan
+  // operations, platform, commercial) so the PHI boundary is visible instead
+  // of a flat list of raw tier slugs.
   const agentsByPlane = useMemo(() => {
     const map = new Map<GovernancePlane | "other", AgentRecord[]>();
-    for (const a of agents) {
+    for (const a of filteredAgents) {
       const plane = planeForTier(a.governanceTier) ?? "other";
       if (!map.has(plane)) map.set(plane, []);
       map.get(plane)!.push(a);
     }
     return map;
-  }, [agents]);
+  }, [filteredAgents]);
 
   // Signal metadata keyed by policy id, from the shared source of truth the
   // evaluator itself uses -- so this form can't advertise a signal the gate
@@ -352,53 +392,44 @@ function AgentFabricConsoleInner() {
     }
   }, [govAgentId, govBlockPolicies, govViolations, signalByPolicyId]);
 
-  const renderAgentCard = (a: AgentRecord) => (
-    <article key={a.id} className="card">
-      <h3 style={{ marginBottom: "0.2rem" }}>{a.name}</h3>
-      <p
-        style={{
-          color: "var(--brand)",
-          fontWeight: 600,
-          fontSize: "0.82rem"
-        }}
-      >
-        {a.protocol.toUpperCase()} · {a.kind} · v{a.version}
-      </p>
-      <p style={{ fontSize: "0.85rem" }}>
-        <code>{a.endpoint}</code>
-      </p>
-      <p style={{ marginTop: "0.6rem", fontSize: "0.85rem" }}>
-        <strong>Tier:</strong> {tierLabel(a.governanceTier)}
-      </p>
-      <p style={{ fontSize: "0.85rem" }}>
-        <strong>Provider:</strong> {a.provider}
-      </p>
-      <details style={{ marginTop: "0.6rem" }}>
-        <summary style={{ cursor: "pointer", fontWeight: 600 }}>
-          Capabilities
-        </summary>
-        <ul style={{ marginTop: "0.4rem", paddingLeft: "1.2rem" }}>
-          {a.capabilities.map((c) => (
-            <li key={c} style={{ fontSize: "0.85rem" }}>
-              {c}
-            </li>
-          ))}
-        </ul>
-      </details>
-      <details style={{ marginTop: "0.4rem" }}>
-        <summary style={{ cursor: "pointer", fontWeight: 600 }}>
-          Policies applied ({(policiesByAgent.get(a.id) ?? []).length})
-        </summary>
-        <ul style={{ marginTop: "0.4rem", paddingLeft: "1.2rem" }}>
-          {(policiesByAgent.get(a.id) ?? []).map((p) => (
-            <li key={p.id} style={{ fontSize: "0.85rem" }}>
-              <code>{p.id}</code> — {p.enforcement} ({p.status})
-            </li>
-          ))}
-        </ul>
-      </details>
-    </article>
-  );
+  const renderAgentCard = (a: AgentRecord) => {
+    const policyCount = (policiesByAgent.get(a.id) ?? []).length;
+    return (
+      <article key={a.id} className="card">
+        <h3 style={{ marginBottom: "0.2rem", fontSize: "1rem" }}>{a.name}</h3>
+        <p style={cardMetaStyle}>
+          {a.protocol.toUpperCase()} · {a.kind} · v{a.version}
+        </p>
+        <p style={{ fontSize: "0.82rem", margin: "0.3rem 0" }}>
+          <code>{a.endpoint}</code>
+        </p>
+        <p style={{ fontSize: "0.82rem", color: "var(--muted)", margin: 0 }}>
+          {tierLabel(a.governanceTier)} · {a.provider} · {policyCount} polic
+          {policyCount === 1 ? "y" : "ies"}
+        </p>
+        <details style={{ marginTop: "0.55rem" }}>
+          <summary style={summaryStyle}>Capabilities ({a.capabilities.length})</summary>
+          <ul style={detailListStyle}>
+            {a.capabilities.map((c) => (
+              <li key={c} style={{ fontSize: "0.82rem", marginBottom: "0.2rem" }}>
+                {c}
+              </li>
+            ))}
+          </ul>
+        </details>
+        <details style={{ marginTop: "0.35rem" }}>
+          <summary style={summaryStyle}>Policies applied ({policyCount})</summary>
+          <ul style={detailListStyle}>
+            {(policiesByAgent.get(a.id) ?? []).map((p) => (
+              <li key={p.id} style={{ fontSize: "0.82rem", marginBottom: "0.2rem" }}>
+                <code>{p.id}</code> — {p.enforcement} ({p.status})
+              </li>
+            ))}
+          </ul>
+        </details>
+      </article>
+    );
+  };
 
   // When ?personaId= is set, scope the recent-tasks chip row to
   // tasks whose spans carry the matching attributes.personaId.
@@ -433,6 +464,12 @@ function AgentFabricConsoleInner() {
     taskIdToPersonaId,
     filteredRecentTaskIds
   ]);
+
+  // Derived counts for the orientation strip.
+  const planesWithAgents = PLANES_IN_ORDER.filter(
+    (plane) => (agentsByPlane.get(plane) ?? []).length > 0
+  );
+  const totalMatches = filteredAgents.length;
 
   return (
     <>
@@ -530,58 +567,48 @@ function AgentFabricConsoleInner() {
         </article>
       )}
 
-      <section style={{ marginBottom: "1.5rem" }}>
-        <p className="eyebrow">Agent Registry</p>
-        <p style={{ marginTop: "0.4rem", color: "var(--muted)", fontSize: "0.88rem" }}>
-          Grouped by plane. The patient/clinical and payer & plan operations
-          planes are PHI-bearing (on the HIPAA audit policy); the commercial
-          plane is strictly PHI-separated; the platform plane is the shared data
-          + integration substrate that serves them.
-        </p>
-        {PLANES_IN_ORDER.filter(
-          (plane) => (agentsByPlane.get(plane) ?? []).length > 0
-        ).map((plane) => {
-          const planeAgents = agentsByPlane.get(plane) ?? [];
-          const meta = GOVERNANCE_PLANES[plane];
-          return (
-            <div key={plane} style={{ marginTop: "1.1rem" }}>
-              <h3 style={{ margin: "0 0 0.1rem" }}>
-                {meta.label}{" "}
-                <span
-                  style={{
-                    color: "var(--muted)",
-                    fontWeight: 500,
-                    fontSize: "0.82rem"
-                  }}
-                >
-                  · {planeAgents.length} agent{planeAgents.length === 1 ? "" : "s"}
-                </span>
-              </h3>
-              <p
-                style={{
-                  color: "var(--muted)",
-                  fontSize: "0.84rem",
-                  margin: "0 0 0.6rem",
-                  maxWidth: "72ch"
-                }}
-              >
-                {meta.description}
-              </p>
-              <div className="card-grid">{planeAgents.map(renderAgentCard)}</div>
-            </div>
-          );
-        })}
-        {(agentsByPlane.get("other") ?? []).length > 0 && (
-          <div style={{ marginTop: "1.1rem" }}>
-            <h3 style={{ margin: "0 0 0.6rem" }}>Other</h3>
-            <div className="card-grid">
-              {(agentsByPlane.get("other") ?? []).map(renderAgentCard)}
-            </div>
-          </div>
-        )}
-      </section>
+      {/*
+       * Orientation strip — derived counts + in-page jump links so a reader
+       * can see the shape of the fabric at a glance and skip straight to the
+       * interactive parts instead of scrolling past 100+ registry cards.
+       */}
+      <article
+        className="card"
+        style={{
+          marginBottom: "1.5rem",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: "0.5rem 1rem",
+          justifyContent: "space-between"
+        }}
+      >
+        <span style={{ fontSize: "0.9rem", fontWeight: 600 }}>
+          {agents.length} agents across {planesWithAgents.length} plane
+          {planesWithAgents.length === 1 ? "" : "s"}
+          <span style={{ color: "var(--muted)", fontWeight: 400 }}>
+            {" "}
+            · {policies.length} policies · {recentTaskIds.length} recent trace
+            {recentTaskIds.length === 1 ? "" : "s"}
+          </span>
+        </span>
+        <nav
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "0.4rem 0.9rem",
+            fontSize: "0.85rem"
+          }}
+        >
+          <a href="#run">Run a test</a>
+          <a href="#trace">Trace</a>
+          <a href="#governance">Governance</a>
+          <a href="#registry">Registry</a>
+          <a href="#policies">Policies</a>
+        </nav>
+      </article>
 
-      <section className="card" style={{ marginBottom: "1.5rem" }}>
+      <section id="run" className="card" style={{ marginBottom: "1.5rem" }}>
         <p className="eyebrow">Run a test case</p>
         <p style={{ marginTop: "0.4rem" }}>
           Trigger an end-to-end A2A handoff from the (mocked) Agentforce intake
@@ -616,7 +643,122 @@ function AgentFabricConsoleInner() {
         )}
       </section>
 
-      <section className="card" style={{ marginBottom: "1.5rem" }}>
+      <section id="registry" style={{ marginBottom: "1.5rem" }}>
+        <p className="eyebrow">Agent Registry</p>
+        <p style={{ marginTop: "0.4rem", color: "var(--muted)", fontSize: "0.88rem" }}>
+          Grouped by plane. The patient/clinical and payer & plan operations
+          planes are PHI-bearing (on the HIPAA audit policy); the commercial
+          plane is strictly PHI-separated; the platform plane is the shared data
+          + integration substrate that serves them.
+        </p>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "0.6rem",
+            margin: "0.7rem 0 0.2rem"
+          }}
+        >
+          <input
+            type="search"
+            value={registryQuery}
+            onChange={(e) => setRegistryQuery(e.target.value)}
+            placeholder="Filter agents by name, tier, or endpoint…"
+            aria-label="Filter the agent registry"
+            style={{
+              flex: "1 1 22rem",
+              maxWidth: "100%",
+              padding: "0.45rem 0.7rem",
+              borderRadius: "0.4rem",
+              border: "1px solid var(--line)",
+              background: "transparent",
+              color: "inherit",
+              fontSize: "0.9rem"
+            }}
+          />
+          <span style={{ color: "var(--muted)", fontSize: "0.84rem" }}>
+            {registryQuery.trim()
+              ? `${totalMatches} of ${agents.length} match`
+              : `${agents.length} agents`}
+          </span>
+          {registryQuery.trim() && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setRegistryQuery("")}
+              style={{ fontSize: "0.8rem", padding: "0.35rem 0.7rem" }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        {totalMatches === 0 && (
+          <p style={{ color: "var(--muted)", fontSize: "0.88rem", marginTop: "0.6rem" }}>
+            No agents match &ldquo;{registryQuery.trim()}&rdquo;.
+          </p>
+        )}
+        {/*
+         * Each plane is a collapsible group so the registry opens compact.
+         * The patient/clinical plane (first) is expanded by default; the rest
+         * start collapsed. When a search query is active, every group is forced
+         * open so matches are always visible — the `key` embeds the query-active
+         * flag so toggling the search remounts the <details> and re-applies the
+         * default `open` state.
+         */}
+        {planesWithAgents.map((plane, idx) => {
+          const planeAgents = agentsByPlane.get(plane) ?? [];
+          const meta = GOVERNANCE_PLANES[plane];
+          const searchActive = registryQuery.trim().length > 0;
+          const defaultOpen = searchActive || idx === 0;
+          return (
+            <details
+              key={`${plane}-${searchActive ? "q" : "all"}`}
+              open={defaultOpen}
+              style={{ marginTop: "1.1rem" }}
+            >
+              <summary style={{ cursor: "pointer" }}>
+                <span style={{ fontSize: "1.05rem", fontWeight: 700 }}>
+                  {meta.label}
+                </span>
+                <span
+                  style={{
+                    color: "var(--muted)",
+                    fontWeight: 500,
+                    fontSize: "0.82rem"
+                  }}
+                >
+                  {" "}
+                  · {planeAgents.length} agent{planeAgents.length === 1 ? "" : "s"}
+                </span>
+              </summary>
+              <p
+                style={{
+                  color: "var(--muted)",
+                  fontSize: "0.84rem",
+                  margin: "0.4rem 0 0.6rem",
+                  maxWidth: "72ch"
+                }}
+              >
+                {meta.description}
+              </p>
+              <div className="card-grid">{planeAgents.map(renderAgentCard)}</div>
+            </details>
+          );
+        })}
+        {(agentsByPlane.get("other") ?? []).length > 0 && (
+          <details open style={{ marginTop: "1.1rem" }}>
+            <summary style={{ cursor: "pointer" }}>
+              <span style={{ fontSize: "1.05rem", fontWeight: 700 }}>Other</span>
+            </summary>
+            <div className="card-grid" style={{ marginTop: "0.6rem" }}>
+              {(agentsByPlane.get("other") ?? []).map(renderAgentCard)}
+            </div>
+          </details>
+        )}
+      </section>
+
+      <section id="governance" className="card" style={{ marginBottom: "1.5rem" }}>
         <p className="eyebrow">Governance pre-flight</p>
         <p style={{ marginTop: "0.4rem" }}>
           Exercise the same pre-flight gate the Care Router runs before it
@@ -896,7 +1038,7 @@ function AgentFabricConsoleInner() {
         </div>
       </section>
 
-      <section className="card" style={{ marginBottom: "1.5rem" }}>
+      <section id="trace" className="card" style={{ marginBottom: "1.5rem" }}>
         <p className="eyebrow">Trace</p>
         <p style={{ marginTop: "0.4rem", fontFamily: "monospace", fontSize: "0.85rem" }}>
           taskId = <code>{activeTaskId || "(none selected)"}</code>
@@ -1074,7 +1216,7 @@ function AgentFabricConsoleInner() {
         )}
       </section>
 
-      <section className="card" style={{ marginBottom: "1.5rem" }}>
+      <section id="policies" className="card" style={{ marginBottom: "1.5rem" }}>
         <p className="eyebrow">Policy Catalog ({policies.length})</p>
         <p style={{ marginTop: "0.4rem" }}>
           Read-only mock of the policies the MuleSoft Agent Fabric enforces
@@ -1083,7 +1225,11 @@ function AgentFabricConsoleInner() {
           Anypoint API gateway, each agent&apos;s inbound middleware, and the
           MCP server boundary).
         </p>
-        <div className="table-wrap" style={{ marginTop: "0.6rem" }}>
+        <details style={{ marginTop: "0.6rem" }}>
+          <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+            Show all {policies.length} policies
+          </summary>
+          <div className="table-wrap" style={{ marginTop: "0.6rem" }}>
           <table>
             <thead>
               <tr>
@@ -1118,7 +1264,8 @@ function AgentFabricConsoleInner() {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </details>
       </section>
 
       <section style={{ marginBottom: "1.5rem" }}>
@@ -1162,7 +1309,7 @@ export default function AgentFabricConsole() {
   return (
     <DemoShell
       title="Multi-agent control plane"
-      subtitle="Live view of every Pause-Health.ai agent registered on a (mocked) MuleSoft Agent Fabric, grouped by plane. The patient/clinical plane runs the lifecycle — inbound lead generation, prospecting & nurture, qualification, Agentforce intake, validated-instrument assessment, benefits verification, patient financial assistance & charity care, good faith estimates (No Surprises Act), advance beneficiary notice (Medicare ABN), the Claude Care Router, lab result & critical-value notification, immunization forecasting (ACIP), controlled-substance / PDMP safety, drug–drug interaction safety, look-alike/sound-alike (LASA) medication-name safety, care-pathway sequencing, care planning, scheduling, referrals, engagement, care-gap closure, medication adherence, clinical summaries, SDOH screening, patient education, remote monitoring, population health, clinical-trials matching, language access, HEDIS quality, advance care planning, care-team management, caseload balancing (care-manager panel assignment), PCP assignment / member–provider matching, reportable / notifiable condition case classification, clinical quality-measure shift detection (SPC), care-management capacity allocation / outreach prioritization, care-transition routing / least-burden path, scheduling conflict / double-booking guard, resource-block scheduling / max-value non-overlapping selection, clinical list reconciliation / longest-common-subsequence (LCS) diff, transitions of care, grievance & appeals, quality attribution, complex care management, trial payments, care-coordination handoff, adverse-event reporting, TEFCA data-sharing, and risk-adjustment coding. A PHI-bearing payer & plan operations plane runs claims adjudication, formulary/DUR review, fraud-waste-abuse detection, utilization review, SLA worklist sequencing / earliest-deadline-first (EDF) scheduling, coordination of benefits, claims overpayment & recovery, timely-filing compliance, claim lifecycle / status-transition guard, subrogation / third-party liability, member cost-share / EOB calculation, medical loss ratio (MLR) rebate calculation, eligibility & enrollment (834) reconciliation, household / family-unit composition, network adequacy / time-and-distance, creditable coverage continuity, OIG exclusion / sanctions screening, and No Surprises Act balance-billing protection — plan-side, human-cosign-gated, never an autonomous adverse determination. The platform & data substrate carries the Pause MCP server, the MCP Bridge, the MuleSoft Process API, Data 360 grounding, provider credentialing, provider-identifier (NPI) validation & integrity, source-of-truth consensus / golden-record field reconciliation, clinical code taxonomy / longest-prefix classification, event-stream code assignment / Huffman optimal prefix coding, clinical event timeline merge / multi-source record reconciliation, and the consent, master-patient-index, break-the-glass, records-retention, de-identification (Safe Harbor), minimum-necessary (purpose-of-use), audit-log-integrity (tamper-evidence), access-anomaly-detection (HIPAA §164.308 activity review), accounting-of-disclosures (HIPAA §164.528), right-of-access (HIPAA §164.524), amendment / correction (HIPAA §164.526), and information blocking (Cures Act / 45 CFR Part 171) services. A strictly PHI-separated commercial plane runs pipeline management, account management, commercial KPI trend & projection (least-squares regression), commercial peak-window / maximum contiguous net-gain detection (Kadane), provider contracting, provider cost & quality percentile benchmarking, and deal desk / quote approval (CPQ). Four agents call live Claude with a deterministic fallback. Every A2A handoff and tool call lands here as a trace span so you can govern, monitor, and audit the multi-agent system in one place."
+      subtitle="A live view of every Pause-Health.ai agent registered on a (mocked) MuleSoft Agent Fabric, grouped by governance plane. The patient/clinical and payer & plan operations planes are PHI-bearing (on the HIPAA audit policy); the commercial plane is strictly PHI-separated; the platform plane is the shared data + integration substrate. A handful of agents call live Claude with a deterministic fallback; every A2A handoff and tool call lands here as a trace span so you can govern, monitor, and audit the system in one place. For the full agent-by-agent narrative, see the Investor Brief."
       eyebrow="Prototype · Agent Fabric Console"
       backHref="/demo/intake"
       backLabel="← Back to Intake"
