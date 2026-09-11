@@ -238,6 +238,10 @@ export type GovernanceTask = {
   caseFactsSourced?: boolean;
   classificationConsistent?: boolean;
   noAutonomousReport?: boolean;
+  // Clinical Event Timeline Merge / Multi-Source Record Reconciliation (events-sourced + merge-consistent + no-autonomous-merge)
+  timelineEventsSourced?: boolean;
+  timelineMergeConsistent?: boolean;
+  timelineNoAutonomousMerge?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1599,6 +1603,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A case reported to public health autonomously, or with no epi review",
     reason:
       "A reportable-condition classification autonomously reported the case to a public-health authority (autoReported:true — a consequential legal action that must be authorized) or did not require epidemiologist review (requiresEpiReview:false); the agent CLASSIFIES — every classification is a RECOMMENDATION requiring an epidemiologist / infection-preventionist to confirm before any report is filed. Mirrors the Adverse-Event Reporting Agent's human-review posture and the HEDIS Agent's no-autonomous-submission — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.timeline.events-sourced",
+    signal: "timelineEventsSourced",
+    violatingValue: false,
+    violationHint: "A fabricated event, a dropped event, or a miscounted source contribution",
+    reason:
+      "A timeline merge is not built from the submitted streams — every timeline entry must trace to a SUBMITTED stream event (same source + eventId + timestamp + kind; no fabricated event), every submitted event must appear EXACTLY ONCE (none dropped, none double-listed), the per-source contributions must echo the submitted counts + actual kept / duplicate tallies, and the kept + duplicate + total counts must add up. A fabricated or dropped event silently corrupts the clinical record. The sourced + completeness gate — mirrors the Enrollment Reconciliation Agent's reconciliation-complete and the Caseload Balancing Agent's assignment-complete"
+  },
+  {
+    policyId: "policy.timeline.merge-consistent",
+    signal: "timelineMergeConsistent",
+    violatingValue: false,
+    violationHint: "A mis-ordered timeline or a wrong duplicate flag",
+    reason:
+      "A timeline merge is not consistent with its logic — recomputing the K-WAY MERGE OF SORTED STREAMS from the submitted streams must reproduce the reported chronological order (timestamps non-decreasing, ties broken by source then eventId) and the reported duplicate flags (an event flagged duplicate genuinely repeats an earlier kept event with the same content key; a kept event genuinely does not). A mis-ordered timeline hides a trend and a mis-flagged duplicate fakes a double dose. The load-bearing correctness gate — mirrors the Reportable Condition Agent's classification-consistent and the Care Pathway Agent's sequence-valid"
+  },
+  {
+    policyId: "policy.timeline.no-autonomous-merge",
+    signal: "timelineNoAutonomousMerge",
+    violatingValue: false,
+    violationHint: "A timeline written back / a duplicate purged autonomously, or with no steward review",
+    reason:
+      "A timeline merge autonomously wrote the merged timeline back to a source system of record, purged a duplicate, or overwrote a chart (autoWritten:true — each is a data-integrity action that must be authorized) or did not require steward review (requiresStewardReview:false); the agent MERGES — every merge is a RECOMMENDATION requiring a data steward to confirm. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the Audit Log Integrity Agent's read-only posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

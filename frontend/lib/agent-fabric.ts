@@ -1054,6 +1054,67 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "timeline-merge-agent",
+    name: "Clinical Event Timeline Merge / Multi-Source Record Reconciliation Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the data-substrate record-reconciliation piece:
+    // POST /api/agents/timeline-merge/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) platform / data-plane agent that takes a patient's
+    // clinical EVENTS as they arrive in several already-sorted source STREAMS (an
+    // EHR, another EHR, a pharmacy, a claims feed — each stream in ascending time
+    // order) and merges them into ONE chronologically-ordered unified TIMELINE,
+    // flagging the DUPLICATES (the SAME clinical event reported by more than one
+    // source). UNLIKE the Reportable Condition agent's RECURSIVE BOOLEAN
+    // EXPRESSION-TREE EVALUATION, the PCP Matching agent's TWO-SIDED STABLE
+    // MATCHING (Gale–Shapley), the Network Adequacy agent's GEOSPATIAL
+    // GREAT-CIRCLE DISTANCE, the Identifier Validation agent's MODULAR-ARITHMETIC
+    // CHECKSUM, the Household Composition agent's UNION-FIND CONNECTED COMPONENTS,
+    // the Provider Benchmarking agent's PERCENTILE / RANK STATISTICS, the MLR
+    // Rebate agent's LARGEST-REMAINDER APPORTIONMENT, the Claim Lifecycle agent's
+    // FSM TRANSITION VALIDATION, the Medication Name Safety agent's STRING EDIT
+    // DISTANCE, the Schedule Conflict agent's GREEDY INTERVAL SELECTION, the
+    // Caseload Balancing agent's GREEDY BIN-PACKING, the Access Anomaly agent's
+    // SLIDING-WINDOW COUNTING, the Care Pathway agent's TOPOLOGICAL ORDERING, the
+    // Enrollment Reconciliation agent's KEYED SET-DIFFERENCE, or the Audit Log
+    // Integrity agent's HASH CHAIN — and, CRUCIALLY, UNLIKE the Coverage
+    // Continuity agent's INTERVAL MERGING (which merges OVERLAPPING date SPANS into
+    // continuous coverage; this merges POINT events from many streams into one
+    // order) and the Master-Patient-Index agent's WEIGHTED identity MATCHING
+    // (which resolves WHO a record belongs to; this runs AFTER identity is known,
+    // merging that patient's already-resolved event streams) — the heart of this
+    // service is the K-WAY MERGE OF SORTED STREAMS: the classic "merge k sorted
+    // lists" / external-sort merge phase that repeatedly takes the earliest head
+    // across the k stream cursors to produce one globally-ordered sequence in
+    // linear time, plus a content-key DEDUPLICATION pass that flags the
+    // second-and-later report of the same clinical event. A mis-ordered or
+    // mis-deduplicated timeline corrupts the record — a duplicated med looks like
+    // a double dose, an out-of-order lab hides a trend — so the agent merges
+    // deterministically and hands the timeline to a data steward; a merge is a
+    // RECOMMENDATION and the agent never autonomously WRITES the timeline back to
+    // a source of record, PURGES a duplicate, or overwrites a chart. It
+    // COMPLEMENTS the other data / provider agents — distinct from the Master
+    // Patient Index agent (which RESOLVES identity across systems), the Enrollment
+    // Reconciliation agent (a KEYED SET-DIFFERENCE between two rosters), and the
+    // Transitions of Care agent (medication reconciliation for ONE encounter):
+    // this MERGES a patient's already-resolved event streams into one timeline. It
+    // is PHI-bearing (the events are the patient's clinical data). REUSES the
+    // existing data-plane tier (platform plane). The events are ILLUSTRATIVE, NOT
+    // a certified record-reconciliation / EMPI system.
+    endpoint: "/api/agents/timeline-merge",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a patient's clinical events in several already-sorted source streams (EHR, EHR, pharmacy, claims) and merges them into ONE chronologically-ordered unified timeline, flagging the duplicates (the same clinical event reported by more than one source) — reporting the merged timeline, each event's duplicate-of link, the per-source contributions, the kept / duplicate / total tallies, and the disposition (clean-merge / duplicates-found). A deterministic data-substrate agent; it COMPLEMENTS the Master Patient Index agent (which RESOLVES identity across systems), the Enrollment Reconciliation agent (a keyed set-difference between two rosters), and the Transitions of Care agent (medication reconciliation for ONE encounter) — this MERGES a patient's already-resolved event streams into one timeline",
+      "The merge is DETERMINISTIC — a pure function of the request's own streams (no randomness, no clock; not a recursive boolean tree, a stable matching, a geospatial distance, a checksum, a union-find, a percentile, an identity match, a largest-remainder apportionment, an FSM transition, an edit distance, an interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, or a hash chain but the K-WAY MERGE OF SORTED STREAMS — repeatedly taking the earliest head across the stream cursors, plus a content-key dedup pass); the same streams always yield the same timeline",
+      "Every timeline event must be sourced — each entry must trace to a SUBMITTED stream event (same source + eventId + timestamp + kind; no fabricated event), every submitted event must appear exactly once (none dropped, none double-listed), and the per-source contributions + tallies must add up; a fabricated or dropped event is blocked at the Agent Fabric governance boundary (policy.timeline.events-sourced, the sourced + completeness gate); and the merge must recompute — re-running the k-way merge from the streams must reproduce the reported chronological order and the reported duplicate flags; a mis-ordered or mis-deduplicated timeline is blocked (policy.timeline.merge-consistent, the load-bearing correctness gate). Mirrors the Enrollment Reconciliation Agent's reconciliation-complete + the Reportable Condition Agent's classification-consistent posture",
+      "The agent MERGES — it NEVER writes the merged timeline back to a source system of record, purges a duplicate, or overwrites a chart (each is a data-integrity action that must be authorized) on its own; a merge that auto-writes or is not review-gated is blocked (policy.timeline.no-autonomous-merge), and every merge is confirmed by a data steward. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the Audit Log Integrity Agent's read-only posture",
+      "Runs against ILLUSTRATIVE synthetic event streams — clearly labeled; NOT a certified record-reconciliation / EMPI system (real reconciliation resolves identity first via an EMPI, reconciles with FHIR resource provenance, and applies source-of-truth precedence rules). PHI-bearing — the events are a patient's clinical data"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
+  },
+  {
     id: "schedule-conflict-agent",
     name: "Scheduling Conflict / Double-Booking Guard Agent",
     kind: "agentforce",
@@ -3147,7 +3208,8 @@ const POLICIES: PolicyRecord[] = [
       "household-composition-agent",
       "network-adequacy-agent",
       "pcp-matching-agent",
-      "reportable-condition-agent"
+      "reportable-condition-agent",
+      "timeline-merge-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -4501,6 +4563,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Reportable Condition Agent may NEVER report the case to a public-health authority on its own (autoReported:true — a consequential legal action that must be authorized) or skip epidemiologist review (requiresEpiReview:true) — the agent CLASSIFIES, and every classification is a RECOMMENDATION requiring an epidemiologist / infection-preventionist to confirm before any report is filed. A classification that auto-reports, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Adverse-Event Reporting Agent's human-review posture and the HEDIS Agent's no-autonomous-submission posture — the harmful action is enforced-off.",
     appliesTo: ["reportable-condition-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.timeline.events-sourced",
+    name: "Every timeline event is sourced and every stream event is accounted for",
+    description:
+      "The Timeline Merge Agent must build the timeline from the submitted streams — every timeline entry must trace to a SUBMITTED stream event (same source + eventId + timestamp + kind; no fabricated event), every submitted event must appear EXACTLY ONCE (none dropped, none double-listed), the per-source contributions must echo the submitted counts + actual kept / duplicate tallies, and the kept + duplicate + total counts must add up. A fabricated or dropped event silently corrupts the clinical record. A determination that fabricates, drops, or miscounts an event is rejected before it can leave the fabric. This is the sourced + completeness gate. Mirrors the Enrollment Reconciliation Agent's reconciliation-complete and the Caseload Balancing Agent's assignment-complete posture. (In the prototype the events are clearly-labeled illustrative synthetics.)",
+    appliesTo: ["timeline-merge-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.timeline.merge-consistent",
+    name: "The merge order + dedup recompute (k-way merge of sorted streams)",
+    description:
+      "The Timeline Merge Agent's timeline must recompute: re-running the K-WAY MERGE OF SORTED STREAMS from the submitted streams must reproduce the reported chronological order (timestamps non-decreasing, ties broken by source then eventId) and the reported duplicate flags (an event flagged duplicate genuinely repeats an earlier kept event with the same content key; a kept event genuinely does not). A mis-ordered timeline hides a trend and a mis-flagged duplicate fakes a double dose. A determination whose order or dedup doesn't recompute is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Reportable Condition Agent's classification-consistent and the Care Pathway Agent's sequence-valid posture.",
+    appliesTo: ["timeline-merge-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.timeline.no-autonomous-merge",
+    name: "No timeline is ever autonomously written back",
+    description:
+      "The Timeline Merge Agent may NEVER write the merged timeline back to a source system of record, purge a duplicate, or overwrite a chart on its own (autoWritten:true — each is a data-integrity action that must be authorized) or skip steward review (requiresStewardReview:true) — the agent MERGES, and every merge is a RECOMMENDATION requiring a data steward to confirm. A merge that auto-writes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the Audit Log Integrity Agent's read-only posture — the harmful action is enforced-off.",
+    appliesTo: ["timeline-merge-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -13529,6 +13618,114 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous report.
         noAutonomousReport: true,
         requiresEpiReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedTimelineMergeTrace() {
+  const s = store();
+  const tm0 = Date.now() - 1000 * 60 * 1;
+  const tmTaskId = "task-seed-timeline-merge-001";
+  const tmName = "Clinical Event Timeline Merge / Multi-Source Record Reconciliation Agent";
+  s.traces.push(
+    {
+      id: "span-timeline-merge-001",
+      taskId: tmTaskId,
+      agentId: "timeline-merge-agent",
+      agentName: tmName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(tm0).toISOString(),
+      finishedAt: new Date(tm0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-timeline-merge-002",
+      taskId: tmTaskId,
+      parentSpanId: "span-timeline-merge-001",
+      agentId: "timeline-merge-agent",
+      agentName: tmName,
+      operation: "timeline.receive-streams",
+      protocol: "a2a",
+      startedAt: new Date(tm0 + 30).toISOString(),
+      finishedAt: new Date(tm0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        recordRef: "record-merge-001",
+        streamCount: 3,
+        totalSubmitted: 6,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-timeline-merge-003",
+      taskId: tmTaskId,
+      parentSpanId: "span-timeline-merge-002",
+      agentId: "timeline-merge-agent",
+      agentName: tmName,
+      operation: "timeline.merge-streams",
+      protocol: "a2a",
+      startedAt: new Date(tm0 + 60).toISOString(),
+      finishedAt: new Date(tm0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        recordRef: "record-merge-001",
+        keptCount: 4,
+        duplicateCount: 2,
+        // The honesty invariants: events sourced, merge recomputes.
+        timelineEventsSourced: true,
+        timelineMergeConsistent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-timeline-merge-004",
+      taskId: tmTaskId,
+      parentSpanId: "span-timeline-merge-003",
+      agentId: "timeline-merge-agent",
+      agentName: tmName,
+      operation: "timeline.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(tm0 + 100).toISOString(),
+      finishedAt: new Date(tm0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        recordRef: "record-merge-001",
+        disposition: "duplicates-found",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-timeline-merge-005",
+      taskId: tmTaskId,
+      parentSpanId: "span-timeline-merge-004",
+      agentId: "timeline-merge-agent",
+      agentName: tmName,
+      operation: "timeline.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(tm0 + 140).toISOString(),
+      finishedAt: new Date(tm0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        recordRef: "record-merge-001",
+        // The honesty invariant: never an autonomous write-back.
+        timelineNoAutonomousMerge: true,
+        requiresStewardReview: true,
         phiAccessed: true,
         synthetic: true
       }
