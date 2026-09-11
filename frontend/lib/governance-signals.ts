@@ -254,6 +254,10 @@ export type GovernanceTask = {
   kpiSeriesSourced?: boolean;
   kpiFitConsistent?: boolean;
   kpiNoAutonomousCommit?: boolean;
+  // Care-Transition Routing / Least-Burden Path / Dijkstra Weighted Shortest Path (path-sourced + route-optimal + no-autonomous-routing)
+  routePathSourced?: boolean;
+  routeOptimal?: boolean;
+  routeNoAutonomousRouting?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1711,6 +1715,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Projection committed as a forecast / quota autonomously, or with no analyst review",
     reason:
       "A KPI-trend fit autonomously committed the projection as an official forecast, adjusted a quota / target, or notified finance (autoCommitted:true — each is a consequential commercial action that must be authorized) or did not require analyst review (requiresAnalystReview:false); the agent PROJECTS — every projection is a RECOMMENDATION requiring a revenue analyst to confirm. Mirrors the Pipeline Management Agent's human-owner posture and the Account Management Agent's never-commit-a-contract posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.route.path-sourced",
+    signal: "routePathSourced",
+    violatingValue: false,
+    violationHint: "A fabricated transition or a malformed path",
+    reason:
+      "A care route's reported path is not a real walk of the submitted graph — it must start at the start node, end at the goal, every consecutive pair must be a SUBMITTED edge (no fabricated transition), and the reported totalCost must equal the sum of those edges' weights; an honest no-route must carry an empty path, a null cost, and reachable:false. A fabricated edge invents a transition that isn't permitted. The sourced + well-formedness gate — mirrors the Claim Lifecycle Agent's states-sourced and the Care Pathway Agent's steps-sourced"
+  },
+  {
+    policyId: "policy.route.route-optimal",
+    signal: "routeOptimal",
+    violatingValue: false,
+    violationHint: "A sub-optimal route or a false 'unreachable'",
+    reason:
+      "A care route is not optimal (or honestly unreachable) — recomputing DIJKSTRA'S WEIGHTED SHORTEST PATH over the submitted edges must reproduce the reported minimum total burden, the reachable flag, and the disposition. A sub-optimal route over-burdens the patient; a false 'unreachable' strands them. The load-bearing correctness gate — mirrors the Claim Lifecycle Agent's transition-consistent and the Outreach Agent's allocation-optimal"
+  },
+  {
+    policyId: "policy.route.no-autonomous-routing",
+    signal: "routeNoAutonomousRouting",
+    violatingValue: false,
+    violationHint: "Transition initiated / setting booked autonomously, or with no care-lead review",
+    reason:
+      "A care route autonomously initiated the transition, booked the setting, or moved the patient (autoRouted:true — each is a care-delivery action that must be authorized) or did not require care-lead review (requiresCareLeadReview:false); the agent ROUTES on paper — every route is a RECOMMENDATION requiring a care lead to confirm. Mirrors the Care Gap Agent's human-review posture and the Outreach Agent's no-autonomous-schedule — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

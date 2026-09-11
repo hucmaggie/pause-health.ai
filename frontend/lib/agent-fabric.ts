@@ -1298,6 +1298,67 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "care-routing-agent",
+    name: "Agentforce Care-Transition Routing (Least-Burden Path)",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the clinical / care-transition-planning piece:
+    // POST /api/agents/care-routing/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) care-coordination agent that, given a patient's
+    // current care SETTING (a start node), a goal setting, and a directed graph of
+    // PERMITTED transitions between settings each carrying a non-negative BURDEN
+    // weight (wait days + travel + cost proxy + risk), finds the
+    // MINIMUM-TOTAL-BURDEN path from start to goal — or reports the goal
+    // unreachable. UNLIKE the KPI Trend agent's LEAST-SQUARES LINEAR REGRESSION,
+    // the Outreach Prioritization agent's 0/1 KNAPSACK DYNAMIC PROGRAMMING, the
+    // Quality Shift agent's CUSUM CHANGE-POINT DETECTION, the Timeline Merge
+    // agent's K-WAY MERGE OF SORTED STREAMS, the Reportable Condition agent's
+    // RECURSIVE BOOLEAN EXPRESSION-TREE EVALUATION, the PCP Matching agent's
+    // TWO-SIDED STABLE MATCHING (Gale–Shapley), the Network Adequacy agent's
+    // GEOSPATIAL GREAT-CIRCLE DISTANCE, the Identifier Validation agent's
+    // MODULAR-ARITHMETIC CHECKSUM, the Household Composition agent's UNION-FIND
+    // CONNECTED COMPONENTS, the Provider Benchmarking agent's PERCENTILE / RANK
+    // STATISTICS, the MLR Rebate agent's LARGEST-REMAINDER APPORTIONMENT, the
+    // Medication Name Safety agent's STRING EDIT DISTANCE, the Schedule Conflict
+    // agent's GREEDY INTERVAL SELECTION, the Enrollment Reconciliation agent's
+    // KEYED SET-DIFFERENCE, or the Audit Log Integrity agent's HASH CHAIN — and,
+    // CRUCIALLY, UNLIKE the Care Pathway agent's TOPOLOGICAL ORDERING (which
+    // sequences ALL the required steps of ONE protocol into a dependency order —
+    // no weights, no source/target, no choosing among alternative routes), the
+    // Claim Lifecycle agent's BFS REACHABILITY (which finds the fewest-HOPS path
+    // across an UNWEIGHTED status state machine — edge count, not edge weight), and
+    // the Transitions of Care agent's MEDICATION RECONCILIATION (which reconciles
+    // meds across ONE encounter — it routes nothing) — the heart of this service is
+    // DIJKSTRA'S WEIGHTED SHORTEST PATH: the classic single-source shortest-path
+    // over a graph with non-negative edge weights, settling the nearest unsettled
+    // node and relaxing its out-edges (dist[v] = min(dist[v], dist[u] + w(u,v))),
+    // then reconstructing the minimum-total-weight path by walking predecessors
+    // back. A greedy or hand-picked route sends a patient the long way round — more
+    // waiting, more travel, more cost — so the agent optimizes DETERMINISTICALLY
+    // and hands the route to a human; a route is a RECOMMENDATION and the agent
+    // never initiates the transition, books the setting, or moves the patient on
+    // its own. It COMPLEMENTS the other care-coordination agents — distinct from
+    // the Care Pathway agent (which topologically orders one protocol's steps), the
+    // Transitions of Care agent (medication reconciliation), and the Schedule
+    // Conflict agent (double-booking guard): this finds the least-burden PATH
+    // through a weighted graph of care settings. It is PHI-bearing (the route is a
+    // patient's care plan). REUSES the existing care-coordination tier (patient /
+    // clinical plane). The settings + transitions are ILLUSTRATIVE, NOT a certified
+    // care-transition / discharge-planning system.
+    endpoint: "/api/agents/care-routing",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Given a patient's current care setting, a goal setting, and a directed graph of permitted transitions each carrying a non-negative burden weight (wait days + travel + cost proxy + risk), finds the minimum-total-burden path from start to goal (route-found) or reports the goal unreachable (no-route) — reporting the path, the total burden, the hop count, and the disposition. A deterministic care-transition-planning agent; it COMPLEMENTS the Care Pathway agent (which topologically orders one protocol's steps), the Transitions of Care agent (medication reconciliation), and the Schedule Conflict agent (double-booking guard) — this finds the least-burden path through a weighted graph of care settings",
+      "The route is DETERMINISTIC — a pure function of the graph's own edges + weights (no randomness, no clock; not a regression, a knapsack, a CUSUM, a k-way merge, a recursive boolean tree, a stable matching, a geospatial distance, a checksum, a union-find, a percentile, a largest-remainder apportionment, an edit distance, an interval selection, a set-difference, a hash chain, a topological sort, or a BFS hop-count but DIJKSTRA'S WEIGHTED SHORTEST PATH — the minimum-total-weight path over non-negative edge weights); the same graph always yields the same route",
+      "The reported path must be sourced — it must start at the start, end at the goal, every consecutive pair must be a submitted edge (no fabricated transition), and the totalCost must equal the sum of those edges' weights; a fabricated edge or malformed path is blocked at the Agent Fabric governance boundary (policy.route.path-sourced, the sourced + well-formedness gate); and the route must be optimal — recomputing Dijkstra over the edges must reproduce the reported minimum total burden, the reachable flag, and the disposition; a sub-optimal route or a false 'unreachable' is blocked (policy.route.route-optimal, the load-bearing correctness gate). Mirrors the Claim Lifecycle Agent's states-sourced + transition-consistent posture",
+      "The agent ROUTES on paper — it NEVER initiates the transition, books the setting, or moves the patient (each is a care-delivery action that must be authorized) on its own; a route that auto-routes or is not review-gated is blocked (policy.route.no-autonomous-routing), and every route is confirmed by a care lead. Mirrors the Care Gap Agent's human-review posture and the Outreach Agent's no-autonomous-schedule",
+      "Runs against ILLUSTRATIVE synthetic settings + transitions — clearly labeled; NOT a certified care-transition / discharge-planning system (real transition planning weighs clinical appropriateness, bed availability, payer authorization, patient preference, and caregiver capacity — not a single scalar burden per edge). PHI-bearing — the route is a patient's care plan"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "schedule-conflict-agent",
     name: "Scheduling Conflict / Double-Booking Guard Agent",
     kind: "agentforce",
@@ -3394,7 +3455,8 @@ const POLICIES: PolicyRecord[] = [
       "reportable-condition-agent",
       "timeline-merge-agent",
       "quality-shift-agent",
-      "outreach-prioritization-agent"
+      "outreach-prioritization-agent",
+      "care-routing-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -4829,6 +4891,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Outreach Prioritization Agent may NEVER launch the outreach, commit the plan, or book the interventions on its own (autoScheduled:true — each is a care-delivery action that must be authorized) or skip care-lead review (requiresCareLeadReview:true) — the agent PRIORITIZES, and every allocation is a RECOMMENDATION requiring a care lead to confirm, with deferred interventions deferred to a later cycle, never denied. An allocation that auto-schedules, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Care Gap Agent's human-review posture — the harmful action is enforced-off.",
     appliesTo: ["outreach-prioritization-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.route.path-sourced",
+    name: "The reported path is sourced and well-formed",
+    description:
+      "The Care-Transition Routing Agent's reported path must be a real walk of the submitted graph — for a route-found determination it must start at the start node, end at the goal, every consecutive pair must be a SUBMITTED edge (no fabricated transition), the reported totalCost must equal the sum of those edges' weights, and hops must equal path.length - 1; an honest no-route must carry an empty path, a null cost, and reachable:false. A fabricated edge invents a transition that isn't permitted. A determination whose path is malformed or uses an invented transition is rejected before it can leave the fabric. This is the sourced + well-formedness gate. Mirrors the Claim Lifecycle Agent's states-sourced and the Care Pathway Agent's steps-sourced posture. (In the prototype the settings + transitions are clearly-labeled illustrative synthetics.)",
+    appliesTo: ["care-routing-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.route.route-optimal",
+    name: "The route is optimal (Dijkstra's weighted shortest path)",
+    description:
+      "The Care-Transition Routing Agent's route must be optimal (or honestly unreachable) — recomputing DIJKSTRA'S WEIGHTED SHORTEST PATH over the submitted edges must reproduce the reported minimum total burden, the reachable flag, and the disposition. A sub-optimal route over-burdens the patient (more waiting, more travel, more cost); a false 'unreachable' strands them. A determination whose route is sub-optimal or falsely unreachable is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Claim Lifecycle Agent's transition-consistent and the Outreach Agent's allocation-optimal posture.",
+    appliesTo: ["care-routing-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.route.no-autonomous-routing",
+    name: "No transition is ever initiated autonomously",
+    description:
+      "The Care-Transition Routing Agent may NEVER initiate the transition, book the setting, or move the patient on its own (autoRouted:true — each is a care-delivery action that must be authorized) or skip care-lead review (requiresCareLeadReview:true) — the agent ROUTES on paper, and every route is a RECOMMENDATION requiring a care lead to confirm. A route that auto-routes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Care Gap Agent's human-review posture and the Outreach Agent's no-autonomous-schedule — the harmful action is enforced-off.",
+    appliesTo: ["care-routing-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -14209,6 +14298,116 @@ function store(): FabricStore {
         cycleRef: "outreach-cycle-001",
         // The honesty invariant: never an autonomous schedule.
         outreachNoAutonomousSchedule: true,
+        requiresCareLeadReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedCareRoutingTrace() {
+  const s = store();
+  const cr0 = Date.now() - 1000 * 60 * 1;
+  const crTaskId = "task-seed-care-routing-001";
+  const crName = "Agentforce Care-Transition Routing (Least-Burden Path)";
+  s.traces.push(
+    {
+      id: "span-care-routing-001",
+      taskId: crTaskId,
+      agentId: "care-routing-agent",
+      agentName: crName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(cr0).toISOString(),
+      finishedAt: new Date(cr0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-care-routing-002",
+      taskId: crTaskId,
+      parentSpanId: "span-care-routing-001",
+      agentId: "care-routing-agent",
+      agentName: crName,
+      operation: "route.receive-graph",
+      protocol: "a2a",
+      startedAt: new Date(cr0 + 30).toISOString(),
+      finishedAt: new Date(cr0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        routeRef: "care-route-001",
+        start: "hospital",
+        goal: "home",
+        edgeCount: 7,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-care-routing-003",
+      taskId: crTaskId,
+      parentSpanId: "span-care-routing-002",
+      agentId: "care-routing-agent",
+      agentName: crName,
+      operation: "route.compute-path",
+      protocol: "a2a",
+      startedAt: new Date(cr0 + 60).toISOString(),
+      finishedAt: new Date(cr0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        routeRef: "care-route-001",
+        totalCost: 7,
+        hops: 3,
+        // The honesty invariants: path sourced, route optimal.
+        routePathSourced: true,
+        routeOptimal: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-care-routing-004",
+      taskId: crTaskId,
+      parentSpanId: "span-care-routing-003",
+      agentId: "care-routing-agent",
+      agentName: crName,
+      operation: "route.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(cr0 + 100).toISOString(),
+      finishedAt: new Date(cr0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        routeRef: "care-route-001",
+        disposition: "route-found",
+        reachable: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-care-routing-005",
+      taskId: crTaskId,
+      parentSpanId: "span-care-routing-004",
+      agentId: "care-routing-agent",
+      agentName: crName,
+      operation: "route.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(cr0 + 140).toISOString(),
+      finishedAt: new Date(cr0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        routeRef: "care-route-001",
+        // The honesty invariant: never an autonomous routing.
+        routeNoAutonomousRouting: true,
         requiresCareLeadReview: true,
         phiAccessed: true,
         synthetic: true
