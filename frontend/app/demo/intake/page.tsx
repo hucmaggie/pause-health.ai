@@ -75,6 +75,7 @@ import { SlaWorklistPanel } from "../../../components/sla-worklist-panel";
 import { ListReconciliationPanel } from "../../../components/list-reconciliation-panel";
 import { HuffmanCodingPanel } from "../../../components/huffman-coding-panel";
 import { BatchPartitionPanel } from "../../../components/batch-partition-panel";
+import { NetworkBuildoutPanel } from "../../../components/network-buildout-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -245,6 +246,7 @@ export default function IntakeDemoPage() {
       <ListReconciliationPanel />
       <HuffmanCodingPanel />
       <BatchPartitionPanel />
+      <NetworkBuildoutPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 

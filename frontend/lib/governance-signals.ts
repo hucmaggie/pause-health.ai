@@ -290,6 +290,10 @@ export type GovernanceTask = {
   batchPartitionSourced?: boolean;
   batchPartitionLoadOptimal?: boolean;
   batchPartitionNoAutonomousAssign?: boolean;
+  // Provider Network Build-Out / Minimum Spanning Tree (tree-sourced + cost-optimal + no-autonomous-provision)
+  networkTreeSourced?: boolean;
+  networkTreeCostOptimal?: boolean;
+  networkNoAutonomousProvision?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1963,6 +1967,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Reviewers assigned / worklist dispatched autonomously, or with no supervisor review",
     reason:
       "A chart-review batch partition autonomously assigned a named reviewer to a batch or dispatched the worklist (autoAssigned:true — each is a staffing action that must be authorized) or did not require supervisor review (requiresSupervisorReview:false); the agent PARTITIONS on paper — every partition is a RECOMMENDATION requiring a supervisor to confirm. Mirrors the Huffman Agent's no-autonomous-deploy and the SLA Worklist Agent's no-autonomous-dispatch — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.netbuildout.tree-sourced",
+    signal: "networkTreeSourced",
+    violatingValue: false,
+    violationHint: "A fabricated link, an altered cost, or a cycle among the chosen links",
+    reason:
+      "A provider-network build plan is not a real, self-consistent accounting of the submitted candidates — each chosen link must be a SUBMITTED candidate link (same endpoints, same cost — no fabricated link, no altered cost), the chosen links must form a FOREST (NO cycle, verified by union-find), the reported totalCost must equal the sum of the chosen links' costs, the reported componentCount must equal the components the chosen links induce over the sites, siteCount and linkCount must be honest, and the disposition must follow (connected iff componentCount === 1). A fabricated link, an altered cost, or a cycle corrupts the plan. The sourced + self-consistency gate — mirrors the Batch Partition Agent's partition-sourced and the Huffman Agent's code-sourced"
+  },
+  {
+    policyId: "policy.netbuildout.cost-optimal",
+    signal: "networkTreeCostOptimal",
+    violatingValue: false,
+    violationHint: "A sub-optimal tree that wastes build budget",
+    reason:
+      "A provider-network build plan is not optimal — re-running KRUSKAL'S ALGORITHM over the submitted sites + links must reproduce the reported totalCost (and the connected / partitioned disposition). A sub-optimal tree wastes build budget — the whole point of the minimization. The load-bearing correctness gate; it recomputes the minimum total cost from the sites + links INDEPENDENT of the reported tree, so a fabricated tree that still reports the optimal total cost fails sourced only while a real-but-sub-optimal tree fails here — mirrors the Batch Partition Agent's load-optimal and the Care Routing Agent's route-optimal"
+  },
+  {
+    policyId: "policy.netbuildout.no-autonomous-provision",
+    signal: "networkNoAutonomousProvision",
+    violatingValue: false,
+    violationHint: "Links provisioned / activated autonomously, or with no architect review",
+    reason:
+      "A provider-network build plan autonomously provisioned, activated, or ordered a link (autoProvisioned:true — each is an infrastructure change that must be authorized) or did not require architect review (requiresArchitectReview:false); the agent PLANS on paper — every build plan is a RECOMMENDATION requiring a network architect to confirm. Mirrors the Batch Partition Agent's no-autonomous-assign and the Huffman Agent's no-autonomous-deploy — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

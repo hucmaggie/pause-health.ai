@@ -2005,6 +2005,51 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "network-buildout-agent",
+    name: "Provider Network Build-Out / Minimum Spanning Tree (Kruskal's Algorithm) Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the care-coordination network-planning piece:
+    // POST /api/agents/network-buildout/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) care-coordination agent that takes a set of care
+    // SITES (clinics / facilities / exchange endpoints) and candidate LINKS between
+    // them (each carrying a build COST) and selects the MINIMUM-TOTAL-COST set of
+    // links that connects every site into ONE network (a minimum spanning tree), or
+    // reports the candidate links cannot connect everything (a spanning forest). The
+    // heart of the service is MINIMUM SPANNING TREE construction via KRUSKAL'S
+    // ALGORITHM: sort candidate links by ascending cost, walk them cheapest-first,
+    // add a link iff it JOINS TWO DISTINCT COMPONENTS (a union-find cycle check).
+    // CRUCIALLY, union-find here is a SUBROUTINE — the cycle test inside the greedy
+    // edge selection — NOT the computation: this is emphatically NOT the Household
+    // Composition agent's UNION-FIND CONNECTED-COMPONENT LABELING (which groups
+    // records into families with no edge weights and no minimum-cost subset). It is
+    // also DIFFERENT from the Care Routing agent's DIJKSTRA'S SHORTEST PATH (which
+    // minimizes ONE path between TWO nodes; MST minimizes the total cost to connect
+    // ALL nodes), the Batch Partition agent's LINEAR PARTITION, the Care Pathway
+    // agent's TOPOLOGICAL ORDERING, the Outreach agent's 0/1 KNAPSACK, the PCP
+    // Matching agent's GALE–SHAPLEY STABLE MATCHING, the SLA Worklist agent's
+    // EARLIEST-DEADLINE-FIRST SCHEDULING, the Huffman agent's OPTIMAL PREFIX CODING,
+    // the List Reconciliation agent's LONGEST COMMON SUBSEQUENCE, the Timeline Merge
+    // agent's K-WAY MERGE, and the Peak-Window agent's KADANE MAXIMUM-SUBARRAY. A
+    // build plan is a RECOMMENDATION requiring a network architect to confirm; the
+    // agent never provisions, activates, or orders a link. It IS PHI-adjacent (the
+    // site labels reference clinics / facilities). REUSES the existing
+    // care-coordination tier. The costs are ILLUSTRATIVE, NOT a certified
+    // network-design system.
+    endpoint: "/api/agents/network-buildout",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a set of care sites and candidate links (each carrying a build cost) and selects the minimum-total-cost set of links that connects every site into one network (a minimum spanning tree), or reports the candidate links cannot connect everything (a spanning forest — disposition connected / partitioned), reporting the chosen links, the total build cost, and the connected-component count. A deterministic care-coordination network-planning agent; it COMPLEMENTS the Care Routing agent (which finds the cheapest single path between two nodes) — this finds the cheapest way to connect ALL the sites",
+      "The plan is DETERMINISTIC — a pure function of the request's own sites + links (time is data: the costs are plain numbers, no real clock; not a Dijkstra shortest path, a linear partition, a topological sort, a knapsack, a stable matching, an EDF schedule, a Huffman code, an LCS diff, a k-way merge, or a Kadane max-subarray, and NOT the Household Composition agent's union-find connected-component labeling but the MINIMUM SPANNING TREE via KRUSKAL'S ALGORITHM — greedy ascending-cost edge selection with a union-find cycle-check subroutine); the same request always yields the same plan",
+      "The tree must be sourced + self-consistent — each chosen link a submitted candidate (same endpoints, same cost), the chosen links forming a forest (no cycle, verified by union-find), the totalCost equal to the sum of the chosen links' costs, the componentCount honest, siteCount and linkCount honest, and the disposition following; a fabricated link, an altered cost, or a cycle is blocked at the Agent Fabric governance boundary (policy.netbuildout.tree-sourced, the sourced + self-consistency gate); and the tree must be cost-optimal — re-running Kruskal's algorithm must reproduce the reported totalCost; a sub-optimal tree that wastes build budget is blocked (policy.netbuildout.cost-optimal, the load-bearing correctness gate). Mirrors the Batch Partition Agent's partition-sourced + load-optimal posture",
+      "The agent PLANS and RECOMMENDS — it NEVER provisions, activates, or orders a link (each is an infrastructure change that must be authorized) on its own; a plan that auto-provisions or is not review-gated is blocked (policy.netbuildout.no-autonomous-provision), and every build plan is confirmed by a network architect. Mirrors the Batch Partition Agent's no-autonomous-assign and the Huffman Agent's no-autonomous-deploy posture",
+      "Runs against ILLUSTRATIVE synthetic networks — clearly labeled; NOT a certified network-design system (real provider-network design weighs adequacy standards, contracted rates, capacity, redundancy, and regulatory requirements — not a bare minimum spanning tree over illustrative costs). PHI-adjacent — the site labels reference clinics / facilities, so a plan is on the HIPAA audit path"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "provider-contracting-agent",
     name: "Provider Contracting & VBC Terms Agent",
     kind: "agentforce",
@@ -3848,6 +3893,7 @@ const POLICIES: PolicyRecord[] = [
       "sla-worklist-agent",
       "list-reconciliation-agent",
       "batch-partition-agent",
+      "network-buildout-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
@@ -4608,6 +4654,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Chart Review Batch Partitioning Agent may NEVER assign a named reviewer to a batch or dispatch the worklist on its own (autoAssigned:true — each is a staffing action that must be authorized) or skip supervisor review (requiresSupervisorReview:true) — the agent PARTITIONS on paper, and every partition is a RECOMMENDATION requiring a supervisor to confirm. A partition that auto-assigns, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Huffman Agent's no-autonomous-deploy and the SLA Worklist Agent's no-autonomous-dispatch posture — the harmful action is enforced-off.",
     appliesTo: ["batch-partition-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.netbuildout.tree-sourced",
+    name: "The build plan is sourced and self-consistent (a real acyclic subset of the candidate links, honest cost)",
+    description:
+      "The Provider Network Build-Out Agent's build plan must be a REAL, self-consistent accounting of the submitted candidates — each chosen link must be a SUBMITTED candidate link (same endpoints, same cost — no fabricated link, no altered cost), the chosen links must form a FOREST (NO cycle, verified by a union-find pass over the chosen links), the reported totalCost must equal the sum of the chosen links' costs, the reported componentCount must equal the connected components the chosen links induce over the sites, siteCount and linkCount must be honest, and the disposition must follow (connected iff componentCount === 1). A fabricated link, an altered cost, or a cycle corrupts the plan. A plan that fabricates a link, alters a cost, or forms a cycle is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the Batch Partition Agent's partition-sourced and the Huffman Agent's code-sourced posture. (In the prototype the costs are a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["network-buildout-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.netbuildout.cost-optimal",
+    name: "The build plan is the cost-optimal minimum spanning tree (Kruskal's algorithm recomputes)",
+    description:
+      "The Provider Network Build-Out Agent's build plan must be COST-OPTIMAL — re-running KRUSKAL'S ALGORITHM over the submitted sites + links must reproduce the reported totalCost (and the connected / partitioned disposition). A sub-optimal tree wastes build budget — the whole point of the minimization. A plan whose total cost isn't minimal is rejected before it can leave the fabric. This is the load-bearing correctness gate; it recomputes the minimum total cost from the sites + links INDEPENDENT of the reported tree (different minimum spanning trees can tie on cost — it compares the scalar optimum), so a fabricated tree that still reports the optimal total cost fails sourced only and a real-but-sub-optimal tree fails here — the two gates are isolable. Mirrors the Batch Partition Agent's load-optimal and the Care Routing Agent's route-optimal posture.",
+    appliesTo: ["network-buildout-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.netbuildout.no-autonomous-provision",
+    name: "No link is autonomously provisioned / activated",
+    description:
+      "The Provider Network Build-Out Agent may NEVER provision, activate, or order a link on its own (autoProvisioned:true — each is an infrastructure change that must be authorized) or skip architect review (requiresArchitectReview:true) — the agent PLANS on paper, and every build plan is a RECOMMENDATION requiring a network architect to confirm. A plan that auto-provisions, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Batch Partition Agent's no-autonomous-assign and the Huffman Agent's no-autonomous-deploy posture — the harmful action is enforced-off.",
+    appliesTo: ["network-buildout-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -16040,6 +16113,116 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous assignment.
         batchPartitionNoAutonomousAssign: true,
         requiresSupervisorReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedNetworkBuildoutTrace() {
+  const s = store();
+  const nb0 = Date.now() - 1000 * 60 * 1;
+  const nbTaskId = "task-seed-network-buildout-001";
+  const nbName = "Provider Network Build-Out / Minimum Spanning Tree (Kruskal's Algorithm) Agent";
+  s.traces.push(
+    {
+      id: "span-network-buildout-001",
+      taskId: nbTaskId,
+      agentId: "network-buildout-agent",
+      agentName: nbName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(nb0).toISOString(),
+      finishedAt: new Date(nb0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // Site labels reference clinics / facilities — PHI-adjacent; on the HIPAA audit path.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-network-buildout-002",
+      taskId: nbTaskId,
+      parentSpanId: "span-network-buildout-001",
+      agentId: "network-buildout-agent",
+      agentName: nbName,
+      operation: "netbuildout.receive-network",
+      protocol: "a2a",
+      startedAt: new Date(nb0 + 30).toISOString(),
+      finishedAt: new Date(nb0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        networkRef: "network-buildout-hub-4501",
+        siteCount: 5,
+        linkCount: 7,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-network-buildout-003",
+      taskId: nbTaskId,
+      parentSpanId: "span-network-buildout-002",
+      agentId: "network-buildout-agent",
+      agentName: nbName,
+      operation: "netbuildout.build",
+      protocol: "a2a",
+      startedAt: new Date(nb0 + 60).toISOString(),
+      finishedAt: new Date(nb0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        networkRef: "network-buildout-hub-4501",
+        totalCost: 18,
+        chosenLinkCount: 4,
+        // The honesty invariants: tree sourced + self-consistent, cost optimal.
+        networkTreeSourced: true,
+        networkTreeCostOptimal: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-network-buildout-004",
+      taskId: nbTaskId,
+      parentSpanId: "span-network-buildout-003",
+      agentId: "network-buildout-agent",
+      agentName: nbName,
+      operation: "netbuildout.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(nb0 + 100).toISOString(),
+      finishedAt: new Date(nb0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        networkRef: "network-buildout-hub-4501",
+        disposition: "connected",
+        componentCount: 1,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-network-buildout-005",
+      taskId: nbTaskId,
+      parentSpanId: "span-network-buildout-004",
+      agentId: "network-buildout-agent",
+      agentName: nbName,
+      operation: "netbuildout.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(nb0 + 140).toISOString(),
+      finishedAt: new Date(nb0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        networkRef: "network-buildout-hub-4501",
+        // The honesty invariant: never an autonomous provisioning.
+        networkNoAutonomousProvision: true,
+        requiresArchitectReview: true,
         phiAccessed: true,
         synthetic: true
       }
