@@ -59,6 +59,7 @@ import { ClaimLifecyclePanel } from "../../../components/claim-lifecycle-panel";
 import { ProviderBenchmarkingPanel } from "../../../components/provider-benchmarking-panel";
 import { HouseholdCompositionPanel } from "../../../components/household-composition-panel";
 import { IdentifierValidationPanel } from "../../../components/identifier-validation-panel";
+import { NetworkAdequacyPanel } from "../../../components/network-adequacy-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -213,6 +214,7 @@ export default function IntakeDemoPage() {
       <ProviderBenchmarkingPanel />
       <HouseholdCompositionPanel />
       <IdentifierValidationPanel />
+      <NetworkAdequacyPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 

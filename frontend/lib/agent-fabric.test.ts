@@ -461,9 +461,10 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // Medication Name Safety (LASA) agent, the payer-operations Claim
     // Lifecycle / Status-Transition Guard agent, the commercial-operations
     // Provider Cost & Quality Percentile Benchmarking agent, the
-    // payer-operations Household / Family-Unit Composition agent, and the
-    // data-plane Provider Identifier (NPI) Validation & Integrity agent.
-    expect(listAgents()).toHaveLength(84);
+    // payer-operations Household / Family-Unit Composition agent, the
+    // data-plane Provider Identifier (NPI) Validation & Integrity agent, and the
+    // payer-operations Network Adequacy / Time-and-Distance agent.
+    expect(listAgents()).toHaveLength(85);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

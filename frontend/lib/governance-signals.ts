@@ -226,6 +226,10 @@ export type GovernanceTask = {
   identifiersSourced?: boolean;
   checksumConsistent?: boolean;
   identifierNoAutonomousReject?: boolean;
+  // Network Adequacy / Time-and-Distance (providers-sourced + distances-consistent + no-autonomous-network-change)
+  providersSourced?: boolean;
+  distancesConsistent?: boolean;
+  noAutonomousNetworkChange?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1515,6 +1519,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A claim / provider rejected or a number corrected autonomously, or with no steward review",
     reason:
       "An identifier-validation finding autonomously rejected a claim, removed a provider from the directory, or corrected a number (autoRejected:true — each is a consequential action that must be authorized) or did not require steward review (requiresStewardReview:false); the agent VALIDATES and FLAGS — every finding is a RECOMMENDATION requiring a data steward to confirm. Mirrors the Provider Credentialing Agent's no-referral-to-expired-or-sanctioned and the Enrollment Reconciliation Agent's no-autonomous-change posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.adequacy.providers-sourced",
+    signal: "providersSourced",
+    violatingValue: false,
+    violationHint: "A phantom in-network provider, or a dropped / miscounted required-specialty provider",
+    reason:
+      "A network-adequacy finding is not built from the submitted in-network providers — every evaluated provider must be a SUBMITTED one (same id, coordinates, and the required specialty; no phantom provider fabricating coverage that isn't in the network), every submitted provider of that specialty must be evaluated (none dropped), the counts must agree, and the nearest must be one of the evaluated. A phantom nearby provider turns a real access GAP into false adequacy. The sourced + completeness gate — mirrors the Identifier Validation Agent's identifiers-sourced and the Household Composition Agent's links-sourced"
+  },
+  {
+    policyId: "policy.adequacy.distances-consistent",
+    signal: "distancesConsistent",
+    violatingValue: false,
+    violationHint: "A mis-measured great-circle distance — a gap understated, or a false gap",
+    reason:
+      "A network-adequacy finding's distances do not add up — recomputing the haversine great-circle distance from the member to each evaluated provider's own coordinates must reproduce every reported distance, the ascending order, the nearest provider, the nearest distance, and the adequacy disposition against the standard. A mis-measured distance understates a gap (falsely certifying adequacy so a member can't reach care) or overstates one. The load-bearing correctness gate — mirrors the Medication Name Safety Agent's distances-consistent and the Provider Benchmarking Agent's stats-consistent"
+  },
+  {
+    policyId: "policy.adequacy.no-autonomous-network-change",
+    signal: "noAutonomousNetworkChange",
+    violatingValue: false,
+    violationHint: "The network certified / a gap closed / a provider added autonomously, or with no network review",
+    reason:
+      "A network-adequacy finding autonomously certified the network as adequate to a regulator, closed a gap, or added / removed a provider (autoCertified:true — each is a consequential action that must be authorized) or did not require network review (requiresNetworkReview:false); the agent ASSESSES adequacy — every finding is a RECOMMENDATION requiring a network manager to confirm. Mirrors the Provider Benchmarking Agent's no-autonomous-tiering and the Provider Credentialing Agent's no-referral-to-expired-or-sanctioned posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

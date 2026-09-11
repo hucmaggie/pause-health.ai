@@ -2535,6 +2535,61 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "network-adequacy-agent",
+    name: "Network Adequacy / Time-and-Distance Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side network-adequacy piece: POST
+    // /api/agents/network-adequacy/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) claims / payer-operations agent that takes a
+    // MEMBER's location plus the plan's IN-NETWORK PROVIDERS and decides whether
+    // the network meets the applicable TIME-AND-DISTANCE adequacy standard for a
+    // required specialty — it computes the GREAT-CIRCLE (haversine) distance from
+    // the member to each in-network provider of that specialty, finds the
+    // NEAREST, and flags an adequacy GAP when the nearest exceeds the standard.
+    // UNLIKE the Identifier Validation agent's MODULAR-ARITHMETIC CHECKSUM (the
+    // NPI Luhn check digit), the Household Composition agent's UNION-FIND
+    // CONNECTED COMPONENTS, the Provider Benchmarking agent's PERCENTILE / RANK
+    // STATISTICS, the Master-Patient-Index agent's WEIGHTED identity MATCHING, the
+    // Claim Lifecycle agent's FSM TRANSITION VALIDATION, the Medication Name
+    // Safety agent's STRING EDIT DISTANCE, the Schedule Conflict agent's GREEDY
+    // INTERVAL SELECTION, the Caseload Balancing agent's GREEDY BIN-PACKING, the
+    // Access Anomaly agent's SLIDING-WINDOW COUNTING, the Coverage Continuity
+    // agent's INTERVAL MERGING, the Care Pathway agent's TOPOLOGICAL ORDERING, the
+    // Enrollment Reconciliation agent's KEYED SET-DIFFERENCE, or the Audit Log
+    // Integrity agent's HASH CHAIN — the heart of this service is GEOSPATIAL
+    // GREAT-CIRCLE DISTANCE: the haversine formula that converts two (lat, lon)
+    // pairs into a distance in miles, plus a NEAREST-NEIGHBOR scan and a THRESHOLD
+    // comparison against the regulatory standard. A member with no in-network
+    // specialist within the standard distance has a network-adequacy GAP — a
+    // compliance failure (CMS 42 CFR 422.116 / state QHP time-and-distance
+    // standards) and an access-to-care failure; a wrong distance understates the
+    // gap. A determination is a RECOMMENDATION requiring a network manager to
+    // confirm — the agent never autonomously CERTIFIES the network, CLOSES a gap,
+    // or ADDS / REMOVES a provider. It COMPLEMENTS the other provider / network
+    // agents — distinct from the Provider Credentialing agent (whether a provider
+    // is QUALIFIED and in the directory), the Referral Management agent (routing a
+    // specific referral), and the Provider Benchmarking agent (a provider's cost /
+    // quality percentile): this measures whether the network is geographically
+    // ADEQUATE. It is PHI-bearing (the member's location + the specialty they need
+    // is health information). REUSES the existing payer-operations tier. The
+    // member + providers + coordinates are ILLUSTRATIVE, NOT a certified
+    // network-adequacy engine (no drive-time, county-designation, or capacity
+    // rules).
+    endpoint: "/api/agents/network-adequacy",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a member's location plus the plan's in-network providers and decides whether the network meets the applicable time-and-distance adequacy standard for a required specialty — it computes the great-circle (haversine) distance from the member to each in-network provider of that specialty, finds the nearest, and flags an adequacy gap when the nearest exceeds the standard — reporting the evaluated providers with distances, the nearest, the matching-provider count, and the disposition (adequacy-met / adequacy-gap). A deterministic payer-operations agent; it COMPLEMENTS the Provider Credentialing agent (whether a provider is QUALIFIED and in the directory), the Referral Management agent (routing a specific referral), and the Provider Benchmarking agent (a provider's cost / quality percentile) — this measures whether the network is geographically ADEQUATE",
+      "The finding is DETERMINISTIC — a pure function of the request's own coordinates + standard (no randomness, no clock; not a checksum, a union-find, a percentile, an identity match, an FSM transition, an edit distance, an interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, or a hash chain but GEOSPATIAL GREAT-CIRCLE DISTANCE — the haversine formula plus a nearest-neighbor scan and a threshold comparison); the same request always yields the same result",
+      "Every evaluated provider must be built from the submitted in-network providers — a submitted provider of the required specialty (same id + coordinates), all such providers evaluated, none dropped or invented; a phantom provider fabricating coverage is blocked at the Agent Fabric governance boundary (policy.adequacy.providers-sourced, the sourced + completeness gate); and the distances must recompute — recomputing the haversine distance from the member to each provider's coordinates must reproduce the reported distances, the nearest, and the disposition; a mis-measured distance (understating a gap into false adequacy) is blocked (policy.adequacy.distances-consistent, the load-bearing correctness gate). Mirrors the Medication Name Safety Agent's distances-consistent + the Identifier Validation Agent's identifiers-sourced posture",
+      "The agent ASSESSES adequacy — it NEVER certifies the network to a regulator, closes a gap, or adds / removes a provider (each is a consequential action that must be authorized) on its own; a determination that auto-certifies or is not review-gated is blocked (policy.adequacy.no-autonomous-network-change), and every finding is confirmed by a network manager. Mirrors the Provider Benchmarking Agent's no-autonomous-tiering and the Provider Credentialing Agent's no-referral-to-expired-or-sanctioned posture",
+      "Runs against ILLUSTRATIVE synthetic member + providers + coordinates + standards — clearly labeled; computes STRAIGHT-LINE great-circle distance only, NOT a certified network-adequacy engine (real time-and-distance adequacy uses drive-time isochrones, county type, minimum provider counts, and telehealth credits). PHI-bearing — the member's location + the specialty they need is health information"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
+  },
+  {
     id: "coverage-continuity-agent",
     name: "Creditable Coverage Continuity Agent",
     kind: "agentforce",
@@ -2972,7 +3027,8 @@ const POLICIES: PolicyRecord[] = [
       "schedule-conflict-agent",
       "medication-name-safety-agent",
       "claim-lifecycle-agent",
-      "household-composition-agent"
+      "household-composition-agent",
+      "network-adequacy-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -4245,6 +4301,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Household Composition Agent may NEVER merge member records, change enrollment, or apply a family accumulator on its own (autoMerged:true — each is a consequential action that must be authorized) or skip steward review (requiresStewardReview:true) — the agent PROPOSES a grouping, and every finding is a RECOMMENDATION requiring a data steward to confirm. A finding that auto-merges, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the Master-Patient-Index Agent's no-autonomous-merge posture — the harmful action is enforced-off.",
     appliesTo: ["household-composition-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.adequacy.providers-sourced",
+    name: "Every evaluated provider is a submitted in-network provider",
+    description:
+      "The Network Adequacy Agent must evaluate exactly the submitted in-network providers of the required specialty — every evaluated provider must be a submitted one (same id, coordinates, and the required specialty; no phantom provider fabricating coverage that isn't in the network), every submitted provider of that specialty must be evaluated (none dropped), the counts must agree, and the nearest must be one of the evaluated. A phantom nearby provider turns a real access GAP into false adequacy. A finding that evaluates a phantom or drops a provider is rejected before it can leave the fabric. This is the sourced + completeness gate. Mirrors the Identifier Validation Agent's identifiers-sourced and the Household Composition Agent's links-sourced posture. (In the prototype the member + providers + coordinates are clearly-labeled illustrative synthetics.)",
+    appliesTo: ["network-adequacy-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.adequacy.distances-consistent",
+    name: "The great-circle distances recompute correctly",
+    description:
+      "The Network Adequacy Agent's distances must recompute exactly: recomputing the haversine great-circle distance from the member to each evaluated provider's own coordinates must reproduce every reported distance, the ascending order, the nearest provider, the nearest distance, and the adequacy disposition against the standard. A mis-measured distance understates a gap (falsely certifying adequacy so a member can't reach care) or overstates one. A finding whose distances don't recompute is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Medication Name Safety Agent's distances-consistent and the Provider Benchmarking Agent's stats-consistent posture.",
+    appliesTo: ["network-adequacy-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.adequacy.no-autonomous-network-change",
+    name: "The network is never autonomously certified or changed",
+    description:
+      "The Network Adequacy Agent may NEVER certify the network as adequate to a regulator, close a gap, or add / remove a provider on its own (autoCertified:true — each is a consequential action that must be authorized) or skip network review (requiresNetworkReview:true) — the agent ASSESSES adequacy, and every finding is a RECOMMENDATION requiring a network manager to confirm. A finding that auto-certifies, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Provider Benchmarking Agent's no-autonomous-tiering and the Provider Credentialing Agent's no-referral-to-expired-or-sanctioned posture — the harmful action is enforced-off.",
+    appliesTo: ["network-adequacy-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -12950,6 +13033,114 @@ function store(): FabricStore {
         identifierNoAutonomousReject: true,
         requiresStewardReview: true,
         phiAccessed: false,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedNetworkAdequacyTrace() {
+  const s = store();
+  const na0 = Date.now() - 1000 * 60 * 1;
+  const naTaskId = "task-seed-network-adequacy-001";
+  const naName = "Network Adequacy / Time-and-Distance Agent";
+  s.traces.push(
+    {
+      id: "span-network-adequacy-001",
+      taskId: naTaskId,
+      agentId: "network-adequacy-agent",
+      agentName: naName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(na0).toISOString(),
+      finishedAt: new Date(na0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-network-adequacy-002",
+      taskId: naTaskId,
+      parentSpanId: "span-network-adequacy-001",
+      agentId: "network-adequacy-agent",
+      agentName: naName,
+      operation: "adequacy.receive-request",
+      protocol: "a2a",
+      startedAt: new Date(na0 + 30).toISOString(),
+      finishedAt: new Date(na0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        caseRef: "adequacy-case-002",
+        requiredSpecialty: "endocrinology",
+        maxDistanceMiles: 10,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-network-adequacy-003",
+      taskId: naTaskId,
+      parentSpanId: "span-network-adequacy-002",
+      agentId: "network-adequacy-agent",
+      agentName: naName,
+      operation: "adequacy.compute-distances",
+      protocol: "a2a",
+      startedAt: new Date(na0 + 60).toISOString(),
+      finishedAt: new Date(na0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        caseRef: "adequacy-case-002",
+        matchingProviderCount: 2,
+        nearestDistanceMiles: 16.44,
+        // The honesty invariants: providers sourced, distances exact.
+        providersSourced: true,
+        distancesConsistent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-network-adequacy-004",
+      taskId: naTaskId,
+      parentSpanId: "span-network-adequacy-003",
+      agentId: "network-adequacy-agent",
+      agentName: naName,
+      operation: "adequacy.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(na0 + 100).toISOString(),
+      finishedAt: new Date(na0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        caseRef: "adequacy-case-002",
+        disposition: "adequacy-gap",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-network-adequacy-005",
+      taskId: naTaskId,
+      parentSpanId: "span-network-adequacy-004",
+      agentId: "network-adequacy-agent",
+      agentName: naName,
+      operation: "adequacy.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(na0 + 140).toISOString(),
+      finishedAt: new Date(na0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        caseRef: "adequacy-case-002",
+        // The honesty invariant: never an autonomous network change.
+        noAutonomousNetworkChange: true,
+        requiresNetworkReview: true,
+        phiAccessed: true,
         synthetic: true
       }
     }
