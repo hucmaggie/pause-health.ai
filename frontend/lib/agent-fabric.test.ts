@@ -468,8 +468,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // care-coordination Reportable / Notifiable Condition Case Classification agent,
     // the data-plane Clinical Event Timeline Merge / Record Reconciliation agent,
     // the care-coordination Clinical Quality-Measure Shift Detection (SPC) agent,
-    // and the care-coordination Care-Management Capacity Allocation / Outreach Prioritization agent.
-    expect(listAgents()).toHaveLength(90);
+    // the care-coordination Care-Management Capacity Allocation / Outreach Prioritization agent,
+    // and the commercial-operations Commercial KPI Trend & Projection agent.
+    expect(listAgents()).toHaveLength(91);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

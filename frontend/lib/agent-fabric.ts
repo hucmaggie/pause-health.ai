@@ -315,6 +315,69 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "commercial-operations"
   },
   {
+    id: "kpi-trend-agent",
+    name: "Agentforce Commercial KPI Trend & Projection",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the commercial-analytics piece: POST
+    // /api/agents/kpi-trend/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) commercial-operations agent that, given a
+    // time-ordered series of a business METRIC (monthly provider-org adoption,
+    // active enrolled patients, ARR, bookings), fits an ordinary LEAST-SQUARES
+    // linear-regression line through the observations, reports its slope +
+    // intercept + R² (goodness of fit), classifies the trend (rising / flat /
+    // declining) against a documented flat tolerance, and PROJECTS the metric to
+    // a future horizon. UNLIKE the Outreach Prioritization agent's 0/1 KNAPSACK
+    // DYNAMIC PROGRAMMING, the Quality Shift agent's CUSUM CHANGE-POINT DETECTION,
+    // the Timeline Merge agent's K-WAY MERGE OF SORTED STREAMS, the Reportable
+    // Condition agent's RECURSIVE BOOLEAN EXPRESSION-TREE EVALUATION, the PCP
+    // Matching agent's TWO-SIDED STABLE MATCHING (Gale–Shapley), the Network
+    // Adequacy agent's GEOSPATIAL GREAT-CIRCLE DISTANCE, the Identifier Validation
+    // agent's MODULAR-ARITHMETIC CHECKSUM, the Household Composition agent's
+    // UNION-FIND CONNECTED COMPONENTS, the MLR Rebate agent's LARGEST-REMAINDER
+    // APPORTIONMENT, the Claim Lifecycle agent's FSM TRANSITION VALIDATION, the
+    // Medication Name Safety agent's STRING EDIT DISTANCE, the Schedule Conflict
+    // agent's GREEDY INTERVAL SELECTION, the Care Pathway agent's TOPOLOGICAL
+    // ORDERING, the Enrollment Reconciliation agent's KEYED SET-DIFFERENCE, or the
+    // Audit Log Integrity agent's HASH CHAIN — and, CRUCIALLY, UNLIKE the Pipeline
+    // Management agent's FORECAST ROLLUP (which SUMS CRM opportunity records into
+    // committed / best-case figures — an aggregation of records, no fitted model),
+    // the Provider Benchmarking agent's PERCENTILE / RANK STATISTICS (which ranks
+    // ONE value against a static distribution; it fits no line and projects
+    // nothing), the Quality Shift agent's CUSUM (which accumulates a running
+    // deviation to catch a SUSTAINED shift; it fits no model and extrapolates
+    // nothing), and the Remote Patient Monitoring agent's WINDOW-VS-BASELINE trend
+    // classification (which compares a recent window to a baseline window; it fits
+    // no line) — the heart of this service is ORDINARY LEAST-SQUARES LINEAR
+    // REGRESSION: the closed-form best-fit line minimizing the sum of squared
+    // residuals (slope = (n·Σxy − Σx·Σy) / (n·Σx² − (Σx)²), intercept = (Σy −
+    // slope·Σx) / n, R² = 1 − SSres/SStot), plus a projection ŷ = slope·horizon +
+    // intercept. A mis-fit line reports a trend the data doesn't support and a
+    // projection nobody should plan against, so the agent fits DETERMINISTICALLY
+    // and hands the forecast to a human; a projection is a RECOMMENDATION and the
+    // agent never commits it as an official forecast, adjusts a quota / target, or
+    // notifies finance on its own. It COMPLEMENTS the other commercial agents —
+    // distinct from the Pipeline Management agent (which rolls up opportunity
+    // records into a forecast) and the Account Management agent (which health-scores
+    // signed accounts): this fits a least-squares trend line to a KPI series and
+    // projects it. It operates ONLY on the commercial CRM plane — it has NO access
+    // to patient PHI and is NOT on the HIPAA-audit policy; the metrics are
+    // aggregate business figures. The series are ILLUSTRATIVE, NOT a certified
+    // forecasting / FP&A system.
+    endpoint: "/api/agents/kpi-trend",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Given a time-ordered series of a business metric (monthly provider-org adoption, active enrolled patients, ARR, bookings), fits an ordinary least-squares linear-regression line, reports slope + intercept + R² (goodness of fit), classifies the trend (rising / flat / declining) against a documented flat tolerance, and projects the metric to a future horizon. A deterministic commercial-analytics agent; it COMPLEMENTS the Pipeline Management agent (which rolls up CRM opportunity records into a forecast) and the Account Management agent (which health-scores signed accounts) — this fits a least-squares trend line to a KPI series and projects it",
+      "The fit is DETERMINISTIC — a pure function of the observations' own indices + values + the parameters (no randomness, no clock; not a knapsack, a CUSUM, a k-way merge, a recursive boolean tree, a stable matching, a geospatial distance, a checksum, a union-find, a percentile, a largest-remainder apportionment, an FSM transition, an edit distance, an interval selection, a topological sort, a set-difference, a hash chain, or a forecast rollup but ORDINARY LEAST-SQUARES LINEAR REGRESSION — the closed-form best-fit line + projection); the same series always yields the same line",
+      "Every fitted point must be sourced — each must trace to a SUBMITTED observation (same index + value; no fabricated point), every observation must appear exactly once (none dropped, none double-plotted), and the fit parameters must be present; a fabricated or dropped point is blocked at the Agent Fabric governance boundary (policy.kpi.series-sourced, the sourced + completeness gate); and the fit must recompute — re-running the least-squares regression over the observations must reproduce the reported slope, intercept, R², trend, projection, and every point's fitted value + residual; a mis-fit line or a fabricated projection is blocked (policy.kpi.fit-consistent, the load-bearing correctness gate). Mirrors the Quality Shift Agent's observations-sourced + cusum-consistent posture",
+      "The agent PROJECTS — it NEVER commits the projection as an official forecast, adjusts a quota / target, or notifies finance (each is a consequential commercial action that must be authorized) on its own; a projection that auto-commits or is not review-gated is blocked (policy.kpi.no-autonomous-commit), and every projection is confirmed by a revenue analyst. Mirrors the Pipeline Management Agent's human-owner and the Account Management Agent's never-commit-a-contract posture",
+      "Operates ONLY on the commercial CRM plane — NO patient PHI, NOT on the HIPAA-audit policy; the metrics are ILLUSTRATIVE aggregate business figures, clearly labeled — NOT a certified forecasting / FP&A system (real commercial forecasting weighs seasonality, pipeline mix, cohort dynamics, macro conditions, and human judgment — not a single straight line through past points)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "commercial-operations"
+  },
+  {
     id: "assessment-agent",
     name: "Agentforce Assessment Agent · Validated Instruments",
     kind: "agentforce",
@@ -4766,6 +4829,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Outreach Prioritization Agent may NEVER launch the outreach, commit the plan, or book the interventions on its own (autoScheduled:true — each is a care-delivery action that must be authorized) or skip care-lead review (requiresCareLeadReview:true) — the agent PRIORITIZES, and every allocation is a RECOMMENDATION requiring a care lead to confirm, with deferred interventions deferred to a later cycle, never denied. An allocation that auto-schedules, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Care Gap Agent's human-review posture — the harmful action is enforced-off.",
     appliesTo: ["outreach-prioritization-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.kpi.series-sourced",
+    name: "Every fitted point is sourced and every observation is accounted for",
+    description:
+      "The Commercial KPI Trend Agent must draw its fit from the submitted observations — every fitted point must trace to a SUBMITTED observation (same index + value; no fabricated point), every submitted observation must appear EXACTLY ONCE across the points (none dropped, none double-plotted), and the fit parameters (horizon, flatTolerance) must be present numbers. A fabricated or dropped point silently bends the line. A determination that fabricates, drops, or double-plots a point is rejected before it can leave the fabric. This is the sourced + completeness gate. Mirrors the Quality Shift Agent's observations-sourced and the Timeline Merge Agent's events-sourced posture. (In the prototype the metrics are clearly-labeled illustrative synthetics carrying no patient PHI.)",
+    appliesTo: ["kpi-trend-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.kpi.fit-consistent",
+    name: "The fit + projection recompute (ordinary least-squares regression)",
+    description:
+      "The Commercial KPI Trend Agent's fit must recompute — re-running the ordinary LEAST-SQUARES linear regression over the submitted observations must reproduce the reported slope, intercept, R², trend classification, projection, and every point's fitted value + residual. A mis-fit line or a fabricated projection misleads the plan. A determination whose fit or projection does not recompute is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Quality Shift Agent's cusum-consistent and the Provider Benchmarking Agent's stats-consistent posture.",
+    appliesTo: ["kpi-trend-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.kpi.no-autonomous-commit",
+    name: "No projection is ever committed autonomously",
+    description:
+      "The Commercial KPI Trend Agent may NEVER commit the projection as an official forecast, adjust a quota / target, or notify finance on its own (autoCommitted:true — each is a consequential commercial action that must be authorized) or skip analyst review (requiresAnalystReview:true) — the agent PROJECTS, and every projection is a RECOMMENDATION requiring a revenue analyst to confirm. A projection that auto-commits, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Pipeline Management Agent's human-owner posture and the Account Management Agent's never-commit-a-contract posture — the harmful action is enforced-off.",
+    appliesTo: ["kpi-trend-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -14121,6 +14211,116 @@ function store(): FabricStore {
         outreachNoAutonomousSchedule: true,
         requiresCareLeadReview: true,
         phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedKpiTrendTrace() {
+  const s = store();
+  const kp0 = Date.now() - 1000 * 60 * 1;
+  const kpTaskId = "task-seed-kpi-trend-001";
+  const kpName = "Agentforce Commercial KPI Trend & Projection";
+  s.traces.push(
+    {
+      id: "span-kpi-trend-001",
+      taskId: kpTaskId,
+      agentId: "kpi-trend-agent",
+      agentName: kpName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(kp0).toISOString(),
+      finishedAt: new Date(kp0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // Commercial CRM plane — no patient PHI.
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-kpi-trend-002",
+      taskId: kpTaskId,
+      parentSpanId: "span-kpi-trend-001",
+      agentId: "kpi-trend-agent",
+      agentName: kpName,
+      operation: "kpi.receive-series",
+      protocol: "a2a",
+      startedAt: new Date(kp0 + 30).toISOString(),
+      finishedAt: new Date(kp0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        seriesRef: "kpi-provider-org-adoption",
+        observationCount: 6,
+        horizon: 6,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-kpi-trend-003",
+      taskId: kpTaskId,
+      parentSpanId: "span-kpi-trend-002",
+      agentId: "kpi-trend-agent",
+      agentName: kpName,
+      operation: "kpi.fit-regression",
+      protocol: "a2a",
+      startedAt: new Date(kp0 + 60).toISOString(),
+      finishedAt: new Date(kp0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        seriesRef: "kpi-provider-org-adoption",
+        slope: 11,
+        rSquared: 1,
+        // The honesty invariants: series sourced, fit consistent.
+        kpiSeriesSourced: true,
+        kpiFitConsistent: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-kpi-trend-004",
+      taskId: kpTaskId,
+      parentSpanId: "span-kpi-trend-003",
+      agentId: "kpi-trend-agent",
+      agentName: kpName,
+      operation: "kpi.classify-trend",
+      protocol: "a2a",
+      startedAt: new Date(kp0 + 100).toISOString(),
+      finishedAt: new Date(kp0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        seriesRef: "kpi-provider-org-adoption",
+        trend: "rising",
+        projection: 86,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-kpi-trend-005",
+      taskId: kpTaskId,
+      parentSpanId: "span-kpi-trend-004",
+      agentId: "kpi-trend-agent",
+      agentName: kpName,
+      operation: "kpi.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(kp0 + 140).toISOString(),
+      finishedAt: new Date(kp0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        seriesRef: "kpi-provider-org-adoption",
+        // The honesty invariant: never an autonomous commit.
+        kpiNoAutonomousCommit: true,
+        requiresAnalystReview: true,
+        phiAccessed: false,
         synthetic: true
       }
     }

@@ -250,6 +250,10 @@ export type GovernanceTask = {
   outreachSelectionsSourced?: boolean;
   outreachAllocationOptimal?: boolean;
   outreachNoAutonomousSchedule?: boolean;
+  // Commercial KPI Trend & Projection / Least-Squares Regression (series-sourced + fit-consistent + no-autonomous-commit)
+  kpiSeriesSourced?: boolean;
+  kpiFitConsistent?: boolean;
+  kpiNoAutonomousCommit?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1683,6 +1687,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Outreach launched / plan committed autonomously, or with no care-lead review",
     reason:
       "An outreach allocation autonomously launched the outreach, committed the plan, or booked the interventions (autoScheduled:true — each is a care-delivery action that must be authorized) or did not require care-lead review (requiresCareLeadReview:false); the agent PRIORITIZES — every allocation is a RECOMMENDATION requiring a care lead to confirm, and a deferred intervention is deferred to a later cycle, never denied. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Care Gap Agent's human-review posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.kpi.series-sourced",
+    signal: "kpiSeriesSourced",
+    violatingValue: false,
+    violationHint: "A fabricated point, a dropped observation, or a missing parameter",
+    reason:
+      "A KPI-trend fit is not drawn from the submitted observations — every fitted point must trace to a SUBMITTED observation (same index + value; no fabricated point), every submitted observation must appear EXACTLY ONCE across the points (none dropped, none double-plotted), and the fit parameters (horizon, flatTolerance) must be present numbers. A fabricated or dropped point silently bends the line. The sourced + completeness gate — mirrors the Quality Shift Agent's observations-sourced and the Timeline Merge Agent's events-sourced"
+  },
+  {
+    policyId: "policy.kpi.fit-consistent",
+    signal: "kpiFitConsistent",
+    violatingValue: false,
+    violationHint: "A mis-fit line or a fabricated projection",
+    reason:
+      "A KPI-trend fit does not recompute — re-running the ordinary LEAST-SQUARES linear regression over the submitted observations must reproduce the reported slope, intercept, R², trend classification, projection, and every point's fitted value + residual. A mis-fit line or a fabricated projection misleads the plan. The load-bearing correctness gate — mirrors the Quality Shift Agent's cusum-consistent and the Provider Benchmarking Agent's stats-consistent"
+  },
+  {
+    policyId: "policy.kpi.no-autonomous-commit",
+    signal: "kpiNoAutonomousCommit",
+    violatingValue: false,
+    violationHint: "Projection committed as a forecast / quota autonomously, or with no analyst review",
+    reason:
+      "A KPI-trend fit autonomously committed the projection as an official forecast, adjusted a quota / target, or notified finance (autoCommitted:true — each is a consequential commercial action that must be authorized) or did not require analyst review (requiresAnalystReview:false); the agent PROJECTS — every projection is a RECOMMENDATION requiring a revenue analyst to confirm. Mirrors the Pipeline Management Agent's human-owner posture and the Account Management Agent's never-commit-a-contract posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

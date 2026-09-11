@@ -65,6 +65,7 @@ import { ReportableConditionPanel } from "../../../components/reportable-conditi
 import { TimelineMergePanel } from "../../../components/timeline-merge-panel";
 import { QualityShiftPanel } from "../../../components/quality-shift-panel";
 import { OutreachPrioritizationPanel } from "../../../components/outreach-prioritization-panel";
+import { KpiTrendPanel } from "../../../components/kpi-trend-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -225,6 +226,7 @@ export default function IntakeDemoPage() {
       <TimelineMergePanel />
       <QualityShiftPanel />
       <OutreachPrioritizationPanel />
+      <KpiTrendPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 
