@@ -2131,6 +2131,68 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "data-plane"
   },
   {
+    id: "code-taxonomy-agent",
+    name: "Clinical Code Taxonomy / Longest-Prefix Classification Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the data-substrate terminology / value-set piece:
+    // POST /api/agents/code-taxonomy/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) platform / data-plane agent that takes a BATCH of
+    // clinical codes (ICD-10 diagnosis, HCPCS / CPT procedure) and a TAXONOMY of
+    // category PREFIXES (a code-group value-set) and classifies each code to its
+    // MOST-SPECIFIC (longest) matching category prefix — or leaves it UNCLASSIFIED
+    // when no prefix matches. UNLIKE the Source Consensus agent's BOYER–MOORE
+    // MAJORITY VOTE, the Care Routing agent's DIJKSTRA'S WEIGHTED SHORTEST PATH,
+    // the KPI Trend agent's LEAST-SQUARES LINEAR REGRESSION, the Outreach
+    // Prioritization agent's 0/1 KNAPSACK DYNAMIC PROGRAMMING, the Quality Shift
+    // agent's CUSUM CHANGE-POINT DETECTION, the Timeline Merge agent's K-WAY MERGE
+    // OF SORTED STREAMS, the Reportable Condition agent's RECURSIVE BOOLEAN
+    // EXPRESSION-TREE EVALUATION, the PCP Matching agent's TWO-SIDED STABLE
+    // MATCHING (Gale–Shapley), the Network Adequacy agent's GEOSPATIAL GREAT-CIRCLE
+    // DISTANCE, the Household Composition agent's UNION-FIND CONNECTED COMPONENTS,
+    // the Provider Benchmarking agent's PERCENTILE / RANK STATISTICS, the MLR
+    // Rebate agent's LARGEST-REMAINDER APPORTIONMENT, the Schedule Conflict agent's
+    // GREEDY INTERVAL SELECTION, the Enrollment Reconciliation agent's KEYED
+    // SET-DIFFERENCE, the Audit Log Integrity agent's HASH CHAIN, or the Claim
+    // Lifecycle agent's BFS REACHABILITY — and, CRUCIALLY, UNLIKE the Identifier
+    // Validation agent's MODULAR-ARITHMETIC CHECKSUM (character math on a single
+    // identifier's Luhn check digit), the Medication Name Safety agent's STRING
+    // EDIT DISTANCE (how far apart two drug NAMES are), and the HCC Risk Adjustment
+    // agent's HIERARCHY + COEFFICIENT SUM (rolling confirmed conditions up a
+    // clinical hierarchy and summing RAF coefficients) — the heart of this service
+    // is a TRIE (PREFIX TREE) LONGEST-PREFIX MATCH: the taxonomy prefixes are
+    // inserted into a trie, and each code is walked character-by-character down the
+    // trie, remembering the DEEPEST terminal node reached — the longest taxonomy
+    // prefix that is a prefix of the code (the most specific category). A shallow
+    // substring match (E28 when E28.3 also applies) mis-buckets a code into a less
+    // specific group; the longest-prefix rule picks the most specific category the
+    // taxonomy defines. A classification is a RECOMMENDATION requiring a coder to
+    // confirm — the agent never autonomously RE-CODES a claim, SUBMITS the codes,
+    // or OVERWRITES the coded record. It COMPLEMENTS the other terminology / coding
+    // agents — distinct from the Identifier Validation agent (which validates an
+    // NPI's check digit), the Medication Name Safety agent (which flags look-alike
+    // drug names by edit distance), and the HCC Risk Adjustment agent (which scores
+    // confirmed conditions up a hierarchy): this maps codes to a value-set taxonomy
+    // by longest prefix. It is DELIBERATELY NOT PHI-BEARING — a code is a
+    // terminology token, classified against a value-set taxonomy, not patient
+    // health information — so, like the Identifier Validation agent, it is NOT on
+    // the HIPAA-audit policy. REUSES the existing data-plane tier (platform plane).
+    // The taxonomy + codes are ILLUSTRATIVE, NOT a certified terminology / code-set
+    // engine.
+    endpoint: "/api/agents/code-taxonomy",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a batch of clinical codes (ICD-10 diagnosis, HCPCS / CPT procedure) and a taxonomy of category prefixes (a code-group value-set) and classifies each code to its most-specific (longest) matching category prefix, or leaves it unclassified when no prefix matches — reporting one classification per code, the classified / unclassified counts, and the batch disposition (all-classified / unclassified-present). A deterministic terminology / value-set agent; it COMPLEMENTS the Identifier Validation agent (which validates an NPI's check digit), the Medication Name Safety agent (which flags look-alike drug names by edit distance), and the HCC Risk Adjustment agent (which scores confirmed conditions up a hierarchy) — this maps codes to a value-set taxonomy by longest prefix",
+      "The classification is DETERMINISTIC — a pure function of the request's own taxonomy + codes (no randomness, no clock; not a regression, a knapsack, a CUSUM, a k-way merge, a recursive boolean tree, a stable matching, a geospatial distance, a checksum, a union-find, a percentile, a largest-remainder apportionment, an edit distance, an interval selection, a hash chain, a BFS hop-count, a Dijkstra shortest path, a keyed set-difference, a majority vote, or a hierarchy-coefficient sum but a TRIE (PREFIX TREE) LONGEST-PREFIX MATCH); the same taxonomy + codes always yield the same determination",
+      "The batch must be sourced — exactly one classification per submitted code, in the same order (no fabricated code, none dropped, none duplicated), every matched prefix a submitted taxonomy prefix (no invented category), each classification self-consistent, the counts adding up, and the disposition following; a fabricated code or invented category is blocked at the Agent Fabric governance boundary (policy.code.classifications-sourced, the sourced + completeness gate); and the classification must recompute — rebuilding the trie and re-running the longest-prefix match over each code must reproduce the reported category + matched prefix; a wrong bucket or a missed match is blocked (policy.code.classification-consistent, the load-bearing correctness gate). Mirrors the Identifier Validation Agent's identifiers-sourced + checksum-consistent posture",
+      "The agent CLASSIFIES and RECOMMENDS — it NEVER re-codes a claim, submits the codes, or overwrites the coded record (each is a consequential coding action that must be authorized) on its own; a determination that auto-applies or is not review-gated is blocked (policy.code.no-autonomous-recode), and every classification is confirmed by a coder. Mirrors the Identifier Validation Agent's no-autonomous-reject and the Enrollment Reconciliation Agent's no-autonomous-change posture",
+      "Runs against ILLUSTRATIVE synthetic taxonomy + codes — clearly labeled; NOT a certified terminology / code-set engine (real terminology services resolve full code systems — ICD-10-CM, SNOMED CT, LOINC, RxNorm — with versioned value sets, inclusion/exclusion logic, and semantic relationships, not a bare longest-prefix match). DELIBERATELY NOT PHI-bearing — a code is a terminology token, classified against a value-set taxonomy, not patient health information"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
+  },
+  {
     id: "break-the-glass-agent",
     name: "Break-the-Glass / Emergency Access Governance Agent",
     kind: "mulesoft-process",
@@ -5032,6 +5094,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Source-of-Truth Consensus Agent may NEVER write the consensus value to the golden record / master data, overwrite a source system, or promote a value to system-of-record on its own (autoWritten:true — each is a data-integrity action that must be authorized) or skip steward review (requiresStewardReview:true) — the agent RECONCILES on paper, and every reconciliation is a RECOMMENDATION requiring a data steward to confirm. A reconciliation that auto-writes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Timeline Merge Agent's no-autonomous-merge and the Enrollment Reconciliation Agent's no-autonomous-change posture — the harmful action is enforced-off.",
     appliesTo: ["source-consensus-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.code.classifications-sourced",
+    name: "Every classification is sourced and complete",
+    description:
+      "The Clinical Code Taxonomy Agent's classification batch must correspond EXACTLY to the submitted codes — exactly one classification per submitted code, in the same order (no fabricated code, none dropped, none duplicated), every matched prefix must be a SUBMITTED taxonomy prefix (no invented category), each classification must be self-consistent (a category iff a matched prefix), the reported counts must add up (classified + unclassified = total = codes), and the disposition must follow. A fabricated code or invented category corrupts the value-set mapping. A determination whose batch invents or drops a code, or invents a category, is rejected before it can leave the fabric. This is the sourced + completeness gate. Mirrors the Identifier Validation Agent's identifiers-sourced and the Enrollment Reconciliation Agent's reconciliation-complete posture. (In the prototype the taxonomy + codes are clearly-labeled illustrative synthetics.)",
+    appliesTo: ["code-taxonomy-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.code.classification-consistent",
+    name: "The classification recomputes (trie longest-prefix match)",
+    description:
+      "The Clinical Code Taxonomy Agent's classification must recompute — rebuilding the TRIE (PREFIX TREE) from the taxonomy and re-running the LONGEST-PREFIX MATCH over each submitted code must reproduce the reported category + matched prefix. A wrong bucket mis-maps a code; a missed match drops it from a value set it belongs to. A determination whose classification doesn't recompute is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Identifier Validation Agent's checksum-consistent and the Source Consensus Agent's consensus-consistent posture.",
+    appliesTo: ["code-taxonomy-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.code.no-autonomous-recode",
+    name: "No claim is ever re-coded autonomously",
+    description:
+      "The Clinical Code Taxonomy Agent may NEVER re-code a claim, submit the codes, or overwrite the coded record on its own (autoApplied:true — each is a consequential coding action that must be authorized) or skip coder review (requiresCoderReview:true) — the agent CLASSIFIES on paper, and every classification is a RECOMMENDATION requiring a coder to confirm. A classification that auto-applies, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Identifier Validation Agent's no-autonomous-reject and the Enrollment Reconciliation Agent's no-autonomous-change posture — the harmful action is enforced-off.",
+    appliesTo: ["code-taxonomy-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -14715,6 +14804,115 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous write.
         consensusNoAutonomousWrite: true,
         requiresStewardReview: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedCodeTaxonomyTrace() {
+  const s = store();
+  const ct0 = Date.now() - 1000 * 60 * 1;
+  const ctTaskId = "task-seed-code-taxonomy-001";
+  const ctName = "Clinical Code Taxonomy / Longest-Prefix Classification Agent";
+  s.traces.push(
+    {
+      id: "span-code-taxonomy-001",
+      taskId: ctTaskId,
+      agentId: "code-taxonomy-agent",
+      agentName: ctName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ct0).toISOString(),
+      finishedAt: new Date(ct0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // Terminology / value-set token — no patient PHI.
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-code-taxonomy-002",
+      taskId: ctTaskId,
+      parentSpanId: "span-code-taxonomy-001",
+      agentId: "code-taxonomy-agent",
+      agentName: ctName,
+      operation: "taxonomy.receive-codes",
+      protocol: "a2a",
+      startedAt: new Date(ct0 + 30).toISOString(),
+      finishedAt: new Date(ct0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        catalogRef: "code-catalog-001",
+        codeCount: 5,
+        prefixCount: 4,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-code-taxonomy-003",
+      taskId: ctTaskId,
+      parentSpanId: "span-code-taxonomy-002",
+      agentId: "code-taxonomy-agent",
+      agentName: ctName,
+      operation: "taxonomy.match-prefixes",
+      protocol: "a2a",
+      startedAt: new Date(ct0 + 60).toISOString(),
+      finishedAt: new Date(ct0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        catalogRef: "code-catalog-001",
+        classifiedCount: 4,
+        // The honesty invariants: classifications sourced, classification consistent.
+        codeClassificationsSourced: true,
+        codeClassificationConsistent: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-code-taxonomy-004",
+      taskId: ctTaskId,
+      parentSpanId: "span-code-taxonomy-003",
+      agentId: "code-taxonomy-agent",
+      agentName: ctName,
+      operation: "taxonomy.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(ct0 + 100).toISOString(),
+      finishedAt: new Date(ct0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        catalogRef: "code-catalog-001",
+        disposition: "unclassified-present",
+        unclassifiedCount: 1,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-code-taxonomy-005",
+      taskId: ctTaskId,
+      parentSpanId: "span-code-taxonomy-004",
+      agentId: "code-taxonomy-agent",
+      agentName: ctName,
+      operation: "taxonomy.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(ct0 + 140).toISOString(),
+      finishedAt: new Date(ct0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        catalogRef: "code-catalog-001",
+        // The honesty invariant: never an autonomous re-code.
+        codeNoAutonomousRecode: true,
+        requiresCoderReview: true,
         phiAccessed: false,
         synthetic: true
       }

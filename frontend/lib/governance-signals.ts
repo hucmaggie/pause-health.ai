@@ -262,6 +262,10 @@ export type GovernanceTask = {
   consensusVotesSourced?: boolean;
   consensusConsistent?: boolean;
   consensusNoAutonomousWrite?: boolean;
+  // Clinical Code Taxonomy / Longest-Prefix Classification / Trie Prefix Match (classifications-sourced + classification-consistent + no-autonomous-recode)
+  codeClassificationsSourced?: boolean;
+  codeClassificationConsistent?: boolean;
+  codeNoAutonomousRecode?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1767,6 +1771,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Golden record written / promoted autonomously, or with no steward review",
     reason:
       "A source-of-truth reconciliation autonomously wrote the consensus value to the golden record / master data, overwrote a source system, or promoted a value to system-of-record (autoWritten:true — each is a data-integrity action that must be authorized) or did not require steward review (requiresStewardReview:false); the agent RECONCILES on paper — every reconciliation is a RECOMMENDATION requiring a data steward to confirm. Mirrors the Timeline Merge Agent's no-autonomous-merge and the Enrollment Reconciliation Agent's no-autonomous-change — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.code.classifications-sourced",
+    signal: "codeClassificationsSourced",
+    violatingValue: false,
+    violationHint: "A fabricated / dropped code or an invented category",
+    reason:
+      "A code-taxonomy classification batch does not correspond exactly to the submitted codes — there must be exactly one classification per submitted code, in the same order (no fabricated code, none dropped, none duplicated), every matched prefix must be a SUBMITTED taxonomy prefix (no invented category), each classification must be self-consistent (a category iff a matched prefix), the reported counts must add up (classified + unclassified = total = codes), and the disposition must follow. A fabricated code or invented category corrupts the value-set mapping. The sourced + completeness gate — mirrors the Identifier Validation Agent's identifiers-sourced and the Enrollment Reconciliation Agent's reconciliation-complete"
+  },
+  {
+    policyId: "policy.code.classification-consistent",
+    signal: "codeClassificationConsistent",
+    violatingValue: false,
+    violationHint: "A wrong bucket or a missed match",
+    reason:
+      "A code-taxonomy classification does not recompute — rebuilding the TRIE (PREFIX TREE) from the taxonomy and re-running the LONGEST-PREFIX MATCH over each submitted code must reproduce the reported category + matched prefix. A wrong bucket mis-maps a code; a missed match drops it from a value set it belongs to. The load-bearing correctness gate — mirrors the Identifier Validation Agent's checksum-consistent and the Source Consensus Agent's consensus-consistent"
+  },
+  {
+    policyId: "policy.code.no-autonomous-recode",
+    signal: "codeNoAutonomousRecode",
+    violatingValue: false,
+    violationHint: "Claim re-coded / codes submitted autonomously, or with no coder review",
+    reason:
+      "A code-taxonomy classification autonomously re-coded a claim, submitted the codes, or overwrote the coded record (autoApplied:true — each is a consequential coding action that must be authorized) or did not require coder review (requiresCoderReview:false); the agent CLASSIFIES on paper — every classification is a RECOMMENDATION requiring a coder to confirm. Mirrors the Identifier Validation Agent's no-autonomous-reject and the Enrollment Reconciliation Agent's no-autonomous-change — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

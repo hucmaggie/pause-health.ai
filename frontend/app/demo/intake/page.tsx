@@ -68,6 +68,7 @@ import { OutreachPrioritizationPanel } from "../../../components/outreach-priori
 import { KpiTrendPanel } from "../../../components/kpi-trend-panel";
 import { CareRoutingPanel } from "../../../components/care-routing-panel";
 import { SourceConsensusPanel } from "../../../components/source-consensus-panel";
+import { CodeTaxonomyPanel } from "../../../components/code-taxonomy-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -231,6 +232,7 @@ export default function IntakeDemoPage() {
       <KpiTrendPanel />
       <CareRoutingPanel />
       <SourceConsensusPanel />
+      <CodeTaxonomyPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 
