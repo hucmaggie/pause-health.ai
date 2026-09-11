@@ -270,6 +270,10 @@ export type GovernanceTask = {
   blockScheduleSourced?: boolean;
   blockScheduleOptimal?: boolean;
   blockScheduleNoAutonomousBooking?: boolean;
+  // Commercial Peak-Window / Maximum Contiguous Net-Gain Detection / Kadane's Maximum-Subarray (window-sourced + window-optimal + no-autonomous-action)
+  peakWindowSourced?: boolean;
+  peakWindowOptimal?: boolean;
+  peakWindowNoAutonomousAction?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1823,6 +1827,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Block booked / bumped autonomously, or with no scheduler review",
     reason:
       "A resource-block schedule autonomously booked, bumped, or confirmed a block (autoBooked:true — each is a scheduling action that must be authorized) or did not require scheduler review (requiresSchedulerReview:false); the agent SELECTS on paper — every schedule is a RECOMMENDATION requiring a scheduler to confirm. Mirrors the Scheduling Conflict Agent's no-autonomous-booking and the Caseload Balancing Agent's no-autonomous-assignment — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.peak-window.window-sourced",
+    signal: "peakWindowSourced",
+    violatingValue: false,
+    violationHint: "A fabricated / out-of-range window or an overstated sum",
+    reason:
+      "A peak-window finding is not a real, self-honest sub-range of the submitted series — the reported window must be a REAL contiguous sub-range (0 <= startIndex <= endIndex < n), its reported windowLength must match (end − start + 1), its reported windowSum must equal the ACTUAL sum of the series over that range, and hasPositiveWindow / disposition must follow the sum's sign. A window that runs off the series or overstates its own sum is a fabricated finding. The sourced + self-honesty gate — mirrors the Care Routing Agent's path-sourced and the Resource Scheduling Agent's selection-sourced"
+  },
+  {
+    policyId: "policy.peak-window.window-optimal",
+    signal: "peakWindowOptimal",
+    violatingValue: false,
+    violationHint: "A sub-optimal window that under-reports the true peak run",
+    reason:
+      "A peak-window finding is not optimal — re-running KADANE'S MAXIMUM-SUBARRAY over the submitted series must reproduce the reported windowSum and the same positive-window / no-positive-window disposition. A sub-optimal window under-reports the true peak run — the business misses the real momentum stretch. The load-bearing correctness gate — mirrors the Care Routing Agent's route-optimal and the Resource Scheduling Agent's schedule-optimal"
+  },
+  {
+    policyId: "policy.peak-window.no-autonomous-action",
+    signal: "peakWindowNoAutonomousAction",
+    violatingValue: false,
+    violationHint: "Finding committed / quota adjusted autonomously, or with no analyst review",
+    reason:
+      "A peak-window finding autonomously committed the finding as an official metric, adjusted a quota / target, or notified finance (autoActioned:true — each is a consequential commercial action that must be authorized) or did not require analyst review (requiresAnalystReview:false); the agent DETECTS on paper — every window is a RECOMMENDATION requiring a revenue analyst to confirm. Mirrors the KPI Trend Agent's no-autonomous-commit and the Provider Benchmarking Agent's no-autonomous-tiering — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

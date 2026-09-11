@@ -70,6 +70,7 @@ import { CareRoutingPanel } from "../../../components/care-routing-panel";
 import { SourceConsensusPanel } from "../../../components/source-consensus-panel";
 import { CodeTaxonomyPanel } from "../../../components/code-taxonomy-panel";
 import { ResourceSchedulingPanel } from "../../../components/resource-scheduling-panel";
+import { PeakWindowPanel } from "../../../components/peak-window-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -235,6 +236,7 @@ export default function IntakeDemoPage() {
       <SourceConsensusPanel />
       <CodeTaxonomyPanel />
       <ResourceSchedulingPanel />
+      <PeakWindowPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 

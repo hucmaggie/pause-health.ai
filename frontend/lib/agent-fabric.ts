@@ -378,6 +378,61 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "commercial-operations"
   },
   {
+    id: "peak-window-agent",
+    name: "Commercial Peak-Window / Maximum Contiguous Net-Gain Detection Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the commercial-analytics momentum piece: POST
+    // /api/agents/peak-window/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) commercial-operations agent that takes a time-
+    // ordered series of a business metric's SIGNED per-period NET CHANGE (net-new
+    // ARR = bookings − churn, net enrolled patients = adds − drops, net revenue
+    // delta) and finds the single MAXIMUM-SUM CONTIGUOUS WINDOW — the strongest
+    // sustained net-gain STRETCH — or honestly reports NO POSITIVE WINDOW when
+    // every contiguous stretch nets a loss. CRUCIALLY, this is NOT the KPI Trend
+    // agent's ORDINARY LEAST-SQUARES LINEAR REGRESSION (which fits a best-fit line
+    // and PROJECTS it to a horizon — a fitted model + extrapolation), NOT the
+    // Quality Shift agent's CUSUM CHANGE-POINT DETECTION (a running deviation from
+    // a target to catch a SUSTAINED shift), NOT the Access Anomaly agent's
+    // SLIDING-WINDOW COUNTING (a FIXED-width window sliding over events), and NOT
+    // the Remote Patient Monitoring agent's WINDOW-VS-BASELINE trend
+    // classification. It is also UNLIKE the Resource Scheduling agent's WEIGHTED
+    // INTERVAL SCHEDULING, the Care Routing agent's DIJKSTRA'S SHORTEST PATH, the
+    // Outreach agent's 0/1 KNAPSACK, the Source Consensus agent's MAJORITY VOTE,
+    // the Code Taxonomy agent's TRIE LONGEST-PREFIX MATCH, the Timeline Merge
+    // agent's K-WAY MERGE, the Provider Benchmarking agent's PERCENTILE / RANK
+    // STATISTICS, the Household Composition agent's UNION-FIND, or the Identifier
+    // Validation agent's MODULAR-ARITHMETIC CHECKSUM — the heart of this service
+    // is KADANE'S MAXIMUM-SUBARRAY algorithm: a single linear scan carrying a
+    // running sum that RESETS whenever extending the previous stretch would do
+    // worse than starting fresh at the current period (curSum = max(x_i, curSum +
+    // x_i)), tracking the best window seen — the maximum-sum contiguous subarray
+    // in O(n), no fixed window width, no fitted model. A fixed-width or whole-
+    // series average hides the true peak run; Kadane finds the exact contiguous
+    // window that maximizes net gain. It COMPLEMENTS the other commercial agents —
+    // distinct from the KPI Trend agent (which fits a least-squares trend line and
+    // projects it) and the Pipeline Management agent (which rolls up CRM
+    // opportunity records): this finds the peak contiguous net-gain window. A
+    // window is a RECOMMENDATION requiring a revenue analyst to confirm; the agent
+    // never autonomously COMMITS the finding, ADJUSTS a quota, or NOTIFIES
+    // finance. It operates ONLY on the commercial CRM plane — NO patient PHI, NOT
+    // on the HIPAA-audit policy. REUSES the existing commercial-operations tier.
+    // The series are ILLUSTRATIVE aggregate business figures, NOT a certified
+    // analytics / FP&A system.
+    endpoint: "/api/agents/peak-window",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Given a time-ordered series of a business metric's signed per-period net change (net-new ARR, net enrolled patients, net revenue delta), finds the single maximum-sum contiguous window — the strongest sustained net-gain stretch — reporting its start / end period, summed net gain, and length, or honestly reporting no positive window when every contiguous stretch nets a loss (disposition positive-window / no-positive-window). A deterministic commercial-analytics agent; it COMPLEMENTS the KPI Trend agent (which fits a least-squares trend line and projects it) and the Pipeline Management agent (which rolls up CRM opportunity records) — this finds the peak contiguous net-gain window",
+      "The detection is DETERMINISTIC — a pure function of the series' own values (no randomness, no clock; not a least-squares regression, a CUSUM, a sliding-window count, a window-vs-baseline, a knapsack, a weighted-interval schedule, a Dijkstra path, a majority vote, a trie match, a k-way merge, a percentile, a union-find, or a checksum but KADANE'S MAXIMUM-SUBARRAY — the running-sum scan that finds the max-sum contiguous window in O(n)); the same series always yields the same window",
+      "The window must be sourced + self-honest — a real contiguous sub-range of the submitted series (0 <= start <= end < n), the reported length matching (end − start + 1), and the reported windowSum equal to the actual sum over that range, with hasPositiveWindow / disposition following the sign; a fabricated / out-of-range window or an overstated sum is blocked at the Agent Fabric governance boundary (policy.peak-window.window-sourced, the sourced + self-honesty gate); and the window must be optimal — re-running Kadane's maximum-subarray must reproduce the reported windowSum + disposition; a sub-optimal window that under-reports the true peak run is blocked (policy.peak-window.window-optimal, the load-bearing correctness gate). Mirrors the Care Routing Agent's path-sourced + route-optimal posture",
+      "The agent DETECTS and RECOMMENDS — it NEVER commits the finding as an official metric, adjusts a quota / target, or notifies finance (each is a consequential commercial action that must be authorized) on its own; a finding that auto-actions or is not review-gated is blocked (policy.peak-window.no-autonomous-action), and every window is confirmed by a revenue analyst. Mirrors the KPI Trend Agent's no-autonomous-commit and the Provider Benchmarking Agent's no-autonomous-tiering posture",
+      "Operates ONLY on the commercial CRM plane — NO patient PHI, NOT on the HIPAA-audit policy; the series are ILLUSTRATIVE aggregate business figures, clearly labeled — NOT a certified analytics / FP&A system (real commercial analytics weighs seasonality, cohort dynamics, pipeline mix, macro conditions, and human judgment — not a bare maximum-subarray over a handful of periods)"
+    ],
+    provider: "Salesforce",
+    governanceTier: "commercial-operations"
+  },
+  {
     id: "assessment-agent",
     name: "Agentforce Assessment Agent · Validated Instruments",
     kind: "agentforce",
@@ -5152,6 +5207,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Commercial KPI Trend Agent may NEVER commit the projection as an official forecast, adjust a quota / target, or notify finance on its own (autoCommitted:true — each is a consequential commercial action that must be authorized) or skip analyst review (requiresAnalystReview:true) — the agent PROJECTS, and every projection is a RECOMMENDATION requiring a revenue analyst to confirm. A projection that auto-commits, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Pipeline Management Agent's human-owner posture and the Account Management Agent's never-commit-a-contract posture — the harmful action is enforced-off.",
     appliesTo: ["kpi-trend-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.peak-window.window-sourced",
+    name: "The window is sourced and self-honest (a real sub-range, an honest sum)",
+    description:
+      "The Commercial Peak-Window Agent's reported window must be a REAL contiguous sub-range of the submitted series (0 <= startIndex <= endIndex < n), its reported windowLength must match (end − start + 1), its reported windowSum must equal the ACTUAL sum of the series over that range, and hasPositiveWindow / disposition must follow the sum's sign. A window that runs off the series or overstates its own sum is a fabricated finding. A finding whose window is out of range or overstates its sum is rejected before it can leave the fabric. This is the sourced + self-honesty gate. Mirrors the Care Routing Agent's path-sourced and the Resource Scheduling Agent's selection-sourced posture. (In the prototype the series are clearly-labeled illustrative aggregate business figures.)",
+    appliesTo: ["peak-window-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.peak-window.window-optimal",
+    name: "The window is optimal (Kadane's maximum-subarray recomputes)",
+    description:
+      "The Commercial Peak-Window Agent's window must be optimal — re-running KADANE'S MAXIMUM-SUBARRAY over the submitted series must reproduce the reported windowSum and the same positive-window / no-positive-window disposition. A sub-optimal window under-reports the true peak run — the business misses the real momentum stretch. A finding whose window sum is not the Kadane optimum is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Care Routing Agent's route-optimal and the Resource Scheduling Agent's schedule-optimal posture.",
+    appliesTo: ["peak-window-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.peak-window.no-autonomous-action",
+    name: "No peak-window finding is ever acted on autonomously",
+    description:
+      "The Commercial Peak-Window Agent may NEVER commit the finding as an official metric, adjust a quota / target, or notify finance on its own (autoActioned:true — each is a consequential commercial action that must be authorized) or skip analyst review (requiresAnalystReview:true) — the agent DETECTS, and every window is a RECOMMENDATION requiring a revenue analyst to confirm. A finding that auto-actions, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the KPI Trend Agent's no-autonomous-commit and the Provider Benchmarking Agent's no-autonomous-tiering posture — the harmful action is enforced-off.",
+    appliesTo: ["peak-window-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -15108,6 +15190,114 @@ function store(): FabricStore {
         blockScheduleNoAutonomousBooking: true,
         requiresSchedulerReview: true,
         phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedPeakWindowTrace() {
+  const s = store();
+  const pw0 = Date.now() - 1000 * 60 * 1;
+  const pwTaskId = "task-seed-peak-window-001";
+  const pwName = "Commercial Peak-Window / Maximum Contiguous Net-Gain Detection Agent";
+  s.traces.push(
+    {
+      id: "span-peak-window-001",
+      taskId: pwTaskId,
+      agentId: "peak-window-agent",
+      agentName: pwName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(pw0).toISOString(),
+      finishedAt: new Date(pw0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // Commercial CRM plane only — aggregate business figures, no PHI.
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-peak-window-002",
+      taskId: pwTaskId,
+      parentSpanId: "span-peak-window-001",
+      agentId: "peak-window-agent",
+      agentName: pwName,
+      operation: "peak.receive-series",
+      protocol: "a2a",
+      startedAt: new Date(pw0 + 30).toISOString(),
+      finishedAt: new Date(pw0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        seriesRef: "net-new-arr-2026",
+        periodCount: 12,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-peak-window-003",
+      taskId: pwTaskId,
+      parentSpanId: "span-peak-window-002",
+      agentId: "peak-window-agent",
+      agentName: pwName,
+      operation: "peak.scan-max-subarray",
+      protocol: "a2a",
+      startedAt: new Date(pw0 + 60).toISOString(),
+      finishedAt: new Date(pw0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        seriesRef: "net-new-arr-2026",
+        windowSum: 58,
+        windowLength: 5,
+        // The honesty invariants: window sourced + self-honest, window optimal.
+        peakWindowSourced: true,
+        peakWindowOptimal: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-peak-window-004",
+      taskId: pwTaskId,
+      parentSpanId: "span-peak-window-003",
+      agentId: "peak-window-agent",
+      agentName: pwName,
+      operation: "peak.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(pw0 + 100).toISOString(),
+      finishedAt: new Date(pw0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        seriesRef: "net-new-arr-2026",
+        disposition: "positive-window",
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-peak-window-005",
+      taskId: pwTaskId,
+      parentSpanId: "span-peak-window-004",
+      agentId: "peak-window-agent",
+      agentName: pwName,
+      operation: "peak.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(pw0 + 140).toISOString(),
+      finishedAt: new Date(pw0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        seriesRef: "net-new-arr-2026",
+        // The honesty invariant: never an autonomous action.
+        peakWindowNoAutonomousAction: true,
+        requiresAnalystReview: true,
+        phiAccessed: false,
         synthetic: true
       }
     }
