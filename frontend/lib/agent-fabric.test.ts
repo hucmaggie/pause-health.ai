@@ -462,9 +462,10 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // Lifecycle / Status-Transition Guard agent, the commercial-operations
     // Provider Cost & Quality Percentile Benchmarking agent, the
     // payer-operations Household / Family-Unit Composition agent, the
-    // data-plane Provider Identifier (NPI) Validation & Integrity agent, and the
-    // payer-operations Network Adequacy / Time-and-Distance agent.
-    expect(listAgents()).toHaveLength(85);
+    // data-plane Provider Identifier (NPI) Validation & Integrity agent, the
+    // payer-operations Network Adequacy / Time-and-Distance agent, and the
+    // care-coordination PCP Assignment / Member–Provider Matching agent.
+    expect(listAgents()).toHaveLength(86);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

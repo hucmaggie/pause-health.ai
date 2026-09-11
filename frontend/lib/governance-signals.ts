@@ -230,6 +230,10 @@ export type GovernanceTask = {
   providersSourced?: boolean;
   distancesConsistent?: boolean;
   noAutonomousNetworkChange?: boolean;
+  // PCP Assignment / Member–Provider Stable Matching (matching-sourced + matching-stable + no-autonomous-assignment)
+  matchingSourced?: boolean;
+  matchingStable?: boolean;
+  pcpNoAutonomousAssignment?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1543,6 +1547,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "The network certified / a gap closed / a provider added autonomously, or with no network review",
     reason:
       "A network-adequacy finding autonomously certified the network as adequate to a regulator, closed a gap, or added / removed a provider (autoCertified:true — each is a consequential action that must be authorized) or did not require network review (requiresNetworkReview:false); the agent ASSESSES adequacy — every finding is a RECOMMENDATION requiring a network manager to confirm. Mirrors the Provider Benchmarking Agent's no-autonomous-tiering and the Provider Credentialing Agent's no-referral-to-expired-or-sanctioned posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.pcp.matching-sourced",
+    signal: "matchingSourced",
+    violatingValue: false,
+    violationHint: "A phantom member / provider, or a miscounted assignment",
+    reason:
+      "A PCP-matching determination is not built from the submitted panel — there must be one assignment per SUBMITTED member (all present, none dropped or invented), every assigned provider must be a SUBMITTED provider, the provider loads must echo the submitted capacities and match the actual assignment counts, and the matched / unmatched tallies must add up. A phantom assignment (a member not in the panel, or a provider not in the network) corrupts the panel. The sourced + completeness gate — mirrors the Network Adequacy Agent's providers-sourced and the Caseload Balancing Agent's assignment-complete"
+  },
+  {
+    policyId: "policy.pcp.matching-stable",
+    signal: "matchingStable",
+    violatingValue: false,
+    violationHint: "An unstable matching — a blocking pair, a capacity violation, or a mis-recompute",
+    reason:
+      "A PCP-matching determination is not stable — recomputing the member-proposing Gale–Shapley deferred acceptance from the echoed preferences + capacities must reproduce the reported assignment and each member's reported preference rank, no provider may be over capacity, and there must be NO blocking pair (a member and provider who both prefer each other over their current assignment). An unstable matching unravels as the pair defects, leaving a patient without a real PCP. The load-bearing correctness gate — mirrors the Network Adequacy Agent's distances-consistent and the Household Composition Agent's partition-consistent"
+  },
+  {
+    policyId: "policy.pcp.no-autonomous-assignment",
+    signal: "pcpNoAutonomousAssignment",
+    violatingValue: false,
+    violationHint: "An assignment committed / a patient reassigned autonomously, or with no coordinator review",
+    reason:
+      "A PCP-matching determination autonomously committed an assignment, reassigned a patient, or overrode a provider's panel (autoAssigned:true — each is a care-ownership decision that must be authorized) or did not require coordinator review (requiresCoordinatorReview:false); the agent PROPOSES a matching — every matching is a RECOMMENDATION requiring a care-coordination lead to confirm. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Care Team Agent's no-autonomous-assignment posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

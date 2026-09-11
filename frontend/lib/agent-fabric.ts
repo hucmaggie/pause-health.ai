@@ -937,6 +937,64 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "pcp-matching-agent",
+    name: "Primary Care Provider (PCP) Assignment / Member–Provider Matching Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the PCP-assignment piece: POST
+    // /api/agents/pcp-matching/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) care-coordination agent that takes a panel of
+    // unassigned MEMBERS (each with a ranked list of preferred primary care
+    // providers) plus a set of PROVIDERS (each with a panel CAPACITY and a
+    // ranked list of the members it would accept) and produces a STABLE
+    // assignment of members to providers — a matching in which no member and
+    // provider who both prefer each other over their current assignment are left
+    // apart (no BLOCKING pair) and no provider is over capacity. UNLIKE the
+    // Network Adequacy agent's GEOSPATIAL GREAT-CIRCLE DISTANCE, the Identifier
+    // Validation agent's MODULAR-ARITHMETIC CHECKSUM, the Household Composition
+    // agent's UNION-FIND CONNECTED COMPONENTS, the Provider Benchmarking agent's
+    // PERCENTILE / RANK STATISTICS, the MLR Rebate agent's LARGEST-REMAINDER
+    // APPORTIONMENT, the Claim Lifecycle agent's FSM TRANSITION VALIDATION, the
+    // Medication Name Safety agent's STRING EDIT DISTANCE, the Schedule Conflict
+    // agent's GREEDY INTERVAL SELECTION, the Access Anomaly agent's
+    // SLIDING-WINDOW COUNTING, the Coverage Continuity agent's INTERVAL MERGING,
+    // the Care Pathway agent's TOPOLOGICAL ORDERING, the Enrollment
+    // Reconciliation agent's KEYED SET-DIFFERENCE, or the Audit Log Integrity
+    // agent's HASH CHAIN — and, CRUCIALLY, UNLIKE the Caseload Balancing agent's
+    // GREEDY BIN-PACKING (worst-fit allocation of a panel across managers'
+    // capacity by acuity, with NO preferences and NO stability guarantee) — the
+    // heart of this service is TWO-SIDED STABLE MATCHING: the Gale–Shapley
+    // DEFERRED-ACCEPTANCE algorithm (the member-proposing, many-to-one
+    // "hospitals/residents" variant) that, from both sides' preference lists +
+    // provider capacities, produces the member-optimal STABLE matching — the
+    // unique assignment with no blocking pair. An assignment that leaves a member
+    // and provider who each prefer the other over their current lot (a blocking
+    // pair) is UNSTABLE — it unravels as the pair defects, leaving a patient
+    // without a real PCP. A matching is a RECOMMENDATION requiring a
+    // care-coordination lead to confirm — the agent never autonomously COMMITS an
+    // assignment, REASSIGNS a patient, or overrides a provider's panel. It
+    // COMPLEMENTS the other care-coordination agents — distinct from the Caseload
+    // Balancing agent (which BIN-PACKS a panel across managers' capacity to
+    // balance load, no preferences), the Care Team & Case Management agent (the
+    // team around ONE patient), and the Population Health agent (prioritizing a
+    // panel): this produces a STABLE two-sided matching of members to PCPs. It is
+    // PHI-bearing (the members are patients). REUSES the existing
+    // care-coordination tier. The panel is ILLUSTRATIVE, NOT a certified
+    // panel-management system.
+    endpoint: "/api/agents/pcp-matching",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a panel of unassigned members (each with a ranked list of preferred primary care providers) plus a set of providers (each with a panel capacity and a ranked list of acceptable members) and produces a STABLE assignment of members to providers — reporting each member's assigned provider + preference rank, the provider loads, the matched / unmatched tallies, and the disposition (all-matched / partial-match). A deterministic care-coordination agent; it COMPLEMENTS the Caseload Balancing agent (which BIN-PACKS a panel across managers' capacity to balance load, no preferences), the Care Team & Case Management agent (the team around ONE patient), and the Population Health agent (prioritizing a panel) — this produces a STABLE two-sided matching of members to PCPs",
+      "The matching is DETERMINISTIC — a pure function of the request's own preferences + capacities (no randomness, no clock; not a geospatial distance, a checksum, a union-find, a percentile, an identity match, a largest-remainder apportionment, an FSM transition, an edit distance, an interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, or a hash chain but TWO-SIDED STABLE MATCHING — the member-proposing Gale–Shapley deferred-acceptance algorithm producing the member-optimal stable matching); the same panel always yields the same matching",
+      "Every assignment must be built from the submitted panel — one assignment per submitted member (all present, none dropped or invented), every assigned provider a submitted one, and the provider loads echoing the submitted capacities + actual counts; a phantom member / provider is blocked at the Agent Fabric governance boundary (policy.pcp.matching-sourced, the sourced + completeness gate); and the matching must be stable — recomputing the Gale–Shapley deferred acceptance from the preferences + capacities must reproduce the assignment + each member's rank, no provider may be over capacity, and there must be NO blocking pair; an unstable / mis-recomputed matching is blocked (policy.pcp.matching-stable, the load-bearing correctness gate). Mirrors the Network Adequacy Agent's distances-consistent + providers-sourced posture",
+      "The agent PROPOSES a matching — it NEVER commits an assignment, reassigns a patient, or overrides a provider's panel (each is a care-ownership decision that must be authorized) on its own; a matching that auto-assigns or is not review-gated is blocked (policy.pcp.no-autonomous-assignment), and every matching is confirmed by a care-coordination lead. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Care Team Agent's no-autonomous-assignment posture",
+      "Runs against ILLUSTRATIVE synthetic members + providers + preferences + capacities — clearly labeled; NOT a certified panel-management system (real PCP assignment also weighs geography, language, continuity of care, plan-network rules, and member choice, and runs against a live attribution system). PHI-bearing — the members are patients"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "schedule-conflict-agent",
     name: "Scheduling Conflict / Double-Booking Guard Agent",
     kind: "agentforce",
@@ -3028,7 +3086,8 @@ const POLICIES: PolicyRecord[] = [
       "medication-name-safety-agent",
       "claim-lifecycle-agent",
       "household-composition-agent",
-      "network-adequacy-agent"
+      "network-adequacy-agent",
+      "pcp-matching-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -4328,6 +4387,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Network Adequacy Agent may NEVER certify the network as adequate to a regulator, close a gap, or add / remove a provider on its own (autoCertified:true — each is a consequential action that must be authorized) or skip network review (requiresNetworkReview:true) — the agent ASSESSES adequacy, and every finding is a RECOMMENDATION requiring a network manager to confirm. A finding that auto-certifies, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Provider Benchmarking Agent's no-autonomous-tiering and the Provider Credentialing Agent's no-referral-to-expired-or-sanctioned posture — the harmful action is enforced-off.",
     appliesTo: ["network-adequacy-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.pcp.matching-sourced",
+    name: "Every assignment is a submitted member matched to a submitted provider",
+    description:
+      "The PCP Matching Agent must assign exactly the submitted panel — one assignment per SUBMITTED member (all present, no duplicate, none dropped or invented), every assigned provider a SUBMITTED provider, the provider loads echoing the submitted capacities with an assignedCount equal to the actual number of assignments to that provider, and the matched / unmatched / total tallies agreeing with the assignments. A phantom assignment (a member not in the panel, or a provider not in the network) corrupts the panel. A determination that assigns a phantom or miscounts is rejected before it can leave the fabric. This is the sourced + completeness gate. Mirrors the Network Adequacy Agent's providers-sourced and the Caseload Balancing Agent's assignment-complete posture. (In the prototype the members + providers + preferences are clearly-labeled illustrative synthetics.)",
+    appliesTo: ["pcp-matching-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.pcp.matching-stable",
+    name: "The matching is stable (recomputes, no blocking pair)",
+    description:
+      "The PCP Matching Agent's matching must be stable: recomputing the member-proposing Gale–Shapley deferred acceptance from the echoed preferences + capacities must reproduce the reported assignment and each member's reported preference rank, no provider may be over capacity, and there must be NO blocking pair (a member and provider who both prefer each other over their current assignment). An unstable matching unravels as the pair defects, leaving a patient without a real PCP — the whole point is the stability. A determination whose matching doesn't recompute, is over capacity, or has a blocking pair is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Network Adequacy Agent's distances-consistent and the Household Composition Agent's partition-consistent posture.",
+    appliesTo: ["pcp-matching-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.pcp.no-autonomous-assignment",
+    name: "No assignment is ever autonomously committed",
+    description:
+      "The PCP Matching Agent may NEVER commit an assignment, reassign a patient, or override a provider's panel on its own (autoAssigned:true — each is a care-ownership decision that must be authorized) or skip coordinator review (requiresCoordinatorReview:true) — the agent PROPOSES a matching, and every matching is a RECOMMENDATION requiring a care-coordination lead to confirm. A matching that auto-assigns, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Care Team Agent's no-autonomous-assignment posture — the harmful action is enforced-off.",
+    appliesTo: ["pcp-matching-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -13140,6 +13226,114 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous network change.
         noAutonomousNetworkChange: true,
         requiresNetworkReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedPcpMatchingTrace() {
+  const s = store();
+  const pm0 = Date.now() - 1000 * 60 * 1;
+  const pmTaskId = "task-seed-pcp-matching-001";
+  const pmName = "Primary Care Provider (PCP) Assignment / Member–Provider Matching Agent";
+  s.traces.push(
+    {
+      id: "span-pcp-matching-001",
+      taskId: pmTaskId,
+      agentId: "pcp-matching-agent",
+      agentName: pmName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(pm0).toISOString(),
+      finishedAt: new Date(pm0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-pcp-matching-002",
+      taskId: pmTaskId,
+      parentSpanId: "span-pcp-matching-001",
+      agentId: "pcp-matching-agent",
+      agentName: pmName,
+      operation: "pcp.receive-panel",
+      protocol: "a2a",
+      startedAt: new Date(pm0 + 30).toISOString(),
+      finishedAt: new Date(pm0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        panelRef: "pcp-panel-001",
+        memberCount: 3,
+        providerCount: 3,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-pcp-matching-003",
+      taskId: pmTaskId,
+      parentSpanId: "span-pcp-matching-002",
+      agentId: "pcp-matching-agent",
+      agentName: pmName,
+      operation: "pcp.run-deferred-acceptance",
+      protocol: "a2a",
+      startedAt: new Date(pm0 + 60).toISOString(),
+      finishedAt: new Date(pm0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        panelRef: "pcp-panel-001",
+        matchedCount: 3,
+        unmatchedCount: 0,
+        // The honesty invariants: assignments sourced, matching stable.
+        matchingSourced: true,
+        matchingStable: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-pcp-matching-004",
+      taskId: pmTaskId,
+      parentSpanId: "span-pcp-matching-003",
+      agentId: "pcp-matching-agent",
+      agentName: pmName,
+      operation: "pcp.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(pm0 + 100).toISOString(),
+      finishedAt: new Date(pm0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        panelRef: "pcp-panel-001",
+        disposition: "all-matched",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-pcp-matching-005",
+      taskId: pmTaskId,
+      parentSpanId: "span-pcp-matching-004",
+      agentId: "pcp-matching-agent",
+      agentName: pmName,
+      operation: "pcp.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(pm0 + 140).toISOString(),
+      finishedAt: new Date(pm0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        panelRef: "pcp-panel-001",
+        // The honesty invariant: never an autonomous assignment.
+        pcpNoAutonomousAssignment: true,
+        requiresCoordinatorReview: true,
         phiAccessed: true,
         synthetic: true
       }
