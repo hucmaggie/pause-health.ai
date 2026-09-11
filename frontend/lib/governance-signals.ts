@@ -294,6 +294,10 @@ export type GovernanceTask = {
   networkTreeSourced?: boolean;
   networkTreeCostOptimal?: boolean;
   networkNoAutonomousProvision?: boolean;
+  // Referral Throughput / Maximum-Flow Network Capacity (flow-sourced + throughput-optimal + no-autonomous-route)
+  referralFlowSourced?: boolean;
+  referralThroughputOptimal?: boolean;
+  referralNoAutonomousRoute?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1991,6 +1995,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Links provisioned / activated autonomously, or with no architect review",
     reason:
       "A provider-network build plan autonomously provisioned, activated, or ordered a link (autoProvisioned:true — each is an infrastructure change that must be authorized) or did not require architect review (requiresArchitectReview:false); the agent PLANS on paper — every build plan is a RECOMMENDATION requiring a network architect to confirm. Mirrors the Batch Partition Agent's no-autonomous-assign and the Huffman Agent's no-autonomous-deploy — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.referralflow.flow-sourced",
+    signal: "referralFlowSourced",
+    violatingValue: false,
+    violationHint: "A fabricated edge, an over-capacity flow, or a conservation violation",
+    reason:
+      "A referral-throughput plan is not a real, feasible flow over the submitted network — every edge's flow must be between 0 and its SUBMITTED capacity (no fabricated edge, no over-capacity flow), flow must be CONSERVED at every node other than the source and sink (total in === total out), the reported maxFlow must equal the net flow OUT of the source AND the net flow INTO the sink, and nodeCount / edgeCount must be honest. A fabricated edge, an over-capacity flow, or a conservation violation corrupts the plan. The sourced + self-consistency gate — mirrors the Network Build-Out Agent's tree-sourced and the Batch Partition Agent's partition-sourced"
+  },
+  {
+    policyId: "policy.referralflow.throughput-optimal",
+    signal: "referralThroughputOptimal",
+    violatingValue: false,
+    violationHint: "A sub-maximal or overstated throughput (max-flow != min-cut)",
+    reason:
+      "A referral-throughput plan is not optimal — re-running EDMONDS–KARP over the submitted network must reproduce the reported maxFlow, and the reported minCutCapacity must equal that maxFlow (the max-flow min-cut theorem). A sub-maximal flow understates achievable throughput; an overstated flow claims capacity that doesn't exist. The load-bearing correctness gate; it recomputes the maximum flow + min-cut from the network INDEPENDENT of the reported per-edge flows, so a fabricated flow that still reports the optimal value fails sourced only while a real-but-sub-maximal flow fails here — mirrors the Network Build-Out Agent's cost-optimal and the Care Routing Agent's route-optimal"
+  },
+  {
+    policyId: "policy.referralflow.no-autonomous-route",
+    signal: "referralNoAutonomousRoute",
+    violatingValue: false,
+    violationHint: "Referrals booked / routed autonomously, or with no coordinator review",
+    reason:
+      "A referral-throughput plan autonomously booked, dispatched, or routed a referral (autoRouted:true — each is a scheduling action that must be authorized) or did not require coordinator review (requiresCoordinatorReview:false); the agent PLANS on paper — every throughput plan is a RECOMMENDATION requiring a referral coordinator to confirm. Mirrors the Network Build-Out Agent's no-autonomous-provision and the Batch Partition Agent's no-autonomous-assign — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

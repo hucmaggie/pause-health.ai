@@ -479,8 +479,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // the care-coordination Clinical List Reconciliation / Longest-Common-Subsequence (LCS) Diff agent,
     // the data-plane Event-Stream Code Assignment / Huffman Optimal Prefix Coding agent,
     // the care-coordination Chart Review Batch Partitioning / Linear Partition (Binary-Search-on-Answer) agent,
-    // and the care-coordination Provider Network Build-Out / Minimum Spanning Tree (Kruskal's Algorithm) agent.
-    expect(listAgents()).toHaveLength(101);
+    // the care-coordination Provider Network Build-Out / Minimum Spanning Tree (Kruskal's Algorithm) agent,
+    // and the care-coordination Referral Throughput / Maximum-Flow Network Capacity (Edmonds–Karp) agent.
+    expect(listAgents()).toHaveLength(102);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

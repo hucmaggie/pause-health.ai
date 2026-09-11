@@ -2050,6 +2050,50 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "referral-throughput-agent",
+    name: "Referral Throughput / Maximum-Flow Network Capacity (Edmonds–Karp) Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the care-coordination network-capacity piece:
+    // POST /api/agents/referral-throughput/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) care-coordination agent that takes a
+    // referral-routing NETWORK (a source feeding intake pools through
+    // capacity-limited specialty CHANNELS to a sink of appointment slots, each
+    // edge carrying a CAPACITY) and computes the MAXIMUM number of referrals
+    // routable end-to-end (the maximum flow), plus the min-cut bottleneck. The
+    // heart of the service is MAX-FLOW / MIN-CUT via EDMONDS–KARP (the
+    // BFS-augmenting-path refinement of FORD–FULKERSON): repeatedly find a
+    // shortest augmenting path in the residual graph, push its bottleneck, and
+    // update residuals (including back-edges) until none remains; the total
+    // pushed is the max flow, and the source-reachable residual side induces the
+    // min cut. By the max-flow min-cut theorem the two are equal. CRUCIALLY this
+    // is DIFFERENT from the Network Build-Out agent's MINIMUM SPANNING TREE
+    // (Kruskal's — connect all nodes at least cost; this pushes maximum flow
+    // through capacities), the Care Routing agent's DIJKSTRA'S SHORTEST PATH (one
+    // cheapest path; this saturates the whole network), the PCP Matching agent's
+    // GALE–SHAPLEY STABLE MATCHING, the Batch Partition agent's LINEAR PARTITION,
+    // the Outreach agent's 0/1 KNAPSACK, the Caseload Balancing agent's
+    // BIN-PACKING, the Household Composition agent's UNION-FIND, the SLA Worklist
+    // agent's EARLIEST-DEADLINE-FIRST SCHEDULING, and the Timeline Merge agent's
+    // K-WAY MERGE. A throughput plan is a RECOMMENDATION requiring a referral
+    // coordinator to confirm; the agent never books, dispatches, or routes a
+    // referral. It IS PHI-adjacent (the node labels reference intake pools /
+    // specialties / slots). REUSES the existing care-coordination tier. The
+    // capacities are ILLUSTRATIVE, NOT a certified capacity-planning system.
+    endpoint: "/api/agents/referral-throughput",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a referral-routing network (a source feeding intake pools through capacity-limited specialty channels to a sink of appointment slots, each edge carrying a capacity) and computes the maximum number of referrals routable end-to-end (the maximum flow) plus the min-cut bottleneck (disposition unconstrained / bottlenecked), reporting the per-edge flows, the max-flow value, the total demand, and the cut. A deterministic care-coordination network-capacity agent; it COMPLEMENTS the Care Routing agent (which finds the cheapest single path) and the Network Build-Out agent (which connects sites at least cost) — this pushes as much flow as possible through the capacities",
+      "The plan is DETERMINISTIC — a pure function of the request's own network (time is data: the capacities are plain numbers, no real clock; not a minimum spanning tree, a Dijkstra shortest path, a stable matching, a linear partition, a knapsack, a bin-packing, a union-find, an EDF schedule, or a k-way merge but MAX-FLOW / MIN-CUT via EDMONDS–KARP — BFS-augmenting-path Ford–Fulkerson with a deterministic node order); the same request always yields the same plan",
+      "The flow must be sourced + conservation-consistent — every edge flow within its submitted capacity (no fabricated edge, no over-capacity flow), flow conserved at every non-source/sink node, the reported maxFlow the net out of source = net into sink, nodeCount and edgeCount honest; a fabricated edge, an over-capacity flow, or a conservation violation is blocked at the Agent Fabric governance boundary (policy.referralflow.flow-sourced, the sourced + self-consistency gate); and the throughput must be optimal — re-running Edmonds–Karp must reproduce the reported maxFlow, with the min-cut equal to it (max-flow min-cut theorem); a sub-maximal or overstated throughput is blocked (policy.referralflow.throughput-optimal, the load-bearing correctness gate). Mirrors the Network Build-Out Agent's tree-sourced + cost-optimal posture",
+      "The agent PLANS and RECOMMENDS — it NEVER books, dispatches, or routes a referral (each is a scheduling action that must be authorized) on its own; a plan that auto-routes or is not review-gated is blocked (policy.referralflow.no-autonomous-route), and every plan is confirmed by a referral coordinator. Mirrors the Network Build-Out Agent's no-autonomous-provision and the Batch Partition Agent's no-autonomous-assign posture",
+      "Runs against ILLUSTRATIVE synthetic networks — clearly labeled; NOT a certified capacity-planning / scheduling system (real referral capacity planning weighs clinical urgency, specialty match, geography, payer networks, and provider preference — not a bare max-flow over illustrative capacities). PHI-adjacent — the node labels reference intake pools / specialties / slots, so a plan is on the HIPAA audit path"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "provider-contracting-agent",
     name: "Provider Contracting & VBC Terms Agent",
     kind: "agentforce",
@@ -3894,6 +3938,7 @@ const POLICIES: PolicyRecord[] = [
       "list-reconciliation-agent",
       "batch-partition-agent",
       "network-buildout-agent",
+      "referral-throughput-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
@@ -4681,6 +4726,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Provider Network Build-Out Agent may NEVER provision, activate, or order a link on its own (autoProvisioned:true — each is an infrastructure change that must be authorized) or skip architect review (requiresArchitectReview:true) — the agent PLANS on paper, and every build plan is a RECOMMENDATION requiring a network architect to confirm. A plan that auto-provisions, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Batch Partition Agent's no-autonomous-assign and the Huffman Agent's no-autonomous-deploy posture — the harmful action is enforced-off.",
     appliesTo: ["network-buildout-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.referralflow.flow-sourced",
+    name: "The throughput plan is a sourced, feasible, conservation-consistent flow",
+    description:
+      "The Referral Throughput Agent's plan must be a REAL, FEASIBLE flow over the submitted network — every edge's flow between 0 and its SUBMITTED capacity (no fabricated edge, no over-capacity flow), flow CONSERVED at every node other than the source and sink (total in === total out), the reported maxFlow equal to the net flow OUT of the source AND the net flow INTO the sink, and nodeCount / edgeCount honest. A fabricated edge, an over-capacity flow, or a conservation violation corrupts the plan. A plan that fabricates an edge, exceeds a capacity, or breaks conservation is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the Network Build-Out Agent's tree-sourced and the Batch Partition Agent's partition-sourced posture. (In the prototype the capacities are a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["referral-throughput-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.referralflow.throughput-optimal",
+    name: "The throughput is the optimal maximum flow (Edmonds–Karp recomputes; max-flow = min-cut)",
+    description:
+      "The Referral Throughput Agent's plan must be OPTIMAL — re-running EDMONDS–KARP over the submitted network must reproduce the reported maxFlow, and the reported minCutCapacity must equal that maxFlow (the max-flow min-cut theorem). A sub-maximal flow understates achievable throughput; an overstated flow claims capacity that doesn't exist. A plan whose throughput isn't the true maximum (or whose cut disagrees) is rejected before it can leave the fabric. This is the load-bearing correctness gate; it recomputes the maximum flow + min-cut from the network INDEPENDENT of the reported per-edge flows, so a fabricated flow that still reports the optimal value fails sourced only and a real-but-sub-maximal flow fails here — the two gates are isolable. Mirrors the Network Build-Out Agent's cost-optimal and the Care Routing Agent's route-optimal posture.",
+    appliesTo: ["referral-throughput-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.referralflow.no-autonomous-route",
+    name: "No referral is autonomously booked / routed",
+    description:
+      "The Referral Throughput Agent may NEVER book, dispatch, or route a referral on its own (autoRouted:true — each is a scheduling action that must be authorized) or skip coordinator review (requiresCoordinatorReview:true) — the agent PLANS on paper, and every throughput plan is a RECOMMENDATION requiring a referral coordinator to confirm. A plan that auto-routes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Network Build-Out Agent's no-autonomous-provision and the Batch Partition Agent's no-autonomous-assign posture — the harmful action is enforced-off.",
+    appliesTo: ["referral-throughput-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -16223,6 +16295,116 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous provisioning.
         networkNoAutonomousProvision: true,
         requiresArchitectReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedReferralThroughputTrace() {
+  const s = store();
+  const rt0 = Date.now() - 1000 * 60 * 1;
+  const rtTaskId = "task-seed-referral-throughput-001";
+  const rtName = "Referral Throughput / Maximum-Flow Network Capacity (Edmonds–Karp) Agent";
+  s.traces.push(
+    {
+      id: "span-referral-throughput-001",
+      taskId: rtTaskId,
+      agentId: "referral-throughput-agent",
+      agentName: rtName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(rt0).toISOString(),
+      finishedAt: new Date(rt0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // Node labels reference intake pools / specialties / slots — PHI-adjacent; on the HIPAA audit path.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-referral-throughput-002",
+      taskId: rtTaskId,
+      parentSpanId: "span-referral-throughput-001",
+      agentId: "referral-throughput-agent",
+      agentName: rtName,
+      operation: "referralflow.receive-network",
+      protocol: "a2a",
+      startedAt: new Date(rt0 + 30).toISOString(),
+      finishedAt: new Date(rt0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        networkRef: "referral-network-menoclinic-5510",
+        nodeCount: 6,
+        edgeCount: 7,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-referral-throughput-003",
+      taskId: rtTaskId,
+      parentSpanId: "span-referral-throughput-002",
+      agentId: "referral-throughput-agent",
+      agentName: rtName,
+      operation: "referralflow.solve-maxflow",
+      protocol: "a2a",
+      startedAt: new Date(rt0 + 60).toISOString(),
+      finishedAt: new Date(rt0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        networkRef: "referral-network-menoclinic-5510",
+        maxFlow: 8,
+        minCutCapacity: 8,
+        // The honesty invariants: flow sourced + conservation-consistent, throughput optimal.
+        referralFlowSourced: true,
+        referralThroughputOptimal: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-referral-throughput-004",
+      taskId: rtTaskId,
+      parentSpanId: "span-referral-throughput-003",
+      agentId: "referral-throughput-agent",
+      agentName: rtName,
+      operation: "referralflow.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(rt0 + 100).toISOString(),
+      finishedAt: new Date(rt0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        networkRef: "referral-network-menoclinic-5510",
+        disposition: "bottlenecked",
+        totalDemand: 12,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-referral-throughput-005",
+      taskId: rtTaskId,
+      parentSpanId: "span-referral-throughput-004",
+      agentId: "referral-throughput-agent",
+      agentName: rtName,
+      operation: "referralflow.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(rt0 + 140).toISOString(),
+      finishedAt: new Date(rt0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        networkRef: "referral-network-menoclinic-5510",
+        // The honesty invariant: never an autonomous routing.
+        referralNoAutonomousRoute: true,
+        requiresCoordinatorReview: true,
         phiAccessed: true,
         synthetic: true
       }

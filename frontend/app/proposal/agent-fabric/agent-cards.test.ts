@@ -38,10 +38,10 @@ function histogramByTier(tiers: string[]): Record<string, number> {
 describe("agent-fabric brief <-> registry drift guard", () => {
   const registry = listAgents();
 
-  it("has exactly one card per registered agent (both 101)", () => {
+  it("has exactly one card per registered agent (both 102)", () => {
     expect(agentCards.length).toBe(registry.length);
-    expect(agentCards.length).toBe(101);
-    expect(registry.length).toBe(101);
+    expect(agentCards.length).toBe(102);
+    expect(registry.length).toBe(102);
   });
 
   it("matches the registry's per-tier histogram exactly", () => {
@@ -77,7 +77,7 @@ describe("agent-fabric brief <-> registry drift guard", () => {
 describe("derived agent count", () => {
   it("locks the derived count word at the current registry size", () => {
     expect(AGENT_CARD_COUNT).toBe(agentCards.length);
-    expect(AGENT_CARD_COUNT_WORD).toBe("One hundred one");
+    expect(AGENT_CARD_COUNT_WORD).toBe("One hundred two");
   });
 
   it("spells counts correctly via the pure helper (hyphenated tens + ones)", () => {
