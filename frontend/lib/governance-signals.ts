@@ -274,6 +274,10 @@ export type GovernanceTask = {
   peakWindowSourced?: boolean;
   peakWindowOptimal?: boolean;
   peakWindowNoAutonomousAction?: boolean;
+  // SLA Worklist Sequencing / Earliest-Deadline-First (EDF) Scheduling (schedule-sourced + edf-ordered + no-autonomous-dispatch)
+  worklistScheduleSourced?: boolean;
+  worklistEdfOrdered?: boolean;
+  worklistNoAutonomousDispatch?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1851,6 +1855,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Finding committed / quota adjusted autonomously, or with no analyst review",
     reason:
       "A peak-window finding autonomously committed the finding as an official metric, adjusted a quota / target, or notified finance (autoActioned:true — each is a consequential commercial action that must be authorized) or did not require analyst review (requiresAnalystReview:false); the agent DETECTS on paper — every window is a RECOMMENDATION requiring a revenue analyst to confirm. Mirrors the KPI Trend Agent's no-autonomous-commit and the Provider Benchmarking Agent's no-autonomous-tiering — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.worklist.schedule-sourced",
+    signal: "worklistScheduleSourced",
+    violatingValue: false,
+    violationHint: "A fabricated case or a mis-chained completion time",
+    reason:
+      "An SLA worklist schedule is not a real, self-consistent accounting of the submitted cases — the scheduled list must be a PERMUTATION of the submitted tasks (each submitted case once — no fabricated case, none dropped or double-worked), each entry must echo its case's duration + deadline, the completion times must chain (first starts at 0, each starts when the previous finishes, each completion = start + duration), each late flag must equal completion > deadline, the counts must add up, and the disposition must follow. A fabricated case or a mis-chained completion time corrupts the schedule. The sourced + self-consistency gate — mirrors the Resource Scheduling Agent's selection-sourced and the Scheduling Conflict Agent's intervals-sourced"
+  },
+  {
+    policyId: "policy.worklist.edf-ordered",
+    signal: "worklistEdfOrdered",
+    violatingValue: false,
+    violationHint: "A non-EDF order that needlessly breaches deadlines",
+    reason:
+      "An SLA worklist schedule is not earliest-deadline-first — re-running the EARLIEST-DEADLINE-FIRST (EDF) discipline over the submitted cases must reproduce the reported ORDER (cases sequenced by deadline ascending, tie-break by case id). A non-EDF order needlessly breaches deadlines that a correct order would have met — the whole point of the discipline. The load-bearing correctness gate — mirrors the Resource Scheduling Agent's schedule-optimal and the Care Routing Agent's route-optimal"
+  },
+  {
+    policyId: "policy.worklist.no-autonomous-dispatch",
+    signal: "worklistNoAutonomousDispatch",
+    violatingValue: false,
+    violationHint: "Case dispatched / started / reassigned autonomously, or with no reviewer review",
+    reason:
+      "An SLA worklist schedule autonomously dispatched, started, or reassigned a case (autoDispatched:true — each is a work-assignment action that must be authorized) or did not require reviewer review (requiresReviewerReview:false); the agent SEQUENCES on paper — every worklist is a RECOMMENDATION requiring a supervisor to confirm. Mirrors the Resource Scheduling Agent's no-autonomous-booking and the Caseload Balancing Agent's no-autonomous-assignment — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

@@ -1856,6 +1856,59 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "sla-worklist-agent",
+    name: "SLA Worklist Sequencing / Earliest-Deadline-First (EDF) Scheduling Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-operations work-sequencing piece: POST
+    // /api/agents/sla-worklist/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) payer-operations agent that takes a single
+    // WORKLIST of pending cases for one processor (a UM nurse's queue, an appeals
+    // analyst's desk, a claims-review bench) — each case a unit of work with a
+    // processing DURATION and an SLA DEADLINE — sequences them EARLIEST-DEADLINE-
+    // FIRST, computes each case's cumulative completion time, and flags which
+    // cases will BREACH their SLA if worked in that order. CRUCIALLY, this is NOT
+    // the Resource Scheduling agent's WEIGHTED INTERVAL SCHEDULING (which SELECTS
+    // a max-weight non-overlapping SUBSET of time-windowed requests for one
+    // resource — a subset, with dropped requests) and NOT the Scheduling Conflict
+    // agent's GREEDY INTERVAL SELECTION (which admits the max COUNT of non-
+    // overlapping appointments). It is also UNLIKE the Peak-Window agent's KADANE
+    // MAXIMUM-SUBARRAY, the Care Routing agent's DIJKSTRA'S SHORTEST PATH, the
+    // Outreach agent's 0/1 KNAPSACK, the Source Consensus agent's MAJORITY VOTE,
+    // the Code Taxonomy agent's TRIE LONGEST-PREFIX MATCH, the Timeline Merge
+    // agent's K-WAY MERGE, the Provider Benchmarking agent's PERCENTILE / RANK
+    // STATISTICS, the Household Composition agent's UNION-FIND, the MLR Rebate
+    // agent's LARGEST-REMAINDER APPORTIONMENT, or the Identifier Validation
+    // agent's MODULAR-ARITHMETIC CHECKSUM — the heart of this service is
+    // EARLIEST-DEADLINE-FIRST (EDF) SCHEDULING: ORDER the entire worklist by
+    // deadline ascending (documented tie-break: earlier deadline first, then
+    // lexical case id), then process the cases sequentially from time zero — each
+    // case starts when the previous finishes, its completion time is the running
+    // cumulative duration, and it BREACHES when its completion time exceeds its
+    // deadline. EDF is the classic optimal single-processor discipline: if ANY
+    // ordering can meet every deadline, EDF does. It COMPLEMENTS the Resource
+    // Scheduling agent (which selects a max-value non-overlapping subset for one
+    // resource) and the Caseload Balancing agent (which bin-packs patients across
+    // care managers): this ORDERS a whole worklist for one processor by SLA
+    // deadline and flags the breaches. A worklist is a RECOMMENDATION requiring a
+    // supervisor to confirm; the agent never autonomously DISPATCHES, STARTS, or
+    // REASSIGNS a case. It IS PHI-bearing (each case references the member / claim
+    // being worked). REUSES the existing payer-operations tier. The worklist is
+    // ILLUSTRATIVE, NOT a certified workforce / queueing system.
+    endpoint: "/api/agents/sla-worklist",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a single worklist of pending cases for one processor (a UM nurse's queue, an appeals analyst's desk, a claims-review bench) — each case a unit of work with a processing duration and an SLA deadline — sequences them earliest-deadline-first, computes each case's cumulative completion time, and flags which cases will breach their SLA if worked in that order (disposition all-on-time / breaches-present). A deterministic payer-operations work-sequencing agent; it COMPLEMENTS the Resource Scheduling agent (which selects a max-value non-overlapping subset for one resource) and the Caseload Balancing agent (which bin-packs patients across care managers) — this ORDERS a whole worklist for one processor by SLA deadline",
+      "The sequencing is DETERMINISTIC — a pure function of the request's own tasks (time is data: durations + deadlines are plain numbers, no real clock; not a weighted-interval schedule, a greedy interval selection, a Kadane max-subarray, a Dijkstra path, a knapsack, a majority vote, a trie match, a k-way merge, a percentile, a union-find, an apportionment, or a checksum but EARLIEST-DEADLINE-FIRST (EDF) SCHEDULING — order by deadline ascending, process sequentially, flag the completions that exceed their deadline); the same worklist always yields the same schedule",
+      "The schedule must be sourced + self-consistent — the scheduled list a permutation of the submitted tasks (each case once, no fabricated case, none dropped / double-worked), each entry echoing its case's duration + deadline, the completion times chaining (first at 0, each starting when the previous finishes, each completion = start + duration), each late flag equal to completion > deadline, and the counts adding up; a fabricated case or a mis-chained completion time is blocked at the Agent Fabric governance boundary (policy.worklist.schedule-sourced, the sourced + self-consistency gate); and the order must be earliest-deadline-first — re-running the EDF discipline must reproduce the reported order; a non-EDF order that needlessly breaches deadlines is blocked (policy.worklist.edf-ordered, the load-bearing correctness gate). Mirrors the Resource Scheduling Agent's selection-sourced + schedule-optimal posture",
+      "The agent SEQUENCES and RECOMMENDS — it NEVER dispatches, starts, or reassigns a case (each is a work-assignment action that must be authorized) on its own; a worklist that auto-dispatches or is not review-gated is blocked (policy.worklist.no-autonomous-dispatch), and every worklist is confirmed by a supervisor. Mirrors the Resource Scheduling Agent's no-autonomous-booking and the Caseload Balancing Agent's no-autonomous-assignment posture",
+      "Runs against ILLUSTRATIVE synthetic worklist — clearly labeled; NOT a certified workforce / queueing system (real worklist management uses staffing levels, skills-based routing, case arrival times, preemption, priority tiers, and shift schedules). PHI-bearing — each case references the member / claim being worked"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
+  },
+  {
     id: "provider-contracting-agent",
     name: "Provider Contracting & VBC Terms Agent",
     kind: "agentforce",
@@ -3644,6 +3697,7 @@ const POLICIES: PolicyRecord[] = [
       "quality-attribution-agent",
       "complex-care-management-agent",
       "claims-adjudication-agent",
+      "sla-worklist-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
@@ -4296,6 +4350,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "Every Utilization Review case deadline must trace to the catalog urgency window (standard 72h, urgent 24h, concurrent-review 24h) applied against the received asOfDate — a deadline that doesn't match the catalog OR one that has been silently extended past the regulatory maximum is rejected before it can leave the fabric. Silently extending a UR deadline breaches Medicare Advantage Chapter 4 / state utilization-review-agent timelines. Mirrors the Grievance & Appeals Agent's deadline-integrity posture.",
     appliesTo: ["utilization-review-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.worklist.schedule-sourced",
+    name: "The schedule is sourced and self-consistent (a real permutation, chained times)",
+    description:
+      "The SLA Worklist Agent's schedule must be a REAL, complete, self-consistent accounting of the submitted cases — the scheduled list must be a PERMUTATION of the submitted tasks (each submitted case appears exactly once — no fabricated case, none dropped or double-worked), each entry must echo its case's duration + deadline, the completion times must chain (the first starts at zero, each starts when the previous finishes, each completion = start + duration), each late flag must equal completion > deadline, the counts must add up, and the disposition must follow. A fabricated case or a mis-chained completion time corrupts the schedule. A schedule that invents a case or mis-chains a completion time is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the Resource Scheduling Agent's selection-sourced and the Scheduling Conflict Agent's intervals-sourced posture. (In the prototype the worklist is a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["sla-worklist-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.worklist.edf-ordered",
+    name: "The order is earliest-deadline-first (the EDF discipline recomputes)",
+    description:
+      "The SLA Worklist Agent's order must be earliest-deadline-first — re-running the EARLIEST-DEADLINE-FIRST (EDF) discipline over the submitted cases must reproduce the reported ORDER (cases sequenced by deadline ascending, tie-break by case id). A non-EDF order needlessly breaches deadlines that a correct order would have met — the whole point of the discipline. A schedule whose order is not EDF is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Resource Scheduling Agent's schedule-optimal and the Care Routing Agent's route-optimal posture.",
+    appliesTo: ["sla-worklist-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.worklist.no-autonomous-dispatch",
+    name: "A case is never autonomously dispatched / started / reassigned",
+    description:
+      "The SLA Worklist Agent may NEVER dispatch, start, or reassign a case on its own (autoDispatched:true — each is a work-assignment action that must be authorized) or skip reviewer review (requiresReviewerReview:true) — the agent SEQUENCES on paper, and every worklist is a RECOMMENDATION requiring a supervisor to confirm. A worklist that auto-dispatches, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Resource Scheduling Agent's no-autonomous-booking and the Caseload Balancing Agent's no-autonomous-assignment posture — the harmful action is enforced-off.",
+    appliesTo: ["sla-worklist-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -15298,6 +15379,113 @@ function store(): FabricStore {
         peakWindowNoAutonomousAction: true,
         requiresAnalystReview: true,
         phiAccessed: false,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedSlaWorklistTrace() {
+  const s = store();
+  const wl0 = Date.now() - 1000 * 60 * 1;
+  const wlTaskId = "task-seed-sla-worklist-001";
+  const wlName = "SLA Worklist Sequencing / Earliest-Deadline-First (EDF) Scheduling Agent";
+  s.traces.push(
+    {
+      id: "span-sla-worklist-001",
+      taskId: wlTaskId,
+      agentId: "sla-worklist-agent",
+      agentName: wlName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(wl0).toISOString(),
+      finishedAt: new Date(wl0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // The cases reference the members / claims being worked.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-sla-worklist-002",
+      taskId: wlTaskId,
+      parentSpanId: "span-sla-worklist-001",
+      agentId: "sla-worklist-agent",
+      agentName: wlName,
+      operation: "worklist.receive-cases",
+      protocol: "a2a",
+      startedAt: new Date(wl0 + 30).toISOString(),
+      finishedAt: new Date(wl0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        queueRef: "um-worklist-am",
+        taskCount: 4,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-sla-worklist-003",
+      taskId: wlTaskId,
+      parentSpanId: "span-sla-worklist-002",
+      agentId: "sla-worklist-agent",
+      agentName: wlName,
+      operation: "worklist.sequence-edf",
+      protocol: "a2a",
+      startedAt: new Date(wl0 + 60).toISOString(),
+      finishedAt: new Date(wl0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        queueRef: "um-worklist-am",
+        lateCount: 1,
+        // The honesty invariants: schedule sourced + self-consistent, order EDF.
+        worklistScheduleSourced: true,
+        worklistEdfOrdered: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-sla-worklist-004",
+      taskId: wlTaskId,
+      parentSpanId: "span-sla-worklist-003",
+      agentId: "sla-worklist-agent",
+      agentName: wlName,
+      operation: "worklist.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(wl0 + 100).toISOString(),
+      finishedAt: new Date(wl0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        queueRef: "um-worklist-am",
+        disposition: "breaches-present",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-sla-worklist-005",
+      taskId: wlTaskId,
+      parentSpanId: "span-sla-worklist-004",
+      agentId: "sla-worklist-agent",
+      agentName: wlName,
+      operation: "worklist.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(wl0 + 140).toISOString(),
+      finishedAt: new Date(wl0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        queueRef: "um-worklist-am",
+        // The honesty invariant: never an autonomous dispatch.
+        worklistNoAutonomousDispatch: true,
+        requiresReviewerReview: true,
+        phiAccessed: true,
         synthetic: true
       }
     }
