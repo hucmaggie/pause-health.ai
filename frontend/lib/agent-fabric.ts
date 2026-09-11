@@ -2407,6 +2407,58 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "data-plane"
   },
   {
+    id: "huffman-coding-agent",
+    name: "Event-Stream Code Assignment / Huffman Optimal Prefix Coding Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the data-substrate stream-codec piece: POST
+    // /api/agents/huffman-coding/tasks (card at /.well-known/agent.json). A
+    // DETERMINISTIC (no-Claude) platform / data-plane agent that takes a set of
+    // event / message TYPES flowing across the integration bus — each type with
+    // an observed FREQUENCY (its share of the stream volume) — and assigns an
+    // OPTIMAL PREFIX-FREE binary code that minimizes the total encoded length
+    // (the sum over types of frequency × code length), so a high-volume telemetry
+    // / event stream (remote-monitoring device events, claim-event codes, sync /
+    // ack messages) can be transmitted as compactly as possible. CRUCIALLY, this
+    // is NOT the Code Taxonomy agent's TRIE LONGEST-PREFIX MATCH (which walks a
+    // code down a prefix tree of taxonomy categories to bucket it — a lookup, not
+    // a code construction) and NOT the Identifier Validation agent's
+    // MODULAR-ARITHMETIC CHECKSUM. It is also UNLIKE the Source Consensus agent's
+    // BOYER–MOORE MAJORITY VOTE, the Timeline Merge agent's K-WAY MERGE, the List
+    // Reconciliation agent's LONGEST COMMON SUBSEQUENCE, the SLA Worklist agent's
+    // EARLIEST-DEADLINE-FIRST SCHEDULING, the Peak-Window agent's KADANE
+    // MAXIMUM-SUBARRAY, the Care Routing agent's DIJKSTRA'S SHORTEST PATH, the
+    // Outreach agent's 0/1 KNAPSACK, the PCP Matching agent's GALE–SHAPLEY STABLE
+    // MATCHING, the Household Composition agent's UNION-FIND, the Provider
+    // Benchmarking agent's PERCENTILE / RANK STATISTICS, or the MLR Rebate agent's
+    // LARGEST-REMAINDER APPORTIONMENT — the heart of this service is HUFFMAN
+    // CODING: build the optimal prefix-free code by repeatedly merging the two
+    // lowest-frequency nodes into a subtree (a greedy priority-queue
+    // construction), then read each symbol's code off the root-to-leaf path.
+    // Huffman is provably optimal — no prefix-free code assigns a smaller total
+    // encoded length — and the total encoded length is the invariant this service
+    // reports and defends. A code assignment is a RECOMMENDATION requiring an
+    // integration engineer to confirm; the agent never autonomously DEPLOYS the
+    // codec to the live bus or RE-ENCODES the production stream. It is
+    // DELIBERATELY NOT PHI-BEARING — an event-type frequency is aggregate
+    // integration telemetry, not patient health information — so, like the Code
+    // Taxonomy and Identifier Validation agents, it is NOT on the HIPAA-audit
+    // policy. REUSES the existing data-plane tier (platform plane). The symbols +
+    // frequencies are ILLUSTRATIVE, NOT a certified codec / compression system.
+    endpoint: "/api/agents/huffman-coding",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a set of event / message types flowing across the integration bus — each type with an observed frequency (its share of the stream volume) — and assigns an optimal prefix-free binary code that minimizes the total encoded length (the sum over types of frequency × code length), reporting one code per type, the weighted total, the fixed-width baseline, and the disposition (compressible / already-uniform). A deterministic data-plane code-assignment agent; it COMPLEMENTS the Code Taxonomy agent (which walks a code down a prefix tree of taxonomy categories to bucket it) and the Identifier Validation agent (which validates an identifier's check digit) — this CONSTRUCTS an optimal prefix-free code from frequencies",
+      "The coding is DETERMINISTIC — a pure function of the request's own symbols (time is data: the frequencies are plain numbers, no real clock; not a trie longest-prefix match, a checksum, a majority vote, a k-way merge, a longest common subsequence, an EDF schedule, a Kadane max-subarray, a Dijkstra path, a knapsack, a stable matching, a union-find, a percentile, or a largest-remainder apportionment but HUFFMAN CODING — merge the two lowest-frequency nodes repeatedly, read the codes off the tree); the same frequencies always yield the same code length",
+      "The code must be sourced + self-consistent — the codes covering exactly the submitted symbols (each once, no fabricated symbol, none dropped / double-coded), each code a non-empty binary string with a matching length + echoed frequency, the code prefix-free (no code a prefix of another), the weightedTotal equal to Σ frequency × length, the fixed-width baseline honest, and the disposition following; a fabricated symbol, a non-prefix-free code, or an overstated total is blocked at the Agent Fabric governance boundary (policy.huffcode.code-sourced, the sourced + self-consistency gate); and the code must be optimal — re-running the Huffman construction must reproduce the reported weightedTotal; a sub-optimal prefix code that wastes bandwidth is blocked (policy.huffcode.code-optimal, the load-bearing correctness gate). Mirrors the List Reconciliation Agent's diff-sourced + lcs-optimal posture",
+      "The agent ASSIGNS and RECOMMENDS — it NEVER deploys the codec to the live integration bus or re-encodes the production stream (each is an infrastructure change that must be authorized) on its own; an assignment that auto-deploys or is not review-gated is blocked (policy.huffcode.no-autonomous-deploy), and every assignment is confirmed by an integration engineer. Mirrors the List Reconciliation Agent's no-autonomous-update and the SLA Worklist Agent's no-autonomous-dispatch posture",
+      "Runs against ILLUSTRATIVE synthetic frequencies — clearly labeled; NOT a certified codec / compression system (real stream compression uses context modeling, arithmetic / range coding, dictionary methods (LZ77 / LZMA), and adaptive codebooks). DELIBERATELY NOT PHI-bearing — an event-type frequency is aggregate integration telemetry, not patient health information"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
+  },
+  {
     id: "break-the-glass-agent",
     name: "Break-the-Glass / Emergency Access Governance Agent",
     kind: "mulesoft-process",
@@ -4454,6 +4506,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Clinical List Reconciliation Agent may NEVER write the reconciled list back, update the chart, or start/stop a medication on its own (autoApplied:true — each is a clinical write that must be authorized) or skip clinician review (requiresClinicianReview:true) — the agent RECONCILES on paper, and every reconciliation is a RECOMMENDATION requiring a clinician to confirm. A reconciliation that auto-applies, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the SLA Worklist Agent's no-autonomous-dispatch and the Resource Scheduling Agent's no-autonomous-booking posture — the harmful action is enforced-off.",
     appliesTo: ["list-reconciliation-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.huffcode.code-sourced",
+    name: "The code is sourced and self-consistent (a real prefix-free code, honest total)",
+    description:
+      "The Event-Stream Code Assignment Agent's code must be a REAL, self-consistent accounting of the submitted symbols — the reported codes must cover EXACTLY the submitted symbols (each once — no fabricated symbol, none dropped or double-coded), each code must be a non-empty binary string whose reported length matches, each frequency must be echoed, the code must be PREFIX-FREE (no code is a prefix of another — the property that makes it uniquely decodable), the reported weightedTotal must equal Σ frequency × length, the fixed-width baseline must be computed honestly, and the disposition must follow. A fabricated symbol, a non-prefix-free code, or an overstated total corrupts the assignment. An assignment that invents a symbol, builds a non-prefix-free code, or overstates its own total is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the List Reconciliation Agent's diff-sourced and the SLA Worklist Agent's schedule-sourced posture. (In the prototype the frequencies are a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["huffman-coding-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.huffcode.code-optimal",
+    name: "The code is the optimal, minimal-length code (Huffman recomputes)",
+    description:
+      "The Event-Stream Code Assignment Agent's code must be OPTIMAL — re-running the HUFFMAN construction over the submitted frequencies must reproduce the reported weightedTotal (and disposition). A sub-optimal prefix code (a fixed-width code, or any tree that isn't the Huffman tree) wastes bandwidth on every message — the whole point of the coding. An assignment whose code isn't minimal-length is rejected before it can leave the fabric. This is the load-bearing correctness gate; it recomputes the minimal total encoded length INDEPENDENT of the reported codes, so it is isolable from the sourced gate. Mirrors the List Reconciliation Agent's lcs-optimal and the Care Routing Agent's route-optimal posture.",
+    appliesTo: ["huffman-coding-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.huffcode.no-autonomous-deploy",
+    name: "The codec is never autonomously deployed / the stream re-encoded",
+    description:
+      "The Event-Stream Code Assignment Agent may NEVER deploy the codec to the live integration bus or re-encode the production stream on its own (autoDeployed:true — each is an infrastructure change that must be authorized) or skip engineer review (requiresEngineerReview:true) — the agent ASSIGNS on paper, and every assignment is a RECOMMENDATION requiring an integration engineer to confirm. An assignment that auto-deploys, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the List Reconciliation Agent's no-autonomous-update and the SLA Worklist Agent's no-autonomous-dispatch posture — the harmful action is enforced-off.",
+    appliesTo: ["huffman-coding-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -15671,6 +15750,113 @@ function store(): FabricStore {
         listDiffNoAutonomousUpdate: true,
         requiresClinicianReview: true,
         phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedHuffmanCodingTrace() {
+  const s = store();
+  const hc0 = Date.now() - 1000 * 60 * 1;
+  const hcTaskId = "task-seed-huffman-coding-001";
+  const hcName = "Event-Stream Code Assignment / Huffman Optimal Prefix Coding Agent";
+  s.traces.push(
+    {
+      id: "span-huffman-coding-001",
+      taskId: hcTaskId,
+      agentId: "huffman-coding-agent",
+      agentName: hcName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(hc0).toISOString(),
+      finishedAt: new Date(hc0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // Aggregate integration telemetry — not patient data.
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-huffman-coding-002",
+      taskId: hcTaskId,
+      parentSpanId: "span-huffman-coding-001",
+      agentId: "huffman-coding-agent",
+      agentName: hcName,
+      operation: "huffcode.receive-symbols",
+      protocol: "a2a",
+      startedAt: new Date(hc0 + 30).toISOString(),
+      finishedAt: new Date(hc0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        streamRef: "rpm-device-events",
+        symbolCount: 5,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-huffman-coding-003",
+      taskId: hcTaskId,
+      parentSpanId: "span-huffman-coding-002",
+      agentId: "huffman-coding-agent",
+      agentName: hcName,
+      operation: "huffcode.build-code",
+      protocol: "a2a",
+      startedAt: new Date(hc0 + 60).toISOString(),
+      finishedAt: new Date(hc0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        streamRef: "rpm-device-events",
+        weightedTotal: 178,
+        // The honesty invariants: code sourced + self-consistent, code optimal.
+        huffCodeSourced: true,
+        huffCodeOptimal: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-huffman-coding-004",
+      taskId: hcTaskId,
+      parentSpanId: "span-huffman-coding-003",
+      agentId: "huffman-coding-agent",
+      agentName: hcName,
+      operation: "huffcode.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(hc0 + 100).toISOString(),
+      finishedAt: new Date(hc0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        streamRef: "rpm-device-events",
+        disposition: "compressible",
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-huffman-coding-005",
+      taskId: hcTaskId,
+      parentSpanId: "span-huffman-coding-004",
+      agentId: "huffman-coding-agent",
+      agentName: hcName,
+      operation: "huffcode.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(hc0 + 140).toISOString(),
+      finishedAt: new Date(hc0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        streamRef: "rpm-device-events",
+        // The honesty invariant: never an autonomous deploy.
+        huffCodeNoAutonomousDeploy: true,
+        requiresEngineerReview: true,
+        phiAccessed: false,
         synthetic: true
       }
     }

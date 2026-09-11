@@ -282,6 +282,10 @@ export type GovernanceTask = {
   listDiffSourced?: boolean;
   listDiffLcsOptimal?: boolean;
   listDiffNoAutonomousUpdate?: boolean;
+  // Event-Stream Code Assignment / Huffman Optimal Prefix Coding (code-sourced + code-optimal + no-autonomous-deploy)
+  huffCodeSourced?: boolean;
+  huffCodeOptimal?: boolean;
+  huffCodeNoAutonomousDeploy?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1907,6 +1911,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Reconciled list written / chart updated / medication changed autonomously, or with no clinician review",
     reason:
       "A clinical list reconciliation autonomously wrote the reconciled list back, updated the chart, or started/stopped a medication (autoApplied:true — each is a clinical write that must be authorized) or did not require clinician review (requiresClinicianReview:false); the agent RECONCILES on paper — every reconciliation is a RECOMMENDATION requiring a clinician to confirm. Mirrors the SLA Worklist Agent's no-autonomous-dispatch and the Resource Scheduling Agent's no-autonomous-booking — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.huffcode.code-sourced",
+    signal: "huffCodeSourced",
+    violatingValue: false,
+    violationHint: "A fabricated symbol, a non-prefix-free code, or an overstated total",
+    reason:
+      "A Huffman code assignment is not a real, self-consistent accounting of the submitted symbols — the reported codes must cover EXACTLY the submitted symbols (each once — no fabricated symbol, none dropped or double-coded), each code a non-empty binary string whose reported length matches, each frequency echoed, the code PREFIX-FREE (no code a prefix of another — the property that makes it uniquely decodable), the reported weightedTotal equal to Σ frequency × length, the fixed-width baseline computed honestly, and the disposition following. A fabricated symbol, a non-prefix-free code, or an overstated total corrupts the assignment. The sourced + self-consistency gate — mirrors the List Reconciliation Agent's diff-sourced and the SLA Worklist Agent's schedule-sourced"
+  },
+  {
+    policyId: "policy.huffcode.code-optimal",
+    signal: "huffCodeOptimal",
+    violatingValue: false,
+    violationHint: "A sub-optimal prefix code that wastes bandwidth",
+    reason:
+      "A Huffman code assignment is not optimal — re-running the HUFFMAN construction over the submitted frequencies must reproduce the reported weightedTotal (and disposition). A sub-optimal prefix code (a fixed-width code, or any tree that isn't the Huffman tree) wastes bandwidth on every message — the whole point of the coding. The load-bearing correctness gate; it recomputes the minimal total encoded length from the frequencies INDEPENDENT of the reported codes, so a fabricated code that still reports the optimal length fails sourced only and a real-but-sub-optimal code fails here — mirrors the List Reconciliation Agent's lcs-optimal and the Care Routing Agent's route-optimal"
+  },
+  {
+    policyId: "policy.huffcode.no-autonomous-deploy",
+    signal: "huffCodeNoAutonomousDeploy",
+    violatingValue: false,
+    violationHint: "Codec deployed to the live bus / production stream re-encoded autonomously, or with no engineer review",
+    reason:
+      "A Huffman code assignment autonomously deployed the codec to the live integration bus or re-encoded the production stream (autoDeployed:true — each is an infrastructure change that must be authorized) or did not require engineer review (requiresEngineerReview:false); the agent ASSIGNS on paper — every assignment is a RECOMMENDATION requiring an integration engineer to confirm. Mirrors the List Reconciliation Agent's no-autonomous-update and the SLA Worklist Agent's no-autonomous-dispatch — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

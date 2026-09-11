@@ -476,8 +476,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // the care-coordination Resource-Block Scheduling / Max-Value Non-Overlapping Selection agent,
     // the commercial Peak-Window / Maximum Contiguous Net-Gain Detection agent,
     // the payer-operations SLA Worklist Sequencing / Earliest-Deadline-First (EDF) Scheduling agent,
-    // and the care-coordination Clinical List Reconciliation / Longest-Common-Subsequence (LCS) Diff agent.
-    expect(listAgents()).toHaveLength(98);
+    // the care-coordination Clinical List Reconciliation / Longest-Common-Subsequence (LCS) Diff agent,
+    // and the data-plane Event-Stream Code Assignment / Huffman Optimal Prefix Coding agent.
+    expect(listAgents()).toHaveLength(99);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
