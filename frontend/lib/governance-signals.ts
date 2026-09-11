@@ -234,6 +234,10 @@ export type GovernanceTask = {
   matchingSourced?: boolean;
   matchingStable?: boolean;
   pcpNoAutonomousAssignment?: boolean;
+  // Reportable / Notifiable Condition Case Classification (facts-sourced + classification-consistent + no-autonomous-report)
+  caseFactsSourced?: boolean;
+  classificationConsistent?: boolean;
+  noAutonomousReport?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1571,6 +1575,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "An assignment committed / a patient reassigned autonomously, or with no coordinator review",
     reason:
       "A PCP-matching determination autonomously committed an assignment, reassigned a patient, or overrode a provider's panel (autoAssigned:true — each is a care-ownership decision that must be authorized) or did not require coordinator review (requiresCoordinatorReview:false); the agent PROPOSES a matching — every matching is a RECOMMENDATION requiring a care-coordination lead to confirm. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Care Team Agent's no-autonomous-assignment posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.reportable.facts-sourced",
+    signal: "caseFactsSourced",
+    violatingValue: false,
+    violationHint: "A fabricated criterion, or a mis-enumerated case definition",
+    reason:
+      "A reportable-condition classification is not built from the submitted case definition + facts — every leaf predicate in the criteria trees must reference a SUBMITTED fact (no fabricated criterion inventing a requirement the definition never stated), the reported classification results must be exactly the definition's classifications in order, the referenced-fact set must match the definition's actual leaves, and the reported classification must be a defined one (or not-a-case). A fabricated criterion over- or under-states the case definition. The sourced + completeness gate — mirrors the PCP Matching Agent's matching-sourced and the Network Adequacy Agent's providers-sourced"
+  },
+  {
+    policyId: "policy.reportable.classification-consistent",
+    signal: "classificationConsistent",
+    violatingValue: false,
+    violationHint: "A mis-evaluated criteria tree — an over- or under-reported condition",
+    reason:
+      "A reportable-condition classification is not consistent with its logic — recomputing the RECURSIVE BOOLEAN EXPRESSION-TREE EVALUATION (nested all-of / any-of / not over the case's facts) of each classification's criteria tree must reproduce each reported met flag, the selected classification (the highest-precedence tree that holds, else not-a-case), and the reportable flag. A mis-evaluated tree raises a false alarm to public health (over-reports) or misses a notifiable case (under-reports). The load-bearing correctness gate — mirrors the PCP Matching Agent's matching-stable and the Care Pathway Agent's sequence-valid"
+  },
+  {
+    policyId: "policy.reportable.no-autonomous-report",
+    signal: "noAutonomousReport",
+    violatingValue: false,
+    violationHint: "A case reported to public health autonomously, or with no epi review",
+    reason:
+      "A reportable-condition classification autonomously reported the case to a public-health authority (autoReported:true — a consequential legal action that must be authorized) or did not require epidemiologist review (requiresEpiReview:false); the agent CLASSIFIES — every classification is a RECOMMENDATION requiring an epidemiologist / infection-preventionist to confirm before any report is filed. Mirrors the Adverse-Event Reporting Agent's human-review posture and the HEDIS Agent's no-autonomous-submission — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

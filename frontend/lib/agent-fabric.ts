@@ -995,6 +995,65 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "reportable-condition-agent",
+    name: "Reportable / Notifiable Condition Case Classification Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the clinical / public-health-compliance
+    // case-classification piece: POST /api/agents/reportable-condition/tasks
+    // (card at /.well-known/agent.json). A DETERMINISTIC (no-Claude)
+    // care-coordination agent that takes a patient CASE's structured facts plus a
+    // public-health CASE DEFINITION — an ordered list of classifications
+    // (confirmed / probable / suspect), each expressed as a nested boolean
+    // CRITERIA TREE of all-of (AND) / any-of (OR) / not (NOT) over leaf
+    // predicates ("confirmed = lab-positive OR (clinically-compatible AND
+    // epi-linked)") — and DETERMINISTICALLY classifies the case by evaluating
+    // each classification's tree and taking the highest-precedence one that
+    // holds. UNLIKE the PCP Matching agent's TWO-SIDED STABLE MATCHING
+    // (Gale–Shapley), the Network Adequacy agent's GEOSPATIAL GREAT-CIRCLE
+    // DISTANCE, the Identifier Validation agent's MODULAR-ARITHMETIC CHECKSUM,
+    // the Household Composition agent's UNION-FIND CONNECTED COMPONENTS, the
+    // Provider Benchmarking agent's PERCENTILE / RANK STATISTICS, the MLR Rebate
+    // agent's LARGEST-REMAINDER APPORTIONMENT, the Claim Lifecycle agent's FSM
+    // TRANSITION VALIDATION, the Medication Name Safety agent's STRING EDIT
+    // DISTANCE, the Schedule Conflict agent's GREEDY INTERVAL SELECTION, the
+    // Caseload Balancing agent's GREEDY BIN-PACKING, the Access Anomaly agent's
+    // SLIDING-WINDOW COUNTING, the Coverage Continuity agent's INTERVAL MERGING,
+    // the Care Pathway agent's TOPOLOGICAL ORDERING, the Enrollment
+    // Reconciliation agent's KEYED SET-DIFFERENCE, or the Audit Log Integrity
+    // agent's HASH CHAIN — the heart of this service is RECURSIVE BOOLEAN
+    // EXPRESSION-TREE EVALUATION: the recursive walk of a nested all-of / any-of
+    // / not tree whose leaves are predicates over the case's facts, the exact
+    // shape a public-health case definition takes, plus a documented
+    // classification precedence (the highest-precedence met tree wins). A
+    // mis-evaluated tree over-reports a notifiable condition (a false alarm to
+    // public health) or under-reports it (a missed case) — so the agent
+    // evaluates the tree deterministically and hands the classification to a
+    // human; a classification is a RECOMMENDATION requiring an epidemiologist /
+    // infection-preventionist to confirm — the agent never autonomously REPORTS
+    // the case to a public-health authority. It COMPLEMENTS the other compliance
+    // / clinical agents — distinct from the Adverse-Event Reporting agent (which
+    // DRAFTS a MedWatch / VAERS report for a drug / vaccine event), the
+    // Utilization Review agent (medical-necessity criteria for a service), and
+    // the Lab Result agent (a single analyte vs a reference range): this
+    // classifies a case against a nested public-health CASE DEFINITION. It is
+    // PHI-bearing (the case is a patient's clinical data). REUSES the existing
+    // care-coordination tier. The condition + definition are ILLUSTRATIVE, NOT a
+    // certified surveillance / case-reporting system.
+    endpoint: "/api/agents/reportable-condition",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a patient case's structured facts plus a public-health case definition (an ordered list of classifications — confirmed / probable / suspect — each a nested boolean criteria tree of all-of / any-of / not over leaf predicates) and DETERMINISTICALLY classifies the case — reporting the selected classification, whether it is reportable, each classification's met flag, the referenced facts, and the reason. A deterministic care-coordination / compliance agent; it COMPLEMENTS the Adverse-Event Reporting agent (which DRAFTS a MedWatch / VAERS report for a drug / vaccine event), the Utilization Review agent (medical-necessity criteria for a service), and the Lab Result agent (a single analyte vs a reference range) — this classifies a case against a nested public-health CASE DEFINITION",
+      "The classification is DETERMINISTIC — a pure function of the request's own facts + definition (no randomness, no clock; not a stable matching, a geospatial distance, a checksum, a union-find, a percentile, an identity match, a largest-remainder apportionment, an FSM transition, an edit distance, an interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, or a hash chain but RECURSIVE BOOLEAN EXPRESSION-TREE EVALUATION — the recursive walk of a nested all-of / any-of / not tree over the case's facts, with a documented classification precedence); the same case always yields the same classification",
+      "Every criterion must be sourced — each leaf predicate must reference a SUBMITTED fact (no fabricated criterion inventing a requirement the definition never stated), the reported classification results must be exactly the definition's classifications in order, and the referenced-fact set must match the definition's actual leaves; a fabricated criterion / mis-enumerated definition is blocked at the Agent Fabric governance boundary (policy.reportable.facts-sourced, the sourced + completeness gate); and the classification must recompute — re-evaluating each criteria tree from the facts must reproduce each met flag, the selected classification, and the reportable flag; a mis-evaluated tree (an over- or under-reported condition) is blocked (policy.reportable.classification-consistent, the load-bearing correctness gate). Mirrors the PCP Matching Agent's matching-stable + matching-sourced posture",
+      "The agent CLASSIFIES — it NEVER reports the case to a public-health authority (a consequential legal action that must be authorized) on its own; a classification that auto-reports or is not review-gated is blocked (policy.reportable.no-autonomous-report), and every classification is confirmed by an epidemiologist / infection-preventionist. Mirrors the Adverse-Event Reporting Agent's human-review posture and the HEDIS Agent's no-autonomous-submission posture",
+      "Runs against an ILLUSTRATIVE synthetic condition + case definition + facts — clearly labeled; NOT a certified surveillance / case-reporting system (real notifiable-condition reporting uses the jurisdiction's official CSTE / CDC case definitions, eCR / eICR electronic case reporting, and an epidemiologist's judgment). PHI-bearing — the case is a patient's clinical data"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "schedule-conflict-agent",
     name: "Scheduling Conflict / Double-Booking Guard Agent",
     kind: "agentforce",
@@ -3087,7 +3146,8 @@ const POLICIES: PolicyRecord[] = [
       "claim-lifecycle-agent",
       "household-composition-agent",
       "network-adequacy-agent",
-      "pcp-matching-agent"
+      "pcp-matching-agent",
+      "reportable-condition-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -4414,6 +4474,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The PCP Matching Agent may NEVER commit an assignment, reassign a patient, or override a provider's panel on its own (autoAssigned:true — each is a care-ownership decision that must be authorized) or skip coordinator review (requiresCoordinatorReview:true) — the agent PROPOSES a matching, and every matching is a RECOMMENDATION requiring a care-coordination lead to confirm. A matching that auto-assigns, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Care Team Agent's no-autonomous-assignment posture — the harmful action is enforced-off.",
     appliesTo: ["pcp-matching-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.reportable.facts-sourced",
+    name: "Every criterion is sourced and the definition is complete",
+    description:
+      "The Reportable Condition Agent must classify the submitted case against the submitted definition — every leaf predicate in the criteria trees must reference a SUBMITTED fact (no fabricated criterion inventing a requirement the definition never stated), the reported classification results must be exactly the definition's classifications in order, the referenced-fact set must match the definition's actual leaves, and the reported classification must be a defined one (or not-a-case). A fabricated criterion over- or under-states the case definition. A determination that references an undefined fact or mis-enumerates the definition is rejected before it can leave the fabric. This is the sourced + completeness gate. Mirrors the PCP Matching Agent's matching-sourced and the Network Adequacy Agent's providers-sourced posture. (In the prototype the condition + definition + facts are clearly-labeled illustrative synthetics.)",
+    appliesTo: ["reportable-condition-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.reportable.classification-consistent",
+    name: "The classification recomputes (recursive boolean evaluation)",
+    description:
+      "The Reportable Condition Agent's classification must recompute: re-running the RECURSIVE BOOLEAN EXPRESSION-TREE EVALUATION (nested all-of / any-of / not over the case's facts) of each classification's criteria tree from the facts must reproduce each reported met flag, the selected classification (the highest-precedence tree that holds, else not-a-case), and the reportable flag. A mis-evaluated tree raises a false alarm to public health (over-reports) or misses a notifiable case (under-reports) — the whole point is the boolean logic. A determination whose classification doesn't recompute is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the PCP Matching Agent's matching-stable and the Care Pathway Agent's sequence-valid posture.",
+    appliesTo: ["reportable-condition-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.reportable.no-autonomous-report",
+    name: "No case is ever autonomously reported to public health",
+    description:
+      "The Reportable Condition Agent may NEVER report the case to a public-health authority on its own (autoReported:true — a consequential legal action that must be authorized) or skip epidemiologist review (requiresEpiReview:true) — the agent CLASSIFIES, and every classification is a RECOMMENDATION requiring an epidemiologist / infection-preventionist to confirm before any report is filed. A classification that auto-reports, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Adverse-Event Reporting Agent's human-review posture and the HEDIS Agent's no-autonomous-submission posture — the harmful action is enforced-off.",
+    appliesTo: ["reportable-condition-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -13334,6 +13421,114 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous assignment.
         pcpNoAutonomousAssignment: true,
         requiresCoordinatorReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedReportableConditionTrace() {
+  const s = store();
+  const rc0 = Date.now() - 1000 * 60 * 1;
+  const rcTaskId = "task-seed-reportable-condition-001";
+  const rcName = "Reportable / Notifiable Condition Case Classification Agent";
+  s.traces.push(
+    {
+      id: "span-reportable-condition-001",
+      taskId: rcTaskId,
+      agentId: "reportable-condition-agent",
+      agentName: rcName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(rc0).toISOString(),
+      finishedAt: new Date(rc0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-reportable-condition-002",
+      taskId: rcTaskId,
+      parentSpanId: "span-reportable-condition-001",
+      agentId: "reportable-condition-agent",
+      agentName: rcName,
+      operation: "rc.receive-case",
+      protocol: "a2a",
+      startedAt: new Date(rc0 + 30).toISOString(),
+      finishedAt: new Date(rc0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        caseRef: "rc-case-001",
+        condition: "acute-viral-hepatitis (illustrative)",
+        factCount: 7,
+        classificationCount: 3,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-reportable-condition-003",
+      taskId: rcTaskId,
+      parentSpanId: "span-reportable-condition-002",
+      agentId: "reportable-condition-agent",
+      agentName: rcName,
+      operation: "rc.evaluate-criteria",
+      protocol: "a2a",
+      startedAt: new Date(rc0 + 60).toISOString(),
+      finishedAt: new Date(rc0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        caseRef: "rc-case-001",
+        // The honesty invariants: facts sourced, classification recomputes.
+        caseFactsSourced: true,
+        classificationConsistent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-reportable-condition-004",
+      taskId: rcTaskId,
+      parentSpanId: "span-reportable-condition-003",
+      agentId: "reportable-condition-agent",
+      agentName: rcName,
+      operation: "rc.classify",
+      protocol: "a2a",
+      startedAt: new Date(rc0 + 100).toISOString(),
+      finishedAt: new Date(rc0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        caseRef: "rc-case-001",
+        classification: "confirmed",
+        reportable: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-reportable-condition-005",
+      taskId: rcTaskId,
+      parentSpanId: "span-reportable-condition-004",
+      agentId: "reportable-condition-agent",
+      agentName: rcName,
+      operation: "rc.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(rc0 + 140).toISOString(),
+      finishedAt: new Date(rc0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        caseRef: "rc-case-001",
+        // The honesty invariant: never an autonomous report.
+        noAutonomousReport: true,
+        requiresEpiReview: true,
         phiAccessed: true,
         synthetic: true
       }

@@ -61,6 +61,7 @@ import { HouseholdCompositionPanel } from "../../../components/household-composi
 import { IdentifierValidationPanel } from "../../../components/identifier-validation-panel";
 import { NetworkAdequacyPanel } from "../../../components/network-adequacy-panel";
 import { PcpMatchingPanel } from "../../../components/pcp-matching-panel";
+import { ReportableConditionPanel } from "../../../components/reportable-condition-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -217,6 +218,7 @@ export default function IntakeDemoPage() {
       <IdentifierValidationPanel />
       <NetworkAdequacyPanel />
       <PcpMatchingPanel />
+      <ReportableConditionPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 

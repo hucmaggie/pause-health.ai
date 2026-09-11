@@ -464,8 +464,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // payer-operations Household / Family-Unit Composition agent, the
     // data-plane Provider Identifier (NPI) Validation & Integrity agent, the
     // payer-operations Network Adequacy / Time-and-Distance agent, and the
-    // care-coordination PCP Assignment / Member–Provider Matching agent.
-    expect(listAgents()).toHaveLength(86);
+    // care-coordination PCP Assignment / Member–Provider Matching agent, and the
+    // care-coordination Reportable / Notifiable Condition Case Classification agent.
+    expect(listAgents()).toHaveLength(87);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
