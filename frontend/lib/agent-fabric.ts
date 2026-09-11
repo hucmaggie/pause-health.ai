@@ -1599,6 +1599,56 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "data-plane"
   },
   {
+    id: "identifier-validation-agent",
+    name: "Provider Identifier (NPI) Validation & Integrity Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the data-substrate identifier-integrity piece:
+    // POST /api/agents/identifier-validation/tasks (card at
+    // /.well-known/agent.json). A DETERMINISTIC (no-Claude) platform / data-plane
+    // agent that takes a BATCH of National Provider Identifiers and validates
+    // each one with the CMS check-digit algorithm — the Luhn (mod-10) checksum
+    // computed over the "80840" prefix + the 9-digit base — classifying each as
+    // valid / invalid-format / invalid-checksum and flagging the invalid ones for
+    // a data steward. UNLIKE the Household Composition agent's UNION-FIND
+    // CONNECTED COMPONENTS, the Provider Benchmarking agent's PERCENTILE / RANK
+    // STATISTICS, the Master-Patient-Index agent's WEIGHTED identity MATCHING, the
+    // Claim Lifecycle agent's FSM TRANSITION VALIDATION, the Medication Name
+    // Safety agent's STRING EDIT DISTANCE, the Schedule Conflict agent's GREEDY
+    // INTERVAL SELECTION, the Caseload Balancing agent's GREEDY BIN-PACKING, the
+    // Access Anomaly agent's SLIDING-WINDOW COUNTING, the Coverage Continuity
+    // agent's INTERVAL MERGING, the Care Pathway agent's TOPOLOGICAL ORDERING, the
+    // Enrollment Reconciliation agent's KEYED SET-DIFFERENCE, or the Audit Log
+    // Integrity agent's HASH CHAIN — the heart of this service is a
+    // MODULAR-ARITHMETIC CHECKSUM: the Luhn (mod-10) check-digit computation that
+    // the NPI standard uses. An NPI with a transposed or mistyped digit fails the
+    // checksum; catching it before it lands on a claim or in a provider directory
+    // prevents a claim rejection or a ghost-directory entry. A determination is a
+    // RECOMMENDATION requiring a data steward to confirm — the agent never
+    // autonomously REJECTS a claim, REMOVES a provider, or CORRECTS a number. It
+    // COMPLEMENTS the other provider-data agents — distinct from the Provider
+    // Credentialing agent (which cites an npi-registry as a verification SOURCE
+    // but does not validate the check digit) and the OIG Exclusion agent (which
+    // MATCHES an NPI against the sanctions list): this validates that the NPI
+    // itself is well-formed and its check digit is correct. It is DELIBERATELY NOT
+    // PHI-BEARING — an NPI is a provider identifier, not patient health
+    // information — so, like the OIG Exclusion agent, it is NOT on the HIPAA-audit
+    // policy. REUSES the existing data-plane tier (platform plane). The
+    // identifiers are ILLUSTRATIVE, NOT a certified NPPES / registry lookup.
+    endpoint: "/api/agents/identifier-validation",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a batch of National Provider Identifiers and validates each one with the CMS check-digit algorithm — the Luhn (mod-10) checksum computed over the '80840' prefix + the 9-digit base — classifying each as valid / invalid-format / invalid-checksum and reporting the per-kind counts and the batch disposition (all-valid / invalids-flagged). A deterministic data-substrate integrity agent; it COMPLEMENTS the Provider Credentialing agent (which cites an npi-registry as a verification SOURCE but does not validate the check digit) and the OIG Exclusion agent (which MATCHES an NPI against the sanctions list) — this validates that the NPI itself is well-formed and its check digit is correct",
+      "The validation is DETERMINISTIC — a pure function of the request's own identifiers (no randomness, no clock; not a percentile, a union-find, an identity match, an FSM transition, an edit distance, an interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, or a hash chain but a MODULAR-ARITHMETIC CHECKSUM — the Luhn / mod-10 check digit the NPI standard uses); the same batch always yields the same result",
+      "Every result must be built from the submitted batch — one result per submitted identifier (same NPI, same order; no fabricated result, no dropped identifier), with the reported counts summing to the total and the disposition following; a fabricated or dropped identifier is blocked at the Agent Fabric governance boundary (policy.identifier.identifiers-sourced, the sourced + completeness gate); and the checksums must recompute — recomputing each identifier's format classification and Luhn check digit from the NPI must reproduce the reported disposition, expected check digit, and counts; a miscomputed checksum (a mistyped NPI waved through, or a correct one failed) is blocked (policy.identifier.checksum-consistent, the load-bearing correctness gate). Mirrors the Household Composition Agent's links-sourced + the Provider Benchmarking Agent's stats-consistent posture",
+      "The agent VALIDATES and FLAGS — it NEVER rejects a claim, removes a provider from the directory, or corrects a number (each is a consequential action that must be authorized) on its own; a determination that auto-rejects or is not review-gated is blocked (policy.identifier.no-autonomous-reject), and every finding is confirmed by a data steward. Mirrors the Provider Credentialing Agent's no-referral-to-expired-or-sanctioned and the Enrollment Reconciliation Agent's no-autonomous-change posture",
+      "Runs against ILLUSTRATIVE synthetic identifiers — clearly labeled; validates the NPI's STRUCTURE + Luhn check digit only, NOT a certified NPPES / registry lookup (it does NOT confirm the NPI is assigned, active, or belongs to a particular provider). DELIBERATELY NOT PHI-bearing — an NPI is a provider identifier, not patient health information"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
+  },
+  {
     id: "break-the-glass-agent",
     name: "Break-the-Glass / Emergency Access Governance Agent",
     kind: "mulesoft-process",
@@ -4195,6 +4245,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Household Composition Agent may NEVER merge member records, change enrollment, or apply a family accumulator on its own (autoMerged:true — each is a consequential action that must be authorized) or skip steward review (requiresStewardReview:true) — the agent PROPOSES a grouping, and every finding is a RECOMMENDATION requiring a data steward to confirm. A finding that auto-merges, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the Master-Patient-Index Agent's no-autonomous-merge posture — the harmful action is enforced-off.",
     appliesTo: ["household-composition-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.identifier.identifiers-sourced",
+    name: "Every validation result traces to a submitted identifier",
+    description:
+      "The Provider Identifier (NPI) Validation Agent must report exactly what was submitted — one result per submitted identifier (same NPI, same order; no fabricated result, no dropped identifier), with the reported total equal to the identifier count, the per-kind counts summing to the total, and the batch disposition following from the counts. A dropped or invented identifier silently mis-states the integrity of the batch. A finding that fabricates or drops an identifier is rejected before it can leave the fabric. This is the sourced + completeness gate. Mirrors the Household Composition Agent's links-sourced and the Enrollment Reconciliation Agent's reconciliation-complete posture. (In the prototype the identifiers are clearly-labeled illustrative synthetics.)",
+    appliesTo: ["identifier-validation-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.identifier.checksum-consistent",
+    name: "The Luhn check digit recomputes correctly",
+    description:
+      "The Provider Identifier (NPI) Validation Agent's checksums must recompute exactly: recomputing each identifier's format classification and Luhn (CMS mod-10 over the 80840 prefix) check digit from the NPI itself must reproduce the reported disposition, expected check digit, and per-kind counts. A miscomputed checksum waves through a mistyped NPI — a claim rejection or a ghost-directory entry waiting to happen — or fails a correct one. A finding whose checksums don't recompute is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Provider Benchmarking Agent's stats-consistent and the OIG Exclusion Agent's match-not-overstated posture.",
+    appliesTo: ["identifier-validation-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.identifier.no-autonomous-reject",
+    name: "A claim / provider is never autonomously rejected",
+    description:
+      "The Provider Identifier (NPI) Validation Agent may NEVER reject a claim, remove a provider from the directory, or correct a number on its own (autoRejected:true — each is a consequential action that must be authorized) or skip steward review (requiresStewardReview:true) — the agent VALIDATES and FLAGS, and every finding is a RECOMMENDATION requiring a data steward to confirm. A finding that auto-rejects, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Provider Credentialing Agent's no-referral-to-expired-or-sanctioned and the Enrollment Reconciliation Agent's no-autonomous-change posture — the harmful action is enforced-off.",
+    appliesTo: ["identifier-validation-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -12764,6 +12841,115 @@ function store(): FabricStore {
         householdNoAutonomousMerge: true,
         requiresStewardReview: true,
         phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedIdentifierValidationTrace() {
+  const s = store();
+  const iv0 = Date.now() - 1000 * 60 * 1;
+  const ivTaskId = "task-seed-identifier-validation-001";
+  const ivName = "Provider Identifier (NPI) Validation & Integrity Agent";
+  s.traces.push(
+    {
+      id: "span-identifier-validation-001",
+      taskId: ivTaskId,
+      agentId: "identifier-validation-agent",
+      agentName: ivName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(iv0).toISOString(),
+      finishedAt: new Date(iv0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // NOT PHI-bearing — an NPI is a provider identifier, not patient health information.
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-identifier-validation-002",
+      taskId: ivTaskId,
+      parentSpanId: "span-identifier-validation-001",
+      agentId: "identifier-validation-agent",
+      agentName: ivName,
+      operation: "identifier.receive-batch",
+      protocol: "a2a",
+      startedAt: new Date(iv0 + 30).toISOString(),
+      finishedAt: new Date(iv0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        batchRef: "npi-batch-001",
+        total: 3,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-identifier-validation-003",
+      taskId: ivTaskId,
+      parentSpanId: "span-identifier-validation-002",
+      agentId: "identifier-validation-agent",
+      agentName: ivName,
+      operation: "identifier.validate-checksums",
+      protocol: "a2a",
+      startedAt: new Date(iv0 + 60).toISOString(),
+      finishedAt: new Date(iv0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        batchRef: "npi-batch-001",
+        validCount: 1,
+        invalidFormatCount: 1,
+        invalidChecksumCount: 1,
+        // The honesty invariants: identifiers sourced, checksums recompute.
+        identifiersSourced: true,
+        checksumConsistent: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-identifier-validation-004",
+      taskId: ivTaskId,
+      parentSpanId: "span-identifier-validation-003",
+      agentId: "identifier-validation-agent",
+      agentName: ivName,
+      operation: "identifier.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(iv0 + 100).toISOString(),
+      finishedAt: new Date(iv0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        batchRef: "npi-batch-001",
+        disposition: "invalids-flagged",
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-identifier-validation-005",
+      taskId: ivTaskId,
+      parentSpanId: "span-identifier-validation-004",
+      agentId: "identifier-validation-agent",
+      agentName: ivName,
+      operation: "identifier.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(iv0 + 140).toISOString(),
+      finishedAt: new Date(iv0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        batchRef: "npi-batch-001",
+        // The honesty invariant: never an autonomous reject.
+        identifierNoAutonomousReject: true,
+        requiresStewardReview: true,
+        phiAccessed: false,
         synthetic: true
       }
     }

@@ -222,6 +222,10 @@ export type GovernanceTask = {
   householdLinksSourced?: boolean;
   householdPartitionConsistent?: boolean;
   householdNoAutonomousMerge?: boolean;
+  // Provider Identifier (NPI) Validation (identifiers-sourced + checksum-consistent + no-autonomous-reject)
+  identifiersSourced?: boolean;
+  checksumConsistent?: boolean;
+  identifierNoAutonomousReject?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1487,6 +1491,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Member records merged / enrollment changed autonomously, or with no steward review",
     reason:
       "A household-composition finding autonomously merged member records, changed enrollment, or applied a family accumulator (autoMerged:true — each is a consequential action that must be authorized) or did not require steward review (requiresStewardReview:false); the agent PROPOSES a grouping — every finding is a RECOMMENDATION requiring a data steward to confirm. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the Master-Patient-Index Agent's no-autonomous-merge posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.identifier.identifiers-sourced",
+    signal: "identifiersSourced",
+    violatingValue: false,
+    violationHint: "A fabricated validation result, or a dropped / miscounted identifier",
+    reason:
+      "An identifier-validation run does not report what was submitted — every result must correspond to a SUBMITTED identifier (same NPI, same order; no fabricated result, no dropped identifier), the reported total must equal the identifier count, the per-kind counts must sum to the total, and the batch disposition must follow. A dropped or invented identifier silently mis-states the integrity of the batch. The sourced + completeness gate — mirrors the Household Composition Agent's links-sourced and the Enrollment Reconciliation Agent's reconciliation-complete"
+  },
+  {
+    policyId: "policy.identifier.checksum-consistent",
+    signal: "checksumConsistent",
+    violatingValue: false,
+    violationHint: "A miscomputed Luhn check digit — a mistyped NPI waved through, or a correct one failed",
+    reason:
+      "An identifier-validation finding's checksums do not add up — recomputing each identifier's format classification and Luhn (CMS mod-10 over the 80840 prefix) check digit from the NPI itself must reproduce the reported disposition, expected check digit, and per-kind counts. A miscomputed checksum waves through a mistyped NPI (a claim rejection waiting to happen) or fails a correct one. The load-bearing correctness gate — mirrors the Provider Benchmarking Agent's stats-consistent and the OIG Exclusion Agent's match-not-overstated"
+  },
+  {
+    policyId: "policy.identifier.no-autonomous-reject",
+    signal: "identifierNoAutonomousReject",
+    violatingValue: false,
+    violationHint: "A claim / provider rejected or a number corrected autonomously, or with no steward review",
+    reason:
+      "An identifier-validation finding autonomously rejected a claim, removed a provider from the directory, or corrected a number (autoRejected:true — each is a consequential action that must be authorized) or did not require steward review (requiresStewardReview:false); the agent VALIDATES and FLAGS — every finding is a RECOMMENDATION requiring a data steward to confirm. Mirrors the Provider Credentialing Agent's no-referral-to-expired-or-sanctioned and the Enrollment Reconciliation Agent's no-autonomous-change posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
