@@ -242,6 +242,10 @@ export type GovernanceTask = {
   timelineEventsSourced?: boolean;
   timelineMergeConsistent?: boolean;
   timelineNoAutonomousMerge?: boolean;
+  // Clinical Quality-Measure Shift Detection / Statistical Process Control (observations-sourced + cusum-consistent + no-autonomous-intervention)
+  qualityObservationsSourced?: boolean;
+  qualityCusumConsistent?: boolean;
+  qualityNoAutonomousIntervention?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1627,6 +1631,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A timeline written back / a duplicate purged autonomously, or with no steward review",
     reason:
       "A timeline merge autonomously wrote the merged timeline back to a source system of record, purged a duplicate, or overwrote a chart (autoWritten:true — each is a data-integrity action that must be authorized) or did not require steward review (requiresStewardReview:false); the agent MERGES — every merge is a RECOMMENDATION requiring a data steward to confirm. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the Audit Log Integrity Agent's read-only posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.quality.observations-sourced",
+    signal: "qualityObservationsSourced",
+    violatingValue: false,
+    violationHint: "A fabricated charted point, a dropped observation, or a missing parameter",
+    reason:
+      "A quality-measure control chart is not drawn from the submitted observations — every charted point must trace to a SUBMITTED observation (same index + value; no fabricated point), every submitted observation must appear EXACTLY ONCE (none dropped, none double-charted), and the chart parameters (target, slack, threshold) must be present numbers. A fabricated or dropped point silently rewrites the trend. The sourced + completeness gate — mirrors the Timeline Merge Agent's events-sourced and the Enrollment Reconciliation Agent's reconciliation-complete"
+  },
+  {
+    policyId: "policy.quality.cusum-consistent",
+    signal: "qualityCusumConsistent",
+    violatingValue: false,
+    violationHint: "A mis-charted CUSUM sum, a wrong alarm index, or a wrong signal",
+    reason:
+      "A quality-measure detection is not consistent with its logic — recomputing the two-sided TABULAR CUSUM from the submitted observations + parameters must reproduce every charted SH_i / SL_i, the first-alarm index, the alarm direction, the signal (in-control / shift-up-detected / shift-down-detected), and the peak sums. A mis-charted CUSUM fakes a shift that isn't there or hides one that is. The load-bearing correctness gate — mirrors the Timeline Merge Agent's merge-consistent and the Provider Benchmarking Agent's stats-consistent"
+  },
+  {
+    policyId: "policy.quality.no-autonomous-intervention",
+    signal: "qualityNoAutonomousIntervention",
+    violatingValue: false,
+    violationHint: "A corrective action / recall campaign launched autonomously, or with no quality review",
+    reason:
+      "A quality-measure detection autonomously launched a corrective action, a recall / outreach campaign, or a process change (autoActioned:true — each is a consequential action that must be authorized) or did not require quality review (requiresQualityReview:false); the agent DETECTS — every signal is a RECOMMENDATION requiring a quality reviewer to confirm. Mirrors the HEDIS Agent's no-autonomous-submission and the Care Gap Agent's human-review posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

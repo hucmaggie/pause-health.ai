@@ -1115,6 +1115,67 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "data-plane"
   },
   {
+    id: "quality-shift-agent",
+    name: "Clinical Quality-Measure Shift Detection (Statistical Process Control) Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the clinical / quality-analytics
+    // change-point-detection piece: POST /api/agents/quality-shift/tasks (card at
+    // /.well-known/agent.json). A DETERMINISTIC (no-Claude) care-coordination /
+    // quality-analytics agent that watches a time-ordered series of a clinical
+    // QUALITY MEASURE (a weekly mammography-screening rate, a monthly
+    // HbA1c-control rate, a daily lab-QC value) and detects whether the measure
+    // has drifted into a SUSTAINED SHIFT away from its established TARGET. UNLIKE
+    // the Timeline Merge agent's K-WAY MERGE OF SORTED STREAMS, the Reportable
+    // Condition agent's RECURSIVE BOOLEAN EXPRESSION-TREE EVALUATION, the PCP
+    // Matching agent's TWO-SIDED STABLE MATCHING (Gale–Shapley), the Network
+    // Adequacy agent's GEOSPATIAL GREAT-CIRCLE DISTANCE, the Identifier Validation
+    // agent's MODULAR-ARITHMETIC CHECKSUM, the Household Composition agent's
+    // UNION-FIND CONNECTED COMPONENTS, the MLR Rebate agent's LARGEST-REMAINDER
+    // APPORTIONMENT, the Claim Lifecycle agent's FSM TRANSITION VALIDATION, the
+    // Medication Name Safety agent's STRING EDIT DISTANCE, the Schedule Conflict
+    // agent's GREEDY INTERVAL SELECTION, the Caseload Balancing agent's GREEDY
+    // BIN-PACKING, the Care Pathway agent's TOPOLOGICAL ORDERING, the Enrollment
+    // Reconciliation agent's KEYED SET-DIFFERENCE, or the Audit Log Integrity
+    // agent's HASH CHAIN — and, CRUCIALLY, UNLIKE the Provider Benchmarking agent's
+    // PERCENTILE / RANK STATISTICS (which ranks one value against a static peer
+    // distribution; this watches ONE series evolve over time) and the Access
+    // Anomaly agent's SLIDING-WINDOW COUNTING (which counts events in a fixed
+    // recent window to catch a spike; this accumulates a running deviation to
+    // catch a SUSTAINED small shift a window would miss) — the heart of this
+    // service is CHANGE-POINT DETECTION via a two-sided TABULAR CUSUM
+    // (cumulative-sum) control chart: it accumulates a one-sided upper sum SH_i =
+    // max(0, SH_{i-1} + (x_i − target) − k) and a one-sided lower sum SL_i =
+    // max(0, SL_{i-1} + (target − x_i) − k), where k is the slack, and SIGNALS the
+    // first observation whose SH or SL exceeds the decision threshold h. A missed
+    // shift lets a quality measure decay unnoticed; a false alarm sends a team
+    // chasing noise — so the chart signals DETERMINISTICALLY and hands the finding
+    // to a human; a signal is a RECOMMENDATION and the agent never launches a
+    // corrective action, a recall campaign, or a process change on its own. It
+    // COMPLEMENTS the other quality / clinical agents — distinct from the HEDIS
+    // agent (which COMPUTES a measure rate), the Population Health agent (which
+    // PRIORITIZES a panel by risk), the Provider Benchmarking agent (which RANKS a
+    // value against peers), and the Remote Monitoring agent (which checks ONE
+    // patient's vitals against a threshold): this watches a quality-measure series
+    // for a SUSTAINED shift over time. It charts DE-IDENTIFIED aggregate rate
+    // series, but because the measures are derived from patient clinical data it
+    // reuses the care-coordination tier and IS on the HIPAA-audit policy. REUSES
+    // the existing care-coordination tier (patient / clinical plane). The measures
+    // are ILLUSTRATIVE, NOT a certified SPC / quality-surveillance platform.
+    endpoint: "/api/agents/quality-shift",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Watches a time-ordered series of a clinical quality measure (a weekly screening rate, a monthly control rate, a daily lab-QC value) and detects whether it has drifted into a SUSTAINED shift away from its target — reporting the charted CUSUM points, the signal (in-control / shift-up-detected / shift-down-detected), the first-alarm index + direction, and the peak sums. A deterministic quality-analytics agent; it COMPLEMENTS the HEDIS agent (which COMPUTES a measure rate), the Population Health agent (which PRIORITIZES a panel by risk), the Provider Benchmarking agent (which RANKS a value against peers), and the Remote Monitoring agent (which checks ONE patient's vitals against a threshold) — this watches a quality-measure series for a sustained shift over time",
+      "The detection is DETERMINISTIC — a pure function of the request's own observations + parameters (no randomness, no clock; not a k-way merge, a recursive boolean tree, a stable matching, a geospatial distance, a checksum, a union-find, a percentile / rank, a largest-remainder apportionment, an FSM transition, an edit distance, an interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, or a hash chain but CHANGE-POINT DETECTION via a two-sided tabular CUSUM control chart); the same series always yields the same signal",
+      "Every charted point must be sourced — each must trace to a SUBMITTED observation (same index + value; no fabricated point), every submitted observation must appear exactly once (none dropped, none double-charted), and the chart parameters must be present; a fabricated or dropped point is blocked at the Agent Fabric governance boundary (policy.quality.observations-sourced, the sourced + completeness gate); and the CUSUM must recompute — re-running the two-sided tabular CUSUM from the observations must reproduce every charted SH_i / SL_i, the first-alarm index, the direction, and the signal; a mis-charted CUSUM (a faked or hidden shift) is blocked (policy.quality.cusum-consistent, the load-bearing correctness gate). Mirrors the Timeline Merge Agent's events-sourced + merge-consistent posture",
+      "The agent DETECTS — it NEVER launches a corrective action, a recall / outreach campaign, or a process change (each is a consequential action that must be authorized) on its own; a detection that auto-actions or is not review-gated is blocked (policy.quality.no-autonomous-intervention), and every signal is confirmed by a quality reviewer. Mirrors the HEDIS Agent's no-autonomous-submission and the Care Gap Agent's human-review posture",
+      "Runs against ILLUSTRATIVE synthetic aggregate rate series — clearly labeled; NOT a certified SPC / quality-surveillance platform (real statistical process control tunes k and h to a target ARL, combines CUSUM with Shewhart / EWMA charts, and accounts for autocorrelation and measure specifications). Charts de-identified aggregate rates derived from patient clinical data — on the HIPAA-audit policy"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "schedule-conflict-agent",
     name: "Scheduling Conflict / Double-Booking Guard Agent",
     kind: "agentforce",
@@ -3209,7 +3270,8 @@ const POLICIES: PolicyRecord[] = [
       "network-adequacy-agent",
       "pcp-matching-agent",
       "reportable-condition-agent",
-      "timeline-merge-agent"
+      "timeline-merge-agent",
+      "quality-shift-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -4590,6 +4652,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Timeline Merge Agent may NEVER write the merged timeline back to a source system of record, purge a duplicate, or overwrite a chart on its own (autoWritten:true — each is a data-integrity action that must be authorized) or skip steward review (requiresStewardReview:true) — the agent MERGES, and every merge is a RECOMMENDATION requiring a data steward to confirm. A merge that auto-writes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the Audit Log Integrity Agent's read-only posture — the harmful action is enforced-off.",
     appliesTo: ["timeline-merge-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.quality.observations-sourced",
+    name: "Every charted point is sourced and every observation is accounted for",
+    description:
+      "The Quality Shift Agent must draw its control chart from the submitted observations — every charted point must trace to a SUBMITTED observation (same index + value; no fabricated point), every submitted observation must appear EXACTLY ONCE (none dropped, none double-charted), and the chart parameters (target, slack, threshold) must be present numbers. A fabricated or dropped point silently rewrites the trend. A determination that fabricates, drops, or double-charts a point is rejected before it can leave the fabric. This is the sourced + completeness gate. Mirrors the Timeline Merge Agent's events-sourced and the Enrollment Reconciliation Agent's reconciliation-complete posture. (In the prototype the measures are clearly-labeled illustrative synthetics.)",
+    appliesTo: ["quality-shift-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.quality.cusum-consistent",
+    name: "The CUSUM recomputes (two-sided tabular CUSUM change-point detection)",
+    description:
+      "The Quality Shift Agent's detection must recompute: re-running the two-sided TABULAR CUSUM from the submitted observations + parameters must reproduce every charted SH_i / SL_i, the first-alarm index, the alarm direction, the signal (in-control / shift-up-detected / shift-down-detected), and the peak sums. A mis-charted CUSUM fakes a shift that isn't there or hides one that is. A determination whose chart or signal doesn't recompute is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Timeline Merge Agent's merge-consistent and the Provider Benchmarking Agent's stats-consistent posture.",
+    appliesTo: ["quality-shift-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.quality.no-autonomous-intervention",
+    name: "No corrective action is ever launched autonomously",
+    description:
+      "The Quality Shift Agent may NEVER launch a corrective action, a recall / outreach campaign, or a process change on its own (autoActioned:true — each is a consequential action that must be authorized) or skip quality review (requiresQualityReview:true) — the agent DETECTS, and every signal is a RECOMMENDATION requiring a quality reviewer to confirm. A detection that auto-actions, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the HEDIS Agent's no-autonomous-submission and the Care Gap Agent's human-review posture — the harmful action is enforced-off.",
+    appliesTo: ["quality-shift-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -13726,6 +13815,115 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous write-back.
         timelineNoAutonomousMerge: true,
         requiresStewardReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedQualityShiftTrace() {
+  const s = store();
+  const qs0 = Date.now() - 1000 * 60 * 1;
+  const qsTaskId = "task-seed-quality-shift-001";
+  const qsName = "Clinical Quality-Measure Shift Detection (Statistical Process Control) Agent";
+  s.traces.push(
+    {
+      id: "span-quality-shift-001",
+      taskId: qsTaskId,
+      agentId: "quality-shift-agent",
+      agentName: qsName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(qs0).toISOString(),
+      finishedAt: new Date(qs0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-quality-shift-002",
+      taskId: qsTaskId,
+      parentSpanId: "span-quality-shift-001",
+      agentId: "quality-shift-agent",
+      agentName: qsName,
+      operation: "quality.receive-series",
+      protocol: "a2a",
+      startedAt: new Date(qs0 + 30).toISOString(),
+      finishedAt: new Date(qs0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        measureRef: "measure-mammography-screening-rate",
+        observationCount: 7,
+        target: 50,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-quality-shift-003",
+      taskId: qsTaskId,
+      parentSpanId: "span-quality-shift-002",
+      agentId: "quality-shift-agent",
+      agentName: qsName,
+      operation: "quality.run-cusum",
+      protocol: "a2a",
+      startedAt: new Date(qs0 + 60).toISOString(),
+      finishedAt: new Date(qs0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        measureRef: "measure-mammography-screening-rate",
+        peakHigh: 15,
+        peakLow: 0,
+        // The honesty invariants: observations sourced, CUSUM recomputes.
+        qualityObservationsSourced: true,
+        qualityCusumConsistent: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-quality-shift-004",
+      taskId: qsTaskId,
+      parentSpanId: "span-quality-shift-003",
+      agentId: "quality-shift-agent",
+      agentName: qsName,
+      operation: "quality.classify-signal",
+      protocol: "a2a",
+      startedAt: new Date(qs0 + 100).toISOString(),
+      finishedAt: new Date(qs0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        measureRef: "measure-mammography-screening-rate",
+        signal: "shift-up-detected",
+        alarmIndex: 5,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-quality-shift-005",
+      taskId: qsTaskId,
+      parentSpanId: "span-quality-shift-004",
+      agentId: "quality-shift-agent",
+      agentName: qsName,
+      operation: "quality.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(qs0 + 140).toISOString(),
+      finishedAt: new Date(qs0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        measureRef: "measure-mammography-screening-rate",
+        // The honesty invariant: never an autonomous intervention.
+        qualityNoAutonomousIntervention: true,
+        requiresQualityReview: true,
         phiAccessed: true,
         synthetic: true
       }

@@ -63,6 +63,7 @@ import { NetworkAdequacyPanel } from "../../../components/network-adequacy-panel
 import { PcpMatchingPanel } from "../../../components/pcp-matching-panel";
 import { ReportableConditionPanel } from "../../../components/reportable-condition-panel";
 import { TimelineMergePanel } from "../../../components/timeline-merge-panel";
+import { QualityShiftPanel } from "../../../components/quality-shift-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -221,6 +222,7 @@ export default function IntakeDemoPage() {
       <PcpMatchingPanel />
       <ReportableConditionPanel />
       <TimelineMergePanel />
+      <QualityShiftPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 
