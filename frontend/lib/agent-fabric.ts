@@ -1176,6 +1176,65 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "outreach-prioritization-agent",
+    name: "Care-Management Capacity Allocation / Outreach Prioritization Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the clinical / care-management
+    // capacity-planning piece: POST /api/agents/outreach-prioritization/tasks
+    // (card at /.well-known/agent.json). A DETERMINISTIC (no-Claude)
+    // care-coordination agent that, given a care team's fixed CAPACITY for the
+    // cycle (its available outreach HOURS this week) and a set of candidate
+    // proactive INTERVENTIONS (each with an hours COST and a projected clinical
+    // BENEFIT), selects the subset that MAXIMIZES total projected benefit while
+    // fitting the capacity budget, deferring (never denying) the rest to the next
+    // cycle. UNLIKE the Quality Shift agent's CUSUM CHANGE-POINT DETECTION, the
+    // Timeline Merge agent's K-WAY MERGE OF SORTED STREAMS, the Reportable
+    // Condition agent's RECURSIVE BOOLEAN EXPRESSION-TREE EVALUATION, the PCP
+    // Matching agent's TWO-SIDED STABLE MATCHING (Gale–Shapley), the Network
+    // Adequacy agent's GEOSPATIAL GREAT-CIRCLE DISTANCE, the Identifier Validation
+    // agent's MODULAR-ARITHMETIC CHECKSUM, the Household Composition agent's
+    // UNION-FIND CONNECTED COMPONENTS, the Provider Benchmarking agent's
+    // PERCENTILE / RANK STATISTICS, the MLR Rebate agent's LARGEST-REMAINDER
+    // APPORTIONMENT, the Claim Lifecycle agent's FSM TRANSITION VALIDATION, the
+    // Medication Name Safety agent's STRING EDIT DISTANCE, the Schedule Conflict
+    // agent's GREEDY INTERVAL SELECTION, the Care Pathway agent's TOPOLOGICAL
+    // ORDERING, the Enrollment Reconciliation agent's KEYED SET-DIFFERENCE, or the
+    // Audit Log Integrity agent's HASH CHAIN — and, CRUCIALLY, UNLIKE the Caseload
+    // Balancing agent's GREEDY BIN-PACKING (which distributes EVERY member across
+    // managers' capacities by acuity — a partition) and the Population Health
+    // agent's RISK RANKING (which orders a panel; it selects no subset under a
+    // budget) — the heart of this service is the 0/1 KNAPSACK via DYNAMIC
+    // PROGRAMMING: the classic capacity-constrained maximum-value-subset
+    // optimization, filling a DP table dp[i][c] = max(dp[i-1][c], dp[i-1][c-cost_i]
+    // + benefit_i) and reconstructing the optimal set by walking the table back. A
+    // greedy or hand-picked allocation leaves benefit on the table — patients who
+    // could have been reached this cycle are not — so the agent optimizes
+    // DETERMINISTICALLY and hands the plan to a human; an allocation is a
+    // RECOMMENDATION and the agent never launches the outreach, commits the plan,
+    // or books the interventions on its own, and a deferred intervention is
+    // deferred, NEVER denied. It COMPLEMENTS the other care-coordination agents —
+    // distinct from the Caseload Balancing agent (which bin-packs a whole panel
+    // across managers), the Population Health agent (which ranks a panel by risk),
+    // and the Care Gap agent (which acts on a measure gap): this selects a
+    // max-benefit subset of interventions under a capacity budget. It is
+    // PHI-bearing (the interventions reference patients). REUSES the existing
+    // care-coordination tier (patient / clinical plane). The interventions are
+    // ILLUSTRATIVE, NOT a certified care-management / capacity-planning system.
+    endpoint: "/api/agents/outreach-prioritization",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Given a care team's fixed capacity (outreach hours this cycle) and a set of candidate proactive interventions (each with an hours cost and a projected benefit), selects the subset that maximizes total projected benefit within the capacity budget and defers (never denies) the rest — reporting the selected + deferred sets, the total cost / benefit, the remaining capacity, and the disposition (all-scheduled / some-deferred). A deterministic care-management capacity-planning agent; it COMPLEMENTS the Caseload Balancing agent (which bin-packs a whole panel across managers), the Population Health agent (which ranks a panel by risk), and the Care Gap agent (which acts on a measure gap) — this selects a max-benefit subset of interventions under a capacity budget",
+      "The allocation is DETERMINISTIC — a pure function of the request's own candidates + capacity (no randomness, no clock; not a CUSUM, a k-way merge, a recursive boolean tree, a stable matching, a geospatial distance, a checksum, a union-find, a percentile, a largest-remainder apportionment, an FSM transition, an edit distance, an interval selection, a bin-packing, a topological sort, a set-difference, or a hash chain but the 0/1 KNAPSACK via dynamic programming — the capacity-constrained maximum-value-subset optimization); the same request always yields the same plan",
+      "Every selection must be sourced — each selected AND deferred intervention must trace to a SUBMITTED candidate (same id + cost + benefit; no fabricated intervention), every candidate must appear exactly once across selected ∪ deferred (none dropped, none double-counted), and the tallies must add up; a fabricated or dropped intervention is blocked at the Agent Fabric governance boundary (policy.outreach.selections-sourced, the sourced + completeness gate); and the allocation must be optimal + feasible — recomputing the knapsack DP over the candidates + capacity must reproduce the reported maximum benefit, and the selection must fit the capacity and equal the DP optimum; a sub-optimal or over-capacity allocation is blocked (policy.outreach.allocation-optimal, the load-bearing correctness gate). Mirrors the Caseload Balancing Agent's assignment-complete + capacity-respected posture",
+      "The agent PRIORITIZES — it NEVER launches the outreach, commits the plan, or books the interventions (each is a care-delivery action that must be authorized) on its own; an allocation that auto-schedules or is not review-gated is blocked (policy.outreach.no-autonomous-schedule), and every allocation is confirmed by a care lead, with deferred interventions deferred to a later cycle, never denied. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Care Gap Agent's human-review posture",
+      "Runs against ILLUSTRATIVE synthetic interventions — clearly labeled; NOT a certified care-management / capacity-planning system (real capacity planning weighs clinical urgency, member consent, staffing mix, regulatory timeliness, and equity — not a single benefit score under one hours budget; a deferred intervention is deferred, never denied). PHI-bearing — the interventions reference patients"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "schedule-conflict-agent",
     name: "Scheduling Conflict / Double-Booking Guard Agent",
     kind: "agentforce",
@@ -3271,7 +3330,8 @@ const POLICIES: PolicyRecord[] = [
       "pcp-matching-agent",
       "reportable-condition-agent",
       "timeline-merge-agent",
-      "quality-shift-agent"
+      "quality-shift-agent",
+      "outreach-prioritization-agent"
     ],
     enforcement: "audit",
     status: "enforced"
@@ -4679,6 +4739,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Quality Shift Agent may NEVER launch a corrective action, a recall / outreach campaign, or a process change on its own (autoActioned:true — each is a consequential action that must be authorized) or skip quality review (requiresQualityReview:true) — the agent DETECTS, and every signal is a RECOMMENDATION requiring a quality reviewer to confirm. A detection that auto-actions, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the HEDIS Agent's no-autonomous-submission and the Care Gap Agent's human-review posture — the harmful action is enforced-off.",
     appliesTo: ["quality-shift-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.outreach.selections-sourced",
+    name: "Every selection is sourced and every candidate is accounted for",
+    description:
+      "The Outreach Prioritization Agent must build its allocation from the submitted candidates — every selected AND deferred intervention must trace to a SUBMITTED candidate (same id + cost + benefit; no fabricated intervention), every submitted candidate must appear EXACTLY ONCE across selected ∪ deferred (none dropped, none double-counted, none in both), and the reported tallies (total cost, total benefit, remaining capacity) must add up. A fabricated or dropped intervention silently rewrites the plan. A determination that fabricates, drops, or double-counts an intervention is rejected before it can leave the fabric. This is the sourced + completeness gate. Mirrors the Caseload Balancing Agent's assignment-complete and the Timeline Merge Agent's events-sourced posture. (In the prototype the interventions are clearly-labeled illustrative synthetics.)",
+    appliesTo: ["outreach-prioritization-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.outreach.allocation-optimal",
+    name: "The allocation is optimal + feasible (0/1 knapsack dynamic programming)",
+    description:
+      "The Outreach Prioritization Agent's allocation must be optimal and feasible — recomputing the 0/1 KNAPSACK dynamic-programming optimization over the submitted candidates + capacity must reproduce the reported maximum total benefit, and the reported selection must be FEASIBLE (its total cost within capacity) and OPTIMAL (its benefit equals the DP optimum). A sub-optimal allocation under-serves patients; an over-capacity one over-commits the team. A determination whose allocation is sub-optimal or over-capacity is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Caseload Balancing Agent's capacity-respected and the Quality Shift Agent's cusum-consistent posture.",
+    appliesTo: ["outreach-prioritization-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.outreach.no-autonomous-schedule",
+    name: "No outreach is ever launched autonomously",
+    description:
+      "The Outreach Prioritization Agent may NEVER launch the outreach, commit the plan, or book the interventions on its own (autoScheduled:true — each is a care-delivery action that must be authorized) or skip care-lead review (requiresCareLeadReview:true) — the agent PRIORITIZES, and every allocation is a RECOMMENDATION requiring a care lead to confirm, with deferred interventions deferred to a later cycle, never denied. An allocation that auto-schedules, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Care Gap Agent's human-review posture — the harmful action is enforced-off.",
+    appliesTo: ["outreach-prioritization-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -13924,6 +14011,115 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous intervention.
         qualityNoAutonomousIntervention: true,
         requiresQualityReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedOutreachPrioritizationTrace() {
+  const s = store();
+  const op0 = Date.now() - 1000 * 60 * 1;
+  const opTaskId = "task-seed-outreach-prioritization-001";
+  const opName = "Care-Management Capacity Allocation / Outreach Prioritization Agent";
+  s.traces.push(
+    {
+      id: "span-outreach-prioritization-001",
+      taskId: opTaskId,
+      agentId: "outreach-prioritization-agent",
+      agentName: opName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(op0).toISOString(),
+      finishedAt: new Date(op0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-outreach-prioritization-002",
+      taskId: opTaskId,
+      parentSpanId: "span-outreach-prioritization-001",
+      agentId: "outreach-prioritization-agent",
+      agentName: opName,
+      operation: "outreach.receive-candidates",
+      protocol: "a2a",
+      startedAt: new Date(op0 + 30).toISOString(),
+      finishedAt: new Date(op0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        cycleRef: "outreach-cycle-001",
+        candidateCount: 4,
+        capacity: 10,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-outreach-prioritization-003",
+      taskId: opTaskId,
+      parentSpanId: "span-outreach-prioritization-002",
+      agentId: "outreach-prioritization-agent",
+      agentName: opName,
+      operation: "outreach.optimize-allocation",
+      protocol: "a2a",
+      startedAt: new Date(op0 + 60).toISOString(),
+      finishedAt: new Date(op0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        cycleRef: "outreach-cycle-001",
+        selectedCount: 3,
+        totalBenefit: 140,
+        // The honesty invariants: selections sourced, allocation optimal.
+        outreachSelectionsSourced: true,
+        outreachAllocationOptimal: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-outreach-prioritization-004",
+      taskId: opTaskId,
+      parentSpanId: "span-outreach-prioritization-003",
+      agentId: "outreach-prioritization-agent",
+      agentName: opName,
+      operation: "outreach.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(op0 + 100).toISOString(),
+      finishedAt: new Date(op0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        cycleRef: "outreach-cycle-001",
+        disposition: "some-deferred",
+        deferredCount: 1,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-outreach-prioritization-005",
+      taskId: opTaskId,
+      parentSpanId: "span-outreach-prioritization-004",
+      agentId: "outreach-prioritization-agent",
+      agentName: opName,
+      operation: "outreach.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(op0 + 140).toISOString(),
+      finishedAt: new Date(op0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        cycleRef: "outreach-cycle-001",
+        // The honesty invariant: never an autonomous schedule.
+        outreachNoAutonomousSchedule: true,
+        requiresCareLeadReview: true,
         phiAccessed: true,
         synthetic: true
       }

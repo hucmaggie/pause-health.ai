@@ -246,6 +246,10 @@ export type GovernanceTask = {
   qualityObservationsSourced?: boolean;
   qualityCusumConsistent?: boolean;
   qualityNoAutonomousIntervention?: boolean;
+  // Care-Management Capacity Allocation / Outreach Prioritization (selections-sourced + allocation-optimal + no-autonomous-schedule)
+  outreachSelectionsSourced?: boolean;
+  outreachAllocationOptimal?: boolean;
+  outreachNoAutonomousSchedule?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1655,6 +1659,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A corrective action / recall campaign launched autonomously, or with no quality review",
     reason:
       "A quality-measure detection autonomously launched a corrective action, a recall / outreach campaign, or a process change (autoActioned:true — each is a consequential action that must be authorized) or did not require quality review (requiresQualityReview:false); the agent DETECTS — every signal is a RECOMMENDATION requiring a quality reviewer to confirm. Mirrors the HEDIS Agent's no-autonomous-submission and the Care Gap Agent's human-review posture — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.outreach.selections-sourced",
+    signal: "outreachSelectionsSourced",
+    violatingValue: false,
+    violationHint: "A fabricated intervention, a dropped candidate, or a miscounted tally",
+    reason:
+      "An outreach allocation is not built from the submitted candidates — every selected AND deferred intervention must trace to a SUBMITTED candidate (same id + cost + benefit; no fabricated intervention), every submitted candidate must appear EXACTLY ONCE across selected ∪ deferred (none dropped, none double-counted, none in both), and the reported tallies (total cost, total benefit, remaining capacity) must add up. A fabricated or dropped intervention silently rewrites the plan. The sourced + completeness gate — mirrors the Caseload Balancing Agent's assignment-complete and the Timeline Merge Agent's events-sourced"
+  },
+  {
+    policyId: "policy.outreach.allocation-optimal",
+    signal: "outreachAllocationOptimal",
+    violatingValue: false,
+    violationHint: "A sub-optimal or over-capacity allocation",
+    reason:
+      "An outreach allocation is not optimal or feasible — recomputing the 0/1 KNAPSACK dynamic-programming optimization over the submitted candidates + capacity must reproduce the reported maximum total benefit, and the reported selection must be FEASIBLE (its total cost within capacity) and OPTIMAL (its benefit equals the DP optimum). A sub-optimal allocation under-serves patients; an over-capacity one over-commits the team. The load-bearing correctness gate — mirrors the Caseload Balancing Agent's capacity-respected and the Quality Shift Agent's cusum-consistent"
+  },
+  {
+    policyId: "policy.outreach.no-autonomous-schedule",
+    signal: "outreachNoAutonomousSchedule",
+    violatingValue: false,
+    violationHint: "Outreach launched / plan committed autonomously, or with no care-lead review",
+    reason:
+      "An outreach allocation autonomously launched the outreach, committed the plan, or booked the interventions (autoScheduled:true — each is a care-delivery action that must be authorized) or did not require care-lead review (requiresCareLeadReview:false); the agent PRIORITIZES — every allocation is a RECOMMENDATION requiring a care lead to confirm, and a deferred intervention is deferred to a later cycle, never denied. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Care Gap Agent's human-review posture — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
