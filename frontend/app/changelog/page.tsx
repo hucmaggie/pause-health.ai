@@ -28,10 +28,10 @@ type ChangelogWeek = {
 
 const weeks: ChangelogWeek[] = [
   {
-    range: "Week of July 12, 2026",
-    headline: "The Care Router's live-Claude path goes green — and the chat can invoke it",
+    range: "Week of September 6, 2026",
+    headline: "The Agent Fabric crosses 100 — a run of deterministic classical-algorithm agents, each a genuinely new computation pattern",
     intro:
-      "With ANTHROPIC_API_KEY finally set in production, the Care Router's live Claude Sonnet 4.5 path was still silently falling back to the deterministic engine — the model's JSON was being rejected before it could be used, and nothing in the trace said why. Two changes fixed that and made it observable, then the live Agentforce intake chat got an explicit handoff so a completed conversation can actually route to the Claude-backed Care Router as one continuous trace.",
+      "The fabric grew from the 68th to the 101st agent this week — a deliberate march through the classical-algorithms canon, each agent a DIFFERENT computation pattern with three governance-enforced honesty gates (sourced + self-consistent, a recomputing optimum, and never an autonomous action): Dijkstra shortest path, Boyer–Moore majority vote, trie longest-prefix match, weighted-interval-scheduling DP, Kadane's maximum-subarray, earliest-deadline-first scheduling, longest-common-subsequence diff, Huffman optimal prefix coding, linear partition by binary-search-on-the-answer (the 100th), and Kruskal's minimum spanning tree (the 101st) — alongside the patient-rights and payer-integrity agents (Right of Access, OIG exclusion screening, amendment/correction, information blocking, DDI safety, MLR rebate, 834 reconciliation, care-pathway sequencing, access-anomaly detection, caseload balancing, LASA medication-name safety, claim-lifecycle guard, NPI validation, household composition, provider benchmarking, network adequacy, PCP matching, reportable-condition classification, timeline merge, and SPC quality-shift detection). Every agent is deterministic (no Claude), PHI-audited where it touches clinical data, and demonstrable on /demo/intake with a parented Agent Fabric trace.",
     entries: [
       {
         title:
@@ -671,7 +671,15 @@ const weeks: ChangelogWeek[] = [
           }
         ],
         status: "shipped"
-      },
+      }
+    ]
+  },
+  {
+    range: "Week of August 30, 2026",
+    headline: "The regulated payer & patient-rights agents — COB through Right of Access (51st–67th)",
+    intro:
+      "A run of deterministic, human-cosign-gated payer-operations and patient-rights agents: Coordination of Benefits, Claims Overpayment & Recovery, Patient Financial Assistance, Lab Result & Critical-Value Notification, Good Faith Estimate, Balance Billing Protection, De-Identification, Immunization Forecasting, Minimum Necessary, Audit Log Integrity, Timely Filing, Controlled Substance / PDMP, Advance Beneficiary Notice, Accounting of Disclosures, Subrogation, Deal Desk, and Right of Access — each catalog-sourced and never an autonomous adverse determination.",
+    entries: [
       {
         title: "Agent Fabric: added the Claims Overpayment & Recovery agent — deterministic post-payment integrity with within-lookback-window, reason-catalog-sourced, and no autonomous clawback (the 52nd agent)",
         summary:
@@ -697,7 +705,15 @@ const weeks: ChangelogWeek[] = [
           }
         ],
         status: "shipped"
-      },
+      }
+    ]
+  },
+  {
+    range: "Week of August 2, 2026",
+    headline: "Identity, emergency access, and records lifecycle — plus the four-plane governance split",
+    intro:
+      "The platform & data-substrate governance agents landed — Master Patient Index / identity resolution, Break-the-Glass emergency access, and Data Retention & Records Lifecycle — alongside Risk Adjustment & HCC coding. Then a governance-taxonomy pass split the overloaded care-coordination tier into a fourth, PHI-bearing 'Payer & plan operations' plane, re-homing the payer-side agents with no logic change.",
+    entries: [
       {
         title: "Agent Fabric: split the overloaded care-coordination tier — introduced a fourth, PHI-bearing 'Payer & plan operations' plane (payer-operations tier) and moved the four payer-side agents onto it, still on the HIPAA-audit policy, no logic change",
         summary:
@@ -788,7 +804,15 @@ const weeks: ChangelogWeek[] = [
           }
         ],
         status: "shipped"
-      },
+      }
+    ]
+  },
+  {
+    range: "Week of July 19, 2026",
+    headline: "The Agent Fabric marches from the 28th to the 46th agent — care, quality, and the first regulated payer & commercial agents",
+    intro:
+      "A dense stretch of Agent Fabric build-out: the patient/clinical lifecycle filled in (clinical trials, language access, HEDIS, advance care planning, care-team management, transitions of care, grievance & appeals, provider credentialing, quality attribution, complex care management), then the first regulated payer-side and commercial agents landed — claims adjudication, formulary/DUR, fraud-waste-abuse, utilization review, clinical-trial payments, provider contracting — each deterministic, catalog-sourced, and human-cosign-gated, never an autonomous adverse determination, up through the Data-Sharing / TEFCA interoperability gateway.",
+    entries: [
       {
         title: "Agent Fabric: added the Data-Sharing / TEFCA Interoperability agent — deterministic cross-org PHI exchange with HIPAA §164.506 TPO gate + TEFCA participant verification + consent-scope enforcement (the 46th agent)",
         summary:
