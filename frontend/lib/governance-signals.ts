@@ -258,6 +258,10 @@ export type GovernanceTask = {
   routePathSourced?: boolean;
   routeOptimal?: boolean;
   routeNoAutonomousRouting?: boolean;
+  // Source-of-Truth Consensus / Golden-Record Field Reconciliation / Boyer–Moore Majority Vote (votes-sourced + consensus-consistent + no-autonomous-write)
+  consensusVotesSourced?: boolean;
+  consensusConsistent?: boolean;
+  consensusNoAutonomousWrite?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1739,6 +1743,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Transition initiated / setting booked autonomously, or with no care-lead review",
     reason:
       "A care route autonomously initiated the transition, booked the setting, or moved the patient (autoRouted:true — each is a care-delivery action that must be authorized) or did not require care-lead review (requiresCareLeadReview:false); the agent ROUTES on paper — every route is a RECOMMENDATION requiring a care lead to confirm. Mirrors the Care Gap Agent's human-review posture and the Outreach Agent's no-autonomous-schedule — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.consensus.votes-sourced",
+    signal: "consensusVotesSourced",
+    violatingValue: false,
+    violationHint: "A fabricated or dropped source vote",
+    reason:
+      "A source-of-truth reconciliation's per-source attribution does not correspond exactly to the submitted votes — every agreement must trace to a SUBMITTED vote (same sourceId + value; no fabricated source), every submitted vote must be attributed exactly once (none dropped, none double-listed), and the reported total must equal the number of votes. A fabricated source stuffs the ballot; a dropped source disenfranchises a feed. The sourced + completeness gate — mirrors the Enrollment Reconciliation Agent's reconciliation-complete and the Timeline Merge Agent's events-sourced"
+  },
+  {
+    policyId: "policy.consensus.consensus-consistent",
+    signal: "consensusConsistent",
+    violatingValue: false,
+    violationHint: "A wrong winner, a false consensus, or a mis-flagged source",
+    reason:
+      "A source-of-truth reconciliation does not recompute — re-running the BOYER–MOORE MAJORITY VOTE over the submitted votes must reproduce the reported candidate, its count, the has-consensus flag, and the disposition, and every real source's agreement flag must equal (its value === the candidate). A wrong winner writes a minority value to the golden record; a false consensus over a plurality corrupts it. The load-bearing correctness gate — mirrors the Timeline Merge Agent's merge-consistent and the Identifier Validation Agent's checksum-consistent"
+  },
+  {
+    policyId: "policy.consensus.no-autonomous-write",
+    signal: "consensusNoAutonomousWrite",
+    violatingValue: false,
+    violationHint: "Golden record written / promoted autonomously, or with no steward review",
+    reason:
+      "A source-of-truth reconciliation autonomously wrote the consensus value to the golden record / master data, overwrote a source system, or promoted a value to system-of-record (autoWritten:true — each is a data-integrity action that must be authorized) or did not require steward review (requiresStewardReview:false); the agent RECONCILES on paper — every reconciliation is a RECOMMENDATION requiring a data steward to confirm. Mirrors the Timeline Merge Agent's no-autonomous-merge and the Enrollment Reconciliation Agent's no-autonomous-change — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

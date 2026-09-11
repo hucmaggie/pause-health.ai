@@ -2071,6 +2071,66 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "data-plane"
   },
   {
+    id: "source-consensus-agent",
+    name: "Source-of-Truth Consensus / Golden-Record Field Reconciliation Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the data-substrate master-data / golden-record
+    // piece: POST /api/agents/source-consensus/tasks (card at
+    // /.well-known/agent.json). A DETERMINISTIC (no-Claude) platform / data-plane
+    // agent that takes a single logical FIELD whose value is reported by several
+    // SOURCE SYSTEMS (an EHR feed, a claims feed, a credentialing feed, an HIE
+    // feed) and decides whether those source votes have a STRICT MAJORITY — a
+    // consensus value more than half the sources agree on — reporting the winner,
+    // its count, and per-source agreement, or honestly reporting NO-CONSENSUS when
+    // no value carries a strict majority. UNLIKE the Care Routing agent's
+    // DIJKSTRA'S WEIGHTED SHORTEST PATH, the KPI Trend agent's LEAST-SQUARES LINEAR
+    // REGRESSION, the Outreach Prioritization agent's 0/1 KNAPSACK DYNAMIC
+    // PROGRAMMING, the Quality Shift agent's CUSUM CHANGE-POINT DETECTION, the
+    // Timeline Merge agent's K-WAY MERGE OF SORTED STREAMS, the Reportable
+    // Condition agent's RECURSIVE BOOLEAN EXPRESSION-TREE EVALUATION, the PCP
+    // Matching agent's TWO-SIDED STABLE MATCHING (Gale–Shapley), the Network
+    // Adequacy agent's GEOSPATIAL GREAT-CIRCLE DISTANCE, the Identifier Validation
+    // agent's MODULAR-ARITHMETIC CHECKSUM, the Household Composition agent's
+    // UNION-FIND CONNECTED COMPONENTS, the Provider Benchmarking agent's
+    // PERCENTILE / RANK STATISTICS, the MLR Rebate agent's LARGEST-REMAINDER
+    // APPORTIONMENT, the Medication Name Safety agent's STRING EDIT DISTANCE, the
+    // Schedule Conflict agent's GREEDY INTERVAL SELECTION, the Audit Log Integrity
+    // agent's HASH CHAIN, or the Claim Lifecycle agent's BFS REACHABILITY — and,
+    // CRUCIALLY, UNLIKE the Enrollment Reconciliation agent's KEYED SET-DIFFERENCE
+    // (which diffs WHO is on two rosters) and the Master-Patient-Index agent's
+    // WEIGHTED identity MATCHING (which decides whether two RECORDS are the same
+    // person) — the heart of this service is the BOYER–MOORE MAJORITY VOTE: the
+    // classic linear-time, constant-space algorithm that finds a strict-majority
+    // element in a single cancellation pass (hold a candidate + counter; increment
+    // on a match, decrement on a mismatch, reset the candidate at zero) plus one
+    // verification pass confirming the survivor occurs in more than half the votes.
+    // When two feeds disagree, a naive "last write wins" silently picks a wrong
+    // value; a majority vote picks the value the SOURCES themselves corroborate —
+    // and honestly declines when they don't. It COMPLEMENTS the other data-plane
+    // agents — distinct from the Enrollment Reconciliation agent (roster diff), the
+    // Master-Patient-Index agent (record identity matching), and the Timeline Merge
+    // agent (chronological event merge): this reconciles ONE field's conflicting
+    // source values into a golden-record value. It is DELIBERATELY NOT PHI-bearing
+    // — a golden-record reference attribute (a provider's specialty, an org's tax
+    // id), not patient health information — so, like the Identifier Validation
+    // agent, it is NOT on the HIPAA-audit policy. REUSES the existing data-plane
+    // tier (platform plane). The fields + sources + values are ILLUSTRATIVE, NOT a
+    // certified master-data-management / golden-record system.
+    endpoint: "/api/agents/source-consensus",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a single logical field whose value is reported by several source systems (an EHR feed, a claims feed, a credentialing feed, an HIE feed) and decides whether those votes have a strict majority — a consensus value more than half the sources agree on — reporting the winner, its count, and per-source agreement (consensus), or honestly reporting no-consensus when no value carries a strict majority. A deterministic data-substrate master-data agent; it COMPLEMENTS the Enrollment Reconciliation agent (roster diff), the Master-Patient-Index agent (record identity matching), and the Timeline Merge agent (chronological event merge) — this reconciles ONE field's conflicting source values into a golden-record value",
+      "The reconciliation is DETERMINISTIC — a pure function of the request's own votes (no randomness, no clock; not a regression, a knapsack, a CUSUM, a k-way merge, a recursive boolean tree, a stable matching, a geospatial distance, a checksum, a union-find, a percentile, a largest-remainder apportionment, an edit distance, an interval selection, a hash chain, a topological sort, a BFS hop-count, a Dijkstra shortest path, a keyed set-difference, or a weighted identity match but the BOYER–MOORE MAJORITY VOTE — the linear-time strict-majority election); the same votes always yield the same determination",
+      "The per-source attribution must be sourced — every agreement must trace to a submitted vote (same sourceId + value; no fabricated source), every submitted vote must be attributed exactly once (none dropped, none double-listed), and the total must equal the number of votes; a fabricated or dropped source is blocked at the Agent Fabric governance boundary (policy.consensus.votes-sourced, the sourced + completeness gate); and the consensus must recompute — re-running the Boyer–Moore majority vote over the votes must reproduce the reported candidate, its count, the has-consensus flag, the disposition, and every real source's agreement flag; a wrong winner or a false consensus is blocked (policy.consensus.consensus-consistent, the load-bearing correctness gate). Mirrors the Timeline Merge Agent's events-sourced + merge-consistent posture",
+      "The agent RECONCILES on paper — it NEVER writes the consensus value to the golden record / master data, overwrites a source system, or promotes a value to system-of-record (each is a data-integrity action that must be authorized) on its own; a reconciliation that auto-writes or is not review-gated is blocked (policy.consensus.no-autonomous-write), and every reconciliation is confirmed by a data steward. Mirrors the Timeline Merge Agent's no-autonomous-merge and the Enrollment Reconciliation Agent's no-autonomous-change posture",
+      "Runs against ILLUSTRATIVE synthetic fields + sources + values — clearly labeled; NOT a certified master-data-management / golden-record system (real MDM weights sources by trust and recency, resolves value semantics, and survives field-by-field with lineage — not a bare majority of raw string votes). DELIBERATELY NOT PHI-bearing — a golden-record reference attribute, not patient health information"
+    ],
+    provider: "MuleSoft Anypoint",
+    governanceTier: "data-plane"
+  },
+  {
     id: "break-the-glass-agent",
     name: "Break-the-Glass / Emergency Access Governance Agent",
     kind: "mulesoft-process",
@@ -4945,6 +5005,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Commercial KPI Trend Agent may NEVER commit the projection as an official forecast, adjust a quota / target, or notify finance on its own (autoCommitted:true — each is a consequential commercial action that must be authorized) or skip analyst review (requiresAnalystReview:true) — the agent PROJECTS, and every projection is a RECOMMENDATION requiring a revenue analyst to confirm. A projection that auto-commits, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Pipeline Management Agent's human-owner posture and the Account Management Agent's never-commit-a-contract posture — the harmful action is enforced-off.",
     appliesTo: ["kpi-trend-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.consensus.votes-sourced",
+    name: "The per-source attribution is sourced and complete",
+    description:
+      "The Source-of-Truth Consensus Agent's per-source attribution must correspond EXACTLY to the submitted votes — every reported agreement must trace to a SUBMITTED vote (same sourceId + value; no fabricated source), every submitted vote must be attributed exactly once (none dropped, none double-listed), and the reported total must equal the number of votes. A fabricated source stuffs the ballot; a dropped source disenfranchises a feed. A determination whose attribution invents or drops a source is rejected before it can leave the fabric. This is the sourced + completeness gate. Mirrors the Enrollment Reconciliation Agent's reconciliation-complete and the Timeline Merge Agent's events-sourced posture. (In the prototype the fields + sources + values are clearly-labeled illustrative synthetics.)",
+    appliesTo: ["source-consensus-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.consensus.consensus-consistent",
+    name: "The consensus recomputes (Boyer–Moore majority vote)",
+    description:
+      "The Source-of-Truth Consensus Agent's determination must recompute — re-running the BOYER–MOORE MAJORITY VOTE over the submitted votes must reproduce the reported candidate, its count, the has-consensus flag, the disposition, and every real source's agreement flag. A wrong winner writes a minority value to the golden record; a false consensus over a plurality corrupts it. A determination whose consensus doesn't add up is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Timeline Merge Agent's merge-consistent and the Identifier Validation Agent's checksum-consistent posture.",
+    appliesTo: ["source-consensus-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.consensus.no-autonomous-write",
+    name: "No golden-record value is ever written autonomously",
+    description:
+      "The Source-of-Truth Consensus Agent may NEVER write the consensus value to the golden record / master data, overwrite a source system, or promote a value to system-of-record on its own (autoWritten:true — each is a data-integrity action that must be authorized) or skip steward review (requiresStewardReview:true) — the agent RECONCILES on paper, and every reconciliation is a RECOMMENDATION requiring a data steward to confirm. A reconciliation that auto-writes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Timeline Merge Agent's no-autonomous-merge and the Enrollment Reconciliation Agent's no-autonomous-change posture — the harmful action is enforced-off.",
+    appliesTo: ["source-consensus-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -14519,6 +14606,115 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous commit.
         kpiNoAutonomousCommit: true,
         requiresAnalystReview: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedSourceConsensusTrace() {
+  const s = store();
+  const sc0 = Date.now() - 1000 * 60 * 1;
+  const scTaskId = "task-seed-source-consensus-001";
+  const scName = "Source-of-Truth Consensus / Golden-Record Field Reconciliation Agent";
+  s.traces.push(
+    {
+      id: "span-source-consensus-001",
+      taskId: scTaskId,
+      agentId: "source-consensus-agent",
+      agentName: scName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(sc0).toISOString(),
+      finishedAt: new Date(sc0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // Data-substrate reference attribute — no patient PHI.
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-source-consensus-002",
+      taskId: scTaskId,
+      parentSpanId: "span-source-consensus-001",
+      agentId: "source-consensus-agent",
+      agentName: scName,
+      operation: "consensus.receive-votes",
+      protocol: "a2a",
+      startedAt: new Date(sc0 + 30).toISOString(),
+      finishedAt: new Date(sc0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        fieldRef: "provider-4417.specialty",
+        voteCount: 5,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-source-consensus-003",
+      taskId: scTaskId,
+      parentSpanId: "span-source-consensus-002",
+      agentId: "source-consensus-agent",
+      agentName: scName,
+      operation: "consensus.run-majority-vote",
+      protocol: "a2a",
+      startedAt: new Date(sc0 + 60).toISOString(),
+      finishedAt: new Date(sc0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        fieldRef: "provider-4417.specialty",
+        candidate: "Endocrinology",
+        candidateCount: 4,
+        // The honesty invariants: votes sourced, consensus consistent.
+        consensusVotesSourced: true,
+        consensusConsistent: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-source-consensus-004",
+      taskId: scTaskId,
+      parentSpanId: "span-source-consensus-003",
+      agentId: "source-consensus-agent",
+      agentName: scName,
+      operation: "consensus.classify-consensus",
+      protocol: "a2a",
+      startedAt: new Date(sc0 + 100).toISOString(),
+      finishedAt: new Date(sc0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        fieldRef: "provider-4417.specialty",
+        disposition: "consensus",
+        hasConsensus: true,
+        phiAccessed: false,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-source-consensus-005",
+      taskId: scTaskId,
+      parentSpanId: "span-source-consensus-004",
+      agentId: "source-consensus-agent",
+      agentName: scName,
+      operation: "consensus.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(sc0 + 140).toISOString(),
+      finishedAt: new Date(sc0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        fieldRef: "provider-4417.specialty",
+        // The honesty invariant: never an autonomous write.
+        consensusNoAutonomousWrite: true,
+        requiresStewardReview: true,
         phiAccessed: false,
         synthetic: true
       }
