@@ -1909,6 +1909,55 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "list-reconciliation-agent",
+    name: "Clinical List Reconciliation / Longest-Common-Subsequence (LCS) Diff Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the care-coordination list-reconciliation piece:
+    // POST /api/agents/list-reconciliation/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) care-coordination agent that takes TWO ordered
+    // clinical lists for one record — a PRIOR list (the medication list at
+    // admission, the problem list at last visit, the care-plan steps as last
+    // agreed) and a CURRENT list (the same list now) — reconciles them by finding
+    // the LONGEST COMMON SUBSEQUENCE (the items PRESERVED in both, in order) and
+    // derives what was RETAINED, ADDED, and REMOVED. CRUCIALLY, this is NOT the
+    // Medication Name Safety agent's LEVENSHTEIN EDIT DISTANCE (which measures
+    // CHARACTER-level edit distance between two drug-name STRINGS to catch
+    // look-alike/sound-alike confusability) and NOT the Enrollment Reconciliation
+    // agent's KEYED SET RECONCILIATION (which joins two record sets on a key to
+    // find adds/drops/mismatches, order-independent). It is also UNLIKE the
+    // Timeline Merge agent's K-WAY MERGE (which interleaves already-sorted
+    // streams), the SLA Worklist agent's EARLIEST-DEADLINE-FIRST SCHEDULING, the
+    // Peak-Window agent's KADANE MAXIMUM-SUBARRAY, the Care Routing agent's
+    // DIJKSTRA'S SHORTEST PATH, the Outreach agent's 0/1 KNAPSACK, the Source
+    // Consensus agent's MAJORITY VOTE, the Code Taxonomy agent's TRIE
+    // LONGEST-PREFIX MATCH, the Household Composition agent's UNION-FIND, the Care
+    // Pathway agent's TOPOLOGICAL ORDERING, or the Identifier Validation agent's
+    // MODULAR-ARITHMETIC CHECKSUM — the heart of this service is the LONGEST COMMON
+    // SUBSEQUENCE: a dynamic-programming table over the two ORDERED lists finds the
+    // longest subsequence common to both (the items kept, in their shared order),
+    // and its complement in each list is what was removed (prior only) and added
+    // (current only). Order matters — LCS respects the sequence — which is exactly
+    // what set reconciliation throws away. A reconciliation is a RECOMMENDATION
+    // requiring a clinician to confirm; the agent never autonomously WRITES the
+    // reconciled list back, UPDATES the chart, or STARTS/STOPS a medication. It IS
+    // PHI-bearing (the lists are one patient's clinical record). REUSES the
+    // existing care-coordination tier. The lists are ILLUSTRATIVE, NOT a certified
+    // medication-reconciliation system.
+    endpoint: "/api/agents/list-reconciliation",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes two ordered clinical lists for one record — a prior list (the medication list at admission, the problem list at last visit, the care-plan steps as last agreed) and a current list (the same list now) — reconciles them by finding the longest common subsequence (the items preserved in both, in order) and derives what was retained, added, and removed (disposition lists-match / changes-present). A deterministic care-coordination reconciliation agent; it COMPLEMENTS the Medication Name Safety agent (which measures character-level edit distance between two drug-name strings) and the Enrollment Reconciliation agent (which joins two record sets on a key, order-independent) — this DIFFS two ORDERED lists respecting sequence",
+      "The reconciliation is DETERMINISTIC — a pure function of the request's own two lists (time is data: the lists are plain ordered tokens, no real clock; not a Levenshtein edit distance, a keyed set reconciliation, a k-way merge, an EDF schedule, a Kadane max-subarray, a Dijkstra path, a knapsack, a majority vote, a trie match, a union-find, a topological order, or a checksum but the LONGEST COMMON SUBSEQUENCE — a DP table over the two ordered lists, backtracked to the retained items, complemented to the removed + added); the same request always yields the same diff",
+      "The diff must be sourced + self-consistent — the reported retained list a genuine common subsequence of both lists (it appears in order within prior AND within current, nothing fabricated / reordered), the removed list exactly the prior items left unmatched (in order), the added list exactly the current items left unmatched (in order), the reported lcsLength matching the retained length, and the disposition following; a fabricated / reordered retained item or a mis-stated add/remove is blocked at the Agent Fabric governance boundary (policy.listdiff.diff-sourced, the sourced + self-consistency gate); and the common subsequence must be the longest — re-running the LCS DP must reproduce the reported lcsLength; a shorter-than-optimal subsequence that over-reports change is blocked (policy.listdiff.lcs-optimal, the load-bearing correctness gate). Mirrors the SLA Worklist Agent's schedule-sourced + edf-ordered posture",
+      "The agent RECONCILES and RECOMMENDS — it NEVER writes the reconciled list back, updates the chart, or starts/stops a medication (each is a clinical write that must be authorized) on its own; a reconciliation that auto-applies or is not review-gated is blocked (policy.listdiff.no-autonomous-update), and every reconciliation is confirmed by a clinician. Mirrors the SLA Worklist Agent's no-autonomous-dispatch and the Resource Scheduling Agent's no-autonomous-booking posture",
+      "Runs against ILLUSTRATIVE synthetic lists — clearly labeled; NOT a certified medication-reconciliation system (real medication / problem-list reconciliation normalizes to RxNorm / SNOMED and accounts for dose, route, frequency, therapeutic equivalence, and clinical intent). PHI-bearing — the lists are one patient's clinical record"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "provider-contracting-agent",
     name: "Provider Contracting & VBC Terms Agent",
     kind: "agentforce",
@@ -3698,6 +3747,7 @@ const POLICIES: PolicyRecord[] = [
       "complex-care-management-agent",
       "claims-adjudication-agent",
       "sla-worklist-agent",
+      "list-reconciliation-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
@@ -4377,6 +4427,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The SLA Worklist Agent may NEVER dispatch, start, or reassign a case on its own (autoDispatched:true — each is a work-assignment action that must be authorized) or skip reviewer review (requiresReviewerReview:true) — the agent SEQUENCES on paper, and every worklist is a RECOMMENDATION requiring a supervisor to confirm. A worklist that auto-dispatches, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Resource Scheduling Agent's no-autonomous-booking and the Caseload Balancing Agent's no-autonomous-assignment posture — the harmful action is enforced-off.",
     appliesTo: ["sla-worklist-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.listdiff.diff-sourced",
+    name: "The diff is sourced and self-consistent (a real common subsequence, honest complements)",
+    description:
+      "The Clinical List Reconciliation Agent's diff must be a REAL, self-consistent accounting of the two submitted lists — the reported RETAINED list must be a genuine COMMON SUBSEQUENCE of both lists (it appears in order within prior AND within current — nothing fabricated, nothing reordered), the REMOVED list must equal exactly the prior items left unmatched (in order), the ADDED list must equal exactly the current items left unmatched (in order), the reported lcsLength must match the retained length, and the disposition must follow. A fabricated / reordered retained item or a mis-stated add/remove corrupts the diff. A diff that invents or reorders a retained item, or mis-states an add/remove, is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the SLA Worklist Agent's schedule-sourced and the Peak-Window Agent's window-sourced posture. (In the prototype the lists are a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["list-reconciliation-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.listdiff.lcs-optimal",
+    name: "The common subsequence is the longest (the LCS DP recomputes)",
+    description:
+      "The Clinical List Reconciliation Agent's common subsequence must be the LONGEST — re-running the longest-common-subsequence dynamic program over the two submitted lists must reproduce the reported lcsLength (and disposition). A shorter-than-optimal common subsequence OVER-reports change — it lists items as removed+added that were really preserved, alarming a clinician needlessly. A diff whose common subsequence is not the longest is rejected before it can leave the fabric. This is the load-bearing correctness gate; it recomputes the LCS length INDEPENDENT of the reported retained list, so it is isolable from the sourced gate. Mirrors the SLA Worklist Agent's edf-ordered and the Care Routing Agent's route-optimal posture.",
+    appliesTo: ["list-reconciliation-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.listdiff.no-autonomous-update",
+    name: "The reconciled list is never autonomously written / applied to the chart",
+    description:
+      "The Clinical List Reconciliation Agent may NEVER write the reconciled list back, update the chart, or start/stop a medication on its own (autoApplied:true — each is a clinical write that must be authorized) or skip clinician review (requiresClinicianReview:true) — the agent RECONCILES on paper, and every reconciliation is a RECOMMENDATION requiring a clinician to confirm. A reconciliation that auto-applies, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the SLA Worklist Agent's no-autonomous-dispatch and the Resource Scheduling Agent's no-autonomous-booking posture — the harmful action is enforced-off.",
+    appliesTo: ["list-reconciliation-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -15485,6 +15562,114 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous dispatch.
         worklistNoAutonomousDispatch: true,
         requiresReviewerReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedListReconciliationTrace() {
+  const s = store();
+  const lr0 = Date.now() - 1000 * 60 * 1;
+  const lrTaskId = "task-seed-list-reconciliation-001";
+  const lrName = "Clinical List Reconciliation / Longest-Common-Subsequence (LCS) Diff Agent";
+  s.traces.push(
+    {
+      id: "span-list-reconciliation-001",
+      taskId: lrTaskId,
+      agentId: "list-reconciliation-agent",
+      agentName: lrName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(lr0).toISOString(),
+      finishedAt: new Date(lr0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // The lists are one patient's clinical record.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-list-reconciliation-002",
+      taskId: lrTaskId,
+      parentSpanId: "span-list-reconciliation-001",
+      agentId: "list-reconciliation-agent",
+      agentName: lrName,
+      operation: "listdiff.receive-lists",
+      protocol: "a2a",
+      startedAt: new Date(lr0 + 30).toISOString(),
+      finishedAt: new Date(lr0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        recordRef: "med-list-mrn-4821",
+        priorCount: 4,
+        currentCount: 4,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-list-reconciliation-003",
+      taskId: lrTaskId,
+      parentSpanId: "span-list-reconciliation-002",
+      agentId: "list-reconciliation-agent",
+      agentName: lrName,
+      operation: "listdiff.diff-lcs",
+      protocol: "a2a",
+      startedAt: new Date(lr0 + 60).toISOString(),
+      finishedAt: new Date(lr0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        recordRef: "med-list-mrn-4821",
+        lcsLength: 3,
+        // The honesty invariants: diff sourced + self-consistent, subsequence longest.
+        listDiffSourced: true,
+        listDiffLcsOptimal: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-list-reconciliation-004",
+      taskId: lrTaskId,
+      parentSpanId: "span-list-reconciliation-003",
+      agentId: "list-reconciliation-agent",
+      agentName: lrName,
+      operation: "listdiff.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(lr0 + 100).toISOString(),
+      finishedAt: new Date(lr0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        recordRef: "med-list-mrn-4821",
+        disposition: "changes-present",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-list-reconciliation-005",
+      taskId: lrTaskId,
+      parentSpanId: "span-list-reconciliation-004",
+      agentId: "list-reconciliation-agent",
+      agentName: lrName,
+      operation: "listdiff.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(lr0 + 140).toISOString(),
+      finishedAt: new Date(lr0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        recordRef: "med-list-mrn-4821",
+        // The honesty invariant: never an autonomous update.
+        listDiffNoAutonomousUpdate: true,
+        requiresClinicianReview: true,
         phiAccessed: true,
         synthetic: true
       }

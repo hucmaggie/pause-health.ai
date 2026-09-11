@@ -278,6 +278,10 @@ export type GovernanceTask = {
   worklistScheduleSourced?: boolean;
   worklistEdfOrdered?: boolean;
   worklistNoAutonomousDispatch?: boolean;
+  // Clinical List Reconciliation / Longest-Common-Subsequence (LCS) Diff (diff-sourced + lcs-optimal + no-autonomous-update)
+  listDiffSourced?: boolean;
+  listDiffLcsOptimal?: boolean;
+  listDiffNoAutonomousUpdate?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1879,6 +1883,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Case dispatched / started / reassigned autonomously, or with no reviewer review",
     reason:
       "An SLA worklist schedule autonomously dispatched, started, or reassigned a case (autoDispatched:true — each is a work-assignment action that must be authorized) or did not require reviewer review (requiresReviewerReview:false); the agent SEQUENCES on paper — every worklist is a RECOMMENDATION requiring a supervisor to confirm. Mirrors the Resource Scheduling Agent's no-autonomous-booking and the Caseload Balancing Agent's no-autonomous-assignment — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.listdiff.diff-sourced",
+    signal: "listDiffSourced",
+    violatingValue: false,
+    violationHint: "A fabricated / reordered retained item or a mis-stated add/remove",
+    reason:
+      "A clinical list reconciliation is not a real, self-consistent accounting of the two submitted lists — the reported RETAINED list must be a genuine COMMON SUBSEQUENCE of both lists (it appears in order within prior AND within current — nothing fabricated, nothing reordered), the REMOVED list must equal exactly the prior items left unmatched (in order), the ADDED list must equal exactly the current items left unmatched (in order), the reported lcsLength must match the retained length, and the disposition must follow. A fabricated / reordered retained item or a mis-stated add/remove corrupts the diff. The sourced + self-consistency gate — mirrors the SLA Worklist Agent's schedule-sourced and the Peak-Window Agent's window-sourced"
+  },
+  {
+    policyId: "policy.listdiff.lcs-optimal",
+    signal: "listDiffLcsOptimal",
+    violatingValue: false,
+    violationHint: "A shorter-than-optimal common subsequence that over-reports change",
+    reason:
+      "A clinical list reconciliation is not the longest common subsequence — re-running the LCS dynamic program over the two submitted lists must reproduce the reported lcsLength (and disposition). A shorter-than-optimal common subsequence OVER-reports change — it lists items as removed+added that were really preserved, alarming a clinician needlessly. The load-bearing correctness gate; it recomputes the LCS length INDEPENDENT of the reported retained list, so a fabricated retained list that still reports the optimal length fails sourced only and a real-but-sub-optimal subsequence fails here — mirrors the SLA Worklist Agent's edf-ordered and the Care Routing Agent's route-optimal"
+  },
+  {
+    policyId: "policy.listdiff.no-autonomous-update",
+    signal: "listDiffNoAutonomousUpdate",
+    violatingValue: false,
+    violationHint: "Reconciled list written / chart updated / medication changed autonomously, or with no clinician review",
+    reason:
+      "A clinical list reconciliation autonomously wrote the reconciled list back, updated the chart, or started/stopped a medication (autoApplied:true — each is a clinical write that must be authorized) or did not require clinician review (requiresClinicianReview:false); the agent RECONCILES on paper — every reconciliation is a RECOMMENDATION requiring a clinician to confirm. Mirrors the SLA Worklist Agent's no-autonomous-dispatch and the Resource Scheduling Agent's no-autonomous-booking — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

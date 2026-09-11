@@ -72,6 +72,7 @@ import { CodeTaxonomyPanel } from "../../../components/code-taxonomy-panel";
 import { ResourceSchedulingPanel } from "../../../components/resource-scheduling-panel";
 import { PeakWindowPanel } from "../../../components/peak-window-panel";
 import { SlaWorklistPanel } from "../../../components/sla-worklist-panel";
+import { ListReconciliationPanel } from "../../../components/list-reconciliation-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -239,6 +240,7 @@ export default function IntakeDemoPage() {
       <ResourceSchedulingPanel />
       <PeakWindowPanel />
       <SlaWorklistPanel />
+      <ListReconciliationPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 
