@@ -1958,6 +1958,53 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "batch-partition-agent",
+    name: "Chart Review Batch Partitioning / Linear Partition (Binary-Search-on-Answer) Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the care-coordination workload-partitioning piece:
+    // POST /api/agents/batch-partition/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) care-coordination agent that takes a
+    // CHRONOLOGICALLY / PRIORITY-ORDERED clinical review worklist — each item
+    // carrying an effort WEIGHT (estimated review minutes / complexity points) —
+    // and a reviewer count k, then splits the worklist into k CONTIGUOUS batches
+    // (order preserved) that MINIMIZE the busiest reviewer's load (the maximum
+    // batch weight). CRUCIALLY, this is NOT the Caseload Balancing agent's
+    // WORST-FIT-DECREASING BIN-PACKING (which reorders members by descending
+    // acuity and greedily drops each into the emptiest bin — an UNORDERED heuristic
+    // assignment) and NOT the Peak-Window agent's KADANE MAXIMUM-SUBARRAY (which
+    // finds one best contiguous window, not a k-way split). It is also UNLIKE the
+    // Huffman agent's OPTIMAL PREFIX CODING, the List Reconciliation agent's
+    // LONGEST COMMON SUBSEQUENCE, the SLA Worklist agent's EARLIEST-DEADLINE-FIRST
+    // SCHEDULING, the Care Routing agent's DIJKSTRA'S SHORTEST PATH, the Outreach
+    // agent's 0/1 KNAPSACK, the PCP Matching agent's GALE–SHAPLEY STABLE MATCHING,
+    // the Scheduling agent's INTERVAL SELECTION, or the Household Composition
+    // agent's UNION-FIND — the heart of this service is the LINEAR PARTITION
+    // PROBLEM solved by BINARY SEARCH ON THE ANSWER: the minimal feasible peak load
+    // lies between the single heaviest item and the total weight; a greedy
+    // feasibility test (how many contiguous batches does a candidate cap require?)
+    // is monotonic in the cap, so binary search converges on the exact minimal
+    // maximum, and an order-preserving DP reconstructs the split. Order matters —
+    // the split is CONTIGUOUS — which is exactly what unordered bin-packing throws
+    // away. A partition is a RECOMMENDATION requiring a supervisor to confirm; the
+    // agent never autonomously ASSIGNS a named reviewer or DISPATCHES the worklist.
+    // It IS PHI-adjacent (the item labels reference charts / encounters). REUSES
+    // the existing care-coordination tier. The worklist is ILLUSTRATIVE, NOT a
+    // certified staffing / workforce-management system.
+    endpoint: "/api/agents/batch-partition",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a chronologically / priority-ordered clinical review worklist — each item carrying an effort weight (estimated review minutes / complexity points) — and a reviewer count k, then splits it into k contiguous batches (order preserved) that minimize the busiest reviewer's load, reporting the batch boundaries, each batch load, and the minimal achievable peak load (disposition divisible / item-bound). A deterministic care-coordination partitioning agent; it COMPLEMENTS the Caseload Balancing agent (which greedily bin-packs unordered members into capacity-bounded panels) — this splits an ORDERED worklist into contiguous batches, provably minimizing the peak",
+      "The partition is DETERMINISTIC — a pure function of the request's own items + reviewer count (time is data: the weights are plain numbers, no real clock; not a worst-fit-decreasing bin-packing, a Kadane max-subarray, a Huffman code, an LCS diff, an EDF schedule, a Dijkstra path, a knapsack, a stable matching, an interval selection, or a union-find but the LINEAR PARTITION PROBLEM — binary search on the minimal peak load with a monotonic greedy feasibility test, reconstructed by an order-preserving DP); the same request always yields the same partition",
+      "The partition must be sourced + self-consistent — the batches, concatenated in order, reproducing EXACTLY the submitted items (same labels, weights, and sequence — nothing dropped / added / reordered / split), exactly batchCount non-empty contiguous batches, each batch load equal to the sum of its items' weights, the reported maxBatchLoad the largest batch load, maxItemWeight and totalWeight honest, and the disposition following; a fabricated batch, a reordered cover, or an overstated load is blocked at the Agent Fabric governance boundary (policy.batchpartition.partition-sourced, the sourced + self-consistency gate); and the partition must be optimal — re-running the linear-partition solver must reproduce the reported maxBatchLoad; a sub-optimal split that overloads one reviewer is blocked (policy.batchpartition.load-optimal, the load-bearing correctness gate). Mirrors the Huffman Agent's code-sourced + code-optimal posture",
+      "The agent PARTITIONS and RECOMMENDS — it NEVER assigns a named reviewer to a batch or dispatches the worklist (each is a staffing action that must be authorized) on its own; a partition that auto-assigns or is not review-gated is blocked (policy.batchpartition.no-autonomous-assign), and every partition is confirmed by a supervisor. Mirrors the Huffman Agent's no-autonomous-deploy and the SLA Worklist Agent's no-autonomous-dispatch posture",
+      "Runs against ILLUSTRATIVE synthetic worklists — clearly labeled; NOT a certified staffing / workforce-management system (real reviewer scheduling weighs skills, certifications, shift rules, breaks, and fatigue — not a bare contiguous split by an effort number). PHI-adjacent — the item labels reference charts / encounters, so a partition is on the HIPAA audit path"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "provider-contracting-agent",
     name: "Provider Contracting & VBC Terms Agent",
     kind: "agentforce",
@@ -3800,6 +3847,7 @@ const POLICIES: PolicyRecord[] = [
       "claims-adjudication-agent",
       "sla-worklist-agent",
       "list-reconciliation-agent",
+      "batch-partition-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
@@ -4533,6 +4581,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Event-Stream Code Assignment Agent may NEVER deploy the codec to the live integration bus or re-encode the production stream on its own (autoDeployed:true — each is an infrastructure change that must be authorized) or skip engineer review (requiresEngineerReview:true) — the agent ASSIGNS on paper, and every assignment is a RECOMMENDATION requiring an integration engineer to confirm. An assignment that auto-deploys, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the List Reconciliation Agent's no-autonomous-update and the SLA Worklist Agent's no-autonomous-dispatch posture — the harmful action is enforced-off.",
     appliesTo: ["huffman-coding-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.batchpartition.partition-sourced",
+    name: "The partition is sourced and self-consistent (a real order-preserving cover, honest loads)",
+    description:
+      "The Chart Review Batch Partitioning Agent's partition must be a REAL, self-consistent accounting of the submitted worklist — the batches, concatenated IN ORDER, must reproduce EXACTLY the submitted items (same labels, same weights, same sequence — no item dropped, added, reordered, or split across batches), there must be exactly batchCount NON-EMPTY contiguous batches, each batch's reported load equal to the sum of its items' weights, the reported maxBatchLoad equal to the largest batch load, maxItemWeight and totalWeight honest, and the disposition following. A fabricated batch, a reordered cover, or an overstated load corrupts the partition. A partition that fabricates a batch, reorders its cover, or overstates a load is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the Huffman Agent's code-sourced and the List Reconciliation Agent's diff-sourced posture. (In the prototype the weights are a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["batch-partition-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.batchpartition.load-optimal",
+    name: "The partition is the optimal, minimal-peak-load split (linear partition recomputes)",
+    description:
+      "The Chart Review Batch Partitioning Agent's partition must be OPTIMAL — re-running the LINEAR-PARTITION solver (BINARY SEARCH ON THE ANSWER) over the submitted weights + batchCount must reproduce the reported maxBatchLoad (and disposition). A sub-optimal split leaves one reviewer overloaded while others idle — the whole point of the balancing. A partition whose peak load isn't minimal is rejected before it can leave the fabric. This is the load-bearing correctness gate; it recomputes the minimal peak load from the weights INDEPENDENT of the reported batches, so a fabricated cover that still reports the optimal peak load fails sourced only and a real-but-sub-optimal split fails here — the two gates are isolable. Mirrors the Huffman Agent's code-optimal and the Care Routing Agent's route-optimal posture.",
+    appliesTo: ["batch-partition-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.batchpartition.no-autonomous-assign",
+    name: "No reviewer is autonomously assigned / the worklist dispatched",
+    description:
+      "The Chart Review Batch Partitioning Agent may NEVER assign a named reviewer to a batch or dispatch the worklist on its own (autoAssigned:true — each is a staffing action that must be authorized) or skip supervisor review (requiresSupervisorReview:true) — the agent PARTITIONS on paper, and every partition is a RECOMMENDATION requiring a supervisor to confirm. A partition that auto-assigns, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Huffman Agent's no-autonomous-deploy and the SLA Worklist Agent's no-autonomous-dispatch posture — the harmful action is enforced-off.",
+    appliesTo: ["batch-partition-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -15857,6 +15932,115 @@ function store(): FabricStore {
         huffCodeNoAutonomousDeploy: true,
         requiresEngineerReview: true,
         phiAccessed: false,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedBatchPartitionTrace() {
+  const s = store();
+  const bp0 = Date.now() - 1000 * 60 * 1;
+  const bpTaskId = "task-seed-batch-partition-001";
+  const bpName = "Chart Review Batch Partitioning / Linear Partition (Binary-Search-on-Answer) Agent";
+  s.traces.push(
+    {
+      id: "span-batch-partition-001",
+      taskId: bpTaskId,
+      agentId: "batch-partition-agent",
+      agentName: bpName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(bp0).toISOString(),
+      finishedAt: new Date(bp0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // Chart / encounter labels — PHI-adjacent; on the HIPAA audit path.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-batch-partition-002",
+      taskId: bpTaskId,
+      parentSpanId: "span-batch-partition-001",
+      agentId: "batch-partition-agent",
+      agentName: bpName,
+      operation: "batchpartition.receive-worklist",
+      protocol: "a2a",
+      startedAt: new Date(bp0 + 30).toISOString(),
+      finishedAt: new Date(bp0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        worklistRef: "chart-review-backlog-2231",
+        itemCount: 6,
+        batchCount: 3,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-batch-partition-003",
+      taskId: bpTaskId,
+      parentSpanId: "span-batch-partition-002",
+      agentId: "batch-partition-agent",
+      agentName: bpName,
+      operation: "batchpartition.partition",
+      protocol: "a2a",
+      startedAt: new Date(bp0 + 60).toISOString(),
+      finishedAt: new Date(bp0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        worklistRef: "chart-review-backlog-2231",
+        maxBatchLoad: 10,
+        totalWeight: 24,
+        // The honesty invariants: partition sourced + self-consistent, load optimal.
+        batchPartitionSourced: true,
+        batchPartitionLoadOptimal: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-batch-partition-004",
+      taskId: bpTaskId,
+      parentSpanId: "span-batch-partition-003",
+      agentId: "batch-partition-agent",
+      agentName: bpName,
+      operation: "batchpartition.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(bp0 + 100).toISOString(),
+      finishedAt: new Date(bp0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        worklistRef: "chart-review-backlog-2231",
+        disposition: "divisible",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-batch-partition-005",
+      taskId: bpTaskId,
+      parentSpanId: "span-batch-partition-004",
+      agentId: "batch-partition-agent",
+      agentName: bpName,
+      operation: "batchpartition.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(bp0 + 140).toISOString(),
+      finishedAt: new Date(bp0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        worklistRef: "chart-review-backlog-2231",
+        // The honesty invariant: never an autonomous assignment.
+        batchPartitionNoAutonomousAssign: true,
+        requiresSupervisorReview: true,
+        phiAccessed: true,
         synthetic: true
       }
     }

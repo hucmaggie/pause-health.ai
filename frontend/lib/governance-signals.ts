@@ -286,6 +286,10 @@ export type GovernanceTask = {
   huffCodeSourced?: boolean;
   huffCodeOptimal?: boolean;
   huffCodeNoAutonomousDeploy?: boolean;
+  // Chart Review Batch Partitioning / Linear Partition (partition-sourced + load-optimal + no-autonomous-assign)
+  batchPartitionSourced?: boolean;
+  batchPartitionLoadOptimal?: boolean;
+  batchPartitionNoAutonomousAssign?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1935,6 +1939,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Codec deployed to the live bus / production stream re-encoded autonomously, or with no engineer review",
     reason:
       "A Huffman code assignment autonomously deployed the codec to the live integration bus or re-encoded the production stream (autoDeployed:true — each is an infrastructure change that must be authorized) or did not require engineer review (requiresEngineerReview:false); the agent ASSIGNS on paper — every assignment is a RECOMMENDATION requiring an integration engineer to confirm. Mirrors the List Reconciliation Agent's no-autonomous-update and the SLA Worklist Agent's no-autonomous-dispatch — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.batchpartition.partition-sourced",
+    signal: "batchPartitionSourced",
+    violatingValue: false,
+    violationHint: "A fabricated batch, a reordered cover, or an overstated batch load",
+    reason:
+      "A chart-review batch partition is not a real, self-consistent accounting of the submitted worklist — the batches, concatenated IN ORDER, must reproduce EXACTLY the submitted items (same labels, same weights, same sequence — no item dropped, added, reordered, or split across batches), there must be exactly batchCount NON-EMPTY contiguous batches, each batch's reported load equal to the sum of its items' weights, the reported maxBatchLoad equal to the largest batch load, maxItemWeight and totalWeight honest, and the disposition following. A fabricated batch, a reordered cover, or an overstated load corrupts the partition. The sourced + self-consistency gate — mirrors the Huffman Agent's code-sourced and the List Reconciliation Agent's diff-sourced"
+  },
+  {
+    policyId: "policy.batchpartition.load-optimal",
+    signal: "batchPartitionLoadOptimal",
+    violatingValue: false,
+    violationHint: "A sub-optimal split that overloads one reviewer",
+    reason:
+      "A chart-review batch partition is not optimal — re-running the LINEAR-PARTITION solver (BINARY SEARCH ON THE ANSWER) over the submitted weights + batchCount must reproduce the reported maxBatchLoad (and disposition). A sub-optimal split leaves one reviewer overloaded while others idle — the whole point of the balancing. The load-bearing correctness gate; it recomputes the minimal peak load from the weights INDEPENDENT of the reported batches, so a fabricated cover that still reports the optimal peak load fails sourced only and a real-but-sub-optimal split fails here — mirrors the Huffman Agent's code-optimal and the Care Routing Agent's route-optimal"
+  },
+  {
+    policyId: "policy.batchpartition.no-autonomous-assign",
+    signal: "batchPartitionNoAutonomousAssign",
+    violatingValue: false,
+    violationHint: "Reviewers assigned / worklist dispatched autonomously, or with no supervisor review",
+    reason:
+      "A chart-review batch partition autonomously assigned a named reviewer to a batch or dispatched the worklist (autoAssigned:true — each is a staffing action that must be authorized) or did not require supervisor review (requiresSupervisorReview:false); the agent PARTITIONS on paper — every partition is a RECOMMENDATION requiring a supervisor to confirm. Mirrors the Huffman Agent's no-autonomous-deploy and the SLA Worklist Agent's no-autonomous-dispatch — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
