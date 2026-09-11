@@ -266,6 +266,10 @@ export type GovernanceTask = {
   codeClassificationsSourced?: boolean;
   codeClassificationConsistent?: boolean;
   codeNoAutonomousRecode?: boolean;
+  // Resource-Block Scheduling / Max-Value Non-Overlapping Selection / Weighted Interval Scheduling DP (selection-sourced + schedule-optimal + no-autonomous-booking)
+  blockScheduleSourced?: boolean;
+  blockScheduleOptimal?: boolean;
+  blockScheduleNoAutonomousBooking?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -1795,6 +1799,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Claim re-coded / codes submitted autonomously, or with no coder review",
     reason:
       "A code-taxonomy classification autonomously re-coded a claim, submitted the codes, or overwrote the coded record (autoApplied:true — each is a consequential coding action that must be authorized) or did not require coder review (requiresCoderReview:false); the agent CLASSIFIES on paper — every classification is a RECOMMENDATION requiring a coder to confirm. Mirrors the Identifier Validation Agent's no-autonomous-reject and the Enrollment Reconciliation Agent's no-autonomous-change — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.block-schedule.selection-sourced",
+    signal: "blockScheduleSourced",
+    violatingValue: false,
+    violationHint: "A fabricated block or a double-booked resource",
+    reason:
+      "A resource-block schedule is not a real, feasible subset of the submitted requests — every selected id must be a SUBMITTED request (no fabricated block, none double-counted), the selected windows must be pairwise NON-OVERLAPPING (the resource is never double-booked), the reported totalWeight must equal the sum of the selected weights, the counts must add up (scheduled + contended = total = requests), and the disposition must follow. A fabricated block or a double-booked resource corrupts the schedule. The sourced + feasibility gate — mirrors the Scheduling Conflict Agent's intervals-sourced + conflict-free and the Care Routing Agent's path-sourced"
+  },
+  {
+    policyId: "policy.block-schedule.schedule-optimal",
+    signal: "blockScheduleOptimal",
+    violatingValue: false,
+    violationHint: "A sub-optimal schedule that leaves clinical value unbooked",
+    reason:
+      "A resource-block schedule is not optimal — re-running the WEIGHTED INTERVAL SCHEDULING DYNAMIC PROGRAM over the submitted requests must reproduce the reported totalWeight and the same all-scheduled / contended disposition. A sub-optimal schedule silently leaves clinical value unbooked — a request that SHOULD have been scheduled sits contended so the resource delivers less than it could. The load-bearing correctness gate — mirrors the Care Routing Agent's route-optimal and the Outreach Prioritization Agent's selection-optimal"
+  },
+  {
+    policyId: "policy.block-schedule.no-autonomous-booking",
+    signal: "blockScheduleNoAutonomousBooking",
+    violatingValue: false,
+    violationHint: "Block booked / bumped autonomously, or with no scheduler review",
+    reason:
+      "A resource-block schedule autonomously booked, bumped, or confirmed a block (autoBooked:true — each is a scheduling action that must be authorized) or did not require scheduler review (requiresSchedulerReview:false); the agent SELECTS on paper — every schedule is a RECOMMENDATION requiring a scheduler to confirm. Mirrors the Scheduling Conflict Agent's no-autonomous-booking and the Caseload Balancing Agent's no-autonomous-assignment — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

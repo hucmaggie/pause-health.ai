@@ -1406,6 +1406,63 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "resource-scheduling-agent",
+    name: "Resource-Block Scheduling / Max-Value Non-Overlapping Selection Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the care-coordination capacity-optimization
+    // piece: POST /api/agents/resource-scheduling/tasks (card at /.well-known/
+    // agent.json). A DETERMINISTIC (no-Claude) care-coordination agent that
+    // takes a SINGLE SHARED SCARCE RESOURCE (an infusion chair, an OR block, a
+    // specialist's slot ladder, an imaging machine) and a batch of competing
+    // REQUESTS for it — each a time WINDOW with a priority WEIGHT (clinical
+    // value / acuity) — and selects the MAXIMUM-TOTAL-WEIGHT set of NON-
+    // OVERLAPPING requests the resource can honor, reporting the rest as
+    // CONTENDED. CRUCIALLY, this is NOT the Scheduling Conflict agent's GREEDY
+    // INTERVAL SELECTION (which maximizes the COUNT of non-overlapping
+    // appointments, WEIGHTLESS) and NOT the Caseload Balancing agent's GREEDY
+    // BIN-PACKING under a capacity constraint or the Outreach Prioritization
+    // agent's 0/1 KNAPSACK DYNAMIC PROGRAMMING (items with a value + a cost
+    // packed under a single capacity budget, no time / overlap structure). It is
+    // also UNLIKE the Care Routing agent's DIJKSTRA'S WEIGHTED SHORTEST PATH, the
+    // Source Consensus agent's BOYER–MOORE MAJORITY VOTE, the Code Taxonomy
+    // agent's TRIE LONGEST-PREFIX MATCH, the KPI Trend agent's LEAST-SQUARES
+    // REGRESSION, the Quality Shift agent's CUSUM CHANGE-POINT DETECTION, the
+    // Timeline Merge agent's K-WAY MERGE, the PCP Matching agent's STABLE
+    // MATCHING, the Network Adequacy agent's GREAT-CIRCLE DISTANCE, the Household
+    // Composition agent's UNION-FIND, the Provider Benchmarking agent's
+    // PERCENTILE / RANK STATISTICS, or the Identifier Validation agent's
+    // MODULAR-ARITHMETIC CHECKSUM — the heart of this service is WEIGHTED
+    // INTERVAL SCHEDULING via DYNAMIC PROGRAMMING: sort the requests by end time,
+    // compute for each request i the latest earlier request p(i) that does NOT
+    // overlap it, fill dp[i] = max(dp[i-1], weight_i + dp[p(i)]), and backtrack
+    // to recover the max-weight compatible subset. A greedy earliest-finish rule
+    // maximizes the COUNT of appointments but can leave clinical VALUE on the
+    // table (two short low-acuity blocks beat one long high-acuity block by
+    // count, but not by weight); the DP maximizes the total weight the resource
+    // actually delivers. It COMPLEMENTS the Scheduling Conflict agent (which
+    // maximizes the number of double-booking-free appointments) and the Caseload
+    // Balancing agent (which bin-packs patients across care managers): this picks
+    // the max-VALUE non-overlapping set for one contended resource. A schedule is
+    // a RECOMMENDATION requiring a scheduler to confirm; the agent never
+    // autonomously BOOKS, BUMPS, or CONFIRMS a block. It IS PHI-bearing (each
+    // request references the patient being scheduled). REUSES the existing care-
+    // coordination tier. The resource + requests are ILLUSTRATIVE, NOT a
+    // certified scheduling / capacity system.
+    endpoint: "/api/agents/resource-scheduling",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a single shared scarce resource (an infusion chair, an OR block, a specialist's slot ladder, an imaging machine) and a batch of competing requests for it — each a time window with a priority weight (clinical value / acuity) — and selects the maximum-total-weight set of non-overlapping requests the resource can honor, reporting the rest as contended (disposition all-scheduled / contended). A deterministic care-coordination capacity-optimization agent; it COMPLEMENTS the Scheduling Conflict agent (which maximizes the COUNT of double-booking-free appointments) and the Caseload Balancing agent (which bin-packs patients across care managers) — this picks the max-VALUE non-overlapping set for one contended resource",
+      "The selection is DETERMINISTIC — a pure function of the request's own requests (time is data: windows are plain numbers, no real clock; not a greedy interval selection, a bin-packing, a knapsack, a Dijkstra shortest path, a majority vote, a trie longest-prefix match, a regression, a CUSUM, a k-way merge, a stable matching, a great-circle distance, a union-find, a percentile, or a checksum but WEIGHTED INTERVAL SCHEDULING via DYNAMIC PROGRAMMING — sort by end, compute p(i) the latest non-overlapping earlier request, fill dp[i] = max(dp[i-1], weight_i + dp[p(i)]), and backtrack for the max-weight compatible subset); the same requests always yield the same schedule",
+      "The selection must be sourced + feasible — every selected id a submitted request (no fabricated block, none double-counted), the selected windows pairwise non-overlapping (the resource is never double-booked), the reported totalWeight equal to the sum of the selected weights, the counts adding up, and the disposition following; a fabricated block or a double-booked resource is blocked at the Agent Fabric governance boundary (policy.block-schedule.selection-sourced, the sourced + feasibility gate); and the selection must be optimal — re-running the weighted-interval DP over the requests must reproduce the reported totalWeight + disposition; a sub-optimal schedule that leaves clinical value unbooked is blocked (policy.block-schedule.schedule-optimal, the load-bearing correctness gate). Mirrors the Care Routing Agent's path-sourced + route-optimal posture",
+      "The agent SELECTS and RECOMMENDS — it NEVER books, bumps, or confirms a block (each is a scheduling action that must be authorized) on its own; a schedule that auto-books or is not review-gated is blocked (policy.block-schedule.no-autonomous-booking), and every schedule is confirmed by a scheduler. Mirrors the Scheduling Conflict Agent's no-autonomous-booking and the Caseload Balancing Agent's no-autonomous-assignment posture",
+      "Runs against ILLUSTRATIVE synthetic resource + requests — clearly labeled; NOT a certified scheduling / capacity system (real resource scheduling uses provider availability calendars, appointment-type durations, buffer / turnover times, room / equipment constraints, and staffing ratios). PHI-bearing — each request references the patient being scheduled"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "transitions-of-care-agent",
     name: "Discharge & Transitions of Care Agent",
     kind: "agentforce",
@@ -3569,6 +3626,7 @@ const POLICIES: PolicyRecord[] = [
       "access-anomaly-agent",
       "caseload-balancing-agent",
       "schedule-conflict-agent",
+      "resource-scheduling-agent",
       "medication-name-safety-agent",
       "claim-lifecycle-agent",
       "household-composition-agent",
@@ -4743,6 +4801,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Scheduling Conflict Agent may NEVER book, cancel, or bump an appointment on its own (autoBooked:true — each is a scheduling action that must be authorized) or skip scheduler review (requiresSchedulerReview:true) — the agent RECOMMENDS, and every schedule is a RECOMMENDATION requiring a scheduler to confirm. A schedule that auto-books, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Appointment Scheduling Agent's governance posture — the harmful action is enforced-off.",
     appliesTo: ["schedule-conflict-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.block-schedule.selection-sourced",
+    name: "The selection is sourced and feasible (no fabricated block, no double-booking)",
+    description:
+      "The Resource-Block Scheduling Agent's selection must be a REAL, FEASIBLE subset of the submitted requests — every selected id must be a SUBMITTED request (no fabricated block, none double-counted), the selected windows must be pairwise NON-OVERLAPPING (the resource is never double-booked), the reported totalWeight must equal the sum of the selected weights, the counts must add up (scheduled + contended = total = requests), and the disposition must follow. A fabricated block or a double-booked resource corrupts the schedule. A schedule that invents a block or double-books the resource is rejected before it can leave the fabric. This is the sourced + feasibility gate. Mirrors the Scheduling Conflict Agent's intervals-sourced + conflict-free and the Care Routing Agent's path-sourced posture. (In the prototype the resource + requests are clearly-labeled illustrative synthetics.)",
+    appliesTo: ["resource-scheduling-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.block-schedule.schedule-optimal",
+    name: "The selection is optimal (the weighted-interval DP recomputes)",
+    description:
+      "The Resource-Block Scheduling Agent's selection must be optimal — re-running the WEIGHTED INTERVAL SCHEDULING DYNAMIC PROGRAM over the submitted requests must reproduce the reported totalWeight and the same all-scheduled / contended disposition. A sub-optimal schedule silently leaves clinical value unbooked — a request that SHOULD have been scheduled sits contended so the resource delivers less than it could. A schedule whose total weight is not the DP optimum is rejected before it can leave the fabric. This is the load-bearing correctness gate. Mirrors the Care Routing Agent's route-optimal and the Outreach Prioritization Agent's selection-optimal posture.",
+    appliesTo: ["resource-scheduling-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.block-schedule.no-autonomous-booking",
+    name: "A block is never autonomously booked / bumped / confirmed",
+    description:
+      "The Resource-Block Scheduling Agent may NEVER book, bump, or confirm a block on its own (autoBooked:true — each is a scheduling action that must be authorized) or skip scheduler review (requiresSchedulerReview:true) — the agent SELECTS on paper, and every schedule is a RECOMMENDATION requiring a scheduler to confirm. A schedule that auto-books, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Scheduling Conflict Agent's no-autonomous-booking and the Caseload Balancing Agent's no-autonomous-assignment posture — the harmful action is enforced-off.",
+    appliesTo: ["resource-scheduling-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -14914,6 +14999,115 @@ function store(): FabricStore {
         codeNoAutonomousRecode: true,
         requiresCoderReview: true,
         phiAccessed: false,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedResourceSchedulingTrace() {
+  const s = store();
+  const rs0 = Date.now() - 1000 * 60 * 1;
+  const rsTaskId = "task-seed-resource-scheduling-001";
+  const rsName = "Resource-Block Scheduling / Max-Value Non-Overlapping Selection Agent";
+  s.traces.push(
+    {
+      id: "span-resource-scheduling-001",
+      taskId: rsTaskId,
+      agentId: "resource-scheduling-agent",
+      agentName: rsName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(rs0).toISOString(),
+      finishedAt: new Date(rs0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // The requests reference the patients being scheduled.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-resource-scheduling-002",
+      taskId: rsTaskId,
+      parentSpanId: "span-resource-scheduling-001",
+      agentId: "resource-scheduling-agent",
+      agentName: rsName,
+      operation: "schedule.receive-requests",
+      protocol: "a2a",
+      startedAt: new Date(rs0 + 30).toISOString(),
+      finishedAt: new Date(rs0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        resourceRef: "infusion-chair-3",
+        requestCount: 5,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-resource-scheduling-003",
+      taskId: rsTaskId,
+      parentSpanId: "span-resource-scheduling-002",
+      agentId: "resource-scheduling-agent",
+      agentName: rsName,
+      operation: "schedule.optimize-selection",
+      protocol: "a2a",
+      startedAt: new Date(rs0 + 60).toISOString(),
+      finishedAt: new Date(rs0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        resourceRef: "infusion-chair-3",
+        totalWeight: 11,
+        scheduledCount: 2,
+        // The honesty invariants: selection sourced + feasible, selection optimal.
+        blockScheduleSourced: true,
+        blockScheduleOptimal: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-resource-scheduling-004",
+      taskId: rsTaskId,
+      parentSpanId: "span-resource-scheduling-003",
+      agentId: "resource-scheduling-agent",
+      agentName: rsName,
+      operation: "schedule.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(rs0 + 100).toISOString(),
+      finishedAt: new Date(rs0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        resourceRef: "infusion-chair-3",
+        disposition: "contended",
+        contendedCount: 3,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-resource-scheduling-005",
+      taskId: rsTaskId,
+      parentSpanId: "span-resource-scheduling-004",
+      agentId: "resource-scheduling-agent",
+      agentName: rsName,
+      operation: "schedule.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(rs0 + 140).toISOString(),
+      finishedAt: new Date(rs0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        resourceRef: "infusion-chair-3",
+        // The honesty invariant: never an autonomous booking.
+        blockScheduleNoAutonomousBooking: true,
+        requiresSchedulerReview: true,
+        phiAccessed: true,
         synthetic: true
       }
     }

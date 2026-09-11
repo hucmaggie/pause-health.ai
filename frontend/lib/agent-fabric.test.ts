@@ -472,8 +472,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // the commercial-operations Commercial KPI Trend & Projection agent,
     // the care-coordination Care-Transition Routing / Least-Burden Path agent,
     // the data-plane Source-of-Truth Consensus / Golden-Record Field Reconciliation agent,
-    // and the data-plane Clinical Code Taxonomy / Longest-Prefix Classification agent.
-    expect(listAgents()).toHaveLength(94);
+    // the data-plane Clinical Code Taxonomy / Longest-Prefix Classification agent,
+    // and the care-coordination Resource-Block Scheduling / Max-Value Non-Overlapping Selection agent.
+    expect(listAgents()).toHaveLength(95);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
