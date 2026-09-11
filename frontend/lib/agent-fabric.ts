@@ -2094,6 +2094,48 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "contact-rate-limit-agent",
+    name: "Member Contact Rate Limiting / Token-Bucket Throttle Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the care-coordination contact-governance piece:
+    // POST /api/agents/contact-rate-limit/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) care-coordination agent that takes a
+    // chronologically-ordered sequence of outbound contact ATTEMPTS to a member
+    // and a token-bucket CONFIG (burst capacity + refill per hour) and replays the
+    // attempts through a TOKEN BUCKET to decide which contacts are PERMITTED and
+    // which are THROTTLED — so a member is never over-contacted past the frequency
+    // cap. The heart of the service is TOKEN-BUCKET RATE LIMITING: a bucket of
+    // `capacity` tokens refilling continuously at `refillPerHour`/hr (capped at
+    // capacity); each attempt in time order accrues refill, then consumes a token
+    // (permit) if one is available, else is throttled. CRUCIALLY this is a
+    // genuinely NEW pattern: NOT the Outreach Prioritization agent's 0/1 KNAPSACK
+    // (which selects WHICH members to contact — this governs HOW OFTEN one member
+    // may be contacted over time), NOT the Access Anomaly agent's SLIDING-WINDOW
+    // COUNTING (fixed window, no continuous refill or token reservoir), NOT the SLA
+    // Worklist agent's EARLIEST-DEADLINE-FIRST SCHEDULING, the Referral Throughput
+    // agent's MAX-FLOW, the Network Build-Out agent's MINIMUM SPANNING TREE, the
+    // Care Routing agent's DIJKSTRA'S SHORTEST PATH, or the Schedule Conflict
+    // agent's GREEDY INTERVAL SELECTION. A throttle plan is a RECOMMENDATION
+    // requiring an outreach coordinator to confirm; the agent never sends a
+    // permitted contact or suppresses a throttled one. It IS PHI-adjacent (the
+    // attempts reference member contacts). REUSES the existing care-coordination
+    // tier. The attempts are ILLUSTRATIVE, NOT a certified communications-compliance
+    // system.
+    endpoint: "/api/agents/contact-rate-limit",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Takes a chronologically-ordered sequence of outbound contact attempts to a member and a token-bucket config (burst capacity + refill per hour) and replays them through a token bucket to permit or throttle each (disposition within-limits / throttled), reporting the per-attempt decisions, the permitted/throttled tallies, and the final token level. A deterministic care-coordination contact-governance agent; it COMPLEMENTS the Outreach Prioritization agent (which selects WHICH members to contact) — this caps HOW OFTEN one member may be contacted over time",
+      "The plan is DETERMINISTIC — a pure function of the request's own config + timestamps (time is data: the timestamps are plain numbers, no real clock; not a knapsack, a sliding-window count, an EDF schedule, a max-flow, a minimum spanning tree, a Dijkstra path, or an interval selection but TOKEN-BUCKET RATE LIMITING — a continuously-refilling token reservoir with a burst cap); the same request always yields the same plan",
+      "The replay must be sourced + self-consistent — the decisions cover exactly the submitted attempts (same ids + timestamps, in non-decreasing time order — none dropped / added / reordered), the permitted/throttled tallies match, attemptCount honest, and the disposition following; a fabricated attempt, a reordered replay, or a miscounted tally is blocked at the Agent Fabric governance boundary (policy.contactrate.replay-sourced, the sourced + self-consistency gate); and the throttle must be policy-exact — re-running the token-bucket simulation must reproduce every permit/throttle decision and the final token level; an over- or under-throttled decision is blocked (policy.contactrate.throttle-exact, the load-bearing correctness gate). Mirrors the Referral Throughput Agent's flow-sourced + throughput-optimal posture",
+      "The agent PLANS and RECOMMENDS — it NEVER sends a permitted contact or suppresses a throttled one (each is a member-communication action that must be authorized) on its own; a plan that auto-sends or is not review-gated is blocked (policy.contactrate.no-autonomous-send), and every plan is confirmed by an outreach coordinator. Mirrors the Referral Throughput Agent's no-autonomous-route and the Batch Partition Agent's no-autonomous-assign posture",
+      "Runs against ILLUSTRATIVE synthetic attempts — clearly labeled; NOT a certified communications-compliance system (real member-contact governance weighs TCPA / CAN-SPAM consent, quiet hours, channel-specific caps, member preferences, and campaign suppression lists — not a bare token bucket over illustrative timestamps). PHI-adjacent — the attempts reference member contacts, so a plan is on the HIPAA audit path"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "provider-contracting-agent",
     name: "Provider Contracting & VBC Terms Agent",
     kind: "agentforce",
@@ -3939,6 +3981,7 @@ const POLICIES: PolicyRecord[] = [
       "batch-partition-agent",
       "network-buildout-agent",
       "referral-throughput-agent",
+      "contact-rate-limit-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
@@ -4753,6 +4796,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Referral Throughput Agent may NEVER book, dispatch, or route a referral on its own (autoRouted:true — each is a scheduling action that must be authorized) or skip coordinator review (requiresCoordinatorReview:true) — the agent PLANS on paper, and every throughput plan is a RECOMMENDATION requiring a referral coordinator to confirm. A plan that auto-routes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Network Build-Out Agent's no-autonomous-provision and the Batch Partition Agent's no-autonomous-assign posture — the harmful action is enforced-off.",
     appliesTo: ["referral-throughput-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.contactrate.replay-sourced",
+    name: "The throttle plan is a sourced, self-consistent replay of the submitted attempts",
+    description:
+      "The Member Contact Rate Limiting Agent's plan must be a REAL, self-consistent replay — the per-attempt decisions must cover EXACTLY the submitted attempts (same ids, same timestamps, in non-decreasing time order — none dropped, added, reordered, or with a fabricated timestamp), the reported permittedCount / throttledCount must match the decisions, attemptCount must be honest, and the disposition must follow (within-limits iff throttledCount === 0). A fabricated attempt, a reordered replay, or a miscounted tally corrupts the plan. A plan that fabricates an attempt, reorders its replay, or miscounts is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the Referral Throughput Agent's flow-sourced and the Batch Partition Agent's partition-sourced posture. (In the prototype the attempts are a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["contact-rate-limit-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.contactrate.throttle-exact",
+    name: "The throttle decision is policy-exact (the token bucket re-simulates)",
+    description:
+      "The Member Contact Rate Limiting Agent's plan must be POLICY-EXACT — re-running the TOKEN-BUCKET simulation over the submitted attempts + config must reproduce the EXACT permit / throttle decision for every attempt and the final token level. Over-throttling denies a contact the bucket would allow; under-throttling permits a contact past the frequency cap (over-contacting the member). A plan whose decisions don't match the bucket is rejected before it can leave the fabric. This is the load-bearing correctness gate; it re-simulates the bucket from the attempts + config INDEPENDENT of the reported decisions, so a fabricated replay that still reports the right tally fails sourced only and a real-but-mis-simulated throttle fails here — the two gates are isolable. Mirrors the Referral Throughput Agent's throughput-optimal and the Care Routing Agent's route-optimal posture.",
+    appliesTo: ["contact-rate-limit-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.contactrate.no-autonomous-send",
+    name: "No contact is autonomously sent / suppressed",
+    description:
+      "The Member Contact Rate Limiting Agent may NEVER send a permitted contact or suppress a throttled one on its own (autoSent:true — each is a member-communication action that must be authorized) or skip coordinator review (requiresCoordinatorReview:true) — the agent PLANS on paper, and every throttle plan is a RECOMMENDATION requiring an outreach coordinator to confirm. A plan that auto-sends, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Referral Throughput Agent's no-autonomous-route and the Batch Partition Agent's no-autonomous-assign posture — the harmful action is enforced-off.",
+    appliesTo: ["contact-rate-limit-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -16404,6 +16474,117 @@ function store(): FabricStore {
         networkRef: "referral-network-menoclinic-5510",
         // The honesty invariant: never an autonomous routing.
         referralNoAutonomousRoute: true,
+        requiresCoordinatorReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedContactRateLimitTrace() {
+  const s = store();
+  const cr0 = Date.now() - 1000 * 60 * 1;
+  const crTaskId = "task-seed-contact-rate-limit-001";
+  const crName = "Member Contact Rate Limiting / Token-Bucket Throttle Agent";
+  s.traces.push(
+    {
+      id: "span-contact-rate-limit-001",
+      taskId: crTaskId,
+      agentId: "contact-rate-limit-agent",
+      agentName: crName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(cr0).toISOString(),
+      finishedAt: new Date(cr0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // The attempts reference member contacts — PHI-adjacent; on the HIPAA audit path.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-contact-rate-limit-002",
+      taskId: crTaskId,
+      parentSpanId: "span-contact-rate-limit-001",
+      agentId: "contact-rate-limit-agent",
+      agentName: crName,
+      operation: "contactrate.receive-attempts",
+      protocol: "a2a",
+      startedAt: new Date(cr0 + 30).toISOString(),
+      finishedAt: new Date(cr0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        memberRef: "member-outreach-7731",
+        attemptCount: 5,
+        capacity: 3,
+        refillPerHour: 1,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-contact-rate-limit-003",
+      taskId: crTaskId,
+      parentSpanId: "span-contact-rate-limit-002",
+      agentId: "contact-rate-limit-agent",
+      agentName: crName,
+      operation: "contactrate.throttle",
+      protocol: "a2a",
+      startedAt: new Date(cr0 + 60).toISOString(),
+      finishedAt: new Date(cr0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        memberRef: "member-outreach-7731",
+        permittedCount: 4,
+        throttledCount: 1,
+        // The honesty invariants: replay sourced + self-consistent, throttle policy-exact.
+        contactReplaySourced: true,
+        contactThrottleExact: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-contact-rate-limit-004",
+      taskId: crTaskId,
+      parentSpanId: "span-contact-rate-limit-003",
+      agentId: "contact-rate-limit-agent",
+      agentName: crName,
+      operation: "contactrate.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(cr0 + 100).toISOString(),
+      finishedAt: new Date(cr0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        memberRef: "member-outreach-7731",
+        disposition: "throttled",
+        finalTokens: 0.5,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-contact-rate-limit-005",
+      taskId: crTaskId,
+      parentSpanId: "span-contact-rate-limit-004",
+      agentId: "contact-rate-limit-agent",
+      agentName: crName,
+      operation: "contactrate.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(cr0 + 140).toISOString(),
+      finishedAt: new Date(cr0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        memberRef: "member-outreach-7731",
+        // The honesty invariant: never an autonomous send.
+        contactNoAutonomousSend: true,
         requiresCoordinatorReview: true,
         phiAccessed: true,
         synthetic: true

@@ -298,6 +298,10 @@ export type GovernanceTask = {
   referralFlowSourced?: boolean;
   referralThroughputOptimal?: boolean;
   referralNoAutonomousRoute?: boolean;
+  // Member Contact Rate Limiting / Token-Bucket (replay-sourced + throttle-exact + no-autonomous-send)
+  contactReplaySourced?: boolean;
+  contactThrottleExact?: boolean;
+  contactNoAutonomousSend?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -2019,6 +2023,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Referrals booked / routed autonomously, or with no coordinator review",
     reason:
       "A referral-throughput plan autonomously booked, dispatched, or routed a referral (autoRouted:true — each is a scheduling action that must be authorized) or did not require coordinator review (requiresCoordinatorReview:false); the agent PLANS on paper — every throughput plan is a RECOMMENDATION requiring a referral coordinator to confirm. Mirrors the Network Build-Out Agent's no-autonomous-provision and the Batch Partition Agent's no-autonomous-assign — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.contactrate.replay-sourced",
+    signal: "contactReplaySourced",
+    violatingValue: false,
+    violationHint: "A fabricated attempt, a reordered replay, or a miscounted tally",
+    reason:
+      "A member-contact throttle plan is not a real, self-consistent replay of the submitted attempts — the decisions must cover EXACTLY the submitted attempts (same ids, same timestamps, in non-decreasing time order — none dropped, added, reordered, or with a fabricated timestamp), the reported permittedCount / throttledCount must match the decisions, attemptCount must be honest, and the disposition must follow (within-limits iff throttledCount === 0). A fabricated attempt, a reordered replay, or a miscounted tally corrupts the plan. The sourced + self-consistency gate — mirrors the Referral Throughput Agent's flow-sourced and the Batch Partition Agent's partition-sourced"
+  },
+  {
+    policyId: "policy.contactrate.throttle-exact",
+    signal: "contactThrottleExact",
+    violatingValue: false,
+    violationHint: "An over- or under-throttled decision (the token bucket disagrees)",
+    reason:
+      "A member-contact throttle plan is not policy-exact — re-running the TOKEN-BUCKET simulation over the submitted attempts + config must reproduce the EXACT permit / throttle decision for every attempt and the final token level. Over-throttling denies a contact the bucket would allow; under-throttling permits a contact past the frequency cap. The load-bearing correctness gate; it re-simulates the bucket from the attempts + config INDEPENDENT of the reported decisions, so a fabricated replay that still reports the right tally fails sourced only while a real-but-mis-simulated throttle fails here — mirrors the Referral Throughput Agent's throughput-optimal and the Care Routing Agent's route-optimal"
+  },
+  {
+    policyId: "policy.contactrate.no-autonomous-send",
+    signal: "contactNoAutonomousSend",
+    violatingValue: false,
+    violationHint: "Contacts sent / suppressed autonomously, or with no coordinator review",
+    reason:
+      "A member-contact throttle plan autonomously sent a permitted contact or suppressed a throttled one (autoSent:true — each is a member-communication action that must be authorized) or did not require coordinator review (requiresCoordinatorReview:false); the agent PLANS on paper — every throttle plan is a RECOMMENDATION requiring an outreach coordinator to confirm. Mirrors the Referral Throughput Agent's no-autonomous-route and the Batch Partition Agent's no-autonomous-assign — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

@@ -77,6 +77,7 @@ import { HuffmanCodingPanel } from "../../../components/huffman-coding-panel";
 import { BatchPartitionPanel } from "../../../components/batch-partition-panel";
 import { NetworkBuildoutPanel } from "../../../components/network-buildout-panel";
 import { ReferralThroughputPanel } from "../../../components/referral-throughput-panel";
+import { ContactRateLimitPanel } from "../../../components/contact-rate-limit-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -249,6 +250,7 @@ export default function IntakeDemoPage() {
       <BatchPartitionPanel />
       <NetworkBuildoutPanel />
       <ReferralThroughputPanel />
+      <ContactRateLimitPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 
