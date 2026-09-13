@@ -481,8 +481,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // the care-coordination Chart Review Batch Partitioning / Linear Partition (Binary-Search-on-Answer) agent,
     // the care-coordination Provider Network Build-Out / Minimum Spanning Tree (Kruskal's Algorithm) agent,
     // the care-coordination Referral Throughput / Maximum-Flow Network Capacity (Edmonds–Karp) agent,
-    // and the care-coordination Member Contact Rate Limiting / Token-Bucket Throttle agent.
-    expect(listAgents()).toHaveLength(103);
+    // the care-coordination Member Contact Rate Limiting / Token-Bucket Throttle agent,
+    // and the payer-operations Duplicate-Claim Pre-Screen / Bloom-Filter Membership Test agent.
+    expect(listAgents()).toHaveLength(104);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

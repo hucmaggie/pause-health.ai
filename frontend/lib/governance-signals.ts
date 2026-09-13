@@ -302,6 +302,10 @@ export type GovernanceTask = {
   contactReplaySourced?: boolean;
   contactThrottleExact?: boolean;
   contactNoAutonomousSend?: boolean;
+  // Duplicate-Claim Pre-Screen / Bloom Filter (filter-sourced + membership-exact + no-autonomous-reject)
+  dupScreenFilterSourced?: boolean;
+  dupScreenMembershipExact?: boolean;
+  dupScreenNoAutonomousReject?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -2047,6 +2051,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Contacts sent / suppressed autonomously, or with no coordinator review",
     reason:
       "A member-contact throttle plan autonomously sent a permitted contact or suppressed a throttled one (autoSent:true — each is a member-communication action that must be authorized) or did not require coordinator review (requiresCoordinatorReview:false); the agent PLANS on paper — every throttle plan is a RECOMMENDATION requiring an outreach coordinator to confirm. Mirrors the Referral Throughput Agent's no-autonomous-route and the Batch Partition Agent's no-autonomous-assign — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.dupscreen.filter-sourced",
+    signal: "dupScreenFilterSourced",
+    violatingValue: false,
+    violationHint: "A fabricated bit array, a mis-tallied count, or a verdict that contradicts the array",
+    reason:
+      "A duplicate-claim pre-screen is not a real, self-consistent Bloom filter — the reported bit array must be the EXACT array produced by inserting the submitted processed ids with the submitted (bitSize, hashCount), the setBitCount equal to the number of 1-bits, each result's id one of the submitted incoming ids (all covered, in order, none fabricated), each verdict consistent with the array (possibly-duplicate iff ALL k bits are set), the tallies matching, and the disposition following. A fabricated bit, a mis-tallied count, or a verdict that contradicts the array corrupts the screen. The sourced + self-consistency gate — mirrors the Contact Rate Limit Agent's replay-sourced and the Referral Throughput Agent's flow-sourced"
+  },
+  {
+    policyId: "policy.dupscreen.membership-exact",
+    signal: "dupScreenMembershipExact",
+    violatingValue: false,
+    violationHint: "A false negative (a known duplicate reported as definitely-new) or a wrong FP-rate estimate",
+    reason:
+      "A duplicate-claim pre-screen is not membership-exact — re-building the Bloom filter from the submitted processed ids + config and re-querying every incoming id must reproduce the reported verdict for each, and LOAD-BEARINGLY there must be NO FALSE NEGATIVE (any incoming id that IS one of the processed ids must be reported possibly-duplicate, never definitely-new — reporting a known duplicate as new would let a duplicate claim through, the one failure a Bloom filter must never make), and the estimated false-positive rate must equal (1 - e^(-k*n/m))^k. The load-bearing correctness gate; it re-derives the membership INDEPENDENT of the reported bit array, so a fabricated array that still reports the right verdicts fails filter-sourced only while a mislabeled verdict fails here — mirrors the Contact Rate Limit Agent's throttle-exact and the Referral Throughput Agent's throughput-optimal"
+  },
+  {
+    policyId: "policy.dupscreen.no-autonomous-reject",
+    signal: "dupScreenNoAutonomousReject",
+    violatingValue: false,
+    violationHint: "Claims rejected / denied autonomously, or with no adjudicator review",
+    reason:
+      "A duplicate-claim pre-screen autonomously rejected, denied, or paid a claim (autoRejected:true — each is an adjudication action that must be authorized) or did not require adjudicator review (requiresAdjudicatorReview:false); the agent PRE-SCREENS on paper — a possibly-duplicate is a ROUTING SIGNAL to the authoritative exact check, never a denial, and every screen is a RECOMMENDATION requiring a claims adjudicator to confirm. Mirrors the Contact Rate Limit Agent's no-autonomous-send and the Referral Throughput Agent's no-autonomous-route — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

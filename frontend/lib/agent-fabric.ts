@@ -1729,6 +1729,45 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "duplicate-claim-screen-agent",
+    name: "Duplicate-Claim Pre-Screen / Bloom-Filter Membership Test Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side duplicate-claim pre-screen piece:
+    // POST /api/agents/duplicate-claim-screen/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) agent for a health-plan / TPA that, given a set of
+    // already-PROCESSED claim ids and a batch of INCOMING claim ids, builds a BLOOM
+    // FILTER over the processed ids and screens each incoming id as DEFINITELY-NEW
+    // (provably never processed — no false negatives) or POSSIBLY-DUPLICATE (route
+    // to the authoritative exact check). The heart of the service is the BLOOM
+    // FILTER: a space-efficient probabilistic set-membership structure with a
+    // one-sided guarantee (no false negatives) and a tunable false-positive rate.
+    // CRUCIALLY this is NOT the Enrollment Reconciliation agent's KEYED
+    // SET-DIFFERENCE (an exact two-roster diff — this is a probabilistic one-sided
+    // membership pre-screen with no per-key storage), NOT the Source Consensus
+    // agent's BOYER–MOORE MAJORITY VOTE, NOT the Timeline Merge agent's K-WAY MERGE,
+    // NOT the Audit Log Integrity agent's HASH CHAIN, NOT the Identifier Validation
+    // agent's MODULAR-ARITHMETIC CHECKSUM, and NOT the Code Taxonomy agent's TRIE
+    // LONGEST-PREFIX MATCH. A possibly-duplicate is a ROUTING SIGNAL to the exact
+    // check, never a denial; the agent never rejects, denies, or pays a claim, and
+    // every screen is a RECOMMENDATION requiring a claims adjudicator to confirm. It
+    // IS PHI-adjacent (claim ids). REUSES the existing payer-operations tier as a
+    // sibling to the Claims Adjudication agent. The ids are ILLUSTRATIVE, NOT a
+    // certified claims-dedup / payment-integrity system.
+    endpoint: "/api/agents/duplicate-claim-screen",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Given a set of already-processed claim ids and a batch of incoming claim ids plus a Bloom config (bit size m + hash count k), builds a Bloom filter over the processed ids and screens each incoming id as definitely-new (provably never processed) or possibly-duplicate (route to the authoritative exact check), reporting the per-id verdicts, the tallies, the set-bit count, and the estimated false-positive rate (disposition all-clear / possible-duplicates). A deterministic payer-operations claims pre-screen; it COMPLEMENTS the Enrollment Reconciliation agent (an exact set-difference) — this is a fast probabilistic pre-filter before the exact check",
+      "The screen is DETERMINISTIC — a pure function of the request's own ids + config with a fixed seeded hash (time is data: the ids are plain data, no real clock; not a keyed set-difference, a majority vote, a k-way merge, a hash chain, a checksum, or a trie but BLOOM-FILTER MEMBERSHIP — a probabilistic set-membership structure with a one-sided no-false-negative guarantee); the same request always yields the same screen",
+      "The filter must be sourced + self-consistent — the reported bit array the exact insert of the processed ids, the set-bit count honest, each verdict consistent with the array; a fabricated bit, a mis-tallied count, or a contradicting verdict is blocked at the Agent Fabric governance boundary (policy.dupscreen.filter-sourced, the sourced + self-consistency gate); and membership must be exact with NO FALSE NEGATIVE — re-building the filter must reproduce every verdict and never report a known duplicate as definitely-new, and the false-positive-rate estimate must match (1 - e^(-k*n/m))^k; a mislabeled verdict is blocked (policy.dupscreen.membership-exact, the load-bearing correctness gate). Mirrors the Contact Rate Limit Agent's replay-sourced + throttle-exact posture",
+      "The agent PRE-SCREENS and RECOMMENDS — a possibly-duplicate is a ROUTING SIGNAL to the exact check, NEVER a denial; it never rejects, denies, or pays a claim on its own; a screen that auto-rejects or is not review-gated is blocked (policy.dupscreen.no-autonomous-reject), and every screen is confirmed by a claims adjudicator. Mirrors the Contact Rate Limit Agent's no-autonomous-send and the Referral Throughput Agent's no-autonomous-route posture",
+      "Runs against ILLUSTRATIVE synthetic ids — clearly labeled; NOT a certified claims-dedup / payment-integrity system (real duplicate-claim detection weighs the full claim key — member, provider, DOS, procedure, units — adjustment / void logic, and an authoritative claims store — not a bare Bloom pre-screen over illustrative ids). PHI-adjacent — claim ids, so a screen is on the HIPAA audit path"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
+  },
+  {
     id: "formulary-review-agent",
     name: "Formulary & Drug Utilization Review Agent",
     kind: "agentforce",
@@ -3982,6 +4021,7 @@ const POLICIES: PolicyRecord[] = [
       "network-buildout-agent",
       "referral-throughput-agent",
       "contact-rate-limit-agent",
+      "duplicate-claim-screen-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
@@ -4823,6 +4863,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Member Contact Rate Limiting Agent may NEVER send a permitted contact or suppress a throttled one on its own (autoSent:true — each is a member-communication action that must be authorized) or skip coordinator review (requiresCoordinatorReview:true) — the agent PLANS on paper, and every throttle plan is a RECOMMENDATION requiring an outreach coordinator to confirm. A plan that auto-sends, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Referral Throughput Agent's no-autonomous-route and the Batch Partition Agent's no-autonomous-assign posture — the harmful action is enforced-off.",
     appliesTo: ["contact-rate-limit-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.dupscreen.filter-sourced",
+    name: "The pre-screen is a sourced, self-consistent Bloom filter",
+    description:
+      "The Duplicate-Claim Pre-Screen Agent's plan must be a REAL, self-consistent Bloom filter — the reported bit array the EXACT array produced by inserting the submitted processed ids with the submitted (bitSize, hashCount), the setBitCount equal to the number of 1-bits, each result's id one of the submitted incoming ids (all covered, in order, none fabricated), each verdict consistent with the array (possibly-duplicate iff ALL k bits are set), the tallies matching, and the disposition following. A fabricated bit, a mis-tallied count, or a verdict that contradicts the array corrupts the screen. A screen that fabricates a bit, miscounts, or reports a contradicting verdict is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the Contact Rate Limit Agent's replay-sourced and the Referral Throughput Agent's flow-sourced posture. (In the prototype the ids are a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["duplicate-claim-screen-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.dupscreen.membership-exact",
+    name: "Membership is exact — no false negatives (the Bloom filter re-derives)",
+    description:
+      "The Duplicate-Claim Pre-Screen Agent's plan must be MEMBERSHIP-EXACT — re-building the Bloom filter from the submitted processed ids + config and re-querying every incoming id must reproduce the reported verdict for each, and LOAD-BEARINGLY there must be NO FALSE NEGATIVE: any incoming id that IS one of the processed ids must be reported possibly-duplicate (never definitely-new) — reporting a known duplicate as new would let a duplicate claim through, the one failure a Bloom filter must never make — and the estimated false-positive rate must equal (1 - e^(-k*n/m))^k. A screen whose verdicts don't match the re-derived membership, or that reports a false negative, is rejected before it can leave the fabric. This is the load-bearing correctness gate; it re-derives the membership INDEPENDENT of the reported bit array, so a fabricated array that still reports the right verdicts fails filter-sourced only and a mislabeled verdict fails here — the two gates are isolable. Mirrors the Contact Rate Limit Agent's throttle-exact and the Referral Throughput Agent's throughput-optimal posture.",
+    appliesTo: ["duplicate-claim-screen-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.dupscreen.no-autonomous-reject",
+    name: "No claim is autonomously rejected / denied",
+    description:
+      "The Duplicate-Claim Pre-Screen Agent may NEVER reject, deny, or pay a claim on its own (autoRejected:true — each is an adjudication action that must be authorized) or skip adjudicator review (requiresAdjudicatorReview:true) — the agent PRE-SCREENS on paper, a possibly-duplicate is a ROUTING SIGNAL to the authoritative exact check (never a denial), and every screen is a RECOMMENDATION requiring a claims adjudicator to confirm. A screen that auto-rejects, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Contact Rate Limit Agent's no-autonomous-send and the Referral Throughput Agent's no-autonomous-route posture — the harmful action is enforced-off.",
+    appliesTo: ["duplicate-claim-screen-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -16586,6 +16653,118 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous send.
         contactNoAutonomousSend: true,
         requiresCoordinatorReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedDuplicateClaimScreenTrace() {
+  const s = store();
+  const dc0 = Date.now() - 1000 * 60 * 1;
+  const dcTaskId = "task-seed-duplicate-claim-screen-001";
+  const dcName = "Duplicate-Claim Pre-Screen / Bloom-Filter Membership Test Agent";
+  s.traces.push(
+    {
+      id: "span-duplicate-claim-screen-001",
+      taskId: dcTaskId,
+      agentId: "duplicate-claim-screen-agent",
+      agentName: dcName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(dc0).toISOString(),
+      finishedAt: new Date(dc0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // Claim ids are PHI-adjacent; on the HIPAA audit path.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-duplicate-claim-screen-002",
+      taskId: dcTaskId,
+      parentSpanId: "span-duplicate-claim-screen-001",
+      agentId: "duplicate-claim-screen-agent",
+      agentName: dcName,
+      operation: "dupscreen.receive-batch",
+      protocol: "a2a",
+      startedAt: new Date(dc0 + 30).toISOString(),
+      finishedAt: new Date(dc0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        batchRef: "claims-batch-2026-09-1180",
+        processedCount: 6,
+        incomingCount: 5,
+        bitSize: 64,
+        hashCount: 3,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-duplicate-claim-screen-003",
+      taskId: dcTaskId,
+      parentSpanId: "span-duplicate-claim-screen-002",
+      agentId: "duplicate-claim-screen-agent",
+      agentName: dcName,
+      operation: "dupscreen.screen",
+      protocol: "a2a",
+      startedAt: new Date(dc0 + 60).toISOString(),
+      finishedAt: new Date(dc0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        batchRef: "claims-batch-2026-09-1180",
+        possibleDuplicateCount: 3,
+        definitelyNewCount: 2,
+        estimatedFalsePositiveRate: 0.014735,
+        // The honesty invariants: filter sourced + self-consistent, membership exact.
+        dupScreenFilterSourced: true,
+        dupScreenMembershipExact: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-duplicate-claim-screen-004",
+      taskId: dcTaskId,
+      parentSpanId: "span-duplicate-claim-screen-003",
+      agentId: "duplicate-claim-screen-agent",
+      agentName: dcName,
+      operation: "dupscreen.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(dc0 + 100).toISOString(),
+      finishedAt: new Date(dc0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        batchRef: "claims-batch-2026-09-1180",
+        disposition: "possible-duplicates",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-duplicate-claim-screen-005",
+      taskId: dcTaskId,
+      parentSpanId: "span-duplicate-claim-screen-004",
+      agentId: "duplicate-claim-screen-agent",
+      agentName: dcName,
+      operation: "dupscreen.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(dc0 + 140).toISOString(),
+      finishedAt: new Date(dc0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        batchRef: "claims-batch-2026-09-1180",
+        // The honesty invariant: never an autonomous rejection.
+        dupScreenNoAutonomousReject: true,
+        requiresAdjudicatorReview: true,
         phiAccessed: true,
         synthetic: true
       }
