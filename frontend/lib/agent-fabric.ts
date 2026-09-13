@@ -1768,6 +1768,47 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "audit-sample-agent",
+    name: "Audit Sample Selection / Reservoir Sampling (Algorithm R, Seeded) Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side compliance-sampling piece:
+    // POST /api/agents/audit-sample/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) agent for a health-plan / TPA compliance team
+    // that, given a large STREAM of record ids (claims / charts flagged for an
+    // audit) and a target sample size k + an explicit SEED, draws a
+    // statistically-defensible k-record SAMPLE in a SINGLE PASS via RESERVOIR
+    // SAMPLING (Vitter's Algorithm R): fill the reservoir with the first k, then
+    // for each later item i draw j in [0, i] and replace reservoir[j] if j < k;
+    // after one pass every item has uniform k/n inclusion probability. The
+    // randomness is a SEEDED PRNG (mulberry32), so the sample is REPRODUCIBLE —
+    // same stream + k + seed → same records — which is what makes an audit sample
+    // defensible. CRUCIALLY this is NOT the Duplicate-Claim Screen agent's BLOOM
+    // FILTER (a membership test, not a uniform draw), NOT the Outreach
+    // Prioritization agent's 0/1 KNAPSACK (a value-maximizing subset, not an
+    // equal-probability sample), NOT the SLA Worklist agent's
+    // EARLIEST-DEADLINE-FIRST SCHEDULING, NOT the Provider Benchmarking agent's
+    // PERCENTILE / RANK STATISTICS, NOT the Contact Rate Limit agent's TOKEN
+    // BUCKET, and NOT the Enrollment Reconciliation agent's KEYED SET-DIFFERENCE.
+    // The agent SELECTS which records to pull; it never opens, adjudicates, or
+    // acts on a sampled record, and every sample is a RECOMMENDATION requiring a
+    // compliance auditor to run the audit. It IS PHI-adjacent (record ids).
+    // REUSES the existing payer-operations tier. The ids are ILLUSTRATIVE, NOT a
+    // certified statistical-sampling / audit system.
+    endpoint: "/api/agents/audit-sample",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Given a stream of record ids, a target sample size k, and a seed, draws a statistically-defensible k-record sample in a single pass (uniform k/n inclusion probability), reporting the selected ids, the population size, the inclusion probability, and the seed (disposition sampled / full-population). A deterministic payer-operations compliance-sampling agent; it COMPLEMENTS the Fraud-Waste-Abuse and Duplicate-Claim Screen agents — they flag records, this selects a defensible sample of records to audit",
+      "The draw is DETERMINISTIC — a pure function of the request's own ids + k + seed via a seeded PRNG (time is data: the ids are plain data, no real clock, no OS randomness; not a Bloom filter, a knapsack, an EDF schedule, a percentile/rank, a token bucket, or a keyed set-difference but RESERVOIR SAMPLING — single-pass uniform selection with Vitter's Algorithm R); the same request always yields the same sample",
+      "The sample must be sourced + self-consistent — a real subset of the submitted stream (no fabricated id, no over-count duplicate), size min(k, n), honest population size and inclusion probability; a fabricated id, a duplicate pick, or a mis-sized sample is blocked at the Agent Fabric governance boundary (policy.auditsample.sample-sourced, the sourced + self-consistency gate); and the selection must be reproducible — re-running the seeded Algorithm R must reproduce the exact sample; a cherry-picked or otherwise unreproducible draw is blocked (policy.auditsample.selection-reproducible, the load-bearing correctness gate). Mirrors the Duplicate-Claim Screen Agent's filter-sourced + membership-exact posture",
+      "The agent SELECTS and RECOMMENDS — it NEVER opens, adjudicates, flags, or acts on a sampled record (each is an audit action that must be authorized) on its own; a sample that auto-audits or is not review-gated is blocked (policy.auditsample.no-autonomous-audit), and every sample is confirmed by a compliance auditor who runs the audit. Mirrors the Duplicate-Claim Screen Agent's no-autonomous-reject and the Contact Rate Limit Agent's no-autonomous-send posture",
+      "Runs against ILLUSTRATIVE synthetic ids — clearly labeled; NOT a certified statistical-sampling / audit system (real audit sampling weighs stratification, RAT-STATS / OIG methodology, confidence intervals, and dollar-unit / probability-proportional-to-size designs — not a bare uniform reservoir over illustrative ids). PHI-adjacent — record ids, so a sample is on the HIPAA audit path"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
+  },
+  {
     id: "formulary-review-agent",
     name: "Formulary & Drug Utilization Review Agent",
     kind: "agentforce",
@@ -4022,6 +4063,7 @@ const POLICIES: PolicyRecord[] = [
       "referral-throughput-agent",
       "contact-rate-limit-agent",
       "duplicate-claim-screen-agent",
+      "audit-sample-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
@@ -4890,6 +4932,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Duplicate-Claim Pre-Screen Agent may NEVER reject, deny, or pay a claim on its own (autoRejected:true — each is an adjudication action that must be authorized) or skip adjudicator review (requiresAdjudicatorReview:true) — the agent PRE-SCREENS on paper, a possibly-duplicate is a ROUTING SIGNAL to the authoritative exact check (never a denial), and every screen is a RECOMMENDATION requiring a claims adjudicator to confirm. A screen that auto-rejects, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Contact Rate Limit Agent's no-autonomous-send and the Referral Throughput Agent's no-autonomous-route posture — the harmful action is enforced-off.",
     appliesTo: ["duplicate-claim-screen-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.auditsample.sample-sourced",
+    name: "The audit sample is a sourced, self-consistent subset of the population",
+    description:
+      "The Audit Sample Agent's sample must be a REAL subset of the submitted stream — every selected id appearing in the submitted recordIds (no fabricated id), no id selected more times than it appears, the sample size equal to min(sampleSize, populationSize), the reported populationSize equal to the stream length, the inclusionProbability equal to effectiveSampleSize / populationSize, and the disposition following (full-population iff populationSize ≤ k). A fabricated id, a duplicate pick, or a mis-sized sample corrupts the draw. A sample that fabricates an id, over-counts a duplicate, or is mis-sized is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the Duplicate-Claim Screen Agent's filter-sourced and the Contact Rate Limit Agent's replay-sourced posture. (In the prototype the ids are a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["audit-sample-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.auditsample.selection-reproducible",
+    name: "The selection is reproducible from its seed (Algorithm R re-runs)",
+    description:
+      "The Audit Sample Agent's sample must be REPRODUCIBLE — re-running the seeded RESERVOIR SAMPLING (Algorithm R) over the submitted stream + (sampleSize, seed) must reproduce the EXACT sample (same ids, same order). A sample that cannot be reproduced from its own seed is not a defensible audit sample: a cherry-picked set could otherwise hide behind a random-looking label. A sample the seed wouldn't produce is rejected before it can leave the fabric. This is the load-bearing correctness gate; it re-runs Algorithm R INDEPENDENT of the reported sample, so a fabricated-but-in-population sample fails here and a real seeded draw with a fabricated id fails sourced — the two gates are isolable. Mirrors the Duplicate-Claim Screen Agent's membership-exact and the Contact Rate Limit Agent's throttle-exact posture.",
+    appliesTo: ["audit-sample-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.auditsample.no-autonomous-audit",
+    name: "No sampled record is autonomously opened / audited",
+    description:
+      "The Audit Sample Agent may NEVER open, adjudicate, flag, or act on a sampled record on its own (autoAudited:true — each is an audit action that must be authorized) or skip auditor review (requiresAuditorReview:true) — the agent SELECTS on paper, and every sample is a RECOMMENDATION of WHICH records to pull, requiring a compliance auditor to run the actual audit. A sample that auto-audits, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Duplicate-Claim Screen Agent's no-autonomous-reject and the Contact Rate Limit Agent's no-autonomous-send posture — the harmful action is enforced-off.",
+    appliesTo: ["audit-sample-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -16765,6 +16834,116 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous rejection.
         dupScreenNoAutonomousReject: true,
         requiresAdjudicatorReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedAuditSampleTrace() {
+  const s = store();
+  const au0 = Date.now() - 1000 * 60 * 1;
+  const auTaskId = "task-seed-audit-sample-001";
+  const auName = "Audit Sample Selection / Reservoir Sampling (Algorithm R, Seeded) Agent";
+  s.traces.push(
+    {
+      id: "span-audit-sample-001",
+      taskId: auTaskId,
+      agentId: "audit-sample-agent",
+      agentName: auName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(au0).toISOString(),
+      finishedAt: new Date(au0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // Record ids are PHI-adjacent; on the HIPAA audit path.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-audit-sample-002",
+      taskId: auTaskId,
+      parentSpanId: "span-audit-sample-001",
+      agentId: "audit-sample-agent",
+      agentName: auName,
+      operation: "auditsample.receive-population",
+      protocol: "a2a",
+      startedAt: new Date(au0 + 30).toISOString(),
+      finishedAt: new Date(au0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        auditRef: "siu-audit-2026-Q3-4402",
+        populationSize: 20,
+        sampleSize: 5,
+        seed: 20260913,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-audit-sample-003",
+      taskId: auTaskId,
+      parentSpanId: "span-audit-sample-002",
+      agentId: "audit-sample-agent",
+      agentName: auName,
+      operation: "auditsample.select",
+      protocol: "a2a",
+      startedAt: new Date(au0 + 60).toISOString(),
+      finishedAt: new Date(au0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        auditRef: "siu-audit-2026-Q3-4402",
+        effectiveSampleSize: 5,
+        inclusionProbability: 0.25,
+        // The honesty invariants: sample sourced + self-consistent, selection reproducible.
+        auditSampleSourced: true,
+        auditSelectionReproducible: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-audit-sample-004",
+      taskId: auTaskId,
+      parentSpanId: "span-audit-sample-003",
+      agentId: "audit-sample-agent",
+      agentName: auName,
+      operation: "auditsample.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(au0 + 100).toISOString(),
+      finishedAt: new Date(au0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        auditRef: "siu-audit-2026-Q3-4402",
+        disposition: "sampled",
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-audit-sample-005",
+      taskId: auTaskId,
+      parentSpanId: "span-audit-sample-004",
+      agentId: "audit-sample-agent",
+      agentName: auName,
+      operation: "auditsample.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(au0 + 140).toISOString(),
+      finishedAt: new Date(au0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        auditRef: "siu-audit-2026-Q3-4402",
+        // The honesty invariant: never an autonomous audit action.
+        auditNoAutonomousAudit: true,
+        requiresAuditorReview: true,
         phiAccessed: true,
         synthetic: true
       }

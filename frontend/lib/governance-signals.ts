@@ -306,6 +306,10 @@ export type GovernanceTask = {
   dupScreenFilterSourced?: boolean;
   dupScreenMembershipExact?: boolean;
   dupScreenNoAutonomousReject?: boolean;
+  // Audit Sample Selection / Reservoir Sampling (sample-sourced + selection-reproducible + no-autonomous-audit)
+  auditSampleSourced?: boolean;
+  auditSelectionReproducible?: boolean;
+  auditNoAutonomousAudit?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -2075,6 +2079,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Claims rejected / denied autonomously, or with no adjudicator review",
     reason:
       "A duplicate-claim pre-screen autonomously rejected, denied, or paid a claim (autoRejected:true — each is an adjudication action that must be authorized) or did not require adjudicator review (requiresAdjudicatorReview:false); the agent PRE-SCREENS on paper — a possibly-duplicate is a ROUTING SIGNAL to the authoritative exact check, never a denial, and every screen is a RECOMMENDATION requiring a claims adjudicator to confirm. Mirrors the Contact Rate Limit Agent's no-autonomous-send and the Referral Throughput Agent's no-autonomous-route — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.auditsample.sample-sourced",
+    signal: "auditSampleSourced",
+    violatingValue: false,
+    violationHint: "A fabricated id, a duplicate pick, or a mis-sized sample",
+    reason:
+      "An audit sample is not a real, self-consistent subset of the submitted stream — every selected id must appear in the submitted recordIds (no fabricated id), no id selected more times than it appears, the sample size equal to min(sampleSize, populationSize), the reported populationSize equal to the stream length, the inclusionProbability equal to effectiveSampleSize / populationSize, and the disposition following (full-population iff populationSize ≤ k). A fabricated id, a duplicate pick, or a mis-sized sample corrupts the draw. The sourced + self-consistency gate — mirrors the Duplicate-Claim Screen Agent's filter-sourced and the Contact Rate Limit Agent's replay-sourced"
+  },
+  {
+    policyId: "policy.auditsample.selection-reproducible",
+    signal: "auditSelectionReproducible",
+    violatingValue: false,
+    violationHint: "A cherry-picked or otherwise unreproducible sample the seed wouldn't produce",
+    reason:
+      "An audit sample is not reproducible — re-running the seeded RESERVOIR SAMPLING (Algorithm R) over the submitted stream + (sampleSize, seed) must reproduce the EXACT sample (same ids, same order). A sample that cannot be reproduced from its own seed is not a defensible audit sample — a cherry-picked set could hide behind a random-looking label. The load-bearing correctness gate; it re-runs Algorithm R INDEPENDENT of the reported sample, so a fabricated-but-in-population sample fails here while a real seeded draw with a fabricated id fails sourced — mirrors the Duplicate-Claim Screen Agent's membership-exact and the Contact Rate Limit Agent's throttle-exact"
+  },
+  {
+    policyId: "policy.auditsample.no-autonomous-audit",
+    signal: "auditNoAutonomousAudit",
+    violatingValue: false,
+    violationHint: "Sampled records opened / adjudicated / acted on autonomously, or with no auditor review",
+    reason:
+      "An audit sample autonomously opened, adjudicated, flagged, or acted on a sampled record (autoAudited:true — each is an audit action that must be authorized) or did not require auditor review (requiresAuditorReview:false); the agent SELECTS on paper — every sample is a RECOMMENDATION of WHICH records to pull, requiring a compliance auditor to run the actual audit. Mirrors the Duplicate-Claim Screen Agent's no-autonomous-reject and the Contact Rate Limit Agent's no-autonomous-send — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

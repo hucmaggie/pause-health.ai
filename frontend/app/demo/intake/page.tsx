@@ -79,6 +79,7 @@ import { NetworkBuildoutPanel } from "../../../components/network-buildout-panel
 import { ReferralThroughputPanel } from "../../../components/referral-throughput-panel";
 import { ContactRateLimitPanel } from "../../../components/contact-rate-limit-panel";
 import { DuplicateClaimScreenPanel } from "../../../components/duplicate-claim-screen-panel";
+import { AuditSamplePanel } from "../../../components/audit-sample-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -253,6 +254,7 @@ export default function IntakeDemoPage() {
       <ReferralThroughputPanel />
       <ContactRateLimitPanel />
       <DuplicateClaimScreenPanel />
+      <AuditSamplePanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 
