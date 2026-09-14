@@ -1847,6 +1847,44 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "interpreter-assignment-agent",
+    name: "Interpreter Assignment / Optimal Assignment (Hungarian Algorithm) Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the care-coordination language-access assignment
+    // piece: POST /api/agents/interpreter-assignment/tasks (card at /.well-known/
+    // agent.json). A DETERMINISTIC (no-Claude) care-coordination agent that, given
+    // qualified INTERPRETERS, concurrent APPOINTMENTS, and a COST matrix (travel +
+    // wait + skill-mismatch, or an "unavailable" sentinel), computes the
+    // MINIMUM-TOTAL-COST one-to-one ASSIGNMENT via the HUNGARIAN ALGORITHM
+    // (Kuhn–Munkres). CRUCIALLY this is EMPHATICALLY DISTINCT from the PCP Matching
+    // agent's GALE–SHAPLEY STABLE MATCHING (stable, from preference lists — no
+    // costs, no global optimum) and the Caseload Balancing agent's
+    // WORST-FIT-DECREASING BIN-PACKING (an unordered greedy capacity fill); it is
+    // also NOT the Referral Throughput agent's MAX-FLOW, NOT the Network Build-Out
+    // agent's MINIMUM SPANNING TREE, NOT the Batch Partition agent's LINEAR
+    // PARTITION, NOT the Outreach agent's 0/1 KNAPSACK, and NOT the Care Routing
+    // agent's DIJKSTRA'S SHORTEST PATH — it is the ASSIGNMENT PROBLEM, solved to
+    // the provable minimum. The agent ASSIGNS on paper; it never books,
+    // dispatches, or notifies an interpreter, and every assignment is a
+    // RECOMMENDATION requiring a language-access coordinator to confirm. It IS
+    // PHI-adjacent (appointment encounters). REUSES the existing care-coordination
+    // tier. The costs are ILLUSTRATIVE, NOT a certified interpreter-scheduling /
+    // workforce system.
+    endpoint: "/api/agents/interpreter-assignment",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Given qualified interpreters, concurrent appointments, and a cost matrix (travel + wait + skill-mismatch, with an 'unavailable' sentinel), computes the minimum-total-cost one-to-one assignment, reporting the pairings, the total cost, and any uncoverable appointments (disposition assignable / infeasible). A deterministic care-coordination assignment agent; it COMPLEMENTS the PCP Matching agent (stable member↔PCP matching) and the Caseload Balancing agent (panel capacity fill) — this is the optimal one-to-one assignment",
+      "The assignment is DETERMINISTIC — a pure function of the request's own interpreters + appointments + cost matrix (time is data: the costs are plain numbers, no real clock; not a Gale–Shapley stable matching, a bin-packing, a max-flow, a minimum spanning tree, a linear partition, a knapsack, or a Dijkstra path but the ASSIGNMENT PROBLEM via the HUNGARIAN ALGORITHM (Kuhn–Munkres) — a minimum-cost perfect matching); the same request always yields the same assignment",
+      "The assignment must be sourced + self-consistent — a real one-to-one matching over the submitted sets (no interpreter or appointment used twice, no fabricated pairing, no unavailable cell), honest total cost, the unmatched list exactly the uncovered appointments; a fabricated pairing, a reused interpreter, or an overstated cost is blocked at the Agent Fabric governance boundary (policy.interpasg.assignment-sourced, the sourced + self-consistency gate); and the assignment must be cost-optimal — re-running the Hungarian algorithm must reproduce the minimum total cost; a sub-optimal assignment that wastes interpreter time is blocked (policy.interpasg.cost-optimal, the load-bearing correctness gate). Mirrors the Benefit Accumulator Agent's ledger-sourced + accumulator-exact posture",
+      "The agent ASSIGNS and RECOMMENDS — it NEVER books, dispatches, or notifies an interpreter (each is a scheduling action that must be authorized) on its own; an assignment that auto-dispatches or is not review-gated is blocked (policy.interpasg.no-autonomous-dispatch), and every assignment is confirmed by a language-access coordinator. Mirrors the Benefit Accumulator Agent's no-autonomous-adjust and the Referral Throughput Agent's no-autonomous-route posture",
+      "Runs against ILLUSTRATIVE synthetic cost matrices — clearly labeled; NOT a certified interpreter-scheduling / workforce system (real interpreter scheduling weighs certification & specialty, modality, union & labor rules, travel logistics, and member language preference — not a bare cost matrix). PHI-adjacent — appointment encounters, so an assignment is on the HIPAA audit path"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "formulary-review-agent",
     name: "Formulary & Drug Utilization Review Agent",
     kind: "agentforce",
@@ -4103,6 +4141,7 @@ const POLICIES: PolicyRecord[] = [
       "duplicate-claim-screen-agent",
       "audit-sample-agent",
       "benefit-accumulator-agent",
+      "interpreter-assignment-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
@@ -5025,6 +5064,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Benefit Accumulator Agent may NEVER post, adjust, or pay against a member's real accumulator on its own (autoAdjusted:true — each is a benefit-adjustment action that must be authorized) or skip analyst review (requiresAnalystReview:true) — the agent COMPUTES on paper, and every ledger is a RECOMMENDATION requiring a benefits analyst to confirm before anything touches the member's real accumulator. A ledger that auto-adjusts, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Audit Sample Agent's no-autonomous-audit and the Duplicate-Claim Screen Agent's no-autonomous-reject posture — the harmful action is enforced-off.",
     appliesTo: ["benefit-accumulator-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.interpasg.assignment-sourced",
+    name: "The assignment is a sourced, self-consistent one-to-one matching",
+    description:
+      "The Interpreter Assignment Agent's assignment must be a REAL one-to-one matching over the submitted sets — each pairing using a SUBMITTED interpreter + appointment, no interpreter or appointment used twice, each cost equal to the SUBMITTED cost-matrix cell and finite (not the UNAVAILABLE sentinel), the totalCost equal to the sum of the chosen cells, the unmatched list exactly the uncovered appointments, and the disposition following (assignable iff every appointment is covered). A fabricated pairing, a reused interpreter, or an overstated cost corrupts the assignment. An assignment that fabricates a pairing, reuses an interpreter, or overstates a cost is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the Benefit Accumulator Agent's ledger-sourced and the Network Build-Out Agent's tree-sourced posture. (In the prototype the costs are a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["interpreter-assignment-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.interpasg.cost-optimal",
+    name: "The assignment is the cost-optimal minimum (the Hungarian algorithm recomputes)",
+    description:
+      "The Interpreter Assignment Agent's assignment must be COST-OPTIMAL — re-running the HUNGARIAN ALGORITHM (Kuhn–Munkres) over the submitted cost matrix must reproduce the reported totalCost (and the feasible / infeasible disposition). A sub-optimal assignment wastes interpreter time and money — the whole point of the minimization. An assignment whose total cost isn't the minimum is rejected before it can leave the fabric. This is the load-bearing correctness gate; it recomputes the minimum total cost from the matrix INDEPENDENT of the reported pairings (different optimal assignments can tie on cost — it compares the scalar optimum), so a fabricated assignment that still reports the optimal cost fails sourced only and a real-but-sub-optimal assignment fails here — the two gates are isolable. Mirrors the Benefit Accumulator Agent's accumulator-exact and the Network Build-Out Agent's cost-optimal posture.",
+    appliesTo: ["interpreter-assignment-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.interpasg.no-autonomous-dispatch",
+    name: "No interpreter is autonomously booked / dispatched",
+    description:
+      "The Interpreter Assignment Agent may NEVER book, dispatch, or notify an interpreter on its own (autoDispatched:true — each is a scheduling action that must be authorized) or skip coordinator review (requiresCoordinatorReview:true) — the agent ASSIGNS on paper, and every assignment is a RECOMMENDATION requiring a language-access coordinator to confirm. An assignment that auto-dispatches, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Benefit Accumulator Agent's no-autonomous-adjust and the Referral Throughput Agent's no-autonomous-route posture — the harmful action is enforced-off.",
+    appliesTo: ["interpreter-assignment-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -17120,6 +17186,116 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous adjustment.
         benefitNoAutonomousAdjust: true,
         requiresAnalystReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedInterpreterAssignmentTrace() {
+  const s = store();
+  const ia0 = Date.now() - 1000 * 60 * 1;
+  const iaTaskId = "task-seed-interpreter-assignment-001";
+  const iaName = "Interpreter Assignment / Optimal Assignment (Hungarian Algorithm) Agent";
+  s.traces.push(
+    {
+      id: "span-interpreter-assignment-001",
+      taskId: iaTaskId,
+      agentId: "interpreter-assignment-agent",
+      agentName: iaName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ia0).toISOString(),
+      finishedAt: new Date(ia0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // Appointments reference member encounters — PHI-adjacent; on the HIPAA audit path.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-interpreter-assignment-002",
+      taskId: iaTaskId,
+      parentSpanId: "span-interpreter-assignment-001",
+      agentId: "interpreter-assignment-agent",
+      agentName: iaName,
+      operation: "interpasg.receive-roster",
+      protocol: "a2a",
+      startedAt: new Date(ia0 + 30).toISOString(),
+      finishedAt: new Date(ia0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        rosterRef: "lang-access-roster-2026-3310",
+        interpreterCount: 3,
+        appointmentCount: 3,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-interpreter-assignment-003",
+      taskId: iaTaskId,
+      parentSpanId: "span-interpreter-assignment-002",
+      agentId: "interpreter-assignment-agent",
+      agentName: iaName,
+      operation: "interpasg.assign",
+      protocol: "a2a",
+      startedAt: new Date(ia0 + 60).toISOString(),
+      finishedAt: new Date(ia0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        rosterRef: "lang-access-roster-2026-3310",
+        totalCost: 12,
+        assignedCount: 3,
+        // The honesty invariants: assignment sourced + self-consistent, cost optimal.
+        interpAssignmentSourced: true,
+        interpAssignmentOptimal: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-interpreter-assignment-004",
+      taskId: iaTaskId,
+      parentSpanId: "span-interpreter-assignment-003",
+      agentId: "interpreter-assignment-agent",
+      agentName: iaName,
+      operation: "interpasg.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(ia0 + 100).toISOString(),
+      finishedAt: new Date(ia0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        rosterRef: "lang-access-roster-2026-3310",
+        disposition: "assignable",
+        unmatchedCount: 0,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-interpreter-assignment-005",
+      taskId: iaTaskId,
+      parentSpanId: "span-interpreter-assignment-004",
+      agentId: "interpreter-assignment-agent",
+      agentName: iaName,
+      operation: "interpasg.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(ia0 + 140).toISOString(),
+      finishedAt: new Date(ia0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        rosterRef: "lang-access-roster-2026-3310",
+        // The honesty invariant: never an autonomous dispatch.
+        interpNoAutonomousDispatch: true,
+        requiresCoordinatorReview: true,
         phiAccessed: true,
         synthetic: true
       }

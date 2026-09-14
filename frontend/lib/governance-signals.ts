@@ -314,6 +314,10 @@ export type GovernanceTask = {
   benefitLedgerSourced?: boolean;
   benefitAccumulatorExact?: boolean;
   benefitNoAutonomousAdjust?: boolean;
+  // Interpreter Assignment / Hungarian Algorithm (assignment-sourced + cost-optimal + no-autonomous-dispatch)
+  interpAssignmentSourced?: boolean;
+  interpAssignmentOptimal?: boolean;
+  interpNoAutonomousDispatch?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -2131,6 +2135,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "A real accumulator posted / adjusted / paid autonomously, or with no analyst review",
     reason:
       "A benefit-accumulator ledger autonomously posted, adjusted, or paid against a member's real accumulator (autoAdjusted:true — each is a benefit-adjustment action that must be authorized) or did not require analyst review (requiresAnalystReview:false); the agent COMPUTES on paper — every ledger is a RECOMMENDATION requiring a benefits analyst to confirm before anything touches the member's real accumulator. Mirrors the Audit Sample Agent's no-autonomous-audit and the Duplicate-Claim Screen Agent's no-autonomous-reject — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.interpasg.assignment-sourced",
+    signal: "interpAssignmentSourced",
+    violatingValue: false,
+    violationHint: "A fabricated pairing, a reused interpreter/appointment, or an overstated cost",
+    reason:
+      "An interpreter assignment is not a real, self-consistent one-to-one matching over the submitted sets — each pairing must use a SUBMITTED interpreter + appointment, no interpreter or appointment used twice, each cost equal to the SUBMITTED cost-matrix cell and finite (not the UNAVAILABLE sentinel), the totalCost equal to the sum of the chosen cells, the unmatched list exactly the uncovered appointments, and the disposition following (assignable iff every appointment is covered). A fabricated pairing, a reused interpreter, or an overstated cost corrupts the assignment. The sourced + self-consistency gate — mirrors the Benefit Accumulator Agent's ledger-sourced and the Network Build-Out Agent's tree-sourced"
+  },
+  {
+    policyId: "policy.interpasg.cost-optimal",
+    signal: "interpAssignmentOptimal",
+    violatingValue: false,
+    violationHint: "A sub-optimal assignment that wastes interpreter time / cost",
+    reason:
+      "An interpreter assignment is not cost-optimal — re-running the HUNGARIAN ALGORITHM over the submitted cost matrix must reproduce the reported totalCost (and the feasible / infeasible disposition). A sub-optimal assignment wastes interpreter time and money — the whole point of the minimization. The load-bearing correctness gate; it recomputes the minimum total cost from the matrix INDEPENDENT of the reported pairings (it compares the scalar optimum, since different optimal assignments can tie), so a fabricated assignment that still reports the optimal cost fails sourced only while a real-but-sub-optimal assignment fails here — mirrors the Benefit Accumulator Agent's accumulator-exact and the Network Build-Out Agent's cost-optimal"
+  },
+  {
+    policyId: "policy.interpasg.no-autonomous-dispatch",
+    signal: "interpNoAutonomousDispatch",
+    violatingValue: false,
+    violationHint: "Interpreters booked / dispatched / notified autonomously, or with no coordinator review",
+    reason:
+      "An interpreter assignment autonomously booked, dispatched, or notified an interpreter (autoDispatched:true — each is a scheduling action that must be authorized) or did not require coordinator review (requiresCoordinatorReview:false); the agent ASSIGNS on paper — every assignment is a RECOMMENDATION requiring a language-access coordinator to confirm. Mirrors the Benefit Accumulator Agent's no-autonomous-adjust and the Referral Throughput Agent's no-autonomous-route — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

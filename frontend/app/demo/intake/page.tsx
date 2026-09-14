@@ -81,6 +81,7 @@ import { ContactRateLimitPanel } from "../../../components/contact-rate-limit-pa
 import { DuplicateClaimScreenPanel } from "../../../components/duplicate-claim-screen-panel";
 import { AuditSamplePanel } from "../../../components/audit-sample-panel";
 import { BenefitAccumulatorPanel } from "../../../components/benefit-accumulator-panel";
+import { InterpreterAssignmentPanel } from "../../../components/interpreter-assignment-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -257,6 +258,7 @@ export default function IntakeDemoPage() {
       <DuplicateClaimScreenPanel />
       <AuditSamplePanel />
       <BenefitAccumulatorPanel />
+      <InterpreterAssignmentPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 
