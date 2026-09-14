@@ -483,8 +483,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // the care-coordination Referral Throughput / Maximum-Flow Network Capacity (Edmonds–Karp) agent,
     // the care-coordination Member Contact Rate Limiting / Token-Bucket Throttle agent,
     // the payer-operations Duplicate-Claim Pre-Screen / Bloom-Filter Membership Test agent,
-    // and the payer-operations Audit Sample Selection / Reservoir Sampling (Algorithm R, Seeded) agent.
-    expect(listAgents()).toHaveLength(105);
+    // the payer-operations Audit Sample Selection / Reservoir Sampling (Algorithm R, Seeded) agent,
+    // and the payer-operations Benefit Accumulator Ledger / Fenwick-Tree Prefix Sums agent.
+    expect(listAgents()).toHaveLength(106);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

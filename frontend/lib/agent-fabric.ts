@@ -1809,6 +1809,44 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "payer-operations"
   },
   {
+    id: "benefit-accumulator-agent",
+    name: "Benefit Accumulator Ledger / Fenwick-Tree Prefix Sums Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the payer-side benefit-accumulator piece:
+    // POST /api/agents/benefit-accumulator/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) agent for a health-plan / TPA that, given an
+    // ORDERED sequence of applied claim amounts and an OUT-OF-POCKET MAXIMUM,
+    // maintains a running accumulator and locates the CROSSOVER claim (the first
+    // at which the member meets their OOP max, after which the plan pays 100%).
+    // The heart of the service is the FENWICK TREE (Binary Indexed Tree):
+    // cumulative-frequency prefix sums with a binary lower-bound descent. CRUCIALLY
+    // this is NOT the Member Cost-Share agent's COST-SHARING WATERFALL (which
+    // splits a SINGLE claim across deductible / coinsurance / OOP — this is a
+    // CUMULATIVE data structure over a SEQUENCE of claims), NOT the Audit Sample
+    // agent's RESERVOIR SAMPLING, NOT the Duplicate-Claim Screen agent's BLOOM
+    // FILTER, NOT the MLR Rebate agent's LARGEST-REMAINDER APPORTIONMENT, NOT the
+    // Provider Benchmarking agent's PERCENTILE / RANK STATISTICS, and NOT the
+    // Peak-Window agent's KADANE MAXIMUM-SUBARRAY. The agent COMPUTES on paper; it
+    // never posts, adjusts, or pays against a member's real accumulator, and every
+    // ledger is a RECOMMENDATION requiring a benefits analyst to confirm. It IS
+    // PHI-adjacent (a member's claims). REUSES the existing payer-operations tier
+    // as a sibling to the Member Cost-Share agent. The amounts are ILLUSTRATIVE,
+    // NOT a certified benefits-accumulator / claims-payment system.
+    endpoint: "/api/agents/benefit-accumulator",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Given an ordered sequence of applied claim amounts and an out-of-pocket maximum, maintains a running accumulator and locates the crossover claim (the first that meets the OOP max), reporting the running cumulative totals, the total applied, the crossover index, and the remaining-before-OOP-max (disposition under-oop-max / oop-max-met). A deterministic payer-operations accumulator-ledger agent; it COMPLEMENTS the Member Cost-Share agent (which splits a single claim across deductible / coinsurance / OOP) — this tallies the running accumulator across many claims",
+      "The ledger is DETERMINISTIC — a pure function of the request's own amounts + OOP max (time is data: the amounts are plain numbers, no real clock; not a cost-sharing waterfall, a reservoir sample, a Bloom filter, a largest-remainder apportionment, a percentile/rank, or a Kadane subarray but FENWICK-TREE PREFIX SUMS — a cumulative-frequency data structure with a lower-bound descent for the crossover); the same request always yields the same ledger",
+      "The ledger must be sourced + self-consistent — each running total the true prefix sum of the submitted amounts, the total applied and remaining honest, the crossover a valid submitted-claim index (or -1); a fabricated running total, a mis-summed ledger, or an out-of-range crossover is blocked at the Agent Fabric governance boundary (policy.benefitacc.ledger-sourced, the sourced + self-consistency gate); and the accumulator must be exact — re-building the Fenwick tree must reproduce every prefix sum and the crossover located by its lower-bound descent; a mislocated crossover (mis-stating when the plan starts paying 100%) is blocked (policy.benefitacc.accumulator-exact, the load-bearing correctness gate). Mirrors the Audit Sample Agent's sample-sourced + selection-reproducible posture",
+      "The agent COMPUTES and RECOMMENDS — it NEVER posts, adjusts, or pays against a member's real accumulator (each is a benefit-adjustment action that must be authorized) on its own; a ledger that auto-adjusts or is not review-gated is blocked (policy.benefitacc.no-autonomous-adjust), and every ledger is confirmed by a benefits analyst. Mirrors the Audit Sample Agent's no-autonomous-audit and the Duplicate-Claim Screen Agent's no-autonomous-reject posture",
+      "Runs against ILLUSTRATIVE synthetic amounts — clearly labeled; NOT a certified benefits-accumulator / claims-payment system (real accumulator processing weighs the full benefit design — embedded vs aggregate family deductibles, network tiers, carve-outs, EOB reversals — plan-year resets, and an authoritative accumulator store — not a bare prefix-sum over illustrative amounts). PHI-adjacent — a member's claims, so a ledger is on the HIPAA audit path"
+    ],
+    provider: "Salesforce",
+    governanceTier: "payer-operations"
+  },
+  {
     id: "formulary-review-agent",
     name: "Formulary & Drug Utilization Review Agent",
     kind: "agentforce",
@@ -4064,6 +4102,7 @@ const POLICIES: PolicyRecord[] = [
       "contact-rate-limit-agent",
       "duplicate-claim-screen-agent",
       "audit-sample-agent",
+      "benefit-accumulator-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
@@ -4959,6 +4998,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Audit Sample Agent may NEVER open, adjudicate, flag, or act on a sampled record on its own (autoAudited:true — each is an audit action that must be authorized) or skip auditor review (requiresAuditorReview:true) — the agent SELECTS on paper, and every sample is a RECOMMENDATION of WHICH records to pull, requiring a compliance auditor to run the actual audit. A sample that auto-audits, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Duplicate-Claim Screen Agent's no-autonomous-reject and the Contact Rate Limit Agent's no-autonomous-send posture — the harmful action is enforced-off.",
     appliesTo: ["audit-sample-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.benefitacc.ledger-sourced",
+    name: "The accumulator ledger is a sourced, self-consistent accounting",
+    description:
+      "The Benefit Accumulator Agent's ledger must be a REAL, self-consistent accounting of the submitted amounts — each runningTotals[k] equal to the sum of appliedAmounts[0..k], the reported totalApplied equal to the final running total, the crossoverIndex either -1 or a valid submitted-claim index, remainingBeforeOopMax equal to max(0, oopMax - totalApplied), and the disposition following (oop-max-met iff totalApplied ≥ oopMax). A fabricated running total, a mis-summed ledger, or an out-of-range crossover corrupts the accounting. A ledger that fabricates a total, mis-sums, or points the crossover out of range is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the Audit Sample Agent's sample-sourced and the Duplicate-Claim Screen Agent's filter-sourced posture. (In the prototype the amounts are a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["benefit-accumulator-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.benefitacc.accumulator-exact",
+    name: "The accumulator is exact (the Fenwick tree re-derives the prefix sums and crossover)",
+    description:
+      "The Benefit Accumulator Agent's ledger must be ACCUMULATOR-EXACT — re-building the FENWICK TREE (Binary Indexed Tree) from the submitted amounts and re-querying must reproduce every prefix sum, and the CROSSOVER index located by the tree's binary lower-bound descent (first prefix sum ≥ oopMax) must equal the reported crossoverIndex. A mislocated crossover — the claim after which the plan pays 100% — mis-states the member's liability. A ledger whose prefix sums disagree with the Fenwick re-derivation, or whose crossover is mislocated, is rejected before it can leave the fabric. This is the load-bearing correctness gate; it re-derives the prefix sums AND the crossover INDEPENDENT of the reported running totals (it descends the tree, not the reported array), so a fabricated ledger that still reports the right crossover fails sourced only and a real-but-mislocated crossover fails here — the two gates are isolable. Mirrors the Audit Sample Agent's selection-reproducible and the Duplicate-Claim Screen Agent's membership-exact posture.",
+    appliesTo: ["benefit-accumulator-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.benefitacc.no-autonomous-adjust",
+    name: "No real accumulator is autonomously posted / adjusted",
+    description:
+      "The Benefit Accumulator Agent may NEVER post, adjust, or pay against a member's real accumulator on its own (autoAdjusted:true — each is a benefit-adjustment action that must be authorized) or skip analyst review (requiresAnalystReview:true) — the agent COMPUTES on paper, and every ledger is a RECOMMENDATION requiring a benefits analyst to confirm before anything touches the member's real accumulator. A ledger that auto-adjusts, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Audit Sample Agent's no-autonomous-audit and the Duplicate-Claim Screen Agent's no-autonomous-reject posture — the harmful action is enforced-off.",
+    appliesTo: ["benefit-accumulator-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -16944,6 +17010,116 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous audit action.
         auditNoAutonomousAudit: true,
         requiresAuditorReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedBenefitAccumulatorTrace() {
+  const s = store();
+  const bx0 = Date.now() - 1000 * 60 * 1;
+  const bxTaskId = "task-seed-benefit-accumulator-001";
+  const bxName = "Benefit Accumulator Ledger / Fenwick-Tree Prefix Sums Agent";
+  s.traces.push(
+    {
+      id: "span-benefit-accumulator-001",
+      taskId: bxTaskId,
+      agentId: "benefit-accumulator-agent",
+      agentName: bxName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(bx0).toISOString(),
+      finishedAt: new Date(bx0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // The ledger references a member's claims — PHI-adjacent; on the HIPAA audit path.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-benefit-accumulator-002",
+      taskId: bxTaskId,
+      parentSpanId: "span-benefit-accumulator-001",
+      agentId: "benefit-accumulator-agent",
+      agentName: bxName,
+      operation: "benefitacc.receive-ledger",
+      protocol: "a2a",
+      startedAt: new Date(bx0 + 30).toISOString(),
+      finishedAt: new Date(bx0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        ledgerRef: "member-accum-2026-7781",
+        claimCount: 6,
+        oopMax: 3000,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-benefit-accumulator-003",
+      taskId: bxTaskId,
+      parentSpanId: "span-benefit-accumulator-002",
+      agentId: "benefit-accumulator-agent",
+      agentName: bxName,
+      operation: "benefitacc.accumulate",
+      protocol: "a2a",
+      startedAt: new Date(bx0 + 60).toISOString(),
+      finishedAt: new Date(bx0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        ledgerRef: "member-accum-2026-7781",
+        totalApplied: 3550,
+        crossoverIndex: 4,
+        // The honesty invariants: ledger sourced + self-consistent, accumulator exact.
+        benefitLedgerSourced: true,
+        benefitAccumulatorExact: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-benefit-accumulator-004",
+      taskId: bxTaskId,
+      parentSpanId: "span-benefit-accumulator-003",
+      agentId: "benefit-accumulator-agent",
+      agentName: bxName,
+      operation: "benefitacc.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(bx0 + 100).toISOString(),
+      finishedAt: new Date(bx0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        ledgerRef: "member-accum-2026-7781",
+        disposition: "oop-max-met",
+        remainingBeforeOopMax: 0,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-benefit-accumulator-005",
+      taskId: bxTaskId,
+      parentSpanId: "span-benefit-accumulator-004",
+      agentId: "benefit-accumulator-agent",
+      agentName: bxName,
+      operation: "benefitacc.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(bx0 + 140).toISOString(),
+      finishedAt: new Date(bx0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        ledgerRef: "member-accum-2026-7781",
+        // The honesty invariant: never an autonomous adjustment.
+        benefitNoAutonomousAdjust: true,
+        requiresAnalystReview: true,
         phiAccessed: true,
         synthetic: true
       }

@@ -310,6 +310,10 @@ export type GovernanceTask = {
   auditSampleSourced?: boolean;
   auditSelectionReproducible?: boolean;
   auditNoAutonomousAudit?: boolean;
+  // Benefit Accumulator Ledger / Fenwick Prefix Sums (ledger-sourced + accumulator-exact + no-autonomous-adjust)
+  benefitLedgerSourced?: boolean;
+  benefitAccumulatorExact?: boolean;
+  benefitNoAutonomousAdjust?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -2103,6 +2107,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Sampled records opened / adjudicated / acted on autonomously, or with no auditor review",
     reason:
       "An audit sample autonomously opened, adjudicated, flagged, or acted on a sampled record (autoAudited:true — each is an audit action that must be authorized) or did not require auditor review (requiresAuditorReview:false); the agent SELECTS on paper — every sample is a RECOMMENDATION of WHICH records to pull, requiring a compliance auditor to run the actual audit. Mirrors the Duplicate-Claim Screen Agent's no-autonomous-reject and the Contact Rate Limit Agent's no-autonomous-send — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.benefitacc.ledger-sourced",
+    signal: "benefitLedgerSourced",
+    violatingValue: false,
+    violationHint: "A fabricated running total, a mis-summed ledger, or an out-of-range crossover",
+    reason:
+      "A benefit-accumulator ledger is not a real, self-consistent accounting of the submitted amounts — each runningTotals[k] must equal the sum of appliedAmounts[0..k], the reported totalApplied equal to the final running total, the crossoverIndex either -1 or a valid submitted-claim index, remainingBeforeOopMax equal to max(0, oopMax - totalApplied), and the disposition following (oop-max-met iff totalApplied ≥ oopMax). A fabricated running total, a mis-summed ledger, or an out-of-range crossover corrupts the accounting. The sourced + self-consistency gate — mirrors the Audit Sample Agent's sample-sourced and the Duplicate-Claim Screen Agent's filter-sourced"
+  },
+  {
+    policyId: "policy.benefitacc.accumulator-exact",
+    signal: "benefitAccumulatorExact",
+    violatingValue: false,
+    violationHint: "A mislocated crossover, or prefix sums that disagree with the Fenwick re-derivation",
+    reason:
+      "A benefit-accumulator ledger is not accumulator-exact — re-building the FENWICK TREE from the submitted amounts and re-querying must reproduce every prefix sum, and the CROSSOVER index located by the tree's binary lower-bound descent (first prefix sum ≥ oopMax) must equal the reported crossoverIndex. A mislocated crossover — the claim after which the plan pays 100% — mis-states the member's liability. The load-bearing correctness gate; it re-derives the prefix sums AND the crossover INDEPENDENT of the reported running totals (it descends the tree, not the reported array), so a fabricated ledger that still reports the right crossover fails sourced only while a real-but-mislocated crossover fails here — mirrors the Audit Sample Agent's selection-reproducible and the Duplicate-Claim Screen Agent's membership-exact"
+  },
+  {
+    policyId: "policy.benefitacc.no-autonomous-adjust",
+    signal: "benefitNoAutonomousAdjust",
+    violatingValue: false,
+    violationHint: "A real accumulator posted / adjusted / paid autonomously, or with no analyst review",
+    reason:
+      "A benefit-accumulator ledger autonomously posted, adjusted, or paid against a member's real accumulator (autoAdjusted:true — each is a benefit-adjustment action that must be authorized) or did not require analyst review (requiresAnalystReview:false); the agent COMPUTES on paper — every ledger is a RECOMMENDATION requiring a benefits analyst to confirm before anything touches the member's real accumulator. Mirrors the Audit Sample Agent's no-autonomous-audit and the Duplicate-Claim Screen Agent's no-autonomous-reject — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
