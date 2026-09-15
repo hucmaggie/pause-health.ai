@@ -1,9 +1,10 @@
 # Resource-Block Scheduling / Max-Value Non-Overlapping Selection Agent
 
-Anypoint Exchange **Agents** asset (A2A v0.3 card, classifier `a2a-card`).
+Anypoint Exchange **Agents** asset (A2A v0.3 card, classifier `a2a-card`),
+published via the Exchange Experience API (`type=agent`).
 
 - **Fabric agent id:** `resource-scheduling-agent`
-- **Artifact:** `pause-agent-resource-scheduling-agent` `1.0.0` (groupId `56707cc3-a0e3-4318-b110-78126aace370`)
+- **Asset:** `pause-agent-resource-scheduling-agent` `1.0.0` (groupId `56707cc3-a0e3-4318-b110-78126aace370`)
 - **Kind / protocol:** agentforce / A2A
 - **Governance tier:** care-coordination
 - **Posture:** PHI-adjacent (HIPAA-audit / consent policies apply)

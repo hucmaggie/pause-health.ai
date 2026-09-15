@@ -1,9 +1,10 @@
 # Source-of-Truth Consensus / Golden-Record Field Reconciliation Agent
 
-Anypoint Exchange **Agents** asset (A2A v0.3 card, classifier `a2a-card`).
+Anypoint Exchange **Agents** asset (A2A v0.3 card, classifier `a2a-card`),
+published via the Exchange Experience API (`type=agent`).
 
 - **Fabric agent id:** `source-consensus-agent`
-- **Artifact:** `pause-agent-source-consensus-agent` `1.0.0` (groupId `56707cc3-a0e3-4318-b110-78126aace370`)
+- **Asset:** `pause-agent-source-consensus-agent` `1.0.0` (groupId `56707cc3-a0e3-4318-b110-78126aace370`)
 - **Kind / protocol:** mulesoft-process / A2A
 - **Governance tier:** data-plane
 - **Posture:** non-PHI

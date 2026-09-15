@@ -17,9 +17,10 @@
  *   - <id>-agent.json  : a canonical A2A v0.3 Agent Card (the payload Exchange
  *                        ingests for the "Agents" asset type, classifier
  *                        `a2a-card`). Registry-derived, so it can never
- *                        overclaim vs. what the fabric actually enforces.
- *   - pom.xml          : Exchange Maven-v2 coordinates (groupId = Pause business
- *                        group, artifactId = pause-agent-<id>, version 1.0.0).
+ *                        overclaim vs. what the fabric actually enforces. This
+ *                        is the ONLY file uploaded — agent assets are published
+ *                        via the Exchange Experience API (type=agent), not the
+ *                        Maven jar path, so there is no pom.
  *   - README.md        : what this asset is, its PHI posture, provenance.
  *
  * This script performs NO network calls. It only reads the snapshot and writes
@@ -148,22 +149,6 @@ function buildAgentCard(agent) {
   };
 }
 
-function pomXml(artifactId) {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>${GROUP_ID}</groupId>
-  <artifactId>${artifactId}</artifactId>
-  <version>${ASSET_VERSION}</version>
-  <packaging>jar</packaging>
-  <name>${artifactId}</name>
-  <description>Pause fabric agent card (A2A v0.3) published for Anypoint Agent Visualizer discovery.</description>
-</project>
-`;
-}
-
 function assetReadme(agent, artifactId) {
   const phi = agent.governanceTier === "clinical-decision" ||
     agent.policies.some((p) => p.includes("hipaa") || p.includes("consent"))
@@ -171,10 +156,11 @@ function assetReadme(agent, artifactId) {
     : "non-PHI";
   return `# ${agent.name}
 
-Anypoint Exchange **Agents** asset (A2A v0.3 card, classifier \`a2a-card\`).
+Anypoint Exchange **Agents** asset (A2A v0.3 card, classifier \`a2a-card\`),
+published via the Exchange Experience API (\`type=agent\`).
 
 - **Fabric agent id:** \`${agent.id}\`
-- **Artifact:** \`${artifactId}\` \`${ASSET_VERSION}\` (groupId \`${GROUP_ID}\`)
+- **Asset:** \`${artifactId}\` \`${ASSET_VERSION}\` (groupId \`${GROUP_ID}\`)
 - **Kind / protocol:** ${agent.kind} / ${agent.protocol.toUpperCase()}
 - **Governance tier:** ${agent.governanceTier}
 - **Posture:** ${phi}
@@ -214,11 +200,9 @@ for (const agent of agents) {
   }
 
   const cardPath = resolve(resDir, `${agent.id}-agent.json`);
-  const pomPath = resolve(assetDir, "pom.xml");
   const readmePath = resolve(assetDir, "README.md");
 
   writeFileSync(cardPath, JSON.stringify(card, null, 2) + "\n");
-  writeFileSync(pomPath, pomXml(artifactId));
   writeFileSync(readmePath, assetReadme(agent, artifactId));
 
   manifest.push({
@@ -226,10 +210,10 @@ for (const agent of agents) {
     artifactId,
     version: ASSET_VERSION,
     groupId: GROUP_ID,
+    type: "agent",
     protocol: "a2a",
     classifier: "a2a-card",
     cardPath: cardPath.replace(resolve(AGENTS_DIR, "..", "..") + "/", ""),
-    pomPath: pomPath.replace(resolve(AGENTS_DIR, "..", "..") + "/", ""),
     governanceTier: agent.governanceTier,
     policyCount: agent.policies.length
   });

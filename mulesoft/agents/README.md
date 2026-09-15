@@ -15,8 +15,8 @@ fabric agent (A2A v0.3 card, classifier `a2a-card`) and publishes them. It is
 | File | Purpose |
 |------|---------|
 | `agents-snapshot.json` | Deterministic, offline snapshot of the live registry (all 110 agents + their policies). Source of truth for generation. |
-| `generate-agent-assets.mjs` | Reads the snapshot, writes one asset folder per agent under `assets/<id>/` (agent card + `pom.xml` + `README.md`) and `assets-manifest.json`. No network. |
-| `publish-agent-assets.sh` | Dry-run-by-default publisher. Validates every asset, prints the exact publish commands, and (only with explicit flags) probes creds or publishes. |
+| `generate-agent-assets.mjs` | Reads the snapshot, writes one asset folder per agent under `assets/<id>/` (agent card + `README.md`) and `assets-manifest.json`. No network. |
+| `publish-agent-assets.sh` | Dry-run-by-default publisher. Validates every asset, prints the exact publish commands, and (only with explicit flags) probes creds or publishes via the Exchange Experience API (`type=agent`). |
 | `assets/<id>/` | 110 generated asset folders. **Fully generated** — do not hand-edit; change the generator and re-run. |
 | `assets-manifest.json` | Machine-readable index the publisher loops over. |
 
@@ -74,17 +74,16 @@ permanently**, so a published `1.0.0` can't be re-used even after deletion.
    This fetches a token and makes ONE read-only GET. If the token fetch fails,
    the creds are expired — rotate them in the Connected App before going further.
 
-2. **Confirm the asset-type path.** The Maven-v2 PUT path this script uses
-   publishes the card as a Maven artifact under the business group. Exchange's
-   native **"Agents"** type (what Visualizer reads) is documented via the
-   Exchange UI *Publish new asset* dialog and the Exchange Experience API with
-   the `a2a-card` classifier. Before a bulk live run, publish **one** asset and
-   check in the Exchange UI that it is typed **Agent** (not generic Custom). If
-   Maven-v2 doesn't tag it as an agent, switch the publish step to the Exchange
-   asset-upload endpoint with `type=agent` / classifier `a2a-card` (still curl +
-   Bearer token; the script's `--live` loop is the place to change).
+2. **Asset-type path — VERIFIED.** The publisher uses the Exchange Experience API
+   (`POST /exchange/api/v2/organizations/{org}/assets/{group}/{assetId}/{version}`)
+   with `type=agent`, `classifier=a2a-card`, and the card as `files.json`. This was
+   confirmed against the live org with a throwaway asset that came back
+   `type: agent`, `status: published`, and appeared under a `?type=agent` search
+   (then was deleted). The Maven-v2 jar PUT that published the spec assets yields
+   `type=unknown` and is deliberately **not** used here. Delete endpoint if you
+   ever need it: `DELETE /exchange/api/v2/assets/{group}/{assetId}/{version}`.
 
-3. **Go live** (only after 1 + 2, and only when you've said go):
+3. **Go live** (only after 1, and only when you've said go):
    ```bash
    bash mulesoft/agents/publish-agent-assets.sh --live CONFIRM=yes
    ```

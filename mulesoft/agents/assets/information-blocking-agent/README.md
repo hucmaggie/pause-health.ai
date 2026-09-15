@@ -1,9 +1,10 @@
 # Information Blocking (Cures Act / 45 CFR Part 171) Agent
 
-Anypoint Exchange **Agents** asset (A2A v0.3 card, classifier `a2a-card`).
+Anypoint Exchange **Agents** asset (A2A v0.3 card, classifier `a2a-card`),
+published via the Exchange Experience API (`type=agent`).
 
 - **Fabric agent id:** `information-blocking-agent`
-- **Artifact:** `pause-agent-information-blocking-agent` `1.0.0` (groupId `56707cc3-a0e3-4318-b110-78126aace370`)
+- **Asset:** `pause-agent-information-blocking-agent` `1.0.0` (groupId `56707cc3-a0e3-4318-b110-78126aace370`)
 - **Kind / protocol:** mulesoft-process / A2A
 - **Governance tier:** data-plane
 - **Posture:** PHI-adjacent (HIPAA-audit / consent policies apply)

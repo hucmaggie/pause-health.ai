@@ -1,9 +1,10 @@
 # Event-Stream Code Assignment / Huffman Optimal Prefix Coding Agent
 
-Anypoint Exchange **Agents** asset (A2A v0.3 card, classifier `a2a-card`).
+Anypoint Exchange **Agents** asset (A2A v0.3 card, classifier `a2a-card`),
+published via the Exchange Experience API (`type=agent`).
 
 - **Fabric agent id:** `huffman-coding-agent`
-- **Artifact:** `pause-agent-huffman-coding-agent` `1.0.0` (groupId `56707cc3-a0e3-4318-b110-78126aace370`)
+- **Asset:** `pause-agent-huffman-coding-agent` `1.0.0` (groupId `56707cc3-a0e3-4318-b110-78126aace370`)
 - **Kind / protocol:** mulesoft-process / A2A
 - **Governance tier:** data-plane
 - **Posture:** non-PHI

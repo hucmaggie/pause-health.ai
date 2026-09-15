@@ -1,9 +1,10 @@
 # Pause MCP Server
 
-Anypoint Exchange **Agents** asset (A2A v0.3 card, classifier `a2a-card`).
+Anypoint Exchange **Agents** asset (A2A v0.3 card, classifier `a2a-card`),
+published via the Exchange Experience API (`type=agent`).
 
 - **Fabric agent id:** `pause-mcp`
-- **Artifact:** `pause-agent-pause-mcp` `1.0.0` (groupId `56707cc3-a0e3-4318-b110-78126aace370`)
+- **Asset:** `pause-agent-pause-mcp` `1.0.0` (groupId `56707cc3-a0e3-4318-b110-78126aace370`)
 - **Kind / protocol:** mcp-server / MCP
 - **Governance tier:** data-plane
 - **Posture:** PHI-adjacent (HIPAA-audit / consent policies apply)

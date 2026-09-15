@@ -33,7 +33,11 @@ SETTINGS="${M2_SETTINGS:-$HOME/.m2/settings.xml}"
 
 GROUP_ID="56707cc3-a0e3-4318-b110-78126aace370"
 TOKEN_URL="https://anypoint.mulesoft.com/accounts/api/v2/oauth2/token"
-MAVEN_BASE="https://maven.anypoint.mulesoft.com/api/v2/organizations/${GROUP_ID}/maven/${GROUP_ID}"
+# Exchange Experience API — the path that produces a native type=agent asset.
+# (The Maven-v2 jar PUT that published our spec assets yields type=unknown, which
+# Agent Visualizer does NOT surface as an agent — verified against the live org.)
+EXCHANGE_BASE="https://anypoint.mulesoft.com/exchange/api/v2"
+UPLOAD_BASE="${EXCHANGE_BASE}/organizations/${GROUP_ID}/assets/${GROUP_ID}"
 
 MODE="dry-run"
 CONFIRM="${CONFIRM:-no}"
@@ -62,13 +66,11 @@ log "Group ID:    $GROUP_ID"
 log "Asset type:  agent (A2A v0.3 card, classifier a2a-card)"
 hr
 
-# Validate every asset on disk: pom + card present, card is valid JSON.
+# Validate every asset on disk: the agent card exists and is valid JSON.
 MISSING=0
 while IFS= read -r id; do
   card="$ASSETS_DIR/$id/src/main/resources/$id-agent.json"
-  pom="$ASSETS_DIR/$id/pom.xml"
   [ -f "$card" ] || { echo "  MISSING card: $id"; MISSING=$((MISSING+1)); }
-  [ -f "$pom" ]  || { echo "  MISSING pom:  $id"; MISSING=$((MISSING+1)); }
   node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$card" 2>/dev/null \
     || { echo "  BAD JSON: $id"; MISSING=$((MISSING+1)); }
 done < <(node -e 'require(process.argv[1]).assets.forEach(a=>console.log(a.id))' "$MANIFEST")
@@ -77,7 +79,7 @@ if [ "$MISSING" -ne 0 ]; then
   echo "Preflight FAILED: $MISSING problem(s). Aborting." >&2
   exit 1
 fi
-log "Preflight OK: all $COUNT assets have a valid pom.xml and a parseable agent card."
+log "Preflight OK: all $COUNT assets have a parseable A2A agent card."
 hr
 
 # ---- 2. Dry-run: print the plan, make no network calls --------------------
@@ -90,36 +92,33 @@ if [ "$MODE" = "dry-run" ]; then
   log "  TOKEN=\$(curl -s -X POST '$TOKEN_URL' \\"
   log "    -d \"grant_type=client_credentials&client_id=\$CLIENT_ID&client_secret=\$CLIENT_SECRET\" | jq -r .access_token)"
   log ""
-  # Show the per-asset PUTs for the first 2 and the last 1 as concrete examples.
+  # Show the per-asset POSTs for the first 2 and the last 1 as concrete examples.
+  # This is the verified Exchange Experience API shape that yields type=agent.
   node -e '
     const m = require(process.argv[1]);
     const base = process.argv[2];
     const show = [...m.assets.slice(0,2), m.assets[m.assets.length-1]];
     for (const a of show) {
-      const B = `${base}/${a.artifactId}/${a.version}`;
+      const card = `mulesoft/agents/assets/${a.id}/src/main/resources/${a.id}-agent.json`;
       console.log(`  # ${a.id}`);
-      console.log(`  curl -s -X PUT "${B}/${a.artifactId}-${a.version}.pom" \\`);
-      console.log(`    -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/xml" \\`);
-      console.log(`    --data-binary @mulesoft/agents/assets/${a.id}/pom.xml`);
-      console.log(`  curl -s -X PUT "${B}/${a.artifactId}-${a.version}-agent.json" \\`);
-      console.log(`    -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \\`);
-      console.log(`    --data-binary @mulesoft/agents/assets/${a.id}/src/main/resources/${a.id}-agent.json`);
+      console.log(`  curl -s -X POST "${base}/${a.artifactId}/${a.version}" \\`);
+      console.log(`    -H "Authorization: bearer $TOKEN" -H "x-sync-publication: true" \\`);
+      console.log(`    -F "name=<agent name>" -F "type=agent" -F "classifier=a2a-card" \\`);
+      console.log(`    -F "files.json=@${card};type=application/json"`);
       console.log("");
     }
     console.log(`  ... (${m.count - 3} more assets, same shape)`);
-  ' "$MANIFEST" "$MAVEN_BASE"
+  ' "$MANIFEST" "$UPLOAD_BASE"
   hr
   log "NETWORK CALLS MADE: 0"
   log ""
-  log "NOTE ON ASSET TYPE: the Maven-v2 PUT path above publishes the card as a"
-  log "Maven artifact. Exchange's native \"Agents\" asset type (what Agent Visualizer"
-  log "reads) is documented only via the Exchange UI 'Publish new asset' dialog and"
-  log "the Exchange Experience API with an agent classifier (a2a-card). Before going"
-  log "live, run: bash publish-agent-assets.sh --probe  to confirm creds, then verify"
-  log "which endpoint tags the asset as type=agent. See mulesoft/agents/README.md."
+  log "ASSET TYPE (verified against the live org): this POST creates a native"
+  log "type=agent asset (classifier a2a-card), which Agent Visualizer surfaces as an"
+  log "agent. The Maven-v2 jar PUT used for our spec assets yields type=unknown and is"
+  log "NOT used here. Each version is pinned at 1.0.0 (Exchange tombstones versions)."
   log ""
-  log "To go live (after credential + endpoint confirmation):"
-  log "  bash mulesoft/agents/publish-agent-assets.sh --live CONFIRM=yes"
+  log "Go-live: 1) bash publish-agent-assets.sh --probe   (confirm creds, read-only)"
+  log "         2) bash publish-agent-assets.sh --live CONFIRM=yes"
   exit 0
 fi
 
@@ -167,27 +166,32 @@ if [ "$MODE" = "live" ]; then
     echo "  bash mulesoft/agents/publish-agent-assets.sh --live CONFIRM=yes" >&2
     exit 3
   fi
-  log "LIVE PUBLISH — pushing $COUNT agent assets to Exchange (version 1.0.0)."
+  log "LIVE PUBLISH — pushing $COUNT type=agent assets to Exchange (version 1.0.0)."
   log "(Exchange tombstones versions; a repeat of an existing version will conflict.)"
   hr
-  OK=0; FAIL=0
+  OK=0; FAIL=0; SKIP=0
   while IFS= read -r row; do
     id="${row%%|*}"; rest="${row#*|}"; artifactId="${rest%%|*}"; version="${rest##*|}"
-    B="$MAVEN_BASE/$artifactId/$version"
-    pom="$ASSETS_DIR/$id/pom.xml"
     card="$ASSETS_DIR/$id/src/main/resources/$id-agent.json"
-    ps=$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/$artifactId-$version.pom" \
-      -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/xml" --data-binary @"$pom")
-    cs=$(curl -s -o /dev/null -w '%{http_code}' -X PUT "$B/$artifactId-$version-agent.json" \
-      -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary @"$card")
-    if [[ "$ps" =~ ^2 ]] && [[ "$cs" =~ ^2 ]]; then
-      OK=$((OK+1)); log "  OK   $id (pom $ps, card $cs)"
+    name=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).name)' "$card")
+    # Skip if this version already exists (idempotent re-runs; avoids tombstone conflicts).
+    exists=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: bearer $TOKEN" \
+      "$EXCHANGE_BASE/assets/$GROUP_ID/$artifactId/$version/asset")
+    if [ "$exists" = "200" ]; then
+      SKIP=$((SKIP+1)); log "  SKIP $id (already published at $version)"; continue
+    fi
+    code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$UPLOAD_BASE/$artifactId/$version" \
+      -H "Authorization: bearer $TOKEN" -H "x-sync-publication: true" \
+      -F "name=$name" -F "type=agent" -F "classifier=a2a-card" \
+      -F "files.json=@$card;type=application/json")
+    if [[ "$code" =~ ^2 ]]; then
+      OK=$((OK+1)); log "  OK   $id (HTTP $code)"
     else
-      FAIL=$((FAIL+1)); log "  FAIL $id (pom $ps, card $cs)"
+      FAIL=$((FAIL+1)); log "  FAIL $id (HTTP $code)"
     fi
   done < <(node -e 'require(process.argv[1]).assets.forEach(a=>console.log(`${a.id}|${a.artifactId}|${a.version}`))' "$MANIFEST")
   hr
-  log "Published OK: $OK   Failed: $FAIL   Total: $COUNT"
+  log "Published OK: $OK   Skipped (already present): $SKIP   Failed: $FAIL   Total: $COUNT"
   log "Reload Anypoint Agent Visualizer and confirm the agents appear."
   [ "$FAIL" -eq 0 ]
 fi
