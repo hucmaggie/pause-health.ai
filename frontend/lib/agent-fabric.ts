@@ -1921,6 +1921,43 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "rolling-census-peak-agent",
+    name: "Rolling Census Peak / Sliding-Window Maximum (Monotonic Deque) Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the care-coordination capacity-monitoring piece:
+    // POST /api/agents/rolling-census-peak/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) care-coordination agent that, given per-slot
+    // CENSUS readings and a trailing WINDOW width k, computes the PEAK census in
+    // every window and flags windows over a CAPACITY threshold. The heart of the
+    // service is the MONOTONIC DEQUE sliding-window maximum: a decreasing-reading
+    // deque of candidate indices, O(n) overall. CRUCIALLY this is NOT the Access
+    // Anomaly agent's SLIDING-WINDOW COUNTING (a fixed-window EVENT COUNT — this is
+    // the sliding-window EXTREMUM), NOT the Coverage Heatmap agent's
+    // DIFFERENCE-ARRAY RANGE ACCUMULATION (per-slot occupancy from range-adds —
+    // this is the rolling MAX over a window of an existing series), NOT the
+    // Peak-Window agent's KADANE MAXIMUM-SUBARRAY (a max contiguous SUM — this is a
+    // max VALUE per fixed window), NOT the Fenwick / Benefit Accumulator agent's
+    // PREFIX SUMS, and NOT the SLA Worklist agent's EARLIEST-DEADLINE-FIRST
+    // SCHEDULING. The agent MONITORS on paper; it never diverts admissions,
+    // triggers surge staffing, or acts on a peak, and every report is a
+    // RECOMMENDATION requiring a nursing supervisor to confirm. It IS PHI-adjacent
+    // (care-unit occupancy). REUSES the existing care-coordination tier. The
+    // readings are ILLUSTRATIVE, NOT a certified capacity-management system.
+    endpoint: "/api/agents/rolling-census-peak",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Given per-slot census readings, a trailing window width k, and a capacity threshold, computes the peak census in every window and flags the windows over capacity, reporting the per-window maxima, the over-capacity windows, and the overall peak (disposition within-capacity / over-capacity). A deterministic care-coordination capacity-monitoring agent; it COMPLEMENTS the Coverage Heatmap agent (per-slot concurrent coverage) and the Access Anomaly agent (windowed event counts) — this reports the rolling peak occupancy",
+      "The report is DETERMINISTIC — a pure function of the request's own readings + window size + capacity (time is data: the readings are plain numbers, no real clock; not a sliding-window count, a difference-array accumulation, a Kadane max-subarray, prefix sums, or an EDF schedule but the SLIDING-WINDOW MAXIMUM via a MONOTONIC DEQUE); the same request always yields the same report",
+      "The windows must be sourced + self-consistent — each window max equal to the true max of that window (cross-checked by DIRECT per-window scanning, INDEPENDENT of the deque method), the over-capacity windows exactly the breaching windows, honest peak/counts; a fabricated window max, a mis-listed window, or a dishonest peak is blocked at the Agent Fabric governance boundary (policy.rollingcensus.windows-sourced, the sourced + self-consistency gate); and the deque must be exact — re-running the monotonic deque must reproduce the maxima array; a mis-derived maxima array is blocked (policy.rollingcensus.deque-exact, the load-bearing correctness gate that cross-checks the same per-window truth by two independent methods). Mirrors the Coverage Heatmap Agent's coverage-sourced + accumulation-exact posture",
+      "The agent MONITORS and RECOMMENDS — it NEVER diverts admissions, triggers surge staffing, or acts on a peak (each is an operational action that must be authorized) on its own; a report that auto-diverts or is not review-gated is blocked (policy.rollingcensus.no-autonomous-divert), and every report is confirmed by a nursing supervisor. Mirrors the Coverage Heatmap Agent's no-autonomous-staff and the Interpreter Assignment Agent's no-autonomous-dispatch posture",
+      "Runs against ILLUSTRATIVE synthetic readings — clearly labeled; NOT a certified capacity-management / patient-flow system (real census management weighs acuity, staffed vs licensed beds, isolation & telemetry needs, anticipated discharges, and boarding — not a bare rolling max over illustrative counts). PHI-adjacent — care-unit occupancy, so a report is on the HIPAA audit path"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "formulary-review-agent",
     name: "Formulary & Drug Utilization Review Agent",
     kind: "agentforce",
@@ -4179,6 +4216,7 @@ const POLICIES: PolicyRecord[] = [
       "benefit-accumulator-agent",
       "interpreter-assignment-agent",
       "coverage-heatmap-agent",
+      "rolling-census-peak-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
@@ -5155,6 +5193,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Coverage Heatmap Agent may NEVER schedule, adjust, or dispatch staff on its own (autoStaffed:true — each is a staffing action that must be authorized) or skip manager review (requiresManagerReview:true) — the agent VISUALIZES on paper, and every heatmap is a RECOMMENDATION requiring a staffing manager to confirm before any coverage changes. A heatmap that auto-staffs, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Interpreter Assignment Agent's no-autonomous-dispatch and the Benefit Accumulator Agent's no-autonomous-adjust posture — the harmful action is enforced-off.",
     appliesTo: ["coverage-heatmap-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.rollingcensus.windows-sourced",
+    name: "The census windows are a sourced, self-consistent per-window peak",
+    description:
+      "The Rolling Census Peak Agent's report must be a REAL, self-consistent per-window peak — each windowMaxes[i] equal to max(readings[i .. i+k-1]) (checked by DIRECT per-window scanning, INDEPENDENT of the monotonic-deque method), exactly readingCount - k + 1 windows, the overCapacityWindows exactly the windows whose max exceeds capacity, and peakCensus / windowCount / readingCount honest with the disposition following (over-capacity iff any window exceeds capacity). A fabricated window max, a mis-listed over-capacity window, or a dishonest peak corrupts the report. A report that fabricates a window max, mis-lists a window, or reports a dishonest peak is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the Coverage Heatmap Agent's coverage-sourced and the Benefit Accumulator Agent's ledger-sourced posture. (In the prototype the readings are a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["rolling-census-peak-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.rollingcensus.deque-exact",
+    name: "The deque is exact (the monotonic deque re-derives the window maxima)",
+    description:
+      "The Rolling Census Peak Agent's report must be DEQUE-EXACT — re-running the MONOTONIC DEQUE sliding-window maximum over the submitted readings + window size must reproduce the reported windowMaxes array exactly, window for window. A report whose maxima don't match the deque computation mis-states where the census peaks. A mis-derived maxima array is rejected before it can leave the fabric. This is the load-bearing correctness gate; it re-runs the monotonic deque INDEPENDENT of the reported maxima (and of the sourced gate's direct scanning), so the two gates cross-check the same per-window truth by two different methods — a fabricated maxima array that still reports the right over-capacity windows fails deque and a genuine-but-mislabeled disposition fails sourced. Mirrors the Coverage Heatmap Agent's accumulation-exact and the Benefit Accumulator Agent's accumulator-exact posture.",
+    appliesTo: ["rolling-census-peak-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.rollingcensus.no-autonomous-divert",
+    name: "No admissions are autonomously diverted / surged",
+    description:
+      "The Rolling Census Peak Agent may NEVER divert admissions, trigger surge staffing, or act on a peak on its own (autoDiverted:true — each is an operational action that must be authorized) or skip supervisor review (requiresSupervisorReview:true) — the agent MONITORS on paper, and every report is a RECOMMENDATION requiring a nursing supervisor to confirm. A report that auto-diverts, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Coverage Heatmap Agent's no-autonomous-staff and the Interpreter Assignment Agent's no-autonomous-dispatch posture — the harmful action is enforced-off.",
+    appliesTo: ["rolling-census-peak-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -17471,6 +17536,117 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous staffing action.
         coverageNoAutonomousStaff: true,
         requiresManagerReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedRollingCensusPeakTrace() {
+  const s = store();
+  const rc0 = Date.now() - 1000 * 60 * 1;
+  const rcTaskId = "task-seed-rolling-census-peak-001";
+  const rcName = "Rolling Census Peak / Sliding-Window Maximum (Monotonic Deque) Agent";
+  s.traces.push(
+    {
+      id: "span-rolling-census-peak-001",
+      taskId: rcTaskId,
+      agentId: "rolling-census-peak-agent",
+      agentName: rcName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(rc0).toISOString(),
+      finishedAt: new Date(rc0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // The census references a care unit's occupancy — PHI-adjacent; on the HIPAA audit path.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-rolling-census-peak-002",
+      taskId: rcTaskId,
+      parentSpanId: "span-rolling-census-peak-001",
+      agentId: "rolling-census-peak-agent",
+      agentName: rcName,
+      operation: "rollingcensus.receive-readings",
+      protocol: "a2a",
+      startedAt: new Date(rc0 + 30).toISOString(),
+      finishedAt: new Date(rc0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        unitRef: "care-unit-census-2026-5501",
+        readingCount: 10,
+        windowSize: 3,
+        capacity: 18,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-rolling-census-peak-003",
+      taskId: rcTaskId,
+      parentSpanId: "span-rolling-census-peak-002",
+      agentId: "rolling-census-peak-agent",
+      agentName: rcName,
+      operation: "rollingcensus.peak",
+      protocol: "a2a",
+      startedAt: new Date(rc0 + 60).toISOString(),
+      finishedAt: new Date(rc0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        unitRef: "care-unit-census-2026-5501",
+        peakCensus: 20,
+        windowCount: 8,
+        // The honesty invariants: windows sourced + self-consistent, deque exact.
+        censusWindowsSourced: true,
+        censusDequeExact: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-rolling-census-peak-004",
+      taskId: rcTaskId,
+      parentSpanId: "span-rolling-census-peak-003",
+      agentId: "rolling-census-peak-agent",
+      agentName: rcName,
+      operation: "rollingcensus.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(rc0 + 100).toISOString(),
+      finishedAt: new Date(rc0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        unitRef: "care-unit-census-2026-5501",
+        disposition: "over-capacity",
+        overCapacityCount: 4,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-rolling-census-peak-005",
+      taskId: rcTaskId,
+      parentSpanId: "span-rolling-census-peak-004",
+      agentId: "rolling-census-peak-agent",
+      agentName: rcName,
+      operation: "rollingcensus.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(rc0 + 140).toISOString(),
+      finishedAt: new Date(rc0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        unitRef: "care-unit-census-2026-5501",
+        // The honesty invariant: never an autonomous diversion.
+        censusNoAutonomousDivert: true,
+        requiresSupervisorReview: true,
         phiAccessed: true,
         synthetic: true
       }

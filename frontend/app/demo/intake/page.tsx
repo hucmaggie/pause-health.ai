@@ -83,6 +83,7 @@ import { AuditSamplePanel } from "../../../components/audit-sample-panel";
 import { BenefitAccumulatorPanel } from "../../../components/benefit-accumulator-panel";
 import { InterpreterAssignmentPanel } from "../../../components/interpreter-assignment-panel";
 import { CoverageHeatmapPanel } from "../../../components/coverage-heatmap-panel";
+import { RollingCensusPeakPanel } from "../../../components/rolling-census-peak-panel";
 import { ExclusionScreeningPanel } from "../../../components/exclusion-screening-panel";
 import { ControlledSubstancePanel } from "../../../components/controlled-substance-panel";
 import { DrugInteractionPanel } from "../../../components/drug-interaction-panel";
@@ -261,6 +262,7 @@ export default function IntakeDemoPage() {
       <BenefitAccumulatorPanel />
       <InterpreterAssignmentPanel />
       <CoverageHeatmapPanel />
+      <RollingCensusPeakPanel />
       <CarePathwayPanel />
       <ExclusionScreeningPanel />
 

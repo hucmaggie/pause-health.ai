@@ -322,6 +322,10 @@ export type GovernanceTask = {
   coverageSourcedSignal?: boolean;
   coverageAccumulationExact?: boolean;
   coverageNoAutonomousStaff?: boolean;
+  // Rolling Census Peak / Sliding-Window Maximum (windows-sourced + deque-exact + no-autonomous-divert)
+  censusWindowsSourced?: boolean;
+  censusDequeExact?: boolean;
+  censusNoAutonomousDivert?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -2187,6 +2191,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Staff scheduled / adjusted / dispatched autonomously, or with no manager review",
     reason:
       "A coverage heatmap autonomously scheduled, adjusted, or dispatched staff (autoStaffed:true — each is a staffing action that must be authorized) or did not require manager review (requiresManagerReview:false); the agent VISUALIZES on paper — every heatmap is a RECOMMENDATION requiring a staffing manager to confirm before any coverage changes. Mirrors the Interpreter Assignment Agent's no-autonomous-dispatch and the Benefit Accumulator Agent's no-autonomous-adjust — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.rollingcensus.windows-sourced",
+    signal: "censusWindowsSourced",
+    violatingValue: false,
+    violationHint: "A fabricated window max, a mis-listed over-capacity window, or a dishonest peak",
+    reason:
+      "A rolling census report is not a real, self-consistent per-window peak — each windowMaxes[i] must equal max(readings[i .. i+k-1]) (checked by DIRECT per-window scanning, independent of the monotonic-deque method), there must be exactly readingCount - k + 1 windows, the overCapacityWindows must be exactly the windows whose max exceeds capacity, and peakCensus / windowCount / readingCount must be honest with the disposition following. A fabricated window max, a mis-listed over-capacity window, or a dishonest peak corrupts the report. The sourced + self-consistency gate — mirrors the Coverage Heatmap Agent's coverage-sourced and the Benefit Accumulator Agent's ledger-sourced"
+  },
+  {
+    policyId: "policy.rollingcensus.deque-exact",
+    signal: "censusDequeExact",
+    violatingValue: false,
+    violationHint: "A maxima array the monotonic deque wouldn't produce",
+    reason:
+      "A rolling census report is not deque-exact — re-running the MONOTONIC DEQUE sliding-window maximum over the submitted readings + window size must reproduce the reported windowMaxes array exactly, window for window. A report whose maxima don't match the deque computation mis-states where the census peaks. The load-bearing correctness gate; it re-runs the monotonic deque INDEPENDENT of the reported maxima (and of the sourced gate's direct scanning), so the two gates cross-check the same per-window truth by two different methods — a fabricated maxima array that still reports the right over-capacity windows fails deque while a genuine-but-mislabeled disposition fails sourced. Mirrors the Coverage Heatmap Agent's accumulation-exact and the Benefit Accumulator Agent's accumulator-exact"
+  },
+  {
+    policyId: "policy.rollingcensus.no-autonomous-divert",
+    signal: "censusNoAutonomousDivert",
+    violatingValue: false,
+    violationHint: "Admissions diverted / surge staffing triggered autonomously, or with no supervisor review",
+    reason:
+      "A rolling census report autonomously diverted admissions, triggered surge staffing, or acted on a peak (autoDiverted:true — each is an operational action that must be authorized) or did not require supervisor review (requiresSupervisorReview:false); the agent MONITORS on paper — every report is a RECOMMENDATION requiring a nursing supervisor to confirm. Mirrors the Coverage Heatmap Agent's no-autonomous-staff and the Interpreter Assignment Agent's no-autonomous-dispatch — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",
