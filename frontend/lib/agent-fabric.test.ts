@@ -487,8 +487,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // the payer-operations Benefit Accumulator Ledger / Fenwick-Tree Prefix Sums agent,
     // the care-coordination Interpreter Assignment / Optimal Assignment (Hungarian Algorithm) agent,
     // the care-coordination Coverage Heatmap / Difference-Array Range Accumulation agent,
-    // and the care-coordination Rolling Census Peak / Sliding-Window Maximum (Monotonic Deque) agent.
-    expect(listAgents()).toHaveLength(109);
+    // the care-coordination Rolling Census Peak / Sliding-Window Maximum (Monotonic Deque) agent,
+    // and the data-plane Status Timeline Compression / Run-Length Encoding (RLE) agent.
+    expect(listAgents()).toHaveLength(110);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 

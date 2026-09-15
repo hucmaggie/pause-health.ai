@@ -326,6 +326,10 @@ export type GovernanceTask = {
   censusWindowsSourced?: boolean;
   censusDequeExact?: boolean;
   censusNoAutonomousDivert?: boolean;
+  // Status Timeline Compression / Run-Length Encoding (encoding-sourced + runs-canonical + no-autonomous-write)
+  statusEncodingSourced?: boolean;
+  statusRunsCanonical?: boolean;
+  statusNoAutonomousWrite?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -2215,6 +2219,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Admissions diverted / surge staffing triggered autonomously, or with no supervisor review",
     reason:
       "A rolling census report autonomously diverted admissions, triggered surge staffing, or acted on a peak (autoDiverted:true — each is an operational action that must be authorized) or did not require supervisor review (requiresSupervisorReview:false); the agent MONITORS on paper — every report is a RECOMMENDATION requiring a nursing supervisor to confirm. Mirrors the Coverage Heatmap Agent's no-autonomous-staff and the Interpreter Assignment Agent's no-autonomous-dispatch — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.statusrle.encoding-sourced",
+    signal: "statusEncodingSourced",
+    violatingValue: false,
+    violationHint: "A run list that doesn't decode to the stream, a wrong length, or a reordered decode",
+    reason:
+      "A status-timeline encoding is not a real, lossless accounting of the submitted stream — DECODING the runs (each value repeated `length` times, in order) must reproduce EXACTLY the submitted statuses (same values, order, and length), every run length must be ≥ 1, the reported runCount / originalLength / compressionRatio / longestRun / dominantStatus must be honest, and the disposition must follow. A fabricated run, a wrong length, or a reordered decode corrupts the encoding. The sourced + self-consistency gate — mirrors the Huffman Agent's code-sourced and the Rolling Census Peak Agent's windows-sourced"
+  },
+  {
+    policyId: "policy.statusrle.runs-canonical",
+    signal: "statusRunsCanonical",
+    violatingValue: false,
+    violationHint: "An over-split or mis-merged run list that isn't the unique maximal-run RLE",
+    reason:
+      "A status-timeline encoding is not canonical — re-running run-length encoding over the submitted statuses must reproduce the EXACT run list. RLE has a UNIQUE canonical form (maximal runs — adjacent runs never share a value), so any over-split run (e.g. a single run reported as two adjacent same-value runs) is non-canonical even though it still decodes correctly. The load-bearing correctness gate; it re-derives the canonical runs INDEPENDENT of the reported runs, so an over-split-but-decodable encoding fails here while a fabricated run that doesn't decode fails sourced — mirrors the Rolling Census Peak Agent's deque-exact and the Huffman Agent's code-optimal"
+  },
+  {
+    policyId: "policy.statusrle.no-autonomous-write",
+    signal: "statusNoAutonomousWrite",
+    violatingValue: false,
+    violationHint: "The compressed timeline written back / persisted autonomously, or with no steward review",
+    reason:
+      "A status-timeline encoding autonomously wrote the compressed timeline back to a source of record, replaced the raw stream, or persisted the encoding (autoWritten:true — each is a data-write that must be authorized) or did not require steward review (requiresStewardReview:false); the agent COMPRESSES on paper — every encoding is a RECOMMENDATION requiring a data steward to confirm. Mirrors the Timeline Merge Agent's no-autonomous-merge and the Rolling Census Peak Agent's no-autonomous-divert — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

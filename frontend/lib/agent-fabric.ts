@@ -2866,6 +2866,41 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "data-plane"
   },
   {
+    id: "status-timeline-rle-agent",
+    name: "Status Timeline Compression / Run-Length Encoding (RLE) Agent",
+    kind: "mulesoft-process",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the platform / data-substrate stream-compression
+    // piece: POST /api/agents/status-timeline-rle/tasks (card at /.well-known/
+    // agent.json). A DETERMINISTIC (no-Claude) data-plane agent that, given a
+    // per-slot STATUS stream (device / bed-occupancy / monitoring status), RUN-
+    // LENGTH-ENCODES it into (value, length) runs — the canonical, reversible RLE.
+    // CRUCIALLY this is NOT the Huffman agent's OPTIMAL PREFIX CODING (a
+    // FREQUENCY-based code over the alphabet — this is CONSECUTIVE-RUN coalescing,
+    // order-dependent), NOT the Coverage Heatmap agent's DIFFERENCE-ARRAY RANGE
+    // ACCUMULATION, NOT the Rolling Census Peak agent's SLIDING-WINDOW MAXIMUM, NOT
+    // the Timeline Merge agent's K-WAY MERGE (which interleaves multiple sorted
+    // streams — this compresses ONE stream), and NOT the List Reconciliation
+    // agent's LONGEST COMMON SUBSEQUENCE. The agent COMPRESSES on paper; it never
+    // writes the compressed timeline back to a source of record, and every
+    // encoding is a RECOMMENDATION requiring a data steward to confirm. It IS
+    // PHI-adjacent (device / bed monitoring timeline). REUSES the existing
+    // data-plane tier. The stream is ILLUSTRATIVE, NOT a certified telemetry-
+    // compression system.
+    endpoint: "/api/agents/status-timeline-rle",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Given a per-slot status stream (device / bed-occupancy / monitoring status), run-length-encodes it into a canonical sequence of (value, length) runs, reporting the run count, the compression ratio, the longest run, and the dominant status (disposition compressible / incompressible). A deterministic data-plane stream-compression agent; it COMPLEMENTS the Huffman agent (frequency-based prefix coding) and the Timeline Merge agent (multi-source interleave) — this run-length-compresses one status stream",
+      "The encoding is DETERMINISTIC — a pure function of the request's own statuses (time is data: the statuses are plain values, no real clock; not a Huffman prefix code, a difference-array accumulation, a sliding-window maximum, a k-way merge, or an LCS but RUN-LENGTH ENCODING — a single-pass coalescing of maximal consecutive-value blocks); the same request always yields the same encoding",
+      "The encoding must be sourced + self-consistent — decoding the runs (value repeated `length` times, in order) reproduces the EXACT submitted stream, every run length ≥ 1, honest counts/ratio/longest-run/dominant-status; a fabricated run, a wrong length, or a reordered decode is blocked at the Agent Fabric governance boundary (policy.statusrle.encoding-sourced, the sourced + self-consistency gate); and the runs must be canonical — re-running RLE reproduces the unique maximal-run list (adjacent runs never share a value); an over-split or mis-merged run list is blocked (policy.statusrle.runs-canonical, the load-bearing correctness gate — an over-split-but-decodable encoding still fails this). Mirrors the Rolling Census Peak Agent's windows-sourced + deque-exact posture",
+      "The agent COMPRESSES and RECOMMENDS — it NEVER writes the compressed timeline back to a source of record, replaces the raw stream, or persists the encoding (each is a data-write that must be authorized) on its own; an encoding that auto-writes or is not review-gated is blocked (policy.statusrle.no-autonomous-write), and every encoding is confirmed by a data steward. Mirrors the Timeline Merge Agent's no-autonomous-merge and the Rolling Census Peak Agent's no-autonomous-divert posture",
+      "Runs against ILLUSTRATIVE synthetic status streams — clearly labeled; NOT a certified time-series / telemetry compression system (real telemetry compression uses delta / delta-of-delta encoding, dictionary methods, Gorilla-style float compression, and lossy downsampling — not a bare RLE over illustrative status labels). PHI-adjacent — device / bed monitoring timeline, so an encoding is on the HIPAA audit path"
+    ],
+    provider: "MuleSoft",
+    governanceTier: "data-plane"
+  },
+  {
     id: "break-the-glass-agent",
     name: "Break-the-Glass / Emergency Access Governance Agent",
     kind: "mulesoft-process",
@@ -4217,6 +4252,7 @@ const POLICIES: PolicyRecord[] = [
       "interpreter-assignment-agent",
       "coverage-heatmap-agent",
       "rolling-census-peak-agent",
+      "status-timeline-rle-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
@@ -5220,6 +5256,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Rolling Census Peak Agent may NEVER divert admissions, trigger surge staffing, or act on a peak on its own (autoDiverted:true — each is an operational action that must be authorized) or skip supervisor review (requiresSupervisorReview:true) — the agent MONITORS on paper, and every report is a RECOMMENDATION requiring a nursing supervisor to confirm. A report that auto-diverts, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Coverage Heatmap Agent's no-autonomous-staff and the Interpreter Assignment Agent's no-autonomous-dispatch posture — the harmful action is enforced-off.",
     appliesTo: ["rolling-census-peak-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.statusrle.encoding-sourced",
+    name: "The encoding is sourced and self-consistent (it decodes back exactly)",
+    description:
+      "The Status Timeline RLE Agent's encoding must be a REAL, lossless accounting of the submitted stream — DECODING the runs (each value repeated `length` times, in order) must reproduce EXACTLY the submitted statuses (same values, order, and length), every run length ≥ 1, the reported runCount / originalLength / compressionRatio / longestRun / dominantStatus honest, and the disposition following. A fabricated run, a wrong length, or a reordered decode corrupts the encoding. An encoding that doesn't decode back to the exact stream is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the Huffman Agent's code-sourced and the Rolling Census Peak Agent's windows-sourced posture. (In the prototype the stream is a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["status-timeline-rle-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.statusrle.runs-canonical",
+    name: "The runs are the canonical maximal-run RLE (run-length encoding re-derives)",
+    description:
+      "The Status Timeline RLE Agent's runs must be CANONICAL — re-running run-length encoding over the submitted statuses must reproduce the EXACT run list. RLE has a UNIQUE canonical form (maximal runs — adjacent runs never share a value), so any over-split run (a single run reported as two adjacent same-value runs) is non-canonical even though it still decodes correctly. A non-canonical run list is rejected before it can leave the fabric. This is the load-bearing correctness gate; it re-derives the canonical runs INDEPENDENT of the reported runs, so an over-split-but-decodable encoding fails here and a fabricated run that doesn't decode fails sourced — the two gates are isolable. Mirrors the Rolling Census Peak Agent's deque-exact and the Huffman Agent's code-optimal posture.",
+    appliesTo: ["status-timeline-rle-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.statusrle.no-autonomous-write",
+    name: "No compressed timeline is autonomously written back",
+    description:
+      "The Status Timeline RLE Agent may NEVER write the compressed timeline back to a source of record, replace the raw stream, or persist the encoding on its own (autoWritten:true — each is a data-write that must be authorized) or skip steward review (requiresStewardReview:true) — the agent COMPRESSES on paper, and every encoding is a RECOMMENDATION requiring a data steward to confirm. An encoding that auto-writes, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Timeline Merge Agent's no-autonomous-merge and the Rolling Census Peak Agent's no-autonomous-divert posture — the harmful action is enforced-off.",
+    appliesTo: ["status-timeline-rle-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -17647,6 +17710,115 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous diversion.
         censusNoAutonomousDivert: true,
         requiresSupervisorReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedStatusTimelineRleTrace() {
+  const s = store();
+  const sr0 = Date.now() - 1000 * 60 * 1;
+  const srTaskId = "task-seed-status-timeline-rle-001";
+  const srName = "Status Timeline Compression / Run-Length Encoding (RLE) Agent";
+  s.traces.push(
+    {
+      id: "span-status-timeline-rle-001",
+      taskId: srTaskId,
+      agentId: "status-timeline-rle-agent",
+      agentName: srName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(sr0).toISOString(),
+      finishedAt: new Date(sr0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // The statuses reference a device / bed monitoring timeline — PHI-adjacent; on the HIPAA audit path.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-status-timeline-rle-002",
+      taskId: srTaskId,
+      parentSpanId: "span-status-timeline-rle-001",
+      agentId: "status-timeline-rle-agent",
+      agentName: srName,
+      operation: "statusrle.receive-stream",
+      protocol: "a2a",
+      startedAt: new Date(sr0 + 30).toISOString(),
+      finishedAt: new Date(sr0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        streamRef: "rpm-device-status-2026-6601",
+        originalLength: 16,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-status-timeline-rle-003",
+      taskId: srTaskId,
+      parentSpanId: "span-status-timeline-rle-002",
+      agentId: "status-timeline-rle-agent",
+      agentName: srName,
+      operation: "statusrle.encode",
+      protocol: "a2a",
+      startedAt: new Date(sr0 + 60).toISOString(),
+      finishedAt: new Date(sr0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        streamRef: "rpm-device-status-2026-6601",
+        runCount: 5,
+        compressionRatio: 3.2,
+        // The honesty invariants: encoding sourced + self-consistent, runs canonical.
+        statusEncodingSourced: true,
+        statusRunsCanonical: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-status-timeline-rle-004",
+      taskId: srTaskId,
+      parentSpanId: "span-status-timeline-rle-003",
+      agentId: "status-timeline-rle-agent",
+      agentName: srName,
+      operation: "statusrle.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(sr0 + 100).toISOString(),
+      finishedAt: new Date(sr0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        streamRef: "rpm-device-status-2026-6601",
+        disposition: "compressible",
+        longestRun: 5,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-status-timeline-rle-005",
+      taskId: srTaskId,
+      parentSpanId: "span-status-timeline-rle-004",
+      agentId: "status-timeline-rle-agent",
+      agentName: srName,
+      operation: "statusrle.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(sr0 + 140).toISOString(),
+      finishedAt: new Date(sr0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        streamRef: "rpm-device-status-2026-6601",
+        // The honesty invariant: never an autonomous write-back.
+        statusNoAutonomousWrite: true,
+        requiresStewardReview: true,
         phiAccessed: true,
         synthetic: true
       }
