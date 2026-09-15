@@ -1885,6 +1885,42 @@ const REGISTRY: AgentSeed[] = [
     governanceTier: "care-coordination"
   },
   {
+    id: "coverage-heatmap-agent",
+    name: "Coverage Heatmap / Difference-Array Range Accumulation Agent",
+    kind: "agentforce",
+    protocol: "a2a",
+    // Runnable A2A stand-in for the care-coordination capacity-visibility piece:
+    // POST /api/agents/coverage-heatmap/tasks (card at /.well-known/agent.json).
+    // A DETERMINISTIC (no-Claude) care-coordination agent that, given staffing
+    // COVERAGE INTERVALS (each adding staff over a window of time slots) and a
+    // REQUIRED MINIMUM, computes the CONCURRENT coverage at every slot and flags
+    // the UNDER-STAFFED slots. The heart of the service is the DIFFERENCE ARRAY
+    // (imos range-update + a single prefix-sum pass): O(m + T) for m intervals over
+    // T slots. CRUCIALLY this is NOT the Fenwick / Benefit Accumulator agent's
+    // POINT-UPDATE + PREFIX-QUERY tree (the dual problem — this is RANGE-UPDATE +
+    // full MATERIALIZE), NOT the Schedule Conflict agent's GREEDY INTERVAL
+    // SELECTION (a max non-overlapping subset — this COUNTS overlaps per slot), NOT
+    // the Peak-Window agent's KADANE MAXIMUM-SUBARRAY (a max contiguous sum — this
+    // is per-slot occupancy), NOT the Caseload Balancing agent's BIN-PACKING, and
+    // NOT the Batch Partition agent's LINEAR PARTITION. The agent VISUALIZES on
+    // paper; it never schedules, adjusts, or dispatches staff, and every heatmap is
+    // a RECOMMENDATION requiring a staffing manager to confirm. It IS PHI-adjacent
+    // (care-unit staffing). REUSES the existing care-coordination tier. The
+    // intervals are ILLUSTRATIVE, NOT a certified workforce-management system.
+    endpoint: "/api/agents/coverage-heatmap",
+    version: "1.0.0",
+    status: "prototype",
+    capabilities: [
+      "Given staffing coverage intervals over a set of time slots and a required minimum, computes the concurrent coverage at every slot and flags the under-staffed slots, reporting the coverage array, the under-staffed slots, and the min/max (disposition fully-covered / understaffed). A deterministic care-coordination capacity-visibility agent; it COMPLEMENTS the Schedule Conflict agent (double-booking guard) and the Caseload Balancing agent (panel capacity fill) — this visualizes concurrent coverage across a schedule",
+      "The heatmap is DETERMINISTIC — a pure function of the request's own intervals + slot count + required minimum (time is data: the intervals + slot indices are plain numbers, no real clock; not a Fenwick point-update tree, a greedy interval selection, a Kadane max-subarray, a bin-packing, or a linear partition but the DIFFERENCE ARRAY — imos range-update + a single prefix-sum pass); the same request always yields the same heatmap",
+      "The coverage must be sourced + self-consistent — each coverage[t] equal to the true count of staff covering slot t (cross-checked by DIRECT interval counting, independent of the difference-array method), the under-staffed slots exactly the below-min slots, honest min/max; a fabricated coverage value, a mis-listed slot, or a dishonest min/max is blocked at the Agent Fabric governance boundary (policy.coverageheat.coverage-sourced, the sourced + self-consistency gate); and the accumulation must be exact — re-applying the intervals to a fresh difference array must reproduce the coverage array; a mis-materialized heatmap is blocked (policy.coverageheat.accumulation-exact, the load-bearing correctness gate that cross-checks the same per-slot truth by two independent methods). Mirrors the Benefit Accumulator Agent's ledger-sourced + accumulator-exact posture",
+      "The agent VISUALIZES and RECOMMENDS — it NEVER schedules, adjusts, or dispatches staff (each is a staffing action that must be authorized) on its own; a heatmap that auto-staffs or is not review-gated is blocked (policy.coverageheat.no-autonomous-staff), and every heatmap is confirmed by a staffing manager. Mirrors the Interpreter Assignment Agent's no-autonomous-dispatch and the Benefit Accumulator Agent's no-autonomous-adjust posture",
+      "Runs against ILLUSTRATIVE synthetic intervals — clearly labeled; NOT a certified workforce-management / staffing system (real staffing weighs skill mix, acuity-adjusted ratios, licensure, breaks & meal relief, union rules, and float pools — not a bare count of overlapping intervals). PHI-adjacent — care-unit staffing, so a heatmap is on the HIPAA audit path"
+    ],
+    provider: "Salesforce",
+    governanceTier: "care-coordination"
+  },
+  {
     id: "formulary-review-agent",
     name: "Formulary & Drug Utilization Review Agent",
     kind: "agentforce",
@@ -4142,6 +4178,7 @@ const POLICIES: PolicyRecord[] = [
       "audit-sample-agent",
       "benefit-accumulator-agent",
       "interpreter-assignment-agent",
+      "coverage-heatmap-agent",
       "formulary-review-agent",
       "fwa-detection-agent",
       "trial-payments-agent",
@@ -5091,6 +5128,33 @@ const POLICIES: PolicyRecord[] = [
     description:
       "The Interpreter Assignment Agent may NEVER book, dispatch, or notify an interpreter on its own (autoDispatched:true — each is a scheduling action that must be authorized) or skip coordinator review (requiresCoordinatorReview:true) — the agent ASSIGNS on paper, and every assignment is a RECOMMENDATION requiring a language-access coordinator to confirm. An assignment that auto-dispatches, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Benefit Accumulator Agent's no-autonomous-adjust and the Referral Throughput Agent's no-autonomous-route posture — the harmful action is enforced-off.",
     appliesTo: ["interpreter-assignment-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.coverageheat.coverage-sourced",
+    name: "The coverage is a sourced, self-consistent per-slot count",
+    description:
+      "The Coverage Heatmap Agent's coverage must be the TRUE count of staff covering each slot — each coverage[t] equal to the sum of `staff` over every submitted interval whose [start, end) contains t (checked by DIRECT interval counting, independent of the difference-array method), the reported understaffedSlots exactly the slots below requiredMin, minCoverage / maxCoverage / slotCount / intervalCount honest, and the disposition following (fully-covered iff no slot is below requiredMin). A fabricated coverage value, a mis-listed under-staffed slot, or a dishonest min/max corrupts the heatmap. A heatmap that fabricates a coverage value, mis-lists a slot, or reports a dishonest min/max is rejected before it can leave the fabric. This is the sourced + self-consistency gate. Mirrors the Benefit Accumulator Agent's ledger-sourced and the Interpreter Assignment Agent's assignment-sourced posture. (In the prototype the intervals are a clearly-labeled illustrative synthetic.)",
+    appliesTo: ["coverage-heatmap-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.coverageheat.accumulation-exact",
+    name: "The accumulation is exact (the difference array re-materializes the coverage)",
+    description:
+      "The Coverage Heatmap Agent's coverage must be ACCUMULATION-EXACT — re-applying the intervals to a fresh DIFFERENCE ARRAY and prefix-summing must reproduce the reported coverage array exactly, slot for slot. A heatmap whose materialized coverage doesn't match the difference-array computation mis-states where the gaps are. A mis-materialized heatmap is rejected before it can leave the fabric. This is the load-bearing correctness gate; it re-runs the difference-array range accumulation INDEPENDENT of the reported coverage (and of the sourced gate's direct counting), so the two gates cross-check the same per-slot truth by two different methods — a fabricated coverage that still reports the right under-staffed slots fails accumulation and a genuine-but-mislabeled disposition fails sourced. Mirrors the Benefit Accumulator Agent's accumulator-exact and the Interpreter Assignment Agent's cost-optimal posture.",
+    appliesTo: ["coverage-heatmap-agent"],
+    enforcement: "block",
+    status: "enforced"
+  },
+  {
+    id: "policy.coverageheat.no-autonomous-staff",
+    name: "No staff is autonomously scheduled / adjusted",
+    description:
+      "The Coverage Heatmap Agent may NEVER schedule, adjust, or dispatch staff on its own (autoStaffed:true — each is a staffing action that must be authorized) or skip manager review (requiresManagerReview:true) — the agent VISUALIZES on paper, and every heatmap is a RECOMMENDATION requiring a staffing manager to confirm before any coverage changes. A heatmap that auto-staffs, or that is not review-gated, is rejected before it can leave the fabric. Mirrors the Interpreter Assignment Agent's no-autonomous-dispatch and the Benefit Accumulator Agent's no-autonomous-adjust posture — the harmful action is enforced-off.",
+    appliesTo: ["coverage-heatmap-agent"],
     enforcement: "block",
     status: "enforced"
   },
@@ -17296,6 +17360,117 @@ function store(): FabricStore {
         // The honesty invariant: never an autonomous dispatch.
         interpNoAutonomousDispatch: true,
         requiresCoordinatorReview: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    }
+  );
+})();
+
+(function seedCoverageHeatmapTrace() {
+  const s = store();
+  const ch0 = Date.now() - 1000 * 60 * 1;
+  const chTaskId = "task-seed-coverage-heatmap-001";
+  const chName = "Coverage Heatmap / Difference-Array Range Accumulation Agent";
+  s.traces.push(
+    {
+      id: "span-coverage-heatmap-001",
+      taskId: chTaskId,
+      agentId: "coverage-heatmap-agent",
+      agentName: chName,
+      operation: "a2a.tasks/send",
+      protocol: "a2a",
+      startedAt: new Date(ch0).toISOString(),
+      finishedAt: new Date(ch0 + 30).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        // Intervals reference care-unit staffing — PHI-adjacent; on the HIPAA audit path.
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-coverage-heatmap-002",
+      taskId: chTaskId,
+      parentSpanId: "span-coverage-heatmap-001",
+      agentId: "coverage-heatmap-agent",
+      agentName: chName,
+      operation: "coverageheat.receive-schedule",
+      protocol: "a2a",
+      startedAt: new Date(ch0 + 30).toISOString(),
+      finishedAt: new Date(ch0 + 60).toISOString(),
+      durationMs: 30,
+      status: "ok",
+      attributes: {
+        scheduleRef: "care-unit-coverage-2026-4408",
+        slotCount: 12,
+        intervalCount: 4,
+        requiredMin: 2,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-coverage-heatmap-003",
+      taskId: chTaskId,
+      parentSpanId: "span-coverage-heatmap-002",
+      agentId: "coverage-heatmap-agent",
+      agentName: chName,
+      operation: "coverageheat.accumulate",
+      protocol: "a2a",
+      startedAt: new Date(ch0 + 60).toISOString(),
+      finishedAt: new Date(ch0 + 100).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        scheduleRef: "care-unit-coverage-2026-4408",
+        minCoverage: 1,
+        maxCoverage: 3,
+        // The honesty invariants: coverage sourced + self-consistent, accumulation exact.
+        coverageSourcedSignal: true,
+        coverageAccumulationExact: true,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-coverage-heatmap-004",
+      taskId: chTaskId,
+      parentSpanId: "span-coverage-heatmap-003",
+      agentId: "coverage-heatmap-agent",
+      agentName: chName,
+      operation: "coverageheat.classify-disposition",
+      protocol: "a2a",
+      startedAt: new Date(ch0 + 100).toISOString(),
+      finishedAt: new Date(ch0 + 140).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        scheduleRef: "care-unit-coverage-2026-4408",
+        disposition: "understaffed",
+        understaffedCount: 2,
+        phiAccessed: true,
+        synthetic: true
+      }
+    },
+    {
+      id: "span-coverage-heatmap-005",
+      taskId: chTaskId,
+      parentSpanId: "span-coverage-heatmap-004",
+      agentId: "coverage-heatmap-agent",
+      agentName: chName,
+      operation: "coverageheat.log-audit",
+      protocol: "a2a",
+      startedAt: new Date(ch0 + 140).toISOString(),
+      finishedAt: new Date(ch0 + 180).toISOString(),
+      durationMs: 40,
+      status: "ok",
+      attributes: {
+        scheduleRef: "care-unit-coverage-2026-4408",
+        // The honesty invariant: never an autonomous staffing action.
+        coverageNoAutonomousStaff: true,
+        requiresManagerReview: true,
         phiAccessed: true,
         synthetic: true
       }

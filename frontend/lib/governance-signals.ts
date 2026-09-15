@@ -318,6 +318,10 @@ export type GovernanceTask = {
   interpAssignmentSourced?: boolean;
   interpAssignmentOptimal?: boolean;
   interpNoAutonomousDispatch?: boolean;
+  // Coverage Heatmap / Difference-Array (coverage-sourced + accumulation-exact + no-autonomous-staff)
+  coverageSourcedSignal?: boolean;
+  coverageAccumulationExact?: boolean;
+  coverageNoAutonomousStaff?: boolean;
   // Clinical trials & research matching (criteria-sourced eligibility + consent-gated outreach)
   eligibilityTracesToCriteria?: boolean;
   researchConsentPresent?: boolean;
@@ -2159,6 +2163,30 @@ export const BOOLEAN_BLOCK_SIGNALS: BooleanBlockSignal[] = [
     violationHint: "Interpreters booked / dispatched / notified autonomously, or with no coordinator review",
     reason:
       "An interpreter assignment autonomously booked, dispatched, or notified an interpreter (autoDispatched:true — each is a scheduling action that must be authorized) or did not require coordinator review (requiresCoordinatorReview:false); the agent ASSIGNS on paper — every assignment is a RECOMMENDATION requiring a language-access coordinator to confirm. Mirrors the Benefit Accumulator Agent's no-autonomous-adjust and the Referral Throughput Agent's no-autonomous-route — the harmful action is enforced-off"
+  },
+  {
+    policyId: "policy.coverageheat.coverage-sourced",
+    signal: "coverageSourcedSignal",
+    violatingValue: false,
+    violationHint: "A fabricated coverage value, a mis-listed under-staffed slot, or a dishonest min/max",
+    reason:
+      "A coverage heatmap is not a real, self-consistent count — each coverage[t] must equal the sum of `staff` over every submitted interval whose [start, end) contains t (checked by DIRECT interval counting, independent of the difference-array method), the reported understaffedSlots must be exactly the slots below requiredMin, minCoverage / maxCoverage / slotCount / intervalCount must be honest, and the disposition must follow (fully-covered iff no slot is below requiredMin). A fabricated coverage value, a mis-listed under-staffed slot, or a dishonest min/max corrupts the heatmap. The sourced + self-consistency gate — mirrors the Benefit Accumulator Agent's ledger-sourced and the Interpreter Assignment Agent's assignment-sourced"
+  },
+  {
+    policyId: "policy.coverageheat.accumulation-exact",
+    signal: "coverageAccumulationExact",
+    violatingValue: false,
+    violationHint: "A coverage array the difference array wouldn't materialize",
+    reason:
+      "A coverage heatmap is not accumulation-exact — re-applying the intervals to a fresh DIFFERENCE ARRAY and prefix-summing must reproduce the reported coverage array exactly, slot for slot. A heatmap whose materialized coverage doesn't match the difference-array computation mis-states where the gaps are. The load-bearing correctness gate; it re-runs the difference-array range accumulation INDEPENDENT of the reported coverage (and of the sourced gate's direct counting), so the two gates cross-check the same per-slot truth by two different methods — a fabricated coverage that still reports the right under-staffed slots fails accumulation while a genuine-but-mislabeled disposition fails sourced. Mirrors the Benefit Accumulator Agent's accumulator-exact and the Interpreter Assignment Agent's cost-optimal"
+  },
+  {
+    policyId: "policy.coverageheat.no-autonomous-staff",
+    signal: "coverageNoAutonomousStaff",
+    violatingValue: false,
+    violationHint: "Staff scheduled / adjusted / dispatched autonomously, or with no manager review",
+    reason:
+      "A coverage heatmap autonomously scheduled, adjusted, or dispatched staff (autoStaffed:true — each is a staffing action that must be authorized) or did not require manager review (requiresManagerReview:false); the agent VISUALIZES on paper — every heatmap is a RECOMMENDATION requiring a staffing manager to confirm before any coverage changes. Mirrors the Interpreter Assignment Agent's no-autonomous-dispatch and the Benefit Accumulator Agent's no-autonomous-adjust — the harmful action is enforced-off"
   },
   {
     policyId: "policy.trials.eligibility-criteria-sourced",

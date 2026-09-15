@@ -485,8 +485,9 @@ describe("Benefits & Coverage Verification (EBV) · Benefits agent", () => {
     // the payer-operations Duplicate-Claim Pre-Screen / Bloom-Filter Membership Test agent,
     // the payer-operations Audit Sample Selection / Reservoir Sampling (Algorithm R, Seeded) agent,
     // the payer-operations Benefit Accumulator Ledger / Fenwick-Tree Prefix Sums agent,
-    // and the care-coordination Interpreter Assignment / Optimal Assignment (Hungarian Algorithm) agent.
-    expect(listAgents()).toHaveLength(107);
+    // the care-coordination Interpreter Assignment / Optimal Assignment (Hungarian Algorithm) agent,
+    // and the care-coordination Coverage Heatmap / Difference-Array Range Accumulation agent.
+    expect(listAgents()).toHaveLength(108);
     expect(listAgents().map((a) => a.id)).toContain("benefits-verification-agent");
   });
 
