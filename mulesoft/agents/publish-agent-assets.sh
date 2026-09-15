@@ -41,14 +41,17 @@ UPLOAD_BASE="${EXCHANGE_BASE}/organizations/${GROUP_ID}/assets/${GROUP_ID}"
 
 MODE="dry-run"
 CONFIRM="${CONFIRM:-no}"
+LIMIT=0   # 0 = all; N = only the first N assets (for a small first batch)
 for arg in "$@"; do
   case "$arg" in
     --probe) MODE="probe" ;;
     --live) MODE="live" ;;
+    --limit=*) LIMIT="${arg#--limit=}" ;;
     CONFIRM=*) CONFIRM="${arg#CONFIRM=}" ;;
     *) echo "unknown arg: $arg" >&2; exit 2 ;;
   esac
 done
+case "$LIMIT" in ''|*[!0-9]*) echo "--limit must be a non-negative integer" >&2; exit 2 ;; esac
 
 log() { printf '%s\n' "$*"; }
 hr() { printf '%s\n' "----------------------------------------------------------------------"; }
@@ -166,11 +169,16 @@ if [ "$MODE" = "live" ]; then
     echo "  bash mulesoft/agents/publish-agent-assets.sh --live CONFIRM=yes" >&2
     exit 3
   fi
-  log "LIVE PUBLISH — pushing $COUNT type=agent assets to Exchange (version 1.0.0)."
+  PLANNED=$COUNT
+  if [ "$LIMIT" -gt 0 ] && [ "$LIMIT" -lt "$COUNT" ]; then PLANNED=$LIMIT; fi
+  log "LIVE PUBLISH — pushing $PLANNED of $COUNT type=agent assets to Exchange (version 1.0.0)."
+  [ "$PLANNED" -lt "$COUNT" ] && log "(--limit=$LIMIT: first $PLANNED assets only — a first batch.)"
   log "(Exchange tombstones versions; a repeat of an existing version will conflict.)"
   hr
-  OK=0; FAIL=0; SKIP=0
+  OK=0; FAIL=0; SKIP=0; DONE=0
   while IFS= read -r row; do
+    if [ "$LIMIT" -gt 0 ] && [ "$DONE" -ge "$LIMIT" ]; then break; fi
+    DONE=$((DONE+1))
     id="${row%%|*}"; rest="${row#*|}"; artifactId="${rest%%|*}"; version="${rest##*|}"
     card="$ASSETS_DIR/$id/src/main/resources/$id-agent.json"
     name=$(node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).name)' "$card")
@@ -191,7 +199,7 @@ if [ "$MODE" = "live" ]; then
     fi
   done < <(node -e 'require(process.argv[1]).assets.forEach(a=>console.log(`${a.id}|${a.artifactId}|${a.version}`))' "$MANIFEST")
   hr
-  log "Published OK: $OK   Skipped (already present): $SKIP   Failed: $FAIL   Total: $COUNT"
+  log "Published OK: $OK   Skipped (already present): $SKIP   Failed: $FAIL   Attempted: $PLANNED / $COUNT"
   log "Reload Anypoint Agent Visualizer and confirm the agents appear."
   [ "$FAIL" -eq 0 ]
 fi
