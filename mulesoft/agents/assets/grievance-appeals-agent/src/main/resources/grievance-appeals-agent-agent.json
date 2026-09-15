@@ -1,0 +1,121 @@
+{
+  "name": "Grievance & Appeals Agent",
+  "description": "Grievance & Appeals Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: patient-facing. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/grievance-appeals",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "classifies-member-complaints-and-coverage-denial",
+      "name": "Classifies member complaints and coverage-denial appeals ...",
+      "description": "Classifies member complaints and coverage-denial appeals — grievance / billing / standard-appeal / expedited-appeal — routes each case to the correct human queue (member-services / clinical-review / compliance), and stamps a regulatory deadline that traces to the case-type catalog + received date; a member-service intake agent distinct from the Member Service / Billing agent (billing self-service) and the Prior Authorization agent (pre-service utilization management)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "classification-routing-and-deadline-stamping-are",
+      "name": "Classification, routing, and deadline stamping are DETERM...",
+      "description": "Classification, routing, and deadline stamping are DETERMINISTIC — a pure function of the intake keywords + coverage/service flags + received date accepted as data (no randomness, no clock); the same intake always yields the same case type / urgency / queue / deadline / summary, with a stable, documented case-id shape",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "the-agent-never-autonomously-resolves-approves-o",
+      "name": "The agent NEVER autonomously resolves, approves, or denie...",
+      "description": "The agent NEVER autonomously resolves, approves, or denies a case — every case is queued for human review, and every resolution proposal is human-queue-action gated (requiresHumanQueueAction:true, applied:false); an autonomous resolution is blocked at the Agent Fabric governance boundary (policy.grievance.no-autonomous-resolution), mirroring the ACP Agent's no-autonomous-directive-change and the HEDIS Agent's no-autonomous-submission posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "every-case-deadline-must-trace-to-the-defined-ca",
+      "name": "Every case deadline must trace to the defined case-type c...",
+      "description": "Every case deadline must trace to the defined case-type catalog + received date and may NOT exceed the regulatory maximum — an off-catalog case-type or a silently-extended deadline is blocked (policy.grievance.deadline-integrity), the load-bearing regulatory-compliance guard against breaching Medicare Advantage Chapter 13 / state-insurance-code timelines",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "the-routing-summary-handed-to-the-downstream-hum",
+      "name": "The routing summary handed to the downstream human queue ...",
+      "description": "The routing summary handed to the downstream human queue is PHI-SAFE — only the STRUCTURED case-type + urgency + queue + deadline + memberRef, never free-text PHI; a summary containing free-text PHI (patient name / DOB / diagnosis / medication / symptom detail) or an extra free-text key is blocked (policy.grievance.no-phi-in-routing-summary), so the routing payload can be delivered via lower-trust channels (Slack, email, ticketing) without leaking PHI",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-case-type-ca",
+      "name": "Runs against ILLUSTRATIVE synthetic case-type catalog, de...",
+      "description": "Runs against ILLUSTRATIVE synthetic case-type catalog, deadline windows, expedited-eligibility rules, and queue mapping — clearly labeled; NOT Medicare Advantage Chapter 13, a certified state-insurance-code process, or a real appeal-adjudication engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "grievance-appeals-agent",
+    "kind": "agentforce",
+    "governanceTier": "patient-facing",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.grievance.no-autonomous-resolution",
+      "policy.grievance.deadline-integrity",
+      "policy.grievance.no-phi-in-routing-summary"
+    ]
+  }
+}

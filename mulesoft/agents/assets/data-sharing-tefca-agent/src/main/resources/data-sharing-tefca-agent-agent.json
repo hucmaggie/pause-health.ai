@@ -1,0 +1,121 @@
+{
+  "name": "Data-Sharing / TEFCA Interoperability Agent",
+  "description": "Data-Sharing / TEFCA Interoperability Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/data-sharing-tefca",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "classifies-each-cross-organization-phi-exchange-",
+      "name": "Classifies each cross-organization PHI exchange request (...",
+      "description": "Classifies each cross-organization PHI exchange request (TEFCA QHIN, Carequality, CommonWell, Direct Secure Messaging) by purpose (treatment / payment / operations / patient-request / public-health / research), verifies the counterparty against the participant registry, applies the patient's data-sharing consent scopes, and classifies as release-authorized / pend-purpose-verification / blocked-non-catalog-purpose / blocked-participant-unverified / blocked-consent-required-non-tpo with a specific reason code",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "exchange-evaluation-is-deterministic-a-pure-func",
+      "name": "Exchange evaluation is DETERMINISTIC — a pure function of...",
+      "description": "Exchange evaluation is DETERMINISTIC — a pure function of the request + catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same decision + primary reason, with a documented decision precedence (blocked-participant-unverified > blocked-non-catalog-purpose > blocked-consent-required-non-tpo > pend-purpose-verification > release-authorized) and stable rule-id ordering",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-classified-exchange-must-trace-to-the-exch",
+      "name": "Every classified exchange must trace to the EXCHANGE_PURP...",
+      "description": "Every classified exchange must trace to the EXCHANGE_PURPOSES + EXCHANGE_NETWORKS + DATA_SHARING_RULES catalog — an off-catalog / bespoke exchange purpose is blocked at the Agent Fabric governance boundary (policy.data-sharing.purpose-catalog-sourced), because a bespoke purpose doesn't map to a HIPAA disclosure permission and would open the network to unauthorized aggregation",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-never-autonomously-releases-phi-for-a-",
+      "name": "The agent NEVER autonomously releases PHI for a non-TPO p...",
+      "description": "The agent NEVER autonomously releases PHI for a non-TPO purpose without an active consent scope — every non-TPO release without consent is DRAFTED for consent capture, and any autonomous release is blocked (policy.data-sharing.no-autonomous-non-tpo-release); this is the load-bearing HIPAA §164.506 boundary — TPO (treatment / payment / operations) doesn't need consent, everything else does. Mirrors the Consent & Preferences Management Agent's no-scope-override, the Grievance & Appeals Agent's no-phi-in-routing-summary, and the Handoff Agent's transfer-consent posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-requester-participant-must-be-identity-attes",
+      "name": "The requester participant must be identity-attested again...",
+      "description": "The requester participant must be identity-attested against the TEFCA / Carequality / CommonWell participant registry — an unverified counterparty is blocked (policy.data-sharing.participant-verified), because under 45 CFR 171 + the TEFCA Common Agreement a QHIN / participant / sub-participant must be identity-attested before a cross-org exchange is authorized. Mirrors the Provider Credentialing Agent's source-integrity, the Adverse Event Reporting Agent's reporter-verified, and the Handoff Agent's receiving-clinician-credentialed posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-exchange-net",
+      "name": "Runs against ILLUSTRATIVE synthetic exchange-network + ex...",
+      "description": "Runs against ILLUSTRATIVE synthetic exchange-network + exchange-purpose + rule + reason catalogs — clearly labeled; NOT an actual TEFCA QHIN implementation, the Carequality Interoperability Framework, the CommonWell Health Alliance node stack, an ONC-certified data-sharing gateway, or a certified 45 CFR 171 information-blocking-safe release engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "data-sharing-tefca-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.data-sharing.purpose-catalog-sourced",
+      "policy.data-sharing.no-autonomous-non-tpo-release",
+      "policy.data-sharing.participant-verified"
+    ]
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "name": "Agentforce Prior Authorization · CareRequest + Utilization Management (Health Cloud)",
+  "description": "Agentforce Prior Authorization · CareRequest + Utilization Management (Health Cloud) — a governed Pause fabric agent (agentforce, A2A). Governance tier: clinical-decision. Enforces 5 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/prior-authorization",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "assembles-a-prior-authorization-for-a-pa-requiri",
+      "name": "Assembles a prior authorization for a PA-requiring menopa...",
+      "description": "Assembles a prior authorization for a PA-requiring menopause item — systemic HRT / compounded estradiol, a bone-density DEXA scan, or a specialized hormone lab panel — the Salesforce 'Agentforce for Health' / Health Cloud CareRequest + Utilization Management analog; the HEAVIEST agent and the LEAST demo-honest (real PA is a genuinely multi-system EDI/278 or FHIR PAS workflow), so the mock is labeled especially clearly",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "pulls-the-synthetic-clinical-context-determinist",
+      "name": "Pulls the (synthetic) clinical context, DETERMINISTICALLY...",
+      "description": "Pulls the (synthetic) clinical context, DETERMINISTICALLY matches the payer's medical-necessity criteria, and assembles the required supporting-documentation checklist (present vs missing) — every package references defined catalog criteria (no randomness, no clock); clearly labeled synthetic, NOT a real X12 278 / FHIR PAS EDI transaction or payer PA portal",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "must-not-autonomously-submit-a-pa-it-may-only-as",
+      "name": "MUST NOT autonomously submit a PA: it may only assemble a...",
+      "description": "MUST NOT autonomously submit a PA: it may only assemble a clinician-gated draft (requiresClinicianApproval:true, submitted:false) — a clinician must approve before submission, enforced at the Agent Fabric governance boundary (policy.pa.no-autonomous-submission)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "documentation-integrity-a-pa-submission-must-inc",
+      "name": "Documentation integrity: a PA submission must include the...",
+      "description": "Documentation integrity: a PA submission must include the required supporting documentation — a submission missing a required document is blocked at the Agent Fabric governance boundary (policy.pa.documentation-integrity), and the submit path refuses as defense in depth",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "tracks-a-pa-status-draft-ready-for-clinician-sub",
+      "name": "Tracks a PA status (draft / ready-for-clinician / submitt...",
+      "description": "Tracks a PA status (draft / ready-for-clinician / submitted / approved / denied) and runs against ILLUSTRATIVE synthetic payer criteria + document checklists — clearly labeled; NOT a certified utilization-management engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "prior-authorization-agent",
+    "kind": "agentforce",
+    "governanceTier": "clinical-decision",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.clinical.no-prescribing",
+      "policy.pa.no-autonomous-submission",
+      "policy.pa.documentation-integrity",
+      "policy.data360.consent-required-before-grounding"
+    ]
+  }
+}

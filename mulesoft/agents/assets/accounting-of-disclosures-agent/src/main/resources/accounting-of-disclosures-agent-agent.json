@@ -1,0 +1,107 @@
+{
+  "name": "Accounting of Disclosures (HIPAA §164.528) Agent",
+  "description": "Accounting of Disclosures (HIPAA §164.528) Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/accounting-of-disclosures",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "the-accounting-of-disclosures-layer-of-the-data-",
+      "name": "The accounting-of-disclosures layer of the data substrate...",
+      "description": "The accounting-of-disclosures layer of the data substrate — given a patient's disclosure log, classifies each disclosure (in-accounting / excluded-TPO / excluded-authorized / out-of-window) against the §164.528 accountability rules, filters to the lookback window, and assembles the accounting of every accountable (non-TPO, non-authorized) disclosure. Complements (not duplicates) the Consent agent (whether a patient may be contacted / data used), the Minimum Necessary agent (how much PHI a purpose may see), the De-Identification agent (whether a dataset is still PHI), the Data Retention agent (records disposition), and the Audit Log Integrity agent (whether the audit TRAIL is tamper-evident) — this answers WHO the patient's PHI was disclosed to",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-accounting-is-deterministic-a-pure-function-",
+      "name": "The accounting is DETERMINISTIC — a pure function of the ...",
+      "description": "The accounting is DETERMINISTIC — a pure function of the request's own fields (no randomness, no clock); the window is the as-of date − the lookback years, and the same log always yields the same classification + accounting + counts",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "every-disclosure-s-purpose-must-trace-to-a-recor",
+      "name": "Every disclosure's purpose must trace to a recorded catal...",
+      "description": "Every disclosure's purpose must trace to a recorded catalog — an off-catalog purpose can't be correctly classified and is blocked at the Agent Fabric governance boundary (policy.accounting.purpose-category-sourced); and every accountable, in-window disclosure must appear in the accounting — dropping one understates the accounting and is blocked (policy.accounting.accountable-disclosures-complete, the load-bearing completeness gate). Mirrors the Minimum Necessary Agent's purpose-of-use-sourced and the Audit Log Integrity Agent's sequence-complete posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-agent-classifies-and-assembles-it-never-dele",
+      "name": "The agent CLASSIFIES and ASSEMBLES — it NEVER deletes, re...",
+      "description": "The agent CLASSIFIES and ASSEMBLES — it NEVER deletes, redacts, or suppresses a logged disclosure (that would falsify the accounting and destroy evidence); a determination that suppresses a disclosure or auto-releases the accounting is blocked (policy.accounting.no-autonomous-suppression), and the assembled accounting is a recommendation requiring privacy-officer review. Mirrors the Audit Log Integrity Agent's no-autonomous-redaction and the Minimum Necessary Agent's no-autonomous-over-disclosure posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-purpose-c",
+      "name": "Runs against an ILLUSTRATIVE synthetic purpose catalog + ...",
+      "description": "Runs against an ILLUSTRATIVE synthetic purpose catalog + accountability rules — clearly labeled; NOT a certified accounting-of-disclosures system (a real accounting is governed by HIPAA §164.528 — the full exclusion set, the six-year window, and the electronic-health-record disclosure rules — and the covered entity's Notice of Privacy Practices)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "accounting-of-disclosures-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.accounting.purpose-category-sourced",
+      "policy.accounting.accountable-disclosures-complete",
+      "policy.accounting.no-autonomous-suppression"
+    ]
+  }
+}

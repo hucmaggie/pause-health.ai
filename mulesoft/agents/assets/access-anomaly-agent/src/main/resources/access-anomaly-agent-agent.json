@@ -1,0 +1,107 @@
+{
+  "name": "Access Anomaly Detection Agent",
+  "description": "Access Anomaly Detection Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/access-anomaly",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "the-information-system-activity-review-layer-of-",
+      "name": "The information-system-activity-review layer of the data ...",
+      "description": "The information-system-activity-review layer of the data substrate — given an actor's PHI-access events plus a window length and a threshold, counts the accesses within a rolling time window, finds the peak number in any window of that length, and flags an anomalous access volume when the peak exceeds the threshold (a possible snooping / breach pattern under HIPAA §164.308(a)(1)(ii)(D)). Complements (not duplicates) the Audit Log Integrity agent (whether the audit TRAIL is tamper-evident), the Break-the-Glass agent (whether a single emergency access is authorized), the Minimum Necessary agent (how much PHI a purpose may see), the Accounting of Disclosures agent (WHO a patient's PHI was disclosed to), and the Consent agent (whether a patient may be contacted / data used) — this detects an unusual VOLUME of accesses by one actor over time",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-detection-is-deterministic-a-pure-function-o",
+      "name": "The detection is DETERMINISTIC — a pure function of the a...",
+      "description": "The detection is DETERMINISTIC — a pure function of the actor's events + the window + the threshold (time is data; no real clock; not an interval merge, a topological sort, a set-difference, a dollar waterfall, an identity match, or a hash chain but SLIDING-WINDOW COUNTING via a two-pointer scan); the same events always yield the same peak + finding, and the detection is WINDOWED (a high daily total spread into small bursts is NOT flagged), not a naive total count",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "every-event-in-the-reported-peak-window-must-tra",
+      "name": "Every event in the reported peak window must trace to a s...",
+      "description": "Every event in the reported peak window must trace to a submitted access event — the peak window's event ids must be a subset of the submitted events and its count must equal the number of those ids; a fabricated peak event or a phantom count is blocked at the Agent Fabric governance boundary (policy.access.events-sourced); and the window count must be exact — recomputing the sliding-window peak must reproduce the reported count, the peak window's events must all fall within a span of at most windowMinutes, and the anomaly flag must equal whether the peak exceeds the threshold; a miscounted peak, an over-wide window, or a mismatched flag is blocked (policy.access.window-count-consistent, the load-bearing correctness gate). Mirrors the Coverage Continuity Agent's segments-sourced + math-consistent posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-agent-measures-it-never-locks-the-actor-s-ac",
+      "name": "The agent MEASURES — it NEVER locks the actor's account, ...",
+      "description": "The agent MEASURES — it NEVER locks the actor's account, revokes their access, or disciplines them (each is an access / employment action that must be authorized) on its own; a finding that auto-locks / auto-revokes, or that is not review-gated, is blocked (policy.access.no-autonomous-action), and every flag is a recommendation requiring a privacy officer to review. Mirrors the Coverage Continuity Agent's no-autonomous-determination and the Audit Log Integrity Agent's no-autonomous-redaction posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-events-windo",
+      "name": "Runs against ILLUSTRATIVE synthetic events + window + thr...",
+      "description": "Runs against ILLUSTRATIVE synthetic events + window + threshold — clearly labeled; NOT a certified breach-detection / SIEM system (real activity review uses the full audit trail, user-behavior analytics, role / relationship context — is there a treatment relationship? — and the privacy officer's judgment). PHI-bearing — the events reference the patients whose records were accessed",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "access-anomaly-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.access.events-sourced",
+      "policy.access.window-count-consistent",
+      "policy.access.no-autonomous-action"
+    ]
+  }
+}

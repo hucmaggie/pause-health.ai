@@ -1,0 +1,94 @@
+{
+  "name": "Agentforce Engagement Agent · Care Continuity",
+  "description": "Agentforce Engagement Agent · Care Continuity — a governed Pause fabric agent (agentforce, A2A). Governance tier: patient-engagement. Enforces 5 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "salesforce://agentforce/pause-engagement@v1",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "re-engages-enrolled-patients-with-symptom-check-",
+      "name": "Re-engages enrolled patients with symptom check-ins and c...",
+      "description": "Re-engages enrolled patients with symptom check-ins and care-plan adherence nudges",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    },
+    {
+      "id": "schedules-follow-up-touchpoints-from-the-care-ro",
+      "name": "Schedules follow-up touchpoints from the Care Router's pa...",
+      "description": "Schedules follow-up touchpoints from the Care Router's pathway output",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    },
+    {
+      "id": "respects-quiet-hours-channel-preference-and-freq",
+      "name": "Respects quiet-hours, channel preference, and frequency c...",
+      "description": "Respects quiet-hours, channel preference, and frequency caps sourced from Data 360",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    },
+    {
+      "id": "escalates-disengagement-or-emerging-risk-signals",
+      "name": "Escalates disengagement or emerging-risk signals back to ...",
+      "description": "Escalates disengagement or emerging-risk signals back to the Care Router",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "engagement-agent",
+    "kind": "agentforce",
+    "governanceTier": "patient-engagement",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.marketing.consent-to-contact-required",
+      "policy.marketing.human-approval-before-send",
+      "policy.engagement.quiet-hours-and-channel-preference",
+      "policy.engagement.frequency-cap"
+    ]
+  }
+}

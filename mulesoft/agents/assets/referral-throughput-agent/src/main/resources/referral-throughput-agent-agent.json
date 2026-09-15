@@ -1,0 +1,107 @@
+{
+  "name": "Referral Throughput / Maximum-Flow Network Capacity (Edmonds–Karp) Agent",
+  "description": "Referral Throughput / Maximum-Flow Network Capacity (Edmonds–Karp) Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/referral-throughput",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-referral-routing-network-a-source-feedin",
+      "name": "Takes a referral-routing network (a source feeding intake...",
+      "description": "Takes a referral-routing network (a source feeding intake pools through capacity-limited specialty channels to a sink of appointment slots, each edge carrying a capacity) and computes the maximum number of referrals routable end-to-end (the maximum flow) plus the min-cut bottleneck (disposition unconstrained / bottlenecked), reporting the per-edge flows, the max-flow value, the total demand, and the cut. A deterministic care-coordination network-capacity agent; it COMPLEMENTS the Care Routing agent (which finds the cheapest single path) and the Network Build-Out agent (which connects sites at least cost) — this pushes as much flow as possible through the capacities",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-plan-is-deterministic-a-pure-function-of-the",
+      "name": "The plan is DETERMINISTIC — a pure function of the reques...",
+      "description": "The plan is DETERMINISTIC — a pure function of the request's own network (time is data: the capacities are plain numbers, no real clock; not a minimum spanning tree, a Dijkstra shortest path, a stable matching, a linear partition, a knapsack, a bin-packing, a union-find, an EDF schedule, or a k-way merge but MAX-FLOW / MIN-CUT via EDMONDS–KARP — BFS-augmenting-path Ford–Fulkerson with a deterministic node order); the same request always yields the same plan",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-flow-must-be-sourced-conservation-consistent",
+      "name": "The flow must be sourced + conservation-consistent — ever...",
+      "description": "The flow must be sourced + conservation-consistent — every edge flow within its submitted capacity (no fabricated edge, no over-capacity flow), flow conserved at every non-source/sink node, the reported maxFlow the net out of source = net into sink, nodeCount and edgeCount honest; a fabricated edge, an over-capacity flow, or a conservation violation is blocked at the Agent Fabric governance boundary (policy.referralflow.flow-sourced, the sourced + self-consistency gate); and the throughput must be optimal — re-running Edmonds–Karp must reproduce the reported maxFlow, with the min-cut equal to it (max-flow min-cut theorem); a sub-maximal or overstated throughput is blocked (policy.referralflow.throughput-optimal, the load-bearing correctness gate). Mirrors the Network Build-Out Agent's tree-sourced + cost-optimal posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-plans-and-recommends-it-never-books-di",
+      "name": "The agent PLANS and RECOMMENDS — it NEVER books, dispatch...",
+      "description": "The agent PLANS and RECOMMENDS — it NEVER books, dispatches, or routes a referral (each is a scheduling action that must be authorized) on its own; a plan that auto-routes or is not review-gated is blocked (policy.referralflow.no-autonomous-route), and every plan is confirmed by a referral coordinator. Mirrors the Network Build-Out Agent's no-autonomous-provision and the Batch Partition Agent's no-autonomous-assign posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-networks-cle",
+      "name": "Runs against ILLUSTRATIVE synthetic networks — clearly la...",
+      "description": "Runs against ILLUSTRATIVE synthetic networks — clearly labeled; NOT a certified capacity-planning / scheduling system (real referral capacity planning weighs clinical urgency, specialty match, geography, payer networks, and provider preference — not a bare max-flow over illustrative capacities). PHI-adjacent — the node labels reference intake pools / specialties / slots, so a plan is on the HIPAA audit path",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "referral-throughput-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.referralflow.flow-sourced",
+      "policy.referralflow.throughput-optimal",
+      "policy.referralflow.no-autonomous-route"
+    ]
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "name": "Minimum Necessary (HIPAA) Agent",
+  "description": "Minimum Necessary (HIPAA) Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/minimum-necessary",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "the-minimum-necessary-layer-of-the-data-substrat",
+      "name": "The minimum-necessary layer of the data substrate — decid...",
+      "description": "The minimum-necessary layer of the data substrate — decides whether a PHI disclosure is limited to the minimum necessary for its stated purpose-of-use + requestor role (45 CFR 164.502(b) / 164.514(d)), releasing only the permitted field categories and withholding the rest, complementing (not duplicating) the Consent & Preferences Management agent (whether a patient may be contacted / data used), the De-Identification agent (whether a dataset is no longer PHI), the Master Patient Index (identity/dedup), the Break-the-Glass agent (emergency PHI access), and the Data Retention agent (records disposition)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "determinations-are-deterministic-a-pure-function",
+      "name": "Determinations are DETERMINISTIC — a pure function of the...",
+      "description": "Determinations are DETERMINISTIC — a pure function of the request + the purpose-of-use catalog (no randomness, no clock); the same request always yields the same field decisions + released/withheld sets + flags",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "every-disclosure-decision-must-cite-a-recorded-p",
+      "name": "Every disclosure decision must cite a recorded purpose-of...",
+      "description": "Every disclosure decision must cite a recorded purpose-of-use — an ad-hoc / un-sourced disclosure is blocked at the Agent Fabric governance boundary (policy.minnec.purpose-of-use-sourced); and every RELEASED field must be within the purpose's permitted categories — releasing an out-of-scope field over-discloses PHI and is blocked (policy.minnec.minimum-necessary-scoped, the load-bearing privacy gate). Mirrors the De-Identification Agent's method-cited + no-release-of-reidentifiable posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "an-over-scope-narrowed-or-bulk-cohort-disclosure",
+      "name": "An over-scope (narrowed) or bulk / cohort disclosure is a...",
+      "description": "An over-scope (narrowed) or bulk / cohort disclosure is a RECOMMENDATION requiring human review — it is never autonomously released; a not-minimum-necessary or bulk determination that does not require human review is blocked (policy.minnec.no-autonomous-over-disclosure). Mirrors the De-Identification Agent's no-release-of-reidentifiable and the Balance Billing Agent's no-autonomous-balance-bill posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-purpose-o",
+      "name": "Runs against an ILLUSTRATIVE synthetic purpose-of-use cat...",
+      "description": "Runs against an ILLUSTRATIVE synthetic purpose-of-use catalog + requestor roles + field categories — clearly labeled; NOT a certified minimum-necessary engine (a real determination uses the covered entity's role-based access policies and its minimum-necessary standard under 45 CFR 164.502(b) / 164.514(d))",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "minimum-necessary-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.minnec.purpose-of-use-sourced",
+      "policy.minnec.minimum-necessary-scoped",
+      "policy.minnec.no-autonomous-over-disclosure"
+    ]
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "name": "Utilization Review Agent",
+  "description": "Utilization Review Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/utilization-review",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "screens-each-proposed-procedure-inpatient-admiss",
+      "name": "Screens each proposed procedure / inpatient admission aga...",
+      "description": "Screens each proposed procedure / inpatient admission against catalog medical-necessity criteria and classifies as approves-meets-criteria / pend-for-clinical-review / require-peer-to-peer / blocked-non-covered with a specific reason code; routes non-approved cases to a clinical reviewer or peer-to-peer with a catalog-sourced SLA deadline (standard 72h, urgent 24h, concurrent-review 24h). Pairs with Prior Authorization (assembly), Claims Adjudication (post-service edits), and Grievance & Appeals (post-denial intake)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "screening-is-deterministic-a-pure-function-of-th",
+      "name": "Screening is DETERMINISTIC — a pure function of the reque...",
+      "description": "Screening is DETERMINISTIC — a pure function of the request + criteria evidence + urgency + catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same decision + criteria-met/missing lists + primary reason + SLA deadline, with a documented decision precedence (blocked-non-covered > require-peer-to-peer > pend-for-clinical-review > approves-meets-criteria) and stable rule-id ordering",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "every-applied-criterion-rule-reason-code-must-tr",
+      "name": "Every applied criterion + rule + reason code must trace t...",
+      "description": "Every applied criterion + rule + reason code must trace to the defined UR criteria catalog (service type + criteria set + rule + reason) — a fabricated / off-catalog 'we-just-decided-you-don't-need-it' criterion is blocked at the Agent Fabric governance boundary (policy.ur.criteria-catalog-sourced), so the agent cannot invent medical-necessity requirements",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-agent-never-autonomously-denies-a-ur-case-ev",
+      "name": "The agent NEVER autonomously denies a UR case — every non...",
+      "description": "The agent NEVER autonomously denies a UR case — every non-approved decision is DRAFTED for clinician cosign, and any autonomous denial is blocked (policy.ur.no-autonomous-denial); UR denial letters are legally consequential under Medicare Advantage / state utilization-review-agent codes with notice + due-process rights, and denying medical necessity on the agent's own authority is a Section 1557 / state-code violation. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the Formulary Agent's no-autonomous-override, the FWA Agent's no-autonomous-denial, and the Trial Payments Agent's no-autonomous-irb-deviation posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "every-ur-case-has-a-catalog-sourced-regulatory-s",
+      "name": "Every UR case has a catalog-sourced regulatory SLA deadli...",
+      "description": "Every UR case has a catalog-sourced regulatory SLA deadline that traces to urgency + received asOfDate — a silently-extended deadline is blocked (policy.ur.sla-integrity); silently extending a UR deadline breaches Medicare Advantage Chapter 4 / state UR-agent timelines. Mirrors the Grievance & Appeals Agent's deadline-integrity posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-service-type",
+      "name": "Runs against ILLUSTRATIVE synthetic service-type + criter...",
+      "description": "Runs against ILLUSTRATIVE synthetic service-type + criteria + rules + reason codes + SLA windows — clearly labeled; NOT MCG (Milliman Care Guidelines / Indicia), InterQual, an actual payer's UR rule set, or a certified medical-necessity engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "utilization-review-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.ur.criteria-catalog-sourced",
+      "policy.ur.no-autonomous-denial",
+      "policy.ur.sla-integrity"
+    ]
+  }
+}

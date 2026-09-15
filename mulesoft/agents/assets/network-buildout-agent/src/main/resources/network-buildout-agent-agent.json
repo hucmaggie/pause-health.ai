@@ -1,0 +1,107 @@
+{
+  "name": "Provider Network Build-Out / Minimum Spanning Tree (Kruskal's Algorithm) Agent",
+  "description": "Provider Network Build-Out / Minimum Spanning Tree (Kruskal's Algorithm) Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/network-buildout",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-set-of-care-sites-and-candidate-links-ea",
+      "name": "Takes a set of care sites and candidate links (each carry...",
+      "description": "Takes a set of care sites and candidate links (each carrying a build cost) and selects the minimum-total-cost set of links that connects every site into one network (a minimum spanning tree), or reports the candidate links cannot connect everything (a spanning forest — disposition connected / partitioned), reporting the chosen links, the total build cost, and the connected-component count. A deterministic care-coordination network-planning agent; it COMPLEMENTS the Care Routing agent (which finds the cheapest single path between two nodes) — this finds the cheapest way to connect ALL the sites",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-plan-is-deterministic-a-pure-function-of-the",
+      "name": "The plan is DETERMINISTIC — a pure function of the reques...",
+      "description": "The plan is DETERMINISTIC — a pure function of the request's own sites + links (time is data: the costs are plain numbers, no real clock; not a Dijkstra shortest path, a linear partition, a topological sort, a knapsack, a stable matching, an EDF schedule, a Huffman code, an LCS diff, a k-way merge, or a Kadane max-subarray, and NOT the Household Composition agent's union-find connected-component labeling but the MINIMUM SPANNING TREE via KRUSKAL'S ALGORITHM — greedy ascending-cost edge selection with a union-find cycle-check subroutine); the same request always yields the same plan",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-tree-must-be-sourced-self-consistent-each-ch",
+      "name": "The tree must be sourced + self-consistent — each chosen ...",
+      "description": "The tree must be sourced + self-consistent — each chosen link a submitted candidate (same endpoints, same cost), the chosen links forming a forest (no cycle, verified by union-find), the totalCost equal to the sum of the chosen links' costs, the componentCount honest, siteCount and linkCount honest, and the disposition following; a fabricated link, an altered cost, or a cycle is blocked at the Agent Fabric governance boundary (policy.netbuildout.tree-sourced, the sourced + self-consistency gate); and the tree must be cost-optimal — re-running Kruskal's algorithm must reproduce the reported totalCost; a sub-optimal tree that wastes build budget is blocked (policy.netbuildout.cost-optimal, the load-bearing correctness gate). Mirrors the Batch Partition Agent's partition-sourced + load-optimal posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-plans-and-recommends-it-never-provisio",
+      "name": "The agent PLANS and RECOMMENDS — it NEVER provisions, act...",
+      "description": "The agent PLANS and RECOMMENDS — it NEVER provisions, activates, or orders a link (each is an infrastructure change that must be authorized) on its own; a plan that auto-provisions or is not review-gated is blocked (policy.netbuildout.no-autonomous-provision), and every build plan is confirmed by a network architect. Mirrors the Batch Partition Agent's no-autonomous-assign and the Huffman Agent's no-autonomous-deploy posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-networks-cle",
+      "name": "Runs against ILLUSTRATIVE synthetic networks — clearly la...",
+      "description": "Runs against ILLUSTRATIVE synthetic networks — clearly labeled; NOT a certified network-design system (real provider-network design weighs adequacy standards, contracted rates, capacity, redundancy, and regulatory requirements — not a bare minimum spanning tree over illustrative costs). PHI-adjacent — the site labels reference clinics / facilities, so a plan is on the HIPAA audit path",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "network-buildout-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.netbuildout.tree-sourced",
+      "policy.netbuildout.cost-optimal",
+      "policy.netbuildout.no-autonomous-provision"
+    ]
+  }
+}

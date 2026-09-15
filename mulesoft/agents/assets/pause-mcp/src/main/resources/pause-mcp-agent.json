@@ -1,0 +1,94 @@
+{
+  "name": "Pause MCP Server",
+  "description": "Pause MCP Server — a governed Pause fabric agent (mcp-server, MCP). Governance tier: data-plane. Enforces 5 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "@pause-health/mcp via stdio",
+  "provider": {
+    "organization": "Pause-Health.ai",
+    "url": "https://pause-health.ai"
+  },
+  "version": "0.3.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "get-patient-timeline-fhir-r5-bundle",
+      "name": "get_patient_timeline (FHIR R5 Bundle)",
+      "description": "get_patient_timeline (FHIR R5 Bundle)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "get-patient-intake-structured-agentforce-record",
+      "name": "get_patient_intake (structured Agentforce record)",
+      "description": "get_patient_intake (structured Agentforce record)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "find-menopause-providers-provider-graph-slice",
+      "name": "find_menopause_providers (provider graph slice)",
+      "description": "find_menopause_providers (provider graph slice)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "experience-api-health-liveness",
+      "name": "experience_api_health (liveness)",
+      "description": "experience_api_health (liveness)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "pause-mcp",
+    "kind": "mcp-server",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.mcp.tools-allowlisted",
+      "policy.phi.bearer-token-required-in-prod",
+      "policy.audit.return-mulesoft-correlation-id",
+      "policy.data.fhir-r5-only"
+    ]
+  }
+}

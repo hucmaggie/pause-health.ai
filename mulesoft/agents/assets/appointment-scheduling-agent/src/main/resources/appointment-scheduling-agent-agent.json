@@ -1,0 +1,120 @@
+{
+  "name": "Agentforce Appointment Scheduling · Book/Reschedule (MSCP)",
+  "description": "Agentforce Appointment Scheduling · Book/Reschedule (MSCP) — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 3 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/appointment-scheduling",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "books-and-reschedules-the-mscp-menopause-special",
+      "name": "Books (and reschedules) the MSCP menopause-specialist vis...",
+      "description": "Books (and reschedules) the MSCP menopause-specialist visit the Care Router recommends — the Salesforce 'Agentforce for Health — Book/Reschedule/Update Appointment' analog",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "honors-the-requested-modality-telehealth-in-pers",
+      "name": "Honors the requested modality (telehealth / in-person) ag...",
+      "description": "Honors the requested modality (telehealth / in-person) against a deterministic synthetic provider availability calendar",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "returns-a-structured-booking-a-synthetic-service",
+      "name": "Returns a structured booking: a synthetic ServiceAppointm...",
+      "description": "Returns a structured booking: a synthetic ServiceAppointment id, the confirmed slot start/end, modality, provider, and status (booked / rescheduled)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-a-deterministic-mock-calendar-hashe",
+      "name": "Runs against a DETERMINISTIC MOCK calendar (hashed provid...",
+      "description": "Runs against a DETERMINISTIC MOCK calendar (hashed provider + date → stable open slots) — clearly labeled synthetic; not a real Salesforce Scheduler / ServiceAppointment write",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "never-double-books-an-already-taken-slot-and-onl",
+      "name": "Never double-books an already-taken slot and only books w...",
+      "description": "Never double-books an already-taken slot and only books within the provider's published availability — both enforced at the Agent Fabric governance boundary",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "hands-the-booked-appointment-to-the-engagement-a",
+      "name": "Hands the booked appointment to the Engagement Agent for ...",
+      "description": "Hands the booked appointment to the Engagement Agent for visit reminders — closing the acquisition → intake → routing → booking → engagement loop",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "appointment-scheduling-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.scheduling.no-double-book",
+      "policy.scheduling.honor-provider-availability"
+    ]
+  }
+}

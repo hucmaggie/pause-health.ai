@@ -1,0 +1,108 @@
+{
+  "name": "Agentforce Clinical Summary Agent · After-Visit Summary",
+  "description": "Agentforce Clinical Summary Agent · After-Visit Summary — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 5 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/clinical-summary",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "0.1.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "composes-an-after-visit-summary-patient-friendly",
+      "name": "Composes an After-Visit Summary (patient-friendly) AND a ...",
+      "description": "Composes an After-Visit Summary (patient-friendly) AND a clinician handoff note from the outputs the other agents already produced — the Salesforce 'Agentforce for Health' After-Visit Summary / clinical-documentation analog",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "assembly-is-deterministic-and-gathers-only-facts",
+      "name": "Assembly is DETERMINISTIC and gathers ONLY facts present ...",
+      "description": "Assembly is DETERMINISTIC and gathers ONLY facts present in the provided lifecycle inputs (intake severity/symptoms, Care Router pathway, optional validated-instrument assessment, optional instantiated care plan, optional detected care gaps) — the agent never invents a clinical fact or a source",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-summary-must-trace-to-the-defined-source-r",
+      "name": "Every summary must trace to the defined source records th...",
+      "description": "Every summary must trace to the defined source records the context was assembled from — a fabricated / off-context assertion is blocked at the Agent Fabric governance boundary (policy.clinical-summary.source-record-sourced)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "phrases-the-two-artifacts-with-live-anthropic-cl",
+      "name": "Phrases the two artifacts with live Anthropic Claude — th...",
+      "description": "Phrases the two artifacts with live Anthropic Claude — the THIRD live-Claude agent after the Care Router and the Care Plan agent — falling back to a DETERMINISTIC scripted composition (with a recorded fallbackReason) when ANTHROPIC_API_KEY is unset or the API call fails",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "non-prescriptive-and-commits-no-clinical-action-",
+      "name": "Non-prescriptive and commits no clinical action: it re-st...",
+      "description": "Non-prescriptive and commits no clinical action: it re-states existing synthetic records for two audiences and requires clinician review — the artifacts are ILLUSTRATIVE synthetics, NOT a certified clinical-documentation engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "clinical-summary-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.clinical-summary.source-record-sourced",
+      "policy.model.anthropic-claude-sonnet-allowlisted",
+      "policy.clinical.no-prescribing",
+      "policy.data360.consent-required-before-grounding"
+    ]
+  }
+}

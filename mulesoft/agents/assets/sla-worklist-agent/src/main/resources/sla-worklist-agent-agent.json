@@ -1,0 +1,107 @@
+{
+  "name": "SLA Worklist Sequencing / Earliest-Deadline-First (EDF) Scheduling Agent",
+  "description": "SLA Worklist Sequencing / Earliest-Deadline-First (EDF) Scheduling Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/sla-worklist",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-single-worklist-of-pending-cases-for-one",
+      "name": "Takes a single worklist of pending cases for one processo...",
+      "description": "Takes a single worklist of pending cases for one processor (a UM nurse's queue, an appeals analyst's desk, a claims-review bench) — each case a unit of work with a processing duration and an SLA deadline — sequences them earliest-deadline-first, computes each case's cumulative completion time, and flags which cases will breach their SLA if worked in that order (disposition all-on-time / breaches-present). A deterministic payer-operations work-sequencing agent; it COMPLEMENTS the Resource Scheduling agent (which selects a max-value non-overlapping subset for one resource) and the Caseload Balancing agent (which bin-packs patients across care managers) — this ORDERS a whole worklist for one processor by SLA deadline",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-sequencing-is-deterministic-a-pure-function-",
+      "name": "The sequencing is DETERMINISTIC — a pure function of the ...",
+      "description": "The sequencing is DETERMINISTIC — a pure function of the request's own tasks (time is data: durations + deadlines are plain numbers, no real clock; not a weighted-interval schedule, a greedy interval selection, a Kadane max-subarray, a Dijkstra path, a knapsack, a majority vote, a trie match, a k-way merge, a percentile, a union-find, an apportionment, or a checksum but EARLIEST-DEADLINE-FIRST (EDF) SCHEDULING — order by deadline ascending, process sequentially, flag the completions that exceed their deadline); the same worklist always yields the same schedule",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-schedule-must-be-sourced-self-consistent-the",
+      "name": "The schedule must be sourced + self-consistent — the sche...",
+      "description": "The schedule must be sourced + self-consistent — the scheduled list a permutation of the submitted tasks (each case once, no fabricated case, none dropped / double-worked), each entry echoing its case's duration + deadline, the completion times chaining (first at 0, each starting when the previous finishes, each completion = start + duration), each late flag equal to completion > deadline, and the counts adding up; a fabricated case or a mis-chained completion time is blocked at the Agent Fabric governance boundary (policy.worklist.schedule-sourced, the sourced + self-consistency gate); and the order must be earliest-deadline-first — re-running the EDF discipline must reproduce the reported order; a non-EDF order that needlessly breaches deadlines is blocked (policy.worklist.edf-ordered, the load-bearing correctness gate). Mirrors the Resource Scheduling Agent's selection-sourced + schedule-optimal posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-agent-sequences-and-recommends-it-never-disp",
+      "name": "The agent SEQUENCES and RECOMMENDS — it NEVER dispatches,...",
+      "description": "The agent SEQUENCES and RECOMMENDS — it NEVER dispatches, starts, or reassigns a case (each is a work-assignment action that must be authorized) on its own; a worklist that auto-dispatches or is not review-gated is blocked (policy.worklist.no-autonomous-dispatch), and every worklist is confirmed by a supervisor. Mirrors the Resource Scheduling Agent's no-autonomous-booking and the Caseload Balancing Agent's no-autonomous-assignment posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-worklist-cle",
+      "name": "Runs against ILLUSTRATIVE synthetic worklist — clearly la...",
+      "description": "Runs against ILLUSTRATIVE synthetic worklist — clearly labeled; NOT a certified workforce / queueing system (real worklist management uses staffing levels, skills-based routing, case arrival times, preemption, priority tiers, and shift schedules). PHI-bearing — each case references the member / claim being worked",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "sla-worklist-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.worklist.schedule-sourced",
+      "policy.worklist.edf-ordered",
+      "policy.worklist.no-autonomous-dispatch"
+    ]
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "name": "Agentforce Service Agent · Patient Intake",
+  "description": "Agentforce Service Agent · Patient Intake — a governed Pause fabric agent (agentforce, A2A). Governance tier: patient-facing. Enforces 3 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "salesforce://agentforce/pause-intake@v2",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "2.1.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "symptom-capture-vasomotor-sleep-mood-cognition-g",
+      "name": "Symptom capture (vasomotor, sleep, mood, cognition, GSM, ...",
+      "description": "Symptom capture (vasomotor, sleep, mood, cognition, GSM, bleeding)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "red-flag-screening",
+      "name": "Red-flag screening",
+      "description": "Red-flag screening",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "structured-intake-record-persistence",
+      "name": "Structured intake record persistence",
+      "description": "Structured intake record persistence",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "hands-captured-task-off-to-care-router-via-googl",
+      "name": "Hands captured task off to Care Router via Google A2A",
+      "description": "Hands captured task off to Care Router via Google A2A",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "agentforce-intake",
+    "kind": "agentforce",
+    "governanceTier": "patient-facing",
+    "status": "prototype",
+    "policies": [
+      "policy.phi.no-free-text-pii",
+      "policy.intake.red-flag-mandatory",
+      "policy.audit.hipaa-log-every-turn"
+    ]
+  }
+}

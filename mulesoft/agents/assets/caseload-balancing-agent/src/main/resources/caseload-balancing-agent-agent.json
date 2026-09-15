@@ -1,0 +1,107 @@
+{
+  "name": "Caseload Balancing (Care-Manager Panel Assignment) Agent",
+  "description": "Caseload Balancing (Care-Manager Panel Assignment) Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/caseload-balancing",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-panel-of-members-each-with-an-acuity-wei",
+      "name": "Takes a panel of members (each with an acuity weight) and...",
+      "description": "Takes a panel of members (each with an acuity weight) and a set of care managers (each with a weighted-slot capacity) and allocates the members across the managers without exceeding any manager's capacity — balancing the load and waitlisting the overflow. A deterministic care-coordination agent; distinct from the Care Team & Case Management agent (assembling the team around ONE patient), the Complex Care Management agent (CCM time-tracking for ONE patient), the Transitions of Care agent (moving ONE patient), and the Population Health agent (prioritizing a panel) — this ALLOCATES a whole panel across the managers' finite capacity",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-allocation-is-deterministic-a-pure-function-",
+      "name": "The allocation is DETERMINISTIC — a pure function of the ...",
+      "description": "The allocation is DETERMINISTIC — a pure function of the request's own members + managers (no randomness, no clock; not a sliding-window count, an interval merge, a topological sort, a set-difference, a dollar waterfall, an identity match, or a hash chain but GREEDY ALLOCATION UNDER A CAPACITY CONSTRAINT — a worst-fit-decreasing bin-packing that processes members by descending acuity and places each into the manager with the greatest remaining capacity that can fit it, tie-broken by id); the same panel always yields the same assignment",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-member-must-be-accounted-for-exactly-once-",
+      "name": "Every member must be accounted for exactly once — the ass...",
+      "description": "Every member must be accounted for exactly once — the assigned set and the waitlisted set must be disjoint and together cover every submitted member (no dropped member, no double-assignment); a dropped or double-counted member is blocked at the Agent Fabric governance boundary (policy.caseload.assignment-complete, the completeness gate); and capacity must be respected — each manager's assigned acuity must equal the sum of their assigned members' acuities, must not exceed capacity, the remaining capacity must be exact, and every waitlist must be justified (the member's acuity exceeds every manager's final remaining capacity); an over-loaded manager, a miscounted load, or an unjust waitlist is blocked (policy.caseload.capacity-respected, the load-bearing correctness gate). Mirrors the Enrollment Reconciliation Agent's reconciliation-complete + the Member Cost-Share Agent's math-consistent posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-recommends-it-never-commits-an-assignm",
+      "name": "The agent RECOMMENDS — it NEVER commits an assignment, re...",
+      "description": "The agent RECOMMENDS — it NEVER commits an assignment, reassigns a patient, or overrides a manager's caseload (each is a care-ownership decision that must be authorized) on its own; an allocation that auto-commits or is not review-gated is blocked (policy.caseload.no-autonomous-assignment), and every allocation is a recommendation requiring a care-management lead to confirm. Mirrors the Care Team Agent's no-autonomous-assignment and the Coverage Continuity Agent's no-autonomous-determination posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-members-mana",
+      "name": "Runs against ILLUSTRATIVE synthetic members + managers + ...",
+      "description": "Runs against ILLUSTRATIVE synthetic members + managers + acuity + capacity — clearly labeled; NOT a certified caseload / staffing system (real panel assignment uses validated acuity instruments, care-manager licensure / specialty / language fit, geographic match, and continuity of an existing relationship). PHI-bearing — the members reference the patients on the panel",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "caseload-balancing-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.caseload.assignment-complete",
+      "policy.caseload.capacity-respected",
+      "policy.caseload.no-autonomous-assignment"
+    ]
+  }
+}

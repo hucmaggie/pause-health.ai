@@ -1,0 +1,107 @@
+{
+  "name": "Benefit Accumulator Ledger / Fenwick-Tree Prefix Sums Agent",
+  "description": "Benefit Accumulator Ledger / Fenwick-Tree Prefix Sums Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/benefit-accumulator",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "given-an-ordered-sequence-of-applied-claim-amoun",
+      "name": "Given an ordered sequence of applied claim amounts and an...",
+      "description": "Given an ordered sequence of applied claim amounts and an out-of-pocket maximum, maintains a running accumulator and locates the crossover claim (the first that meets the OOP max), reporting the running cumulative totals, the total applied, the crossover index, and the remaining-before-OOP-max (disposition under-oop-max / oop-max-met). A deterministic payer-operations accumulator-ledger agent; it COMPLEMENTS the Member Cost-Share agent (which splits a single claim across deductible / coinsurance / OOP) — this tallies the running accumulator across many claims",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-ledger-is-deterministic-a-pure-function-of-t",
+      "name": "The ledger is DETERMINISTIC — a pure function of the requ...",
+      "description": "The ledger is DETERMINISTIC — a pure function of the request's own amounts + OOP max (time is data: the amounts are plain numbers, no real clock; not a cost-sharing waterfall, a reservoir sample, a Bloom filter, a largest-remainder apportionment, a percentile/rank, or a Kadane subarray but FENWICK-TREE PREFIX SUMS — a cumulative-frequency data structure with a lower-bound descent for the crossover); the same request always yields the same ledger",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-ledger-must-be-sourced-self-consistent-each-",
+      "name": "The ledger must be sourced + self-consistent — each runni...",
+      "description": "The ledger must be sourced + self-consistent — each running total the true prefix sum of the submitted amounts, the total applied and remaining honest, the crossover a valid submitted-claim index (or -1); a fabricated running total, a mis-summed ledger, or an out-of-range crossover is blocked at the Agent Fabric governance boundary (policy.benefitacc.ledger-sourced, the sourced + self-consistency gate); and the accumulator must be exact — re-building the Fenwick tree must reproduce every prefix sum and the crossover located by its lower-bound descent; a mislocated crossover (mis-stating when the plan starts paying 100%) is blocked (policy.benefitacc.accumulator-exact, the load-bearing correctness gate). Mirrors the Audit Sample Agent's sample-sourced + selection-reproducible posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-agent-computes-and-recommends-it-never-posts",
+      "name": "The agent COMPUTES and RECOMMENDS — it NEVER posts, adjus...",
+      "description": "The agent COMPUTES and RECOMMENDS — it NEVER posts, adjusts, or pays against a member's real accumulator (each is a benefit-adjustment action that must be authorized) on its own; a ledger that auto-adjusts or is not review-gated is blocked (policy.benefitacc.no-autonomous-adjust), and every ledger is confirmed by a benefits analyst. Mirrors the Audit Sample Agent's no-autonomous-audit and the Duplicate-Claim Screen Agent's no-autonomous-reject posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-amounts-clea",
+      "name": "Runs against ILLUSTRATIVE synthetic amounts — clearly lab...",
+      "description": "Runs against ILLUSTRATIVE synthetic amounts — clearly labeled; NOT a certified benefits-accumulator / claims-payment system (real accumulator processing weighs the full benefit design — embedded vs aggregate family deductibles, network tiers, carve-outs, EOB reversals — plan-year resets, and an authoritative accumulator store — not a bare prefix-sum over illustrative amounts). PHI-adjacent — a member's claims, so a ledger is on the HIPAA audit path",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "benefit-accumulator-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.benefitacc.ledger-sourced",
+      "policy.benefitacc.accumulator-exact",
+      "policy.benefitacc.no-autonomous-adjust"
+    ]
+  }
+}

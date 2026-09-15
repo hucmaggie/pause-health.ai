@@ -1,0 +1,107 @@
+{
+  "name": "Clinical List Reconciliation / Longest-Common-Subsequence (LCS) Diff Agent",
+  "description": "Clinical List Reconciliation / Longest-Common-Subsequence (LCS) Diff Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/list-reconciliation",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-two-ordered-clinical-lists-for-one-record-",
+      "name": "Takes two ordered clinical lists for one record — a prior...",
+      "description": "Takes two ordered clinical lists for one record — a prior list (the medication list at admission, the problem list at last visit, the care-plan steps as last agreed) and a current list (the same list now) — reconciles them by finding the longest common subsequence (the items preserved in both, in order) and derives what was retained, added, and removed (disposition lists-match / changes-present). A deterministic care-coordination reconciliation agent; it COMPLEMENTS the Medication Name Safety agent (which measures character-level edit distance between two drug-name strings) and the Enrollment Reconciliation agent (which joins two record sets on a key, order-independent) — this DIFFS two ORDERED lists respecting sequence",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-reconciliation-is-deterministic-a-pure-funct",
+      "name": "The reconciliation is DETERMINISTIC — a pure function of ...",
+      "description": "The reconciliation is DETERMINISTIC — a pure function of the request's own two lists (time is data: the lists are plain ordered tokens, no real clock; not a Levenshtein edit distance, a keyed set reconciliation, a k-way merge, an EDF schedule, a Kadane max-subarray, a Dijkstra path, a knapsack, a majority vote, a trie match, a union-find, a topological order, or a checksum but the LONGEST COMMON SUBSEQUENCE — a DP table over the two ordered lists, backtracked to the retained items, complemented to the removed + added); the same request always yields the same diff",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-diff-must-be-sourced-self-consistent-the-rep",
+      "name": "The diff must be sourced + self-consistent — the reported...",
+      "description": "The diff must be sourced + self-consistent — the reported retained list a genuine common subsequence of both lists (it appears in order within prior AND within current, nothing fabricated / reordered), the removed list exactly the prior items left unmatched (in order), the added list exactly the current items left unmatched (in order), the reported lcsLength matching the retained length, and the disposition following; a fabricated / reordered retained item or a mis-stated add/remove is blocked at the Agent Fabric governance boundary (policy.listdiff.diff-sourced, the sourced + self-consistency gate); and the common subsequence must be the longest — re-running the LCS DP must reproduce the reported lcsLength; a shorter-than-optimal subsequence that over-reports change is blocked (policy.listdiff.lcs-optimal, the load-bearing correctness gate). Mirrors the SLA Worklist Agent's schedule-sourced + edf-ordered posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-reconciles-and-recommends-it-never-wri",
+      "name": "The agent RECONCILES and RECOMMENDS — it NEVER writes the...",
+      "description": "The agent RECONCILES and RECOMMENDS — it NEVER writes the reconciled list back, updates the chart, or starts/stops a medication (each is a clinical write that must be authorized) on its own; a reconciliation that auto-applies or is not review-gated is blocked (policy.listdiff.no-autonomous-update), and every reconciliation is confirmed by a clinician. Mirrors the SLA Worklist Agent's no-autonomous-dispatch and the Resource Scheduling Agent's no-autonomous-booking posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-lists-clearl",
+      "name": "Runs against ILLUSTRATIVE synthetic lists — clearly label...",
+      "description": "Runs against ILLUSTRATIVE synthetic lists — clearly labeled; NOT a certified medication-reconciliation system (real medication / problem-list reconciliation normalizes to RxNorm / SNOMED and accounts for dose, route, frequency, therapeutic equivalence, and clinical intent). PHI-bearing — the lists are one patient's clinical record",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "list-reconciliation-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.listdiff.diff-sourced",
+      "policy.listdiff.lcs-optimal",
+      "policy.listdiff.no-autonomous-update"
+    ]
+  }
+}

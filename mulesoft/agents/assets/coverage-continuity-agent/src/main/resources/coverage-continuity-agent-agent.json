@@ -1,0 +1,107 @@
+{
+  "name": "Creditable Coverage Continuity Agent",
+  "description": "Creditable Coverage Continuity Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/coverage-continuity",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-member-s-coverage-segments-each-a-start-",
+      "name": "Takes a member's coverage segments (each a start/end date...",
+      "description": "Takes a member's coverage segments (each a start/end date from an employer, individual, or public plan), merges the overlapping / adjacent ones into continuous spans, totals the inclusive covered days, measures the gaps between consecutive spans, and flags a significant break in creditable coverage when a gap exceeds the threshold (63 days by the HIPAA / ACA rule). A deterministic payer-operations agent; distinct from the Benefits Verification agent (is coverage active NOW), the Coordination of Benefits agent (the ORDER of concurrent coverages), the Enrollment Reconciliation agent (roster drift), and the Member Cost-Share agent (splitting a claim) — this measures the CONTINUITY of coverage OVER TIME",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-analysis-is-deterministic-a-pure-function-of",
+      "name": "The analysis is DETERMINISTIC — a pure function of the me...",
+      "description": "The analysis is DETERMINISTIC — a pure function of the member's segments + the request's own asOfDate (time is data; no real clock; not a topological sort, a set-difference, a dollar waterfall, a ratio, or a single-date deadline but INTERVAL MERGING + GAP DETECTION over date ranges); the same segments always yield the same spans + gaps + determination",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "every-merged-span-must-trace-to-submitted-segmen",
+      "name": "Every merged span must trace to submitted segments — each...",
+      "description": "Every merged span must trace to submitted segments — each span boundary must come from a real segment boundary and every segment must fall within a span; fabricated coverage (a span not backed by a segment) or a dropped segment is blocked at the Agent Fabric governance boundary (policy.coverage.segments-sourced); and the coverage math must be exact — the total covered days must equal the sum of the spans' inclusive lengths, each gap must equal the exact distance between consecutive spans, and the significant-break flag must equal whether any gap exceeds the threshold; a miscounted total, a mis-measured gap, or a mismatched break flag is blocked (policy.coverage.math-consistent, the load-bearing correctness gate). Mirrors the Member Cost-Share Agent's math-consistent and the MLR Rebate Agent's allocation-consistent posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-agent-measures-it-never-issues-a-creditable-",
+      "name": "The agent MEASURES — it NEVER issues a creditable-coverag...",
+      "description": "The agent MEASURES — it NEVER issues a creditable-coverage determination, denies a special enrollment, or imposes a late-enrollment penalty (each is a coverage decision that must be authorized) on its own; a determination that auto-issues or is not review-gated is blocked (policy.coverage.no-autonomous-determination), and every determination is a recommendation requiring an eligibility reviewer to confirm. Mirrors the Enrollment Reconciliation Agent's no-autonomous-change and the MLR Rebate Agent's no-autonomous-disbursement posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-segments-thr",
+      "name": "Runs against ILLUSTRATIVE synthetic segments + threshold ...",
+      "description": "Runs against ILLUSTRATIVE synthetic segments + threshold — clearly labeled; NOT a certified creditable-coverage system (real determination uses the certificate of creditable coverage, plan-specific rules, and the full HIPAA / ACA / Medicare Part D frameworks). PHI-bearing — the segments reference the member's coverage history",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "coverage-continuity-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.coverage.segments-sourced",
+      "policy.coverage.math-consistent",
+      "policy.coverage.no-autonomous-determination"
+    ]
+  }
+}

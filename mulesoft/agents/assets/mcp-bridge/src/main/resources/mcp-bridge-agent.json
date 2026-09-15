@@ -1,0 +1,107 @@
+{
+  "name": "Pause MCP Bridge · A2A ↔ MCP egress",
+  "description": "Pause MCP Bridge · A2A ↔ MCP egress — a governed Pause fabric agent (mcp-bridge, MCP). Governance tier: integration. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "pause://agent-fabric/mcp-bridge → {loopback /api/mcp, PAUSE_MCP_HOST_REMOTES[]}",
+  "provider": {
+    "organization": "Pause-Health.ai",
+    "url": "https://pause-health.ai"
+  },
+  "version": "0.1.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "bridges-fabric-agents-a2a-onto-external-mcp-tool",
+      "name": "Bridges fabric agents (A2A) onto external MCP tool server...",
+      "description": "Bridges fabric agents (A2A) onto external MCP tool servers via a per-request MCP host — the outbound complement to the inbound Pause MCP Server",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "integration"
+      ]
+    },
+    {
+      "id": "fans-out-a-tool-call-across-an-ordered-remote-li",
+      "name": "Fans out a tool call across an ordered remote list (same-...",
+      "description": "Fans out a tool call across an ordered remote list (same-origin loopback first, then allow-listed externals) and returns the first success",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "integration"
+      ]
+    },
+    {
+      "id": "forwards-an-inbound-bearer-token-only-to-the-sam",
+      "name": "Forwards an inbound bearer token ONLY to the same-origin ...",
+      "description": "Forwards an inbound bearer token ONLY to the same-origin loopback remote — never to a cross-origin external MCP server",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "integration"
+      ]
+    },
+    {
+      "id": "falls-back-to-the-direct-experience-api-call-whe",
+      "name": "Falls back to the direct Experience-API call when no remo...",
+      "description": "Falls back to the direct Experience-API call when no remote is configured or every remote errors, so routing never regresses",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "integration"
+      ]
+    },
+    {
+      "id": "env-gated-pause-mcp-host-enabled-off-by-default-",
+      "name": "Env-gated (PAUSE_MCP_HOST_ENABLED); off by default in the...",
+      "description": "Env-gated (PAUSE_MCP_HOST_ENABLED); off by default in the prototype",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "integration"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "mcp-bridge",
+    "kind": "mcp-bridge",
+    "governanceTier": "integration",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.mcp-bridge.remote-allowlist",
+      "policy.mcp-bridge.tool-allowlist",
+      "policy.mcp-bridge.no-cross-origin-bearer"
+    ]
+  }
+}

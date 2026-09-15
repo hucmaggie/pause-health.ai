@@ -1,0 +1,109 @@
+{
+  "name": "Agentforce Care Gap Closure · Preventive Care (Health Cloud)",
+  "description": "Agentforce Care Gap Closure · Preventive Care (Health Cloud) — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-gap. Enforces 6 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/care-gap-closure",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "proactively-detects-menopause-relevant-preventiv",
+      "name": "Proactively detects menopause-relevant preventive-care ga...",
+      "description": "Proactively detects menopause-relevant preventive-care gaps — bone-density/DEXA (osteoporosis risk), lipid panel, screening mammogram, and overdue HRT follow-up — grounded on the patient's Data 360 context + age/cycle/symptom signals",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-gap"
+      ]
+    },
+    {
+      "id": "detection-is-deterministic-a-pure-function-of-an",
+      "name": "Detection is DETERMINISTIC (a pure function of an explici...",
+      "description": "Detection is DETERMINISTIC (a pure function of an explicit as-of date + per-measure history; no randomness, no clock) — the same context always yields the same gaps",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-gap"
+      ]
+    },
+    {
+      "id": "every-detected-gap-references-a-defined-clinical",
+      "name": "Every detected gap references a defined clinical-measure ...",
+      "description": "Every detected gap references a defined clinical-measure catalog id (open/overdue, dueSince/lastDone, priority) — never a fabricated gap; enforced at the Agent Fabric governance boundary",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-gap"
+      ]
+    },
+    {
+      "id": "drafts-consent-and-quiet-hours-aware-outreach-fo",
+      "name": "Drafts consent- and quiet-hours-aware outreach for each g...",
+      "description": "Drafts consent- and quiet-hours-aware outreach for each gap (human-approval-gated, never auto-sent) and hands it to the Engagement Agent for delivery",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-gap"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-clinical-mea",
+      "name": "Runs against ILLUSTRATIVE synthetic clinical measures + i...",
+      "description": "Runs against ILLUSTRATIVE synthetic clinical measures + intervals — clearly labeled; NOT a certified clinical guideline engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-gap"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "care-gap-closure-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-gap",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.caregap.clinical-measure-sourced",
+      "policy.data360.consent-required-before-grounding",
+      "policy.marketing.consent-to-contact-required",
+      "policy.marketing.human-approval-before-send",
+      "policy.engagement.quiet-hours-and-channel-preference"
+    ]
+  }
+}

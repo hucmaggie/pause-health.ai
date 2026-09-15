@@ -1,0 +1,107 @@
+{
+  "name": "Member Cost-Share / EOB Calculation Agent",
+  "description": "Member Cost-Share / EOB Calculation Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/member-cost-share",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "splits-an-adjudicated-in-network-claim-s-allowed",
+      "name": "Splits an adjudicated in-network claim's allowed amount i...",
+      "description": "Splits an adjudicated in-network claim's allowed amount into the member's cost-share (deductible + coinsurance) and the plan-paid portion — runs the deductible → coinsurance → out-of-pocket-maximum waterfall against the member's plan benefit design + current accumulators (deductible-met, OOP-met), capping the member at the remaining OOP maximum. Companion to the Claims Adjudication (produces the allowed amount), Coordination of Benefits (payer order), Subrogation (third-party recovery), Good Faith Estimate (pre-service uninsured estimate), and Balance Billing (surprise-bill protection) agents — this splits the ALREADY-adjudicated allowed amount into member vs. plan responsibility",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-split-is-deterministic-a-pure-function-of-th",
+      "name": "The split is DETERMINISTIC — a pure function of the claim...",
+      "description": "The split is DETERMINISTIC — a pure function of the claim's own fields + the plan (no randomness, no clock); the deductible is applied first, the remainder is split by the coinsurance rate, and the member's total is capped at the remaining OOP maximum, so the same claim always yields the same member / plan split",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-benefit-design-must-trace-to-the-recorded-pl",
+      "name": "The benefit design must trace to the recorded plan catalo...",
+      "description": "The benefit design must trace to the recorded plan catalog — an off-catalog plan can't be correctly cost-shared and is blocked at the Agent Fabric governance boundary (policy.costshare.benefit-design-sourced); and the split must add up and stay bounded — the member + plan must equal the allowed amount, the member share must be non-negative and within the allowed / remaining OOP maximum, and a split that doesn't add up is blocked (policy.costshare.math-consistent, the load-bearing correctness gate). Mirrors the Good Faith Estimate Agent's charge-master-sourced + math-consistent and the Subrogation Agent's recoverable-within-paid posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-eob-cost-share-is-an-estimate-breakdown-the-",
+      "name": "The EOB cost-share is an ESTIMATE / BREAKDOWN — the agent...",
+      "description": "The EOB cost-share is an ESTIMATE / BREAKDOWN — the agent NEVER posts a charge, an invoice, or a balance to the member; a determination that posts a member charge, or that is not review-gated, is blocked (policy.costshare.no-autonomous-member-charge), and every breakdown is finalized by the claims system / a human. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Advance Beneficiary Notice Agent's no-autonomous-beneficiary-liability posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-plan-cata",
+      "name": "Runs against an ILLUSTRATIVE synthetic plan catalog + ded...",
+      "description": "Runs against an ILLUSTRATIVE synthetic plan catalog + deductible / coinsurance / OOP-max waterfall (no copays, tiering, family accumulators, or out-of-network penalties) — clearly labeled; NOT a certified claims / adjudication system (real cost-share is governed by the member's certificate of coverage / SBC, the payer's adjudication system, and applicable state / federal law)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "member-cost-share-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.costshare.benefit-design-sourced",
+      "policy.costshare.math-consistent",
+      "policy.costshare.no-autonomous-member-charge"
+    ]
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "name": "Subrogation / Third-Party Liability Agent",
+  "description": "Subrogation / Third-Party Liability Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/subrogation",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "decides-whether-a-plan-has-a-subrogation-third-p",
+      "name": "Decides whether a plan has a subrogation / third-party-li...",
+      "description": "Decides whether a plan has a subrogation / third-party-liability interest in a liable third party's settlement for injury claims it paid — decides eligibility (injury-related AND a liable third party AND a real accident AND a recovery-allowing basis), computes a BOUNDED recoverable amount (capped at the plan's paid amount, capped again at the settlement, barred by the made-whole doctrine, reduced by the common-fund attorney-fee share), and decides the disposition (no-subrogation-interest / notify-made-whole-bar / assert-lien-with-review). Companion to the Claims Adjudication (per-claim edits), Coordination of Benefits (payer order), Overpayment Recovery (post-payment clawback of the plan's OWN overpayment), Timely Filing (was the claim filed in time), and FWA Detection (fraud) agents — this recovers the plan's injury-claim payments from a LIABLE THIRD PARTY's settlement",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-determination-is-deterministic-a-pure-functi",
+      "name": "The determination is DETERMINISTIC — a pure function of t...",
+      "description": "The determination is DETERMINISTIC — a pure function of the case's own fields (no randomness, no clock); the recoverable is computed and bounded from the plan's paid amount, the settlement, and the doctrine reductions, and the same case always yields the same eligibility + recoverable + disposition",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "every-recovery-decision-must-cite-a-recorded-sub",
+      "name": "Every recovery decision must cite a recorded subrogation ...",
+      "description": "Every recovery decision must cite a recorded subrogation basis — an ad-hoc / un-sourced basis is blocked at the Agent Fabric governance boundary (policy.subrogation.basis-sourced); and the recoverable must never exceed the plan's paid amount or the settlement — a lien asserted as PROFIT rather than reimbursement is blocked (policy.subrogation.recoverable-within-paid, the load-bearing correctness gate). Mirrors the Overpayment Recovery Agent's reason-catalog-sourced and the Good Faith Estimate Agent's math-consistent posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "a-subrogation-interest-is-a-recommendation-requi",
+      "name": "A subrogation interest is a RECOMMENDATION requiring a su...",
+      "description": "A subrogation interest is a RECOMMENDATION requiring a subrogation specialist / plan counsel to review — the agent NEVER autonomously asserts or perfects a lien, reduces the member's settlement, or recovers funds; a determination that auto-asserts a lien, or finds an interest without requiring review, is blocked (policy.subrogation.no-autonomous-lien). Mirrors the Overpayment Recovery Agent's no-autonomous-clawback and the Balance Billing Agent's no-autonomous-balance-bill posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-subrogation-",
+      "name": "Runs against ILLUSTRATIVE synthetic subrogation bases + m...",
+      "description": "Runs against ILLUSTRATIVE synthetic subrogation bases + made-whole / common-fund reductions — clearly labeled; NOT a certified subrogation engine (real subrogation is governed by the plan document — for a self-funded ERISA plan, 29 U.S.C. §1132(a)(3) and cases such as US Airways v. McCutchen and Montanile — state subrogation / made-whole / common-fund law, and state workers-compensation statutes)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "subrogation-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.subrogation.basis-sourced",
+      "policy.subrogation.recoverable-within-paid",
+      "policy.subrogation.no-autonomous-lien"
+    ]
+  }
+}

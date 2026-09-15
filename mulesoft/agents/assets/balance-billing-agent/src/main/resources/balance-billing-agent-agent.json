@@ -1,0 +1,107 @@
+{
+  "name": "Balance Billing Protection (No Surprises Act) Agent",
+  "description": "Balance Billing Protection (No Surprises Act) Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/balance-billing",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "decides-whether-the-no-surprises-act-prohibits-b",
+      "name": "Decides whether the No Surprises Act prohibits balance-bi...",
+      "description": "Decides whether the No Surprises Act prohibits balance-billing an out-of-network claim — resolves the protection basis (emergency, out-of-network at an in-network facility, air ambulance, ground ambulance, in-network), applies any effective notice-and-consent waiver (valid only for a waivable, non-ancillary service), computes the patient's cost-share BASIS (in-network QPA for a protected claim), and computes the balance-bill amount (0 + prohibited for a protected claim). A deterministic payer-plane agent; the claim-time complement to the Good Faith Estimate agent",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-determination-is-deterministic-a-pure-functi",
+      "name": "The determination is DETERMINISTIC — a pure function of t...",
+      "description": "The determination is DETERMINISTIC — a pure function of the request + the basis catalog (no randomness, no clock); the same claim always yields the same protection + cost-share basis + balance-bill flags",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "every-determination-must-cite-a-recorded-protect",
+      "name": "Every determination must cite a recorded protection basis...",
+      "description": "Every determination must cite a recorded protection basis — an ad-hoc / un-sourced protection call is blocked at the Agent Fabric governance boundary (policy.balancebill.protection-basis-sourced); and for a PROTECTED claim the patient's cost-share must be computed on the in-network (QPA) basis, never the out-of-network billed charge — a protected patient's cost-share based on the billed charge over-charges them and is blocked (policy.balancebill.cost-share-in-network-basis, 45 CFR 149.110–149.130). Mirrors the Overpayment & Recovery Agent's reason-catalog-sourced + within-lookback-window posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "a-protected-claim-can-never-be-balance-billed-th",
+      "name": "A PROTECTED claim can NEVER be balance-billed — the diffe...",
+      "description": "A PROTECTED claim can NEVER be balance-billed — the difference between the billed charge and the allowed amount may not be billed to the patient, and a balance bill allowed on a protected claim is blocked (policy.balancebill.no-autonomous-balance-bill); a permitted balance bill on a NON-protected claim (a valid waiver, ground ambulance) requires human review. Mirrors the Overpayment & Recovery Agent's no-autonomous-clawback and the Lab Result Agent's no-autonomous-clinical-action posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-protection-b",
+      "name": "Runs against ILLUSTRATIVE synthetic protection bases + wa...",
+      "description": "Runs against ILLUSTRATIVE synthetic protection bases + waiver rules + ancillary handling + QPA amounts — clearly labeled; NOT a certified No Surprises Act engine (a real determination uses the actual Qualifying Payment Amount, the federal IDR process, the notice-and-consent requirements, and the provider's network contracts under 45 CFR 149)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "balance-billing-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.balancebill.protection-basis-sourced",
+      "policy.balancebill.cost-share-in-network-basis",
+      "policy.balancebill.no-autonomous-balance-bill"
+    ]
+  }
+}

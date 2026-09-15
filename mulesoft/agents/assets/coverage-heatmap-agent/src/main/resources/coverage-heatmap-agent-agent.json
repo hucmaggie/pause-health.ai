@@ -1,0 +1,107 @@
+{
+  "name": "Coverage Heatmap / Difference-Array Range Accumulation Agent",
+  "description": "Coverage Heatmap / Difference-Array Range Accumulation Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/coverage-heatmap",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "given-staffing-coverage-intervals-over-a-set-of-",
+      "name": "Given staffing coverage intervals over a set of time slot...",
+      "description": "Given staffing coverage intervals over a set of time slots and a required minimum, computes the concurrent coverage at every slot and flags the under-staffed slots, reporting the coverage array, the under-staffed slots, and the min/max (disposition fully-covered / understaffed). A deterministic care-coordination capacity-visibility agent; it COMPLEMENTS the Schedule Conflict agent (double-booking guard) and the Caseload Balancing agent (panel capacity fill) — this visualizes concurrent coverage across a schedule",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-heatmap-is-deterministic-a-pure-function-of-",
+      "name": "The heatmap is DETERMINISTIC — a pure function of the req...",
+      "description": "The heatmap is DETERMINISTIC — a pure function of the request's own intervals + slot count + required minimum (time is data: the intervals + slot indices are plain numbers, no real clock; not a Fenwick point-update tree, a greedy interval selection, a Kadane max-subarray, a bin-packing, or a linear partition but the DIFFERENCE ARRAY — imos range-update + a single prefix-sum pass); the same request always yields the same heatmap",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-coverage-must-be-sourced-self-consistent-eac",
+      "name": "The coverage must be sourced + self-consistent — each cov...",
+      "description": "The coverage must be sourced + self-consistent — each coverage[t] equal to the true count of staff covering slot t (cross-checked by DIRECT interval counting, independent of the difference-array method), the under-staffed slots exactly the below-min slots, honest min/max; a fabricated coverage value, a mis-listed slot, or a dishonest min/max is blocked at the Agent Fabric governance boundary (policy.coverageheat.coverage-sourced, the sourced + self-consistency gate); and the accumulation must be exact — re-applying the intervals to a fresh difference array must reproduce the coverage array; a mis-materialized heatmap is blocked (policy.coverageheat.accumulation-exact, the load-bearing correctness gate that cross-checks the same per-slot truth by two independent methods). Mirrors the Benefit Accumulator Agent's ledger-sourced + accumulator-exact posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-visualizes-and-recommends-it-never-sch",
+      "name": "The agent VISUALIZES and RECOMMENDS — it NEVER schedules,...",
+      "description": "The agent VISUALIZES and RECOMMENDS — it NEVER schedules, adjusts, or dispatches staff (each is a staffing action that must be authorized) on its own; a heatmap that auto-staffs or is not review-gated is blocked (policy.coverageheat.no-autonomous-staff), and every heatmap is confirmed by a staffing manager. Mirrors the Interpreter Assignment Agent's no-autonomous-dispatch and the Benefit Accumulator Agent's no-autonomous-adjust posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-intervals-cl",
+      "name": "Runs against ILLUSTRATIVE synthetic intervals — clearly l...",
+      "description": "Runs against ILLUSTRATIVE synthetic intervals — clearly labeled; NOT a certified workforce-management / staffing system (real staffing weighs skill mix, acuity-adjusted ratios, licensure, breaks & meal relief, union rules, and float pools — not a bare count of overlapping intervals). PHI-adjacent — care-unit staffing, so a heatmap is on the HIPAA audit path",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "coverage-heatmap-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.coverageheat.coverage-sourced",
+      "policy.coverageheat.accumulation-exact",
+      "policy.coverageheat.no-autonomous-staff"
+    ]
+  }
+}

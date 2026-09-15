@@ -1,0 +1,107 @@
+{
+  "name": "Risk Adjustment & HCC Coding Agent",
+  "description": "Risk Adjustment & HCC Coding Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/risk-adjustment",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "reviews-a-single-patient-s-clinical-context-and-",
+      "name": "Reviews a SINGLE patient's clinical context and identifie...",
+      "description": "Reviews a SINGLE patient's clinical context and identifies suspected / confirmed HCCs for risk adjustment (each mapped to the documented clinical evidence that supports it), computes a RAF-style risk score from the confirmed set, and flags coding gaps + unsupported / over-coded entries — a clinical-documentation-integrity agent that COMPLEMENTS, not duplicates, the HEDIS & Quality Reporting and Quality-Measure Attribution agents (quality MEASURES) with risk-adjustment CONDITION coding",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "hcc-suspicion-raf-scoring-is-deterministic-a-pur",
+      "name": "HCC suspicion + RAF scoring is DETERMINISTIC — a pure fun...",
+      "description": "HCC suspicion + RAF scoring is DETERMINISTIC — a pure function of the structured clinical context against the HCC + supporting-evidence catalogs (no randomness, no clock; any dates are taken as data); the same context always yields the same assessment, with confirmed = coded + evidence-supported, suspected = evidence-supported but uncoded (a coding gap), and unsupported = coded but not evidence-supported (over-coded)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-confirmed-suspected-hcc-must-trace-to-docu",
+      "name": "Every confirmed / suspected HCC must trace to documented ...",
+      "description": "Every confirmed / suspected HCC must trace to documented clinical evidence in the catalog — a fabricated / unsupported code presented as supported (upcoding) is blocked at the Agent Fabric governance boundary (policy.riskadj.evidence-supported-coding); a coding gap or an unsupported / over-coded flag is a SAFE, honest OUTPUT surfaced for a clinician to validate / correct, NOT a block",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-suspected-code-is-a-recommendation-requiri",
+      "name": "Every suspected code is a RECOMMENDATION requiring clinic...",
+      "description": "Every suspected code is a RECOMMENDATION requiring clinician validation before use — a suspected code finalized without clinician validation is blocked (policy.riskadj.clinician-validation-required); and the agent NEVER autonomously submits codes or adjusts a claim / RAF for reimbursement — an autonomous submission is blocked (policy.riskadj.no-autonomous-submission). Mirrors the Prior Authorization Agent's clinician-approval + no-autonomous-submission posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-hcc-catal",
+      "name": "Runs against an ILLUSTRATIVE synthetic HCC catalog, RAF w...",
+      "description": "Runs against an ILLUSTRATIVE synthetic HCC catalog, RAF weights, and supporting-evidence catalog — clearly labeled; NOT the certified CMS-HCC model, real RAF coefficients, ICD-10 → HCC crosswalks, or a certified risk-adjustment / coding engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "risk-adjustment-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.riskadj.evidence-supported-coding",
+      "policy.riskadj.clinician-validation-required",
+      "policy.riskadj.no-autonomous-submission"
+    ]
+  }
+}

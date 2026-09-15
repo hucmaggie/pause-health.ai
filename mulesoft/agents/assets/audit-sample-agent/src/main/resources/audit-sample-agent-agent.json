@@ -1,0 +1,107 @@
+{
+  "name": "Audit Sample Selection / Reservoir Sampling (Algorithm R, Seeded) Agent",
+  "description": "Audit Sample Selection / Reservoir Sampling (Algorithm R, Seeded) Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/audit-sample",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "given-a-stream-of-record-ids-a-target-sample-siz",
+      "name": "Given a stream of record ids, a target sample size k, and...",
+      "description": "Given a stream of record ids, a target sample size k, and a seed, draws a statistically-defensible k-record sample in a single pass (uniform k/n inclusion probability), reporting the selected ids, the population size, the inclusion probability, and the seed (disposition sampled / full-population). A deterministic payer-operations compliance-sampling agent; it COMPLEMENTS the Fraud-Waste-Abuse and Duplicate-Claim Screen agents — they flag records, this selects a defensible sample of records to audit",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-draw-is-deterministic-a-pure-function-of-the",
+      "name": "The draw is DETERMINISTIC — a pure function of the reques...",
+      "description": "The draw is DETERMINISTIC — a pure function of the request's own ids + k + seed via a seeded PRNG (time is data: the ids are plain data, no real clock, no OS randomness; not a Bloom filter, a knapsack, an EDF schedule, a percentile/rank, a token bucket, or a keyed set-difference but RESERVOIR SAMPLING — single-pass uniform selection with Vitter's Algorithm R); the same request always yields the same sample",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-sample-must-be-sourced-self-consistent-a-rea",
+      "name": "The sample must be sourced + self-consistent — a real sub...",
+      "description": "The sample must be sourced + self-consistent — a real subset of the submitted stream (no fabricated id, no over-count duplicate), size min(k, n), honest population size and inclusion probability; a fabricated id, a duplicate pick, or a mis-sized sample is blocked at the Agent Fabric governance boundary (policy.auditsample.sample-sourced, the sourced + self-consistency gate); and the selection must be reproducible — re-running the seeded Algorithm R must reproduce the exact sample; a cherry-picked or otherwise unreproducible draw is blocked (policy.auditsample.selection-reproducible, the load-bearing correctness gate). Mirrors the Duplicate-Claim Screen Agent's filter-sourced + membership-exact posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-agent-selects-and-recommends-it-never-opens-",
+      "name": "The agent SELECTS and RECOMMENDS — it NEVER opens, adjudi...",
+      "description": "The agent SELECTS and RECOMMENDS — it NEVER opens, adjudicates, flags, or acts on a sampled record (each is an audit action that must be authorized) on its own; a sample that auto-audits or is not review-gated is blocked (policy.auditsample.no-autonomous-audit), and every sample is confirmed by a compliance auditor who runs the audit. Mirrors the Duplicate-Claim Screen Agent's no-autonomous-reject and the Contact Rate Limit Agent's no-autonomous-send posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-ids-clearly-",
+      "name": "Runs against ILLUSTRATIVE synthetic ids — clearly labeled...",
+      "description": "Runs against ILLUSTRATIVE synthetic ids — clearly labeled; NOT a certified statistical-sampling / audit system (real audit sampling weighs stratification, RAT-STATS / OIG methodology, confidence intervals, and dollar-unit / probability-proportional-to-size designs — not a bare uniform reservoir over illustrative ids). PHI-adjacent — record ids, so a sample is on the HIPAA audit path",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "audit-sample-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.auditsample.sample-sourced",
+      "policy.auditsample.selection-reproducible",
+      "policy.auditsample.no-autonomous-audit"
+    ]
+  }
+}

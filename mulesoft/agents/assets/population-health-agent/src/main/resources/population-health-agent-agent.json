@@ -1,0 +1,107 @@
+{
+  "name": "Population Health & Risk Stratification Agent",
+  "description": "Population Health & Risk Stratification Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/population-health",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "reasons-over-a-whole-panel-cohort-of-menopause-m",
+      "name": "Reasons over a whole PANEL/COHORT of menopause/midlife pa...",
+      "description": "Reasons over a whole PANEL/COHORT of menopause/midlife patients at once (a new granularity) — the 'Agentforce for Health' population-health / risk-stratification analog, distinct from every single-patient agent",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "risk-scoring-is-deterministic-and-transparent-a-",
+      "name": "Risk scoring is DETERMINISTIC and TRANSPARENT — a pure, a...",
+      "description": "Risk scoring is DETERMINISTIC and TRANSPARENT — a pure, additive/weighted function of a defined set of documented risk factors (intake severity, validated-assessment band, open care gaps, positive SDOH domains, medication non-adherence, worsening monitored trend), each with a weight; the same panel always yields the same tiers + worklist ordering (stable, documented tie-break; no randomness, no clock)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-patient-s-tier-is-explainable-by-citing-it",
+      "name": "Every patient's tier is EXPLAINABLE by citing its contrib...",
+      "description": "Every patient's tier is EXPLAINABLE by citing its contributing factors and traces to the documented risk-factor spec — an opaque / off-spec score is blocked at the Agent Fabric governance boundary (policy.pophealth.transparent-risk-model)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-risk-model-may-not-score-on-a-protected-clas",
+      "name": "The risk model may NOT score on a protected-class attribu...",
+      "description": "The risk model may NOT score on a protected-class attribute (race, ethnicity, gender identity, religion, etc.) — a fairness / responsible-AI requirement (policy.pophealth.no-protected-class-factors); and a risk tier is a prioritization signal only, never an autonomous care decision — every tier→action requires human / care-manager review (policy.pophealth.no-autonomous-care-decision)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-risk-factors",
+      "name": "Runs against ILLUSTRATIVE synthetic risk factors + weight...",
+      "description": "Runs against ILLUSTRATIVE synthetic risk factors + weights + cutoffs and synthetic/de-identified patient references — clearly labeled; NOT a certified risk-stratification model",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "population-health-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.pophealth.transparent-risk-model",
+      "policy.pophealth.no-protected-class-factors",
+      "policy.pophealth.no-autonomous-care-decision"
+    ]
+  }
+}

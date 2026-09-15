@@ -1,0 +1,107 @@
+{
+  "name": "Rolling Census Peak / Sliding-Window Maximum (Monotonic Deque) Agent",
+  "description": "Rolling Census Peak / Sliding-Window Maximum (Monotonic Deque) Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/rolling-census-peak",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "given-per-slot-census-readings-a-trailing-window",
+      "name": "Given per-slot census readings, a trailing window width k...",
+      "description": "Given per-slot census readings, a trailing window width k, and a capacity threshold, computes the peak census in every window and flags the windows over capacity, reporting the per-window maxima, the over-capacity windows, and the overall peak (disposition within-capacity / over-capacity). A deterministic care-coordination capacity-monitoring agent; it COMPLEMENTS the Coverage Heatmap agent (per-slot concurrent coverage) and the Access Anomaly agent (windowed event counts) — this reports the rolling peak occupancy",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-report-is-deterministic-a-pure-function-of-t",
+      "name": "The report is DETERMINISTIC — a pure function of the requ...",
+      "description": "The report is DETERMINISTIC — a pure function of the request's own readings + window size + capacity (time is data: the readings are plain numbers, no real clock; not a sliding-window count, a difference-array accumulation, a Kadane max-subarray, prefix sums, or an EDF schedule but the SLIDING-WINDOW MAXIMUM via a MONOTONIC DEQUE); the same request always yields the same report",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-windows-must-be-sourced-self-consistent-each",
+      "name": "The windows must be sourced + self-consistent — each wind...",
+      "description": "The windows must be sourced + self-consistent — each window max equal to the true max of that window (cross-checked by DIRECT per-window scanning, INDEPENDENT of the deque method), the over-capacity windows exactly the breaching windows, honest peak/counts; a fabricated window max, a mis-listed window, or a dishonest peak is blocked at the Agent Fabric governance boundary (policy.rollingcensus.windows-sourced, the sourced + self-consistency gate); and the deque must be exact — re-running the monotonic deque must reproduce the maxima array; a mis-derived maxima array is blocked (policy.rollingcensus.deque-exact, the load-bearing correctness gate that cross-checks the same per-window truth by two independent methods). Mirrors the Coverage Heatmap Agent's coverage-sourced + accumulation-exact posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-monitors-and-recommends-it-never-diver",
+      "name": "The agent MONITORS and RECOMMENDS — it NEVER diverts admi...",
+      "description": "The agent MONITORS and RECOMMENDS — it NEVER diverts admissions, triggers surge staffing, or acts on a peak (each is an operational action that must be authorized) on its own; a report that auto-diverts or is not review-gated is blocked (policy.rollingcensus.no-autonomous-divert), and every report is confirmed by a nursing supervisor. Mirrors the Coverage Heatmap Agent's no-autonomous-staff and the Interpreter Assignment Agent's no-autonomous-dispatch posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-readings-cle",
+      "name": "Runs against ILLUSTRATIVE synthetic readings — clearly la...",
+      "description": "Runs against ILLUSTRATIVE synthetic readings — clearly labeled; NOT a certified capacity-management / patient-flow system (real census management weighs acuity, staffed vs licensed beds, isolation & telemetry needs, anticipated discharges, and boarding — not a bare rolling max over illustrative counts). PHI-adjacent — care-unit occupancy, so a report is on the HIPAA audit path",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "rolling-census-peak-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.rollingcensus.windows-sourced",
+      "policy.rollingcensus.deque-exact",
+      "policy.rollingcensus.no-autonomous-divert"
+    ]
+  }
+}

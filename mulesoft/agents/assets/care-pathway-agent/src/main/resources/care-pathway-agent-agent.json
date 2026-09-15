@@ -1,0 +1,107 @@
+{
+  "name": "Care Pathway Sequencing Agent",
+  "description": "Care Pathway Sequencing Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: clinical-decision. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/care-pathway",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "sequences-a-clinical-pathway-s-steps-each-declar",
+      "name": "Sequences a clinical pathway's steps — each declaring its...",
+      "description": "Sequences a clinical pathway's steps — each declaring its prerequisite steps — into a valid execution order that respects every dependency, detecting dependency cycles (no valid order exists) and missing prerequisites (a step depends on a step absent from the pathway), and reporting each step's stage (0-based longest-prerequisite-chain depth). A deterministic clinical-decision agent; distinct from the Care Plan agent (which AUTHORS a plan from a template), the Transitions of Care / Care Coordination Handoff agents (moving a patient between settings / teams), and the Drug Interaction / Controlled Substance agents (medication safety) — this ORDERS the steps of a pathway so no step is scheduled before its prerequisites",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "the-sequencing-is-deterministic-a-pure-function-",
+      "name": "The sequencing is DETERMINISTIC — a pure function of the ...",
+      "description": "The sequencing is DETERMINISTIC — a pure function of the pathway's steps (no randomness, no clock; not a set-difference, an identity match, a lookup, or a ratio but a TOPOLOGICAL ORDERING via Kahn's algorithm + CYCLE DETECTION, ties broken by step id); the same pathway always yields the same order",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "every-step-id-in-the-output-must-reference-a-sub",
+      "name": "Every step id in the output must reference a submitted pa...",
+      "description": "Every step id in the output must reference a submitted pathway step — a fabricated / dangling step id is blocked at the Agent Fabric governance boundary (policy.pathway.steps-sourced); and the sequence must be valid — when sequenced, the ordered steps are a complete permutation of the pathway and every step appears AFTER all its prerequisites (ordering a treatment step before its safety-screening prerequisite is the worst failure mode), and when un-sequenceable no order is asserted; a sequence that violates a prerequisite, drops a step, or asserts an impossible order is blocked (policy.pathway.sequence-valid, the load-bearing correctness gate). Mirrors the Enrollment Reconciliation Agent's reconciliation-complete and the Member Cost-Share Agent's math-consistent posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "the-agent-sequences-it-never-executes-orders-adm",
+      "name": "The agent SEQUENCES — it NEVER executes / orders / admini...",
+      "description": "The agent SEQUENCES — it NEVER executes / orders / administers a step (ordering a lab, a screening, or a therapy is a clinical action that must be authorized) on its own; a determination that auto-executes or is not review-gated is blocked (policy.pathway.no-autonomous-execution), and every determination is a recommendation requiring a clinician to confirm and order. Mirrors the Drug Interaction Agent's no-autonomous-hold-or-override and the Lab Result Agent's no-autonomous-clinical-action posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-pathways-ste",
+      "name": "Runs against ILLUSTRATIVE synthetic pathways + steps — cl...",
+      "description": "Runs against ILLUSTRATIVE synthetic pathways + steps — clearly labeled; NOT a certified clinical pathway engine (real pathway management uses evidence-based order sets, the patient's clinical context, scheduling / timing constraints, and the care team's judgment). PHI-bearing — the pathway references the patient",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "care-pathway-agent",
+    "kind": "agentforce",
+    "governanceTier": "clinical-decision",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.pathway.steps-sourced",
+      "policy.pathway.sequence-valid",
+      "policy.pathway.no-autonomous-execution"
+    ]
+  }
+}

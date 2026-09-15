@@ -1,0 +1,106 @@
+{
+  "name": "Agentforce SDOH Screening Agent · Whole-Person Care",
+  "description": "Agentforce SDOH Screening Agent · Whole-Person Care — a governed Pause fabric agent (agentforce, A2A). Governance tier: whole-person-care. Enforces 3 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/sdoh-screening",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "screens-a-patient-for-health-related-social-need",
+      "name": "Screens a patient for health-related social needs / socia...",
+      "description": "Screens a patient for health-related social needs / social determinants of health with the CMS Accountable Health Communities HRSN core-domain screening tool (housing instability, food insecurity, transportation needs, utility needs, interpersonal safety) — the 'Agentforce for Health' whole-person-care analog",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    },
+    {
+      "id": "screening-is-deterministic-real-rule-based-logic",
+      "name": "Screening is DETERMINISTIC real rule-based logic (no LLM)...",
+      "description": "Screening is DETERMINISTIC real rule-based logic (no LLM): per-domain positive/negative determination, an overall count of positive social-need domains, and cutoff-based scoring (e.g. the HITS interpersonal-safety cutoff) — the same responses always screen identically",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    },
+    {
+      "id": "escalates-a-positive-interpersonal-safety-screen",
+      "name": "Escalates a positive interpersonal-safety screen to a hum...",
+      "description": "Escalates a positive interpersonal-safety screen to a human social worker as a mandatory red flag — mirroring the Assessment Agent's PHQ-9 item 9 handling",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    },
+    {
+      "id": "drafts-consent-gated-community-resource-referral",
+      "name": "Drafts CONSENT-GATED community-resource referrals (211, l...",
+      "description": "Drafts CONSENT-GATED community-resource referrals (211, local food bank, housing assistance, utility assistance, a domestic-violence hotline for safety), each referencing a defined resource-catalog id, human-approval-gated and never sent — NEVER an autonomous enrollment; a referral without patient consent is blocked at the Agent Fabric governance boundary",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    },
+    {
+      "id": "refuses-to-administer-any-screener-outside-the-v",
+      "name": "Refuses to administer any screener outside the validated ...",
+      "description": "Refuses to administer any screener outside the validated allow-list, and keeps SDOH SEPARATE from clinical severity — a positive social need raises a care-coordination flag, not an intake clinical severity. Runs against ILLUSTRATIVE synthetic community resources — clearly labeled; NOT a live directory of real programs",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "sdoh-screening-agent",
+    "kind": "agentforce",
+    "governanceTier": "whole-person-care",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.sdoh.validated-screener-only",
+      "policy.sdoh.consent-before-referral"
+    ]
+  }
+}

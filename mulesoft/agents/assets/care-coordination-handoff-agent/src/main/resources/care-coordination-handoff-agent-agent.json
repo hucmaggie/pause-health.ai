@@ -1,0 +1,121 @@
+{
+  "name": "Care Coordination Handoff Agent",
+  "description": "Care Coordination Handoff Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/care-coordination-handoff",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "deterministically-assembles-a-joint-commission-n",
+      "name": "Deterministically assembles a Joint-Commission-NPSG-2 SBA...",
+      "description": "Deterministically assembles a Joint-Commission-NPSG-2 SBAR handoff (situation, background, assessment, recommendation) for any cross-setting patient transition and classifies as handoff-accepted / pend-sbar-incomplete / blocked-clinician-not-credentialed / blocked-no-consent with a specific reason code. Distinct from Transitions of Care (post-discharge hospital→home + med reconciliation) and Referral Management (outbound specialist referral) — this is any cross-setting handoff",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "handoff-evaluation-is-deterministic-a-pure-funct",
+      "name": "Handoff evaluation is DETERMINISTIC — a pure function of ...",
+      "description": "Handoff evaluation is DETERMINISTIC — a pure function of the request + catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same decision + missing-sections list + primary reason, with a documented decision precedence (blocked-no-consent > blocked-clinician-not-credentialed > pend-sbar-incomplete > handoff-accepted) and stable rule-id ordering",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-handoff-accepted-decision-must-have-all-fo",
+      "name": "Every handoff-accepted decision must have all four SBAR s...",
+      "description": "Every handoff-accepted decision must have all four SBAR sections populated — the Joint Commission NPSG-2 requires standardized handoff communication; a handoff-accepted decision missing a section is blocked (policy.handoff.sbar-completeness), and the safe answer when incomplete is decision:'pend-sbar-incomplete' routed to sending-clinician-completion",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-receiving-clinician-must-be-credentialed-cur",
+      "name": "The receiving clinician must be credentialed (current, un...",
+      "description": "The receiving clinician must be credentialed (current, unsanctioned) — a handoff to an expired / incomplete / sanctioned clinician is a ghost-network variant and a Section 1557 / due-process failure (policy.handoff.receiving-clinician-credentialed); the safe answer is decision:'blocked-clinician-not-credentialed' routed to credentialing-remediation. Mirrors the Provider Credentialing Agent's no-referral-to-expired-or-sanctioned posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "transitions-that-share-phi-with-a-new-setting-ho",
+      "name": "Transitions that share PHI with a new setting (hospital→S...",
+      "description": "Transitions that share PHI with a new setting (hospital→SNF, SNF→home, home→hospice, PCP→behavioral-health) require documented transfer consent — a handoff without it is a HIPAA disclosure failure (policy.handoff.consent-on-file); the safe answer is decision:'blocked-no-consent' routed to consent-capture. Mirrors the Consent & Preferences Management Agent's consent-scope posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-care-setting",
+      "name": "Runs against ILLUSTRATIVE synthetic care-setting + transi...",
+      "description": "Runs against ILLUSTRATIVE synthetic care-setting + transition-type + rule + reason catalogs — clearly labeled; NOT Epic Care Everywhere, Cerner CareAware, an actual health system's handoff protocol, or a certified Joint Commission / ONC-approved handoff module",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "care-coordination-handoff-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.handoff.sbar-completeness",
+      "policy.handoff.receiving-clinician-credentialed",
+      "policy.handoff.consent-on-file"
+    ]
+  }
+}

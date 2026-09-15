@@ -1,0 +1,107 @@
+{
+  "name": "Consent & Preferences Management Agent",
+  "description": "Consent & Preferences Management Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/consent-management",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "the-authoritative-consent-ledger-communication-p",
+      "name": "The AUTHORITATIVE consent ledger + communication-preferen...",
+      "description": "The AUTHORITATIVE consent ledger + communication-preference store the rest of the fabric's consent-before-outreach / consent-before-referral / consent-to-monitor gates logically defer to — the source of truth for consent, not a consumer of it",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "a-deterministic-consent-decision-function-evalua",
+      "name": "A DETERMINISTIC consent-decision function (evaluateConsen...",
+      "description": "A DETERMINISTIC consent-decision function (evaluateConsent) that denies a withheld / revoked / expired / unrecorded scope, an unpermitted channel, a quiet-hours touch, or a frequency-cap breach and otherwise allows — a pure function of the ledger + the query's own atTime + priorTouches (no randomness, no clock), citing the consent record it relied on",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "every-consent-state-must-trace-to-a-recorded-con",
+      "name": "Every consent state must trace to a recorded consent even...",
+      "description": "Every consent state must trace to a recorded consent event/basis — an asserted-but-unrecorded consent is blocked at the Agent Fabric governance boundary (policy.consent.recorded-source)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "a-revoked-expired-consent-is-honored-immediately",
+      "name": "A revoked / expired consent is honored immediately — a de...",
+      "description": "A revoked / expired consent is honored immediately — a decision may never ALLOW against a revoked / expired scope (policy.consent.honor-revocation); and a decision may never override a withheld scope or borrow consent across scopes (policy.consent.no-scope-override)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-consent-l",
+      "name": "Runs against an ILLUSTRATIVE synthetic consent ledger — s...",
+      "description": "Runs against an ILLUSTRATIVE synthetic consent ledger — scopes, recorded sources, preferences, and patient references clearly labeled; NOT a certified consent-management / preference-center system",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "consent-management-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.consent.recorded-source",
+      "policy.consent.honor-revocation",
+      "policy.consent.no-scope-override"
+    ]
+  }
+}

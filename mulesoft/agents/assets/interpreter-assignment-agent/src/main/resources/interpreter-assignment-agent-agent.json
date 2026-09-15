@@ -1,0 +1,107 @@
+{
+  "name": "Interpreter Assignment / Optimal Assignment (Hungarian Algorithm) Agent",
+  "description": "Interpreter Assignment / Optimal Assignment (Hungarian Algorithm) Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/interpreter-assignment",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "given-qualified-interpreters-concurrent-appointm",
+      "name": "Given qualified interpreters, concurrent appointments, an...",
+      "description": "Given qualified interpreters, concurrent appointments, and a cost matrix (travel + wait + skill-mismatch, with an 'unavailable' sentinel), computes the minimum-total-cost one-to-one assignment, reporting the pairings, the total cost, and any uncoverable appointments (disposition assignable / infeasible). A deterministic care-coordination assignment agent; it COMPLEMENTS the PCP Matching agent (stable member↔PCP matching) and the Caseload Balancing agent (panel capacity fill) — this is the optimal one-to-one assignment",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-assignment-is-deterministic-a-pure-function-",
+      "name": "The assignment is DETERMINISTIC — a pure function of the ...",
+      "description": "The assignment is DETERMINISTIC — a pure function of the request's own interpreters + appointments + cost matrix (time is data: the costs are plain numbers, no real clock; not a Gale–Shapley stable matching, a bin-packing, a max-flow, a minimum spanning tree, a linear partition, a knapsack, or a Dijkstra path but the ASSIGNMENT PROBLEM via the HUNGARIAN ALGORITHM (Kuhn–Munkres) — a minimum-cost perfect matching); the same request always yields the same assignment",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-assignment-must-be-sourced-self-consistent-a",
+      "name": "The assignment must be sourced + self-consistent — a real...",
+      "description": "The assignment must be sourced + self-consistent — a real one-to-one matching over the submitted sets (no interpreter or appointment used twice, no fabricated pairing, no unavailable cell), honest total cost, the unmatched list exactly the uncovered appointments; a fabricated pairing, a reused interpreter, or an overstated cost is blocked at the Agent Fabric governance boundary (policy.interpasg.assignment-sourced, the sourced + self-consistency gate); and the assignment must be cost-optimal — re-running the Hungarian algorithm must reproduce the minimum total cost; a sub-optimal assignment that wastes interpreter time is blocked (policy.interpasg.cost-optimal, the load-bearing correctness gate). Mirrors the Benefit Accumulator Agent's ledger-sourced + accumulator-exact posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-assigns-and-recommends-it-never-books-",
+      "name": "The agent ASSIGNS and RECOMMENDS — it NEVER books, dispat...",
+      "description": "The agent ASSIGNS and RECOMMENDS — it NEVER books, dispatches, or notifies an interpreter (each is a scheduling action that must be authorized) on its own; an assignment that auto-dispatches or is not review-gated is blocked (policy.interpasg.no-autonomous-dispatch), and every assignment is confirmed by a language-access coordinator. Mirrors the Benefit Accumulator Agent's no-autonomous-adjust and the Referral Throughput Agent's no-autonomous-route posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-cost-matrice",
+      "name": "Runs against ILLUSTRATIVE synthetic cost matrices — clear...",
+      "description": "Runs against ILLUSTRATIVE synthetic cost matrices — clearly labeled; NOT a certified interpreter-scheduling / workforce system (real interpreter scheduling weighs certification & specialty, modality, union & labor rules, travel logistics, and member language preference — not a bare cost matrix). PHI-adjacent — appointment encounters, so an assignment is on the HIPAA audit path",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "interpreter-assignment-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.interpasg.assignment-sourced",
+      "policy.interpasg.cost-optimal",
+      "policy.interpasg.no-autonomous-dispatch"
+    ]
+  }
+}

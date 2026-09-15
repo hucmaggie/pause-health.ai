@@ -1,0 +1,121 @@
+{
+  "name": "Advance Care Planning Agent",
+  "description": "Advance Care Planning Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: whole-person-care. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/advance-care-planning",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "surfaces-which-advance-directives-living-will-dp",
+      "name": "Surfaces which advance directives (living will, DPOA-HC, ...",
+      "description": "Surfaces which advance directives (living will, DPOA-HC, POLST) are on file for a midlife/menopause patient, flags missing / stale / off-source / language-access gaps, and drafts a consent-gated conversation prompt for the care team — a whole-person-care ACP touchpoint agent, distinct from the Consent Management agent (data-use consent) and the Care Plan agent (active treatment planning)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    },
+    {
+      "id": "acp-assessment-is-deterministic-a-pure-function-",
+      "name": "ACP assessment is DETERMINISTIC — a pure function of the ...",
+      "description": "ACP assessment is DETERMINISTIC — a pure function of the caller-provided asOfDate + directives-on-file against the illustrative ACP directive catalog + approved-source list (no randomness, no clock); the same context always yields the same assessment (with a stable, documented flag ordering)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    },
+    {
+      "id": "every-claimed-directive-on-file-must-trace-to-th",
+      "name": "Every claimed directive on file must trace to the defined...",
+      "description": "Every claimed directive on file must trace to the defined ACP directive catalog AND an approved directive-source label with a recorded execution date — an off-catalog directive, an unapproved / verbal source, or a missing execution date is blocked at the Agent Fabric governance boundary (policy.acp.directive-source-integrity), so the agent cannot fabricate a directive to inflate ACP completeness",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    },
+    {
+      "id": "the-agent-never-autonomously-creates-updates-or-",
+      "name": "The agent NEVER autonomously creates, updates, or overrid...",
+      "description": "The agent NEVER autonomously creates, updates, or overrides a directive — every directive change is a clinician + patient sign-off gated proposal, and any autonomous change is blocked (policy.acp.no-autonomous-directive-change); mirrors the Prior Authorization Agent's no-autonomous-submission and the HEDIS Agent's human-approval posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    },
+    {
+      "id": "for-a-limited-english-proficiency-lep-patient-th",
+      "name": "For a limited-English-proficiency (LEP) patient the agent...",
+      "description": "For a limited-English-proficiency (LEP) patient the agent defers to the Language Access & Health Equity agent and WITHHOLDS the active prompt (a safe answer) until a qualified-interpreter plan is documented — a plan claiming an active ACP conversation for an LEP patient with no interpreter is blocked (policy.acp.language-access-integrity)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-directive-ca",
+      "name": "Runs against ILLUSTRATIVE synthetic directive-catalog, ap...",
+      "description": "Runs against ILLUSTRATIVE synthetic directive-catalog, approved-source, and staleness-threshold values — directives, sources, and thresholds clearly labeled; NOT a certified advance-directives registry or a POLST/MOLST program",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "advance-care-planning-agent",
+    "kind": "agentforce",
+    "governanceTier": "whole-person-care",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.acp.directive-source-integrity",
+      "policy.acp.no-autonomous-directive-change",
+      "policy.acp.language-access-integrity"
+    ]
+  }
+}

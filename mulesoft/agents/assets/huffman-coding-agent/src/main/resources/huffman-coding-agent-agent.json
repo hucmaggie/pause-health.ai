@@ -1,0 +1,106 @@
+{
+  "name": "Event-Stream Code Assignment / Huffman Optimal Prefix Coding Agent",
+  "description": "Event-Stream Code Assignment / Huffman Optimal Prefix Coding Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 3 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/huffman-coding",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-set-of-event-message-types-flowing-acros",
+      "name": "Takes a set of event / message types flowing across the i...",
+      "description": "Takes a set of event / message types flowing across the integration bus — each type with an observed frequency (its share of the stream volume) — and assigns an optimal prefix-free binary code that minimizes the total encoded length (the sum over types of frequency × code length), reporting one code per type, the weighted total, the fixed-width baseline, and the disposition (compressible / already-uniform). A deterministic data-plane code-assignment agent; it COMPLEMENTS the Code Taxonomy agent (which walks a code down a prefix tree of taxonomy categories to bucket it) and the Identifier Validation agent (which validates an identifier's check digit) — this CONSTRUCTS an optimal prefix-free code from frequencies",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-coding-is-deterministic-a-pure-function-of-t",
+      "name": "The coding is DETERMINISTIC — a pure function of the requ...",
+      "description": "The coding is DETERMINISTIC — a pure function of the request's own symbols (time is data: the frequencies are plain numbers, no real clock; not a trie longest-prefix match, a checksum, a majority vote, a k-way merge, a longest common subsequence, an EDF schedule, a Kadane max-subarray, a Dijkstra path, a knapsack, a stable matching, a union-find, a percentile, or a largest-remainder apportionment but HUFFMAN CODING — merge the two lowest-frequency nodes repeatedly, read the codes off the tree); the same frequencies always yield the same code length",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-code-must-be-sourced-self-consistent-the-cod",
+      "name": "The code must be sourced + self-consistent — the codes co...",
+      "description": "The code must be sourced + self-consistent — the codes covering exactly the submitted symbols (each once, no fabricated symbol, none dropped / double-coded), each code a non-empty binary string with a matching length + echoed frequency, the code prefix-free (no code a prefix of another), the weightedTotal equal to Σ frequency × length, the fixed-width baseline honest, and the disposition following; a fabricated symbol, a non-prefix-free code, or an overstated total is blocked at the Agent Fabric governance boundary (policy.huffcode.code-sourced, the sourced + self-consistency gate); and the code must be optimal — re-running the Huffman construction must reproduce the reported weightedTotal; a sub-optimal prefix code that wastes bandwidth is blocked (policy.huffcode.code-optimal, the load-bearing correctness gate). Mirrors the List Reconciliation Agent's diff-sourced + lcs-optimal posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-agent-assigns-and-recommends-it-never-deploy",
+      "name": "The agent ASSIGNS and RECOMMENDS — it NEVER deploys the c...",
+      "description": "The agent ASSIGNS and RECOMMENDS — it NEVER deploys the codec to the live integration bus or re-encodes the production stream (each is an infrastructure change that must be authorized) on its own; an assignment that auto-deploys or is not review-gated is blocked (policy.huffcode.no-autonomous-deploy), and every assignment is confirmed by an integration engineer. Mirrors the List Reconciliation Agent's no-autonomous-update and the SLA Worklist Agent's no-autonomous-dispatch posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-frequencies-",
+      "name": "Runs against ILLUSTRATIVE synthetic frequencies — clearly...",
+      "description": "Runs against ILLUSTRATIVE synthetic frequencies — clearly labeled; NOT a certified codec / compression system (real stream compression uses context modeling, arithmetic / range coding, dictionary methods (LZ77 / LZMA), and adaptive codebooks). DELIBERATELY NOT PHI-bearing — an event-type frequency is aggregate integration telemetry, not patient health information",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "huffman-coding-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.huffcode.code-sourced",
+      "policy.huffcode.code-optimal",
+      "policy.huffcode.no-autonomous-deploy"
+    ]
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "name": "Agentforce Account Management · Customer Success",
+  "description": "Agentforce Account Management · Customer Success — a governed Pause fabric agent (agentforce, A2A). Governance tier: commercial-operations. Enforces 2 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "salesforce://agentforce/pause-accounts@v1",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "manages-signed-provider-organization-and-employe",
+      "name": "Manages signed provider-organization and employer account...",
+      "description": "Manages signed provider-organization and employer accounts post-close: health scoring, renewals, and expansion",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "surfaces-usage-adoption-signals-and-drafts-renew",
+      "name": "Surfaces usage / adoption signals and drafts renewal & QB...",
+      "description": "Surfaces usage / adoption signals and drafts renewal & QBR materials for the account team's review",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "flags-churn-risk-and-expansion-opportunities-nev",
+      "name": "Flags churn risk and expansion opportunities; never commi...",
+      "description": "Flags churn risk and expansion opportunities; never commits a contract or pricing change without a human account owner",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "operates-only-on-the-commercial-crm-plane-has-no",
+      "name": "Operates only on the commercial CRM plane; has no access ...",
+      "description": "Operates only on the commercial CRM plane; has no access to patient PHI or the clinical plane",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "account-management-agent",
+    "kind": "agentforce",
+    "governanceTier": "commercial-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.commercial.no-phi-in-commercial-plane",
+      "policy.commercial.human-owner-before-contract-change"
+    ]
+  }
+}

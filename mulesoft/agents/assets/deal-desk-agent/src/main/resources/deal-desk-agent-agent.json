@@ -1,0 +1,107 @@
+{
+  "name": "Deal Desk / Quote Approval Agent",
+  "description": "Deal Desk / Quote Approval Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: commercial-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/deal-desk",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "validates-a-proposed-b2b-enterprise-quote-agains",
+      "name": "Validates a proposed B2B enterprise quote against the dea...",
+      "description": "Validates a proposed B2B enterprise quote against the deal-desk pricing / discount-guardrail catalog — prices each line, sums the list / net / discount totals, computes the effective blended discount, checks each line's discount against its product's max auto-approve guardrail, and decides whether the quote auto-approves (every line within guardrail) or must escalate to a human deal-desk owner (any line out of guardrail). Companion to the Pipeline Management (opportunity pipeline / forecast), Account Management (post-close renewals / expansion), and Provider Contracting (payer↔provider network contract) agents — this validates a proposed SALES QUOTE's pricing + discounting",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "the-decision-is-deterministic-a-pure-function-of",
+      "name": "The decision is DETERMINISTIC — a pure function of the qu...",
+      "description": "The decision is DETERMINISTIC — a pure function of the quote's own line items + the catalog (no randomness, no clock); the totals + effective discount are computed from the lines, and the same quote always yields the same totals + guardrail result + disposition",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "every-line-must-price-from-the-recorded-pricing-",
+      "name": "Every line must price from the recorded pricing catalog —...",
+      "description": "Every line must price from the recorded pricing catalog — an ad-hoc / off-catalog product is blocked at the Agent Fabric governance boundary (policy.dealdesk.pricing-catalog-sourced); and the quote totals must equal the recomputed line sums — a guessed / hidden total is blocked (policy.dealdesk.discount-math-consistent, the load-bearing correctness gate). Mirrors the Provider Contracting Agent's contract-type-catalog-sourced and the Good Faith Estimate Agent's math-consistent posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "an-out-of-guardrail-discount-is-never-autonomous",
+      "name": "An out-of-guardrail discount is NEVER autonomously approv...",
+      "description": "An out-of-guardrail discount is NEVER autonomously approved — a quote with any line whose discount exceeds its product's max auto-approve guardrail must escalate to a human deal-desk owner; a determination that auto-approves an out-of-guardrail quote is blocked (policy.dealdesk.no-autonomous-out-of-guardrail-approval). Mirrors the Account Management Agent's human-owner-before-contract-change and the Provider Contracting Agent's no-autonomous-term-change posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-pause-health",
+      "name": "Runs against ILLUSTRATIVE synthetic Pause-Health product ...",
+      "description": "Runs against ILLUSTRATIVE synthetic Pause-Health product catalog + guardrail percentages — clearly labeled; NOT a certified CPQ / pricing system (real quoting is governed by the company's CPQ — e.g. Salesforce Revenue Cloud — its approved price book, and its deal-desk / finance discount-approval matrix). Because it operates on commercial quote data rather than patient PHI, this agent lives on the commercial-operations plane (NOT patient-care)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "deal-desk-agent",
+    "kind": "agentforce",
+    "governanceTier": "commercial-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.commercial.no-phi-in-commercial-plane",
+      "policy.dealdesk.pricing-catalog-sourced",
+      "policy.dealdesk.discount-math-consistent",
+      "policy.dealdesk.no-autonomous-out-of-guardrail-approval"
+    ]
+  }
+}

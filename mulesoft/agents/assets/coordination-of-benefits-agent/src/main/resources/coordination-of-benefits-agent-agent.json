@@ -1,0 +1,107 @@
+{
+  "name": "Coordination of Benefits Agent",
+  "description": "Coordination of Benefits Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/coordination-of-benefits",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "orders-a-patient-s-multiple-coverages-primary-se",
+      "name": "Orders a patient's multiple coverages (primary → secondar...",
+      "description": "Orders a patient's multiple coverages (primary → secondary → tertiary) for a health-plan / TPA, citing the governing COB rule for every ordering decision — companion to the Claims Adjudication (per-claim edits after payer order is known), Benefits & Coverage Verification / EBV (single-plan eligibility), and Utilization Review (medical necessity) agents; this decides the ORDER OF BENEFITS across coverages BEFORE adjudication",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "ordering-is-deterministic-a-pure-function-of-the",
+      "name": "Ordering is DETERMINISTIC — a pure function of the covera...",
+      "description": "Ordering is DETERMINISTIC — a pure function of the coverages + the request's own context (no randomness, no clock); the same coverages always yield the same order + cited rules, applying a documented precedence (custody-decree > Medicaid-payer-of-last-resort > Medicare-secondary-payer > subscriber-before-dependent > active-before-inactive > birthday-rule > longer-coverage tie-break)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "a-custody-court-decree-always-overrides-the-birt",
+      "name": "A custody / court decree ALWAYS overrides the birthday ru...",
+      "description": "A custody / court decree ALWAYS overrides the birthday rule — when an active decree names a dependent child's primary coverage, that plan is primary; a determination that ignores the decree is blocked at the Agent Fabric governance boundary (policy.cob.custody-decree-overrides-birthday). Mirrors the Data Retention Agent's legal-hold-overrides-purge — a legal instrument overrides the default rule",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "every-ordering-decision-must-cite-a-recorded-cob",
+      "name": "Every ordering decision must cite a recorded COB rule fro...",
+      "description": "Every ordering decision must cite a recorded COB rule from the rule catalog — an ad-hoc / un-sourced ordering is blocked (policy.cob.order-of-benefits-rule-sourced); and the agent NEVER autonomously adjudicates or pays — an order-of-benefits determination is a RECOMMENDATION requiring human cosign (requiresHumanCosign:true), and any autonomous adjudication is blocked (policy.cob.no-autonomous-adjudication). Mirrors the Claims Adjudication Agent's no-autonomous-denial posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-cob-rule-cat",
+      "name": "Runs against ILLUSTRATIVE synthetic COB rule catalog + pl...",
+      "description": "Runs against ILLUSTRATIVE synthetic COB rule catalog + plan types + payer labels — clearly labeled; NOT a certified coordination-of-benefits engine (real COB is governed by the NAIC COB Model Regulation, Medicare Secondary Payer 42 CFR 411, Medicaid third-party liability 42 CFR 433.139, ERISA plan documents, and state insurance code)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "coordination-of-benefits-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.cob.custody-decree-overrides-birthday",
+      "policy.cob.order-of-benefits-rule-sourced",
+      "policy.cob.no-autonomous-adjudication"
+    ]
+  }
+}

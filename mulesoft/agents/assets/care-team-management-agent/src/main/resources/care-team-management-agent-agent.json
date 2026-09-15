@@ -1,0 +1,121 @@
+{
+  "name": "Care Team & Case Management Agent",
+  "description": "Care Team & Case Management Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/care-team",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "assembles-the-multi-disciplinary-care-team-aroun",
+      "name": "Assembles the multi-disciplinary care team around a singl...",
+      "description": "Assembles the multi-disciplinary care team around a single high-need menopause/midlife patient (PCP, MSCP, cardiology, endocrinology, bone-health, pelvic-floor PT, behavioral health), assigns a case manager, and emits a shared team snapshot — a care-coordination agent, distinct from the panel-level Population Health & Risk Stratification agent",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "team-assembly-is-deterministic-a-pure-function-o",
+      "name": "Team assembly is DETERMINISTIC — a pure function of the p...",
+      "description": "Team assembly is DETERMINISTIC — a pure function of the patient's clinical needs against the illustrative care-role catalog + condition→role trigger map, with the case manager assigned by a stable, documented hash on the patientRef (no randomness, no clock); the same context always yields the same team + case manager + snapshot",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-team-role-on-the-roster-and-in-the-needed-",
+      "name": "Every team role — on the roster and in the needed-roles s...",
+      "description": "Every team role — on the roster and in the needed-roles set — must trace to the defined care-role catalog; an off-catalog / fabricated discipline label is blocked at the Agent Fabric governance boundary (policy.careteam.role-catalog-sourced), so the agent cannot pad a roster or claim coverage for a role that doesn't exist",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-never-autonomously-adds-or-removes-a-t",
+      "name": "The agent NEVER autonomously adds or removes a team membe...",
+      "description": "The agent NEVER autonomously adds or removes a team member — every roster change is a case-manager sign-off gated proposal, and an autonomous change is blocked (policy.careteam.no-autonomous-assignment); mirrors the ACP Agent's no-autonomous-directive-change and the HEDIS Agent's human-approval posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "a-legitimate-care-team-must-include-a-pcp-role-p",
+      "name": "A legitimate care team must include a PCP (role.pcp) — th...",
+      "description": "A legitimate care team must include a PCP (role.pcp) — the continuity-of-care anchor every specialist coordinates around; a roster shipping without an accountable PCP is blocked (policy.careteam.pcp-required), a load-bearing continuity-of-care invariant",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-care-role-ca",
+      "name": "Runs against ILLUSTRATIVE synthetic care-role catalog, co...",
+      "description": "Runs against ILLUSTRATIVE synthetic care-role catalog, condition→role triggers, and case-manager pool — roles, responsibilities, and refs clearly labeled; NOT a certified care-team schema, a real provider directory, or a case-management workflow engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "care-team-management-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.careteam.role-catalog-sourced",
+      "policy.careteam.no-autonomous-assignment",
+      "policy.careteam.pcp-required"
+    ]
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "name": "Complex Care Management Agent",
+  "description": "Complex Care Management Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/complex-care-management",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "confirms-medicare-ccm-eligibility-tracks-per-act",
+      "name": "Confirms Medicare CCM eligibility, tracks per-activity mo...",
+      "description": "Confirms Medicare CCM eligibility, tracks per-activity monthly time entries, maps the total to the illustrative CPT ladder (99490/99491 non-complex, 99487/99489 complex), and assembles a billing package for human quality-team review — the reimbursable time-tracking piece of care management, distinct from Care Team (roster) and Care Plan (treatment content)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "eligibility-time-totals-and-cpt-selection-are-de",
+      "name": "Eligibility, time totals, and CPT selection are DETERMINI...",
+      "description": "Eligibility, time totals, and CPT selection are DETERMINISTIC — a pure function of the patient's chronic conditions, Medicare-coverage flag, consent flag, age, and per-activity time entries (no randomness, no clock); the same context always yields the same eligibility + time summary + CPT selection + billing package",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-ccm-eligibility-claim-must-trace-to-the-de",
+      "name": "Every CCM eligibility claim must trace to the defined chr...",
+      "description": "Every CCM eligibility claim must trace to the defined chronic-condition catalog (≥ 2 conditions), the Medicare-eligibility age gate, the Medicare-coverage flag, and the consent flag — a fabricated chronic condition or unsupported eligibility is blocked at the Agent Fabric governance boundary (policy.ccm.eligibility-catalog-sourced)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-never-autonomously-submits-a-ccm-claim",
+      "name": "The agent NEVER autonomously submits a CCM claim to CMS —...",
+      "description": "The agent NEVER autonomously submits a CCM claim to CMS — every billing package is requiresQualityTeamApproval:true / submitted:false, and any autonomous submission is blocked (policy.ccm.no-autonomous-billing); mirrors the HEDIS Agent's no-autonomous-submission and the Prior Authorization Agent's no-autonomous-submission posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-logged-minute-must-trace-to-the-defined-cc",
+      "name": "Every logged minute must trace to the defined CCM activit...",
+      "description": "Every logged minute must trace to the defined CCM activity catalog (medication reconciliation, care-plan update, patient communication, referral follow-up, care-team coordination, patient education, resource navigation) and the reported total must equal the sum of the per-entry minutes — phantom-minute inflation (the classic CCM audit finding) or an off-catalog activity is blocked (policy.ccm.time-integrity)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-chronic-cond",
+      "name": "Runs against ILLUSTRATIVE synthetic chronic-condition cat...",
+      "description": "Runs against ILLUSTRATIVE synthetic chronic-condition catalog, CCM activity catalog, CPT thresholds, and Medicare eligibility flags — clearly labeled; NOT CMS Chapter 12 / MLN Booklet 909188 CCM billing, an actual CPT coding manual, or a live Medicare claim-submission system",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "complex-care-management-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.ccm.eligibility-catalog-sourced",
+      "policy.ccm.no-autonomous-billing",
+      "policy.ccm.time-integrity"
+    ]
+  }
+}

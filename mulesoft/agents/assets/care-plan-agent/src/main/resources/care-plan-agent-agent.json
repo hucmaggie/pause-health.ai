@@ -1,0 +1,109 @@
+{
+  "name": "Pause Care Plan · Claude Sonnet 4.5",
+  "description": "Pause Care Plan · Claude Sonnet 4.5 — a governed Pause fabric agent (anthropic-claude, A2A). Governance tier: clinical-decision. Enforces 6 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/care-plan",
+  "provider": {
+    "organization": "Anthropic + Pause-Health.ai",
+    "url": "https://pause-health.ai"
+  },
+  "version": "0.1.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "instantiates-a-menopause-care-plan-goals-interve",
+      "name": "Instantiates a menopause care plan (goals, interventions,...",
+      "description": "Instantiates a menopause care plan (goals, interventions, follow-up cadence) DETERMINISTICALLY from a defined CarePlanTemplate, selected by the Care Router's pathway/severity + intake — the Salesforce 'Agentforce for Health' / Health Cloud CarePlan analog",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "every-instantiated-plan-references-a-defined-car",
+      "name": "Every instantiated plan references a defined care-plan te...",
+      "description": "Every instantiated plan references a defined care-plan template id (open/structured goals + interventions + cadence) — never a fabricated plan; enforced at the Agent Fabric governance boundary",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "generates-a-concise-patient-clinician-progress-s",
+      "name": "Generates a concise patient/clinician progress SUMMARY wi...",
+      "description": "Generates a concise patient/clinician progress SUMMARY with live Anthropic Claude — the SECOND live-Claude agent after the Care Router — falling back to a DETERMINISTIC scripted summary (with a recorded fallbackReason) when ANTHROPIC_API_KEY is unset or the API call fails",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "summaries-are-non-prescriptive-they-report-the-e",
+      "name": "Summaries are NON-PRESCRIPTIVE: they report the existing ...",
+      "description": "Summaries are NON-PRESCRIPTIVE: they report the existing plan's goals/interventions/cadence and never add or change a medication, dose, order, or prescription",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-care-plan-te",
+      "name": "Runs against ILLUSTRATIVE synthetic care-plan templates —...",
+      "description": "Runs against ILLUSTRATIVE synthetic care-plan templates — clearly labeled; NOT a certified clinical care-plan engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "care-plan-agent",
+    "kind": "anthropic-claude",
+    "governanceTier": "clinical-decision",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.careplan.template-sourced",
+      "policy.model.anthropic-claude-sonnet-allowlisted",
+      "policy.clinical.no-prescribing",
+      "policy.clinical.rationale-required",
+      "policy.data360.consent-required-before-grounding"
+    ]
+  }
+}

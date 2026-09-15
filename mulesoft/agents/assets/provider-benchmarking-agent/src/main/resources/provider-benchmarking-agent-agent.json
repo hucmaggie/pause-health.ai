@@ -1,0 +1,106 @@
+{
+  "name": "Provider Cost & Quality Percentile Benchmarking Agent",
+  "description": "Provider Cost & Quality Percentile Benchmarking Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: commercial-operations. Enforces 3 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/provider-benchmarking",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-target-provider-s-metric-value-plus-a-pe",
+      "name": "Takes a target provider's metric value plus a peer cohort...",
+      "description": "Takes a target provider's metric value plus a peer cohort of providers' values and computes where the provider falls in the distribution — its percentile rank (midpoint method), the direction-adjusted effective percentile, the cohort median, and a performance band (top-quartile / above-median / below-median / bottom-quartile) — flagging an unfavorable band for network review. A deterministic commercial-operations agent; it COMPLEMENTS the Provider Contracting agent (a single VBC benchmark-DRIFT vs a contract threshold), the HEDIS Quality agent (the measure RATES), the Quality-Measure Attribution agent (the DENOMINATOR), and the Provider Credentialing agent (network integrity) — this ranks a provider within a peer DISTRIBUTION via percentile",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "the-finding-is-deterministic-a-pure-function-of-",
+      "name": "The finding is DETERMINISTIC — a pure function of the req...",
+      "description": "The finding is DETERMINISTIC — a pure function of the request's own value + cohort + metric direction (no randomness, no clock; not an FSM transition, an edit distance, an interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, a dollar waterfall, a pairwise KB lookup, an exact identity match, or a hash chain but PERCENTILE / RANK STATISTICS over a numeric distribution — sort the cohort, compute the midpoint percentile rank, the median, and a quartile band); the same input always yields the same finding, and the metric direction (higher-is-better for quality, lower-is-better for cost) is honored so a higher effective percentile always means better",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "the-peer-cohort-must-be-intact-every-cohort-memb",
+      "name": "The peer cohort must be intact — every cohort member a we...",
+      "description": "The peer cohort must be intact — every cohort member a well-formed { providerId, numeric value }, the reported cohort size equal to the actual cohort, the target value numeric; a phantom / omitted peer that mis-sizes the denominator is blocked at the Agent Fabric governance boundary (policy.benchmark.cohort-sourced, the sourced gate); and the statistics must be exact — recomputing the rank statistics from the cohort must reproduce the reported counts, percentile rank, effective percentile, median, band, and disposition; a miscomputed percentile or a band that doesn't follow is blocked (policy.benchmark.stats-consistent, the load-bearing correctness gate). Mirrors the Claim Lifecycle Agent's states-sourced + transition-consistent posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "the-agent-benchmarks-it-never-tiers-the-provider",
+      "name": "The agent BENCHMARKS — it NEVER tiers the provider, adjus...",
+      "description": "The agent BENCHMARKS — it NEVER tiers the provider, adjusts their payment, or removes them from the network (each is a commercially consequential action that must be authorized) on its own; a finding that auto-tiers or is not review-gated is blocked (policy.benchmark.no-autonomous-tiering), and every finding is a recommendation requiring a network manager to confirm. Mirrors the Provider Contracting Agent's no-autonomous-term-change and the Timely Filing Agent's no-autonomous-write-off posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-peer-cohorts",
+      "name": "Runs against ILLUSTRATIVE synthetic peer cohorts + metric...",
+      "description": "Runs against ILLUSTRATIVE synthetic peer cohorts + metric values — clearly labeled; NOT a certified benchmarking system (real provider benchmarking uses risk / case-mix adjustment, statistically valid peer grouping, minimum denominators, confidence intervals, and the network team's judgment). Because it operates on provider-level aggregate metrics rather than patient PHI, this agent lives on the commercial-operations plane and is NOT PHI-bearing (NOT on the HIPAA-audit policy)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "provider-benchmarking-agent",
+    "kind": "agentforce",
+    "governanceTier": "commercial-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.benchmark.cohort-sourced",
+      "policy.benchmark.stats-consistent",
+      "policy.benchmark.no-autonomous-tiering"
+    ]
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "name": "Salesforce Data 360 · Unified Patient Grounding",
+  "description": "Salesforce Data 360 · Unified Patient Grounding — a governed Pause fabric agent (salesforce-data-360, REST). Governance tier: data-grounding. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/data-360",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "zero-copy-federated-query-across-jupyterhealth-f",
+      "name": "Zero-copy federated query across JupyterHealth FHIR, DBDP...",
+      "description": "Zero-copy federated query across JupyterHealth FHIR, DBDP features, Agentforce intake history, and the customer EHR-of-record",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-grounding"
+      ]
+    },
+    {
+      "id": "calculated-insights-30-day-hrv-z-score-vasomotor",
+      "name": "Calculated Insights (30-day HRV z-score, vasomotor burden...",
+      "description": "Calculated Insights (30-day HRV z-score, vasomotor burden index, sleep disruption, days since MSCP contact)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-grounding"
+      ]
+    },
+    {
+      "id": "identity-resolution-with-confidence-scoring-acro",
+      "name": "Identity Resolution with confidence scoring across federa...",
+      "description": "Identity Resolution with confidence scoring across federated sources",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-grounding"
+      ]
+    },
+    {
+      "id": "population-segments-activated-to-agentforce-the-",
+      "name": "Population Segments activated to Agentforce, the Agent Fa...",
+      "description": "Population Segments activated to Agentforce, the Agent Fabric, and Health Cloud",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-grounding"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "salesforce-data-360",
+    "kind": "salesforce-data-360",
+    "governanceTier": "data-grounding",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.data360.zero-copy-federation",
+      "policy.data360.consent-required-before-grounding",
+      "policy.data360.segment-activation-allowlist"
+    ]
+  }
+}

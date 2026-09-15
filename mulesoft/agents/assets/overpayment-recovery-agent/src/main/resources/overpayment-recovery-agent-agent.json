@@ -1,0 +1,107 @@
+{
+  "name": "Claims Overpayment & Recovery Agent",
+  "description": "Claims Overpayment & Recovery Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/overpayment-recovery",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "evaluates-a-paid-claim-for-a-health-plan-tpa-com",
+      "name": "Evaluates a PAID claim for a health-plan / TPA — computes...",
+      "description": "Evaluates a PAID claim for a health-plan / TPA — computes the overpayment (paid − correct), cites the governing recovery reason, derives the recovery deadline from the reason's statutory lookback, and classifies as recoverable / not-recoverable-within-window / no-overpayment. Companion to the Claims Adjudication (pre-payment), FWA Detection (suspected fraud), and Coordination of Benefits (payer order) agents — this is POST-payment recovery",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "evaluation-is-deterministic-a-pure-function-of-t",
+      "name": "Evaluation is DETERMINISTIC — a pure function of the clai...",
+      "description": "Evaluation is DETERMINISTIC — a pure function of the claim's amounts + dates + the request's own asOfDate (no randomness, no clock); the recovery deadline is derived from the paid date + the reason's lookback window, and the same claim always yields the same overpayment + cited reason + recoverability",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "a-recovery-must-be-within-the-statutory-lookback",
+      "name": "A recovery must be WITHIN the statutory lookback window —...",
+      "description": "A recovery must be WITHIN the statutory lookback window — an overpayment past its window (paid date + lookback days) is NEVER recoverable; a clawback asserted past the window is blocked at the Agent Fabric governance boundary (policy.recovery.within-lookback-window), because recouping beyond the statutory lookback is an unlawful recoupment. Mirrors the Data Retention Agent's legal-hold-overrides-purge — a window bounds the action",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "every-recovery-must-cite-a-recorded-recovery-rea",
+      "name": "Every recovery must cite a recorded recovery reason — an ...",
+      "description": "Every recovery must cite a recorded recovery reason — an ad-hoc / un-sourced clawback is blocked (policy.recovery.reason-catalog-sourced); and a clawback is never executed autonomously — a recoverable overpayment is a RECOMMENDATION requiring human review with member/provider notice, and an autonomous / unreviewed clawback is blocked (policy.recovery.no-autonomous-clawback). Mirrors the FWA Agent's no-autonomous-denial and the Data Retention Agent's no-autonomous-purge posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-recovery-rea",
+      "name": "Runs against ILLUSTRATIVE synthetic recovery reason catal...",
+      "description": "Runs against ILLUSTRATIVE synthetic recovery reason catalog + lookback windows + reason ids — clearly labeled; NOT a certified payment-integrity system (real overpayment recovery is governed by the ACA §6402 60-day rule, CMS recovery rules, ERISA, and state insurance code)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "overpayment-recovery-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.recovery.within-lookback-window",
+      "policy.recovery.reason-catalog-sourced",
+      "policy.recovery.no-autonomous-clawback"
+    ]
+  }
+}
