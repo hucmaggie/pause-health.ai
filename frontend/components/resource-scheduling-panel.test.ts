@@ -56,7 +56,7 @@ describe("runResourceSchedulingTask", () => {
   it("POSTs and returns the A2A task result", async () => {
     const task: A2ATask = {
       id: "t-9",
-      status: { state: "completed", timestamp: "now", message: { role: "agent", parts: [] } }
+      status: { state: "completed", timestamp: "now", message: { role: "agent", parts: [], timestamp: "now" } }
     };
     const fetchImpl = vi.fn(async () =>
       new Response(JSON.stringify({ jsonrpc: "2.0", id: "t-9", result: task }), {
@@ -83,7 +83,7 @@ describe("resourceSchedulingViewFromTask", () => {
   it("lifts a resolved view from a completed task", () => {
     const task: A2ATask = {
       id: "t-1",
-      status: { state: "completed", timestamp: "now", message: { role: "agent", parts: [] } },
+      status: { state: "completed", timestamp: "now", message: { role: "agent", parts: [], timestamp: "now" } },
       artifacts: [
         {
           name: "BlockScheduleDetermination",
@@ -141,7 +141,7 @@ describe("resourceSchedulingViewFromTask", () => {
       status: {
         state: "failed",
         timestamp: "now",
-        message: { role: "agent", parts: [{ type: "text", text: "blocked" }] }
+        message: { role: "agent", parts: [{ type: "text", text: "blocked" }], timestamp: "now" }
       },
       metadata: {
         agentFabric: {
@@ -167,7 +167,7 @@ describe("resourceSchedulingViewFromTask", () => {
       status: {
         state: "failed",
         timestamp: "now",
-        message: { role: "agent", parts: [{ type: "text", text: "nope" }] }
+        message: { role: "agent", parts: [{ type: "text", text: "nope" }], timestamp: "now" }
       },
       metadata: { agentFabric: { decision: "invalid", traceTaskId: "t-3" } }
     };

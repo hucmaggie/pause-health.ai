@@ -152,7 +152,7 @@ describe("amendmentViewFromTask", () => {
       status: {
         state: "failed",
         timestamp: new Date().toISOString(),
-        message: { role: "agent", parts: [{ type: "text", text: "blocked" }] }
+        message: { role: "agent", parts: [{ type: "text", text: "blocked" }], timestamp: "now" }
       },
       metadata: {
         agentFabric: {
