@@ -1,0 +1,28 @@
+{
+  "required" : [ ],
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "zip" : {
+      "title" : "Zip",
+      "description" : "The patient’s 5-digit US ZIP code, used to find nearby providers. If you don’t already have it, ask the patient once. Optional — if the patient has none or declines, omit it and the search runs nationally.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "menopause" : {
+      "title" : "Menopause",
+      "description" : "Always set this to true so only menopause-certified (MSCP) providers are returned.",
+      "lightning:type" : "lightning__booleanType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "limit" : {
+      "title" : "Limit",
+      "description" : "Always set this to 3 so only the top three ranked providers are returned.",
+      "lightning:type" : "lightning__integerType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}
