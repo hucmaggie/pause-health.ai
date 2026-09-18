@@ -107,11 +107,7 @@ describe("POPULATION_HEALTH_PRESETS", () => {
     expect(preset).toBeDefined();
     expect(
       riskScoreTracesToFactors(
-        preset!.assertedProfiles as Array<{
-          score: number;
-          tier: "low" | "rising" | "high";
-          contributingFactors: { factorId: string; points: number }[];
-        }>
+        preset!.assertedProfiles as unknown as Parameters<typeof riskScoreTracesToFactors>[0]
       )
     ).toBe(false);
   });

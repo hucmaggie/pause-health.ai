@@ -172,7 +172,7 @@ describe("GET /callback · token exchange", () => {
     expect(res.headers.get("Location")).toBe("/proposal/headless-360");
 
     // The code_verifier from the cookie is presented on exchange.
-    const [, init] = spy.mock.calls[0] as [string, RequestInit];
+    const [, init] = spy.mock.calls[0] as unknown as [string, RequestInit];
     expect(String(init.body)).toContain("grant_type=authorization_code");
     expect(String(init.body)).toContain("code=auth-code");
     expect(String(init.body)).toContain("code_verifier=verifier-abc");

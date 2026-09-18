@@ -128,7 +128,7 @@ describe("POST /token/refresh · exchange", () => {
     // The response body must not carry the token — the cookie is the carrier.
     expect(JSON.stringify(body)).not.toContain("NEW-ACCESS");
 
-    const [, init] = spy.mock.calls[0] as [string, RequestInit];
+    const [, init] = spy.mock.calls[0] as unknown as [string, RequestInit];
     expect(String(init.body)).toContain("grant_type=refresh_token");
     expect(String(init.body)).toContain("refresh_token=REFRESH-1");
 

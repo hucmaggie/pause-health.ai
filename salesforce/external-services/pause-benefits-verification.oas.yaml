@@ -1,0 +1,141 @@
+openapi: 3.0.0
+info:
+  title: Pause Benefits Verification
+  version: "1.0.0"
+  description: >
+    Agentforce-facing slice of the Pause Benefits & Coverage Verification (EBV)
+    agent. Registered in Salesforce as an External Service so an Agentforce
+    agent can call verifyBenefits as an action when a patient (or the intake
+    flow) asks whether a menopause specialist visit is covered.
+
+    Backed by the public, no-auth GET
+    https://pause-health.ai/api/agentforce/benefits-verification, a thin REST
+    alias over the A2A benefits-verification agent that runs the SAME
+    deterministic verification and the SAME Agent Fabric governance gate. The
+    result is synthetic (a mock 270/271 EBV round-trip), NOT a real EDI
+    transaction or FHIR CoverageEligibilityResponse — frame it to the patient
+    as an estimate, not a guarantee.
+
+    Lean schema by design: External Services maps only the declared fields into
+    the agent's action output variables, so we declare only what the agent needs
+    to answer the patient.
+
+# External Services uses the associated Named Credential (Pause_Provider_API)
+# for the host; this server URL is informational. Paths resolve relative to the
+# Named Credential endpoint, so the path below must match the live route.
+servers:
+  - url: https://pause-health.ai
+
+paths:
+  /api/agentforce/benefits-verification:
+    get:
+      operationId: verifyBenefits
+      summary: Verify insurance eligibility & benefits for an MSCP visit
+      description: >
+        Returns a structured coverage result for a menopause specialist (MSCP)
+        visit: plan status (active/inactive), in/out-of-network, deductible +
+        amount met, coinsurance/copay, and an estimated visit cost + patient
+        out-of-pocket, plus the (mock) EBV transaction id the result traces to.
+        Pass the patient's insurance plan as payer. Synthetic/deterministic.
+      parameters:
+        - name: payer
+          in: query
+          required: false
+          description: >
+            The patient's insurance plan string, e.g. "Aetna", "BCBS", "United".
+            Common synonyms are recognized. Omit only if unknown.
+          schema:
+            type: string
+        - name: zip
+          in: query
+          required: false
+          description: Patient 5-digit ZIP (region only is used).
+          schema:
+            type: string
+        - name: memberId
+          in: query
+          required: false
+          description: Synthetic subscriber/member id. Never a real member number.
+          schema:
+            type: string
+        - name: serviceType
+          in: query
+          required: false
+          description: Service being verified; defaults to the MSCP specialist visit.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: >
+            Coverage verification result. NOTE: when the Agent Fabric governance
+            gate blocks the call (e.g. missing consent), the body is the blocked
+            shape (blocked=true, decision, violations) instead of the coverage
+            fields — the agent should tell the patient it can't verify coverage
+            and why, not invent a result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eligibilityStatus:
+                    type: string
+                    description: "active | inactive"
+                  network:
+                    type: string
+                    description: "in-network | out-of-network"
+                  payerName:
+                    type: string
+                    description: Canonical display payer name.
+                  planName:
+                    type: string
+                    description: Synthetic-but-plausible plan name.
+                  deductibleTotal:
+                    type: number
+                  deductibleMet:
+                    type: number
+                  deductibleRemaining:
+                    type: number
+                  coinsuranceRate:
+                    type: number
+                    description: Effective coinsurance rate (0..1); 0 when a copay applies.
+                  copay:
+                    type: number
+                    description: Flat office-visit copay when the plan uses one in-network.
+                  estimatedVisitCost:
+                    type: number
+                    description: Estimated allowed/negotiated cost of the visit (USD).
+                  estimatedPatientResponsibility:
+                    type: number
+                    description: Estimated patient out-of-pocket for the visit (USD).
+                  ebvTransactionId:
+                    type: string
+                    description: >
+                      Deterministic synthetic EBV transaction id the result
+                      traces to. Cite it if the patient asks how coverage was
+                      checked; it is a mock trace, not a real clearinghouse id.
+                  sourced:
+                    type: boolean
+                    description: >
+                      True when the result traces to a (mock) payer/clearinghouse
+                      EBV source. Always true for a verified result.
+                  synthetic:
+                    type: boolean
+                    description: Always true — labels the result as synthetic.
+                  blocked:
+                    type: boolean
+                    description: >
+                      Present and true only when the Agent Fabric governance gate
+                      blocked the call. When true, coverage fields are absent.
+                  decision:
+                    type: string
+                    description: "block, when the governance gate refused the call."
+                  violations:
+                    type: array
+                    description: The governance policies that blocked the call.
+                    items:
+                      type: object
+                      properties:
+                        policyId:
+                          type: string
+                        reason:
+                          type: string

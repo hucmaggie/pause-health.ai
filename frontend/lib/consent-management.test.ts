@@ -296,7 +296,7 @@ describe("respectsConsentScope · no-scope-override signal", () => {
     };
     expect(respectsConsentScope([overrideWithheld])).toBe(false);
     expect(
-      respectsConsentScope([{ ...overrideWithheld, effectiveStatus: "none", matchedConsentEventId: undefined }])
+      respectsConsentScope([{ ...overrideWithheld, effectiveStatus: "none" }])
     ).toBe(false);
     expect(respectsConsentScope(null)).toBe(false);
   });

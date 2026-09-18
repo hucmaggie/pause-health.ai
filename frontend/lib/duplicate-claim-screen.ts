@@ -342,6 +342,12 @@ export function membershipExact(
         incomingIds?: unknown;
         results?: unknown;
         estimatedFalsePositiveRate?: unknown;
+        // membershipExact re-derives membership from the ids and ignores the
+        // reported bit array, but callers legitimately pass the full
+        // DuplicateScreenDetermination (which carries bits/setBitCount), so the
+        // param type tolerates those extra fields.
+        bits?: unknown;
+        setBitCount?: unknown;
       }
     | null
     | undefined
