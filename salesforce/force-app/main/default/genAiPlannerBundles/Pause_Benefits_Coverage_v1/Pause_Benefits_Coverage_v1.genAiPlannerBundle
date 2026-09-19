@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPlannerBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Answers patient questions about menopause-visit insurance coverage, cost, and network status. Synthetic EBV.</description>
+    <localTopicLinks>
+        <genAiPluginName>Benefits_Coverage_16jfj0000032R7F</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>agent_router_16jfj0000032R7F</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>ambiguous_question_16jfj0000032R7F</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>escalation_16jfj0000032R7F</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>off_topic_16jfj0000032R7F</genAiPluginName>
+    </localTopicLinks>
+    <localTopics>
+        <fullName>off_topic_16jfj0000032R7F</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Redirect conversation to relevant topics when user request goes off-topic</description>
+        <developerName>off_topic_16jfj0000032R7F</developerName>
+        <genAiPluginInstructions>
+            <description>You are an AI Agent.</description>
+            <developerName>instruction0_179fj000004CGDC</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179fj000004CGDC</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localDeveloperName>off_topic</localDeveloperName>
+        <masterLabel>Off Topic</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>ambiguous_question_16jfj0000032R7F</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Redirect conversation to relevant topics when user request is too ambiguous</description>
+        <developerName>ambiguous_question_16jfj0000032R7F</developerName>
+        <genAiPluginInstructions>
+            <description>You are an AI Agent.</description>
+            <developerName>instruction0_179fj000004CGDD</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179fj000004CGDD</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localDeveloperName>ambiguous_question</localDeveloperName>
+        <masterLabel>Ambiguous Question</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>escalation_16jfj0000032R7F</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Handles requests from users who want to transfer or escalate their conversation to a live human agent.</description>
+        <developerName>escalation_16jfj0000032R7F</developerName>
+        <genAiPluginInstructions>
+            <description>You are an AI Agent.</description>
+            <developerName>instruction0_179fj000004CGDB</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179fj000004CGDB</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localDeveloperName>escalation</localDeveloperName>
+        <masterLabel>Escalation</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>agent_router_16jfj0000032R7F</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Welcome the user and determine the appropriate subagent based on user input</description>
+        <developerName>agent_router_16jfj0000032R7F</developerName>
+        <genAiPluginInstructions>
+            <description>You are an AI Agent.
+
+{{state.AgentScriptInternal_agent_instructions}}</description>
+            <developerName>instruction0_179fj000004CGDE</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179fj000004CGDE</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localDeveloperName>agent_router</localDeveloperName>
+        <masterLabel>Agent Router</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>Benefits_Coverage_16jfj0000032R7F</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Use this subagent when the patient asks whether a menopause specialist visit is covered, what it will cost, their copay/coinsurance/deductible, or whether a provider is in-network for their insurance pla</description>
+        <developerName>Benefits_Coverage_16jfj0000032R7F</developerName>
+        <genAiPluginInstructions>
+            <description>You are an AI Agent.</description>
+            <developerName>instruction0_179fj000004CGDF</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179fj000004CGDF</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localActionLinks>
+            <functionName>verifyBenefits_179fj000004CGDF</functionName>
+        </localActionLinks>
+        <localActions>
+            <fullName>verifyBenefits_179fj000004CGDF</fullName>
+            <description>Verifies insurance eligibility and benefits for a menopause specialist visit; returns plan status, network, deductible, and estimated patient cost. Synthetic.</description>
+            <developerName>verifyBenefits_179fj000004CGDF</developerName>
+            <invocationTarget>PauseBenefitsVerification.verifyBenefits</invocationTarget>
+            <invocationTargetType>externalService</invocationTargetType>
+            <isConfirmationRequired>false</isConfirmationRequired>
+            <isIncludeInProgressIndicator>false</isIncludeInProgressIndicator>
+            <localDeveloperName>verifyBenefits</localDeveloperName>
+            <masterLabel>verifyBenefits</masterLabel>
+        </localActions>
+        <localDeveloperName>Benefits_Coverage</localDeveloperName>
+        <masterLabel>Benefits &amp; Coverage</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <masterLabel>Pause Benefits &amp; Coverage</masterLabel>
+    <plannerType>Atlas__ConcurrentMultiAgentOrchestration</plannerType>
+</GenAiPlannerBundle>

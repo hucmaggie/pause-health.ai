@@ -22,5 +22,17 @@
         <members>Pause_Health_Intake_Prechat_Dossier</members>
         <name>PermissionSet</name>
     </types>
-    <version>62.0</version>
+    <types>
+        <members>PauseBenefitsVerification</members>
+        <name>ExternalServiceRegistration</name>
+    </types>
+    <types>
+        <members>Pause_Benefits_Coverage</members>
+        <name>Bot</name>
+    </types>
+    <types>
+        <members>Pause_Benefits_Coverage_v1</members>
+        <name>GenAiPlannerBundle</name>
+    </types>
+    <version>67.0</version>
 </Package>
