@@ -208,7 +208,7 @@ export default function PressPage() {
         </ul>
       </section>
 
-      <section className="card" style={{ marginTop: "1.5rem" }}>
+      <section className="card" style={{ marginTop: "1.5rem", maxWidth: "80ch" }}>
         <p className="eyebrow">Boilerplate · Approved for citation</p>
         <h2 style={{ fontSize: "clamp(1.3rem, 2.2vw, 1.7rem)", marginBottom: "0.6rem" }}>
           About Pause-Health.ai
