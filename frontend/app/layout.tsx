@@ -54,6 +54,7 @@ const ORGANIZATION_JSON_LD = {
     sameAs: ["https://www.linkedin.com/in/hucmaggie/"]
   },
   sameAs: [
+    "https://www.linkedin.com/company/pause-health.ai",
     "https://www.linkedin.com/in/hucmaggie/",
     "https://github.com/hucmaggie/pause-health.ai"
   ],
