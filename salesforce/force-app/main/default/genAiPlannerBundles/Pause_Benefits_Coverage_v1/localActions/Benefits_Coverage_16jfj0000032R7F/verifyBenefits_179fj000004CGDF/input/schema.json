@@ -1,0 +1,35 @@
+{
+  "required" : [ ],
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "payer" : {
+      "title" : "Payer",
+      "description" : "The patient's insurance plan string, e.g. \"Aetna\", \"BCBS\", \"United\". Common synonyms are recognized. Omit only if unknown.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "zip" : {
+      "title" : "Zip",
+      "description" : "Patient 5-digit ZIP (region only is used).",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "memberId" : {
+      "title" : "Member Id",
+      "description" : "Synthetic subscriber/member id. Never a real member number.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "serviceType" : {
+      "title" : "Service Type",
+      "description" : "Service being verified; defaults to the MSCP specialist visit.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}
