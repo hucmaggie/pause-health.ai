@@ -192,6 +192,19 @@ export default function PressPage() {
             <span>Brand assets</span>
             <strong>Below · direct download</strong>
           </li>
+          <li>
+            <span>Follow</span>
+            <strong>
+              <a
+                href="https://www.linkedin.com/company/pause-health.ai"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "var(--brand)" }}
+              >
+                LinkedIn · @pause-health.ai
+              </a>
+            </strong>
+          </li>
         </ul>
       </section>
 
