@@ -1,0 +1,30 @@
+{
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "200" : {
+      "title" : "200",
+      "description" : "Billing answer. NOTE: when the Agent Fabric governance gate blocks the call, the body is the blocked shape (blocked=true, decision, violations) instead of the answer fields — the agent should say it can't answer and why, not invent claim data.",
+      "lightning:type" : "@apexClassType/ExternalService__c__PauseMemberService_answerBillingQuestion_OUT_200",
+      "lightning:isPII" : false,
+      "copilotAction:isDisplayable" : true,
+      "copilotAction:isUsedByPlanner" : true
+    },
+    "responseCode" : {
+      "title" : "Response Code",
+      "description" : "response code",
+      "lightning:type" : "lightning__integerType",
+      "lightning:isPII" : false,
+      "copilotAction:isDisplayable" : false,
+      "copilotAction:isUsedByPlanner" : true
+    },
+    "defaultExc" : {
+      "title" : "Default Exception",
+      "description" : "Default response",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isDisplayable" : false,
+      "copilotAction:isUsedByPlanner" : true
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}

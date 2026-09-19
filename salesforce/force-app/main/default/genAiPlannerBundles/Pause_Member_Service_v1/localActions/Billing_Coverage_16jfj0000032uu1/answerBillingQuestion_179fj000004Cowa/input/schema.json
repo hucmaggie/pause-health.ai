@@ -1,0 +1,21 @@
+{
+  "required" : [ "query" ],
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "query" : {
+      "title" : "Query",
+      "description" : "The member's billing/coverage question in their own words, e.g. \"what's the status of my claim\", \"what do I owe\", \"explain my EOB\".",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "memberId" : {
+      "title" : "Member Id",
+      "description" : "Synthetic subscriber/member id used to seed the deterministic claim set. Never a real member number. Omit to use a demo member.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}
