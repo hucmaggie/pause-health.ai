@@ -165,10 +165,10 @@ export default function RootLayout({
                 className="site-logo-full"
                 src="/brand/pause-health-logo-mono-transparent.png"
                 alt="Pause-Health.ai"
-                width={220}
-                height={64}
+                width={254}
+                height={44}
                 priority
-                sizes="220px"
+                sizes="254px"
               />
               <span className="site-logo-compact">
                 <Image
