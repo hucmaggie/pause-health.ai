@@ -1,0 +1,115 @@
+openapi: 3.0.0
+info:
+  title: Pause Member Service
+  version: "1.0.0"
+  description: >
+    Agentforce-facing slice of the Pause Member Service · Billing & Coverage
+    agent. Registered in Salesforce as an External Service so an Agentforce
+    agent can answer a member's billing/coverage self-service questions — claim
+    status, patient responsibility, outstanding balance, EOB explanation — and
+    route anything out of scope to a human member-services specialist.
+
+    Backed by the public, no-auth GET
+    https://pause-health.ai/api/agentforce/member-service, a thin REST alias over
+    the A2A member-service agent that runs the SAME deterministic billing answer
+    and the SAME Agent Fabric governance gate. Every answer traces to a synthetic
+    claim/EOB record; this is NOT a real 835/ERA remittance or FHIR
+    ExplanationOfBenefit. Frame amounts as estimates from mock records.
+
+    Lean schema by design: External Services maps only the declared fields into
+    the agent's action output variables.
+
+servers:
+  - url: https://pause-health.ai
+
+paths:
+  /api/agentforce/member-service:
+    get:
+      operationId: answerBillingQuestion
+      summary: Answer a member billing/coverage question (or route to a human)
+      description: >
+        Given the member's billing/coverage question, returns a structured,
+        claim-sourced answer: the classified intent, answer text, cited claim
+        ids/count, total patient responsibility, and whether the request routes
+        to a human. Synthetic/deterministic; every answer traces to a mock claim.
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: >
+            The member's billing/coverage question in their own words, e.g.
+            "what's the status of my claim", "what do I owe", "explain my EOB".
+          schema:
+            type: string
+        - name: memberId
+          in: query
+          required: false
+          description: >
+            Synthetic subscriber/member id used to seed the deterministic claim
+            set. Never a real member number. Omit to use a demo member.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: >
+            Billing answer. NOTE: when the Agent Fabric governance gate blocks the
+            call, the body is the blocked shape (blocked=true, decision,
+            violations) instead of the answer fields — the agent should say it
+            can't answer and why, not invent claim data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  intent:
+                    type: string
+                    description: "claim-status | patient-responsibility | balance | eob-explanation | out-of-scope"
+                  kind:
+                    type: string
+                    description: "billing-answer | route-to-human"
+                  answer:
+                    type: string
+                    description: The human-readable answer text (no free-text PII).
+                  citedClaimIds:
+                    type: array
+                    description: The synthetic claim id(s) the answer derives from.
+                    items:
+                      type: string
+                  citedClaimCount:
+                    type: integer
+                  patientResponsibility:
+                    type: number
+                    description: Total patient out-of-pocket across the cited claims (USD).
+                  routeToHuman:
+                    type: boolean
+                    description: >
+                      True when the request is out of scope or has no claim on
+                      file and is handed to a member-services specialist.
+                  routeToHumanReason:
+                    type: string
+                    description: Why the request was routed to a human (present only when routeToHuman is true).
+                  routeToHumanQueue:
+                    type: string
+                    description: The member-services queue the handoff targets.
+                  sourced:
+                    type: boolean
+                    description: True when the answer traces to a synthetic claim record. Always true for a valid answer.
+                  synthetic:
+                    type: boolean
+                    description: Always true — labels the answer as synthetic.
+                  blocked:
+                    type: boolean
+                    description: Present and true only when the governance gate blocked the call.
+                  decision:
+                    type: string
+                    description: "block, when the governance gate refused the call."
+                  violations:
+                    type: array
+                    description: The governance policies that blocked the call.
+                    items:
+                      type: object
+                      properties:
+                        policyId:
+                          type: string
+                        reason:
+                          type: string
