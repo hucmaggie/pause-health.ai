@@ -86,12 +86,29 @@ describe("GET /api/agentforce/route-to-care", () => {
     }
   });
 
-  it("does NOT book when book=true but no providerId is supplied", async () => {
+  it("books with a synthesized provider id when book=true on an MSCP pathway without an explicit providerId", async () => {
+    // The Agentforce agent often only has a provider NAME, not an NPI. book=true
+    // on an MSCP pathway should still produce a synthetic confirmation.
     const { json } = await body(
-      "?primarySymptom=vasomotor&severity=moderate&redFlagsAcknowledged=no&book=true"
+      "?primarySymptom=vasomotor&severity=moderate&redFlagsAcknowledged=no&book=true&providerName=Dr.%20Okafor"
     );
-    expect(json.chained).not.toContain("appointment-scheduling");
-    expect(json.scheduling).toBeUndefined();
+    if (String(json.pathway).startsWith("mscp-")) {
+      expect(json.chained).toContain("appointment-scheduling");
+      const scheduling = json.scheduling as Record<string, unknown>;
+      expect(scheduling.serviceAppointmentId).toBeDefined();
+      expect(String(scheduling.providerId)).toContain("npi-");
+    }
+  });
+
+  it("does NOT book when the pathway is not an MSCP visit even if book=true", async () => {
+    // A red-flag / urgent pathway is not bookable via this alias.
+    const { json } = await body(
+      "?primarySymptom=bleeding&severity=severe&redFlagsAcknowledged=yes&book=true&providerId=npi-123"
+    );
+    if (!String(json.pathway).startsWith("mscp-")) {
+      expect(json.chained).not.toContain("appointment-scheduling");
+      expect(json.scheduling).toBeUndefined();
+    }
   });
 
   // A complete AHC-HRSN screen: housing 2 items (0-7), food 2 (0-2),

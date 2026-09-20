@@ -225,17 +225,30 @@ export async function GET(req: Request) {
   }
 
   // ── 3. Appointment Scheduling — book when requested AND the pathway is an
-  //    MSCP visit (only pathways that name a provider are bookable).
+  //    MSCP visit (only MSCP pathways are bookable; self-care / urgent-referral
+  //    pathways are not). A providerId is preferred, but the Agentforce agent
+  //    often only has a provider NAME from the conversation (not an NPI) — so
+  //    when book=true on an MSCP pathway without an explicit providerId, fall
+  //    back to a synthetic default id derived from the provider name (or a
+  //    generic MSCP slot) so a name-only "book with Dr. Okafor" still yields a
+  //    deterministic synthetic confirmation rather than silently no-op'ing.
   let scheduling: Record<string, unknown> | undefined;
-  const providerId = g("providerId");
+  const explicitProviderId = g("providerId");
+  const providerName = g("providerName");
   const isMscpVisit = decision.pathway.startsWith("mscp-");
-  if (flag("book") && isMscpVisit && providerId) {
+  // Synthesize a stable provider id from the name when none was supplied.
+  const providerId =
+    explicitProviderId ??
+    (providerName
+      ? "npi-" + providerName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+      : "npi-mscp-default");
+  if (flag("book") && isMscpVisit) {
     try {
       const modality: Modality = (g("modality") as Modality) ?? modalityForPathway(decision.pathway);
       const summary = bookingSummary(
         bookAppointment({
           providerId,
-          providerName: g("providerName"),
+          providerName,
           modality,
           ...(g("requestedDate") ? { requestedDate: g("requestedDate") } : {})
         })
