@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExternalServiceRegistration xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>PauseRouteToCare</label>
+    <namedCredentialReference>Pause_Provider_API</namedCredentialReference>
+    <operations>
+        <active>true</active>
+        <name>handofftocarerouter</name>
+    </operations>
+    <registrationProviderType>Custom</registrationProviderType>
+    <schema>openapi: 3.0.0
+info:
+  title: Pause Route To Care (Intake handoff)
+  version: &quot;1.0.0&quot;
+  description: &gt;
+    Agentforce-facing slice of the Pause intake→specialist handoff. Registered
+    in Salesforce as an External Service so the Pause Health Intake Agent can,
+    once it has captured the mandatory red-flag screen and the patient&apos;s top
+    symptom, hand off to the specialist agents in ONE call — and get back the
+    care pathway plus any coverage / booking / social-needs results, all under a
+    single Agent Fabric trace.
+
+    Backed by the public, no-auth GET
+    https://pause-health.ai/api/agentforce/route-to-care, a thin REST alias that
+    CHAINS the deterministic specialist libs behind one endpoint:
+      1. Care Router (always) — the pathway decision + acuity + rationale.
+      2. Benefits / EBV — when verifyCoverage=true OR the intake carries a payer.
+      3. Appointment Scheduling — when book=true AND the pathway is an MSCP visit
+         AND a providerId is given (books against a synthetic calendar).
+      4. SDOH Screening — when a complete coded AHC-HRSN screen vector is given;
+         a positive interpersonal-safety screen is a mandatory human escalation,
+         community-resource referrals are consent-gated.
+
+    WHY ONE ACTION, NOT FIVE SUBAGENTS: a unified &quot;concierge&quot; with all five
+    specialists under one Agent Router was tried and abandoned — the Service
+    Agent template&apos;s platform Inappropriate-Content classifier mis-fires on
+    benign coverage/billing questions once many subagents share a router (see
+    AGENTFORCE_CONCIERGE_BUILD_SHEET.md). This action lets the narrow-scoped
+    Intake Agent trigger the chain DETERMINISTICALLY without an overloaded
+    router — each specialist stays guardrail-safe.
+
+    The SAME Agent Fabric governance gate the Care Router enforces applies: the
+    mandatory red-flag screen must be completed (a missing screen is blocked —
+    the agent must ask the yes/no safety question first). Advisory/synthetic: it
+    recommends a pathway, a synthetic cost estimate, and a synthetic booking; it
+    does NOT diagnose, prescribe, guarantee cost, or create a real appointment.
+
+servers:
+  - url: https://pause-health.ai
+
+paths:
+  /api/agentforce/route-to-care:
+    get:
+      operationId: handoffToCareRouter
+      summary: Hand a completed intake off to the specialist agents (chained)
+      description: &gt;
+        Given a structured intake (primary symptom, severity, cycle status, and
+        the MANDATORY red-flag screen), routes to the appropriate care pathway
+        and, when requested, chains Benefits verification, Appointment booking,
+        and SDOH screening — returning all results together with a taskId that
+        correlates the whole chain in one Agent Fabric trace. If the red-flag
+        screen is missing, the governance gate blocks the call (blocked=true) and
+        the agent must ask the red-flag question first, not invent a pathway.
+      parameters:
+        - name: primarySymptom
+          in: query
+          required: false
+          description: &quot;Primary symptom cluster, e.g. vasomotor, sleep, mood, cognition, gsm, bleeding.&quot;
+          schema:
+            type: string
+        - name: severity
+          in: query
+          required: false
+          description: &quot;mild | moderate | severe.&quot;
+          schema:
+            type: string
+        - name: redFlagsAcknowledged
+          in: query
+          required: true
+          description: &gt;
+            The MANDATORY red-flag screen result — yes / no / none. Required: the
+            handoff refuses to route without it. Ask the patient the single
+            yes/no safety question and pass their answer (yes or no).
+          schema:
+            type: string
+        - name: cycleStatus
+          in: query
+          required: false
+          description: &quot;e.g. perimenopause, postmenopause, unknown.&quot;
+          schema:
+            type: string
+        - name: ageBand
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: patientZip
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: patientInsurance
+          in: query
+          required: false
+          description: &gt;
+            Payer name. When present, Benefits verification is chained
+            automatically (no need to also set verifyCoverage).
+          schema:
+            type: string
+        - name: verifyCoverage
+          in: query
+          required: false
+          description: &quot;Set true to force a Benefits/eligibility check even without an inline payer.&quot;
+          schema:
+            type: string
+        - name: book
+          in: query
+          required: false
+          description: &gt;
+            Set true to book an appointment after routing. Only books when the
+            pathway is an MSCP visit AND a providerId is supplied.
+          schema:
+            type: string
+        - name: providerId
+          in: query
+          required: false
+          description: &quot;NPI / provider id to book with (required for booking).&quot;
+          schema:
+            type: string
+        - name: providerName
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: modality
+          in: query
+          required: false
+          description: &quot;telehealth | in-person. Defaults to the pathway&apos;s modality.&quot;
+          schema:
+            type: string
+        - name: requestedDate
+          in: query
+          required: false
+          description: &quot;Preferred date (ISO yyyy-mm-dd) for the booking.&quot;
+          schema:
+            type: string
+        - name: screenSdoh
+          in: query
+          required: false
+          description: &gt;
+            A complete coded AHC-HRSN screen as one string, domain:vector pairs
+            separated by &apos;;&apos; — e.g.
+            &quot;housing:1,1;food:0,0;transportation:0;utilities:0;safety:1,1,1,1&quot;.
+            Item counts: housing 2 (0-7), food 2 (0-2), transportation 1 (0-1),
+            utilities 1 (0-2), safety 4 (1-5). An incomplete screen is skipped
+            (it never breaks routing).
+          schema:
+            type: string
+        - name: sdohScreener
+          in: query
+          required: false
+          description: &quot;Validated screener id; defaults to ahc-hrsn.&quot;
+          schema:
+            type: string
+        - name: sdohConsent
+          in: query
+          required: false
+          description: &quot;Set true if the patient consented to community-resource referrals.&quot;
+          schema:
+            type: string
+      responses:
+        &quot;200&quot;:
+          description: &gt;
+            The chained result. NOTE: when the governance gate blocks the call
+            (e.g. no red-flag screen), the body is the blocked shape
+            (blocked=true, decision, violations, taskId) instead of the pathway
+            fields — the agent should complete the red-flag screen and retry, not
+            invent a pathway.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  taskId:
+                    type: string
+                    description: Correlation id for the whole chain; view at /demo/agent-fabric?taskId=&lt;id&gt;.
+                  chained:
+                    type: array
+                    description: Which specialist agents ran, in order (always includes care-router).
+                    items:
+                      type: string
+                  pathway:
+                    type: string
+                    description: &quot;self-care-tracking | mscp-virtual-visit | mscp-in-person | urgent-gynecology | behavioral-health-handoff | ed-referral&quot;
+                  pathwayLabel:
+                    type: string
+                  acuity:
+                    type: string
+                    description: &quot;self-care | routine | expedited | urgent | emergent&quot;
+                  rationale:
+                    type: array
+                    description: Human-readable reasons for the recommendation (never empty).
+                    items:
+                      type: string
+                  redFlagsTriggered:
+                    type: array
+                    items:
+                      type: string
+                  recommendedTargetResponse:
+                    type: string
+                    description: Suggested next-step message framing for the patient.
+                  coverage:
+                    type: object
+                    description: Present when Benefits verification was chained.
+                    properties:
+                      payer:
+                        type: string
+                      planName:
+                        type: string
+                      eligibilityStatus:
+                        type: string
+                      network:
+                        type: string
+                      estimatedPatientResponsibility:
+                        type: number
+                      deductibleRemaining:
+                        type: number
+                      sourced:
+                        type: boolean
+                  scheduling:
+                    type: object
+                    description: Present when an appointment was booked.
+                    properties:
+                      providerId:
+                        type: string
+                      providerName:
+                        type: string
+                      modality:
+                        type: string
+                      serviceAppointmentId:
+                        type: string
+                      slotStart:
+                        type: string
+                      slotEnd:
+                        type: string
+                      status:
+                        type: string
+                  sdoh:
+                    type: object
+                    description: Present when a complete SDOH screen was chained.
+                    properties:
+                      screener:
+                        type: string
+                      positiveDomains:
+                        type: array
+                        items:
+                          type: string
+                      positiveDomainCount:
+                        type: integer
+                      safetyEscalation:
+                        type: boolean
+                        description: True when a positive interpersonal-safety screen requires a human social worker.
+                      referralsDrafted:
+                        type: integer
+                  synthetic:
+                    type: boolean
+                    description: Always true — advisory synthetic result.
+                  blocked:
+                    type: boolean
+                    description: Present and true only when the governance gate blocked the call.
+                  decision:
+                    type: string
+                    description: &quot;block, when the governance gate refused the call.&quot;
+                  violations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        policyId:
+                          type: string
+                        reason:
+                          type: string
+</schema>
+    <schemaType>OpenApi3</schemaType>
+    <schemaUploadFileExtension>yaml</schemaUploadFileExtension>
+    <schemaUploadFileName>pause-route-to-care.oas</schemaUploadFileName>
+    <serviceBinding>{&quot;host&quot;:&quot;pause-health.ai&quot;,&quot;basePath&quot;:&quot;&quot;,&quot;allowedSchemes&quot;:[&quot;HTTPS&quot;],&quot;requestMediaTypes&quot;:[],&quot;responseMediaTypes&quot;:[],&quot;compatibleMediaTypes&quot;:{},&quot;integrationFlags&quot;:null,&quot;extensions&quot;:{}}</serviceBinding>
+    <status>Complete</status>
+    <systemVersion>9</systemVersion>
+</ExternalServiceRegistration>

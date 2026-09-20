@@ -1,0 +1,119 @@
+{
+  "required" : [ "redFlagsAcknowledged" ],
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "primarySymptom" : {
+      "title" : "Primary Symptom",
+      "description" : "Primary symptom cluster, e.g. vasomotor, sleep, mood, cognition, gsm, bleeding.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "severity" : {
+      "title" : "Severity",
+      "description" : "mild | moderate | severe.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "redFlagsAcknowledged" : {
+      "title" : "Red Flags Acknowledged",
+      "description" : "The MANDATORY red-flag screen result — yes / no / none. Required: the handoff refuses to route without it. Ask the patient the single yes/no safety question and pass their answer (yes or no).",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "cycleStatus" : {
+      "title" : "Cycle Status",
+      "description" : "e.g. perimenopause, postmenopause, unknown.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "ageBand" : {
+      "title" : "Age Band",
+      "description" : "Age Band",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "patientZip" : {
+      "title" : "Patient Zip",
+      "description" : "Patient Zip",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "patientInsurance" : {
+      "title" : "Patient Insurance",
+      "description" : "Payer name. When present, Benefits verification is chained automatically (no need to also set verifyCoverage).",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "verifyCoverage" : {
+      "title" : "Verify Coverage",
+      "description" : "Set true to force a Benefits/eligibility check even without an inline payer.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "book" : {
+      "title" : "Book",
+      "description" : "Set true to book an appointment after routing. Only books when the pathway is an MSCP visit AND a providerId is supplied.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "providerId" : {
+      "title" : "Provider Id",
+      "description" : "NPI / provider id to book with (required for booking).",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "providerName" : {
+      "title" : "Provider Name",
+      "description" : "Provider Name",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "modality" : {
+      "title" : "Modality",
+      "description" : "telehealth | in-person. Defaults to the pathway's modality.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "requestedDate" : {
+      "title" : "Requested Date",
+      "description" : "Preferred date (ISO yyyy-mm-dd) for the booking.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "screenSdoh" : {
+      "title" : "Screen Sdoh",
+      "description" : "A complete coded AHC-HRSN screen as one string, domain:vector pairs separated by ';' — e.g. \"housing:1,1;food:0,0;transportation:0;utilities:0;safety:1,1,1,1\". Item counts: housing 2 (0-7), food 2 (0-2), transportation 1 (0-1), utilities 1 (0-2), safety 4 (1-5). An incomplete screen is skipped (it never breaks routing).",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "sdohScreener" : {
+      "title" : "Sdoh Screener",
+      "description" : "Validated screener id; defaults to ahc-hrsn.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "sdohConsent" : {
+      "title" : "Sdoh Consent",
+      "description" : "Set true if the patient consented to community-resource referrals.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}

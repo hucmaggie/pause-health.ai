@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPlannerBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Menopause-focused intake agent for Pause-Health.ai. Collects symptoms, assesses red flags, routes to MSCP-credentialed clinicians via the Care Router.</description>
+    <localTopicLinks>
+        <genAiPluginName>Escalation_16jfj0000033ZU9</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>Find_a_Provider_16jfj0000033ZU9</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>Menopause_Symptom_Intake_16jfj0000033ZU9</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>Route_to_Care_16jfj0000033ZU9</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>agent_router_16jfj0000033ZU9</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>ambiguous_question_16jfj0000033ZU9</genAiPluginName>
+    </localTopicLinks>
+    <localTopicLinks>
+        <genAiPluginName>off_topic_16jfj0000033ZU9</genAiPluginName>
+    </localTopicLinks>
+    <localTopics>
+        <fullName>off_topic_16jfj0000033ZU9</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Redirect conversation to relevant subagents when user request goes off-topic</description>
+        <developerName>off_topic_16jfj0000033ZU9</developerName>
+        <genAiPluginInstructions>
+            <description>You are the Pause Health Intake Assistant. You conduct structured menopause-symptom intakes for women aged 40-60: chief complaint, top 3 symptoms with severity, LMP, medications, allergies, red-flag screening. You collect and route; clinicians decide.
+At the start of a conversation, greet the patient by their first name (the messaging end user&apos;s first name) when it is available; otherwise open warmly without a name. Acknowledge what you already know about their menopause-care context rather than re-asking their identity.</description>
+            <developerName>instruction0_179fj000004Dei9</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179fj000004Dei9</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localDeveloperName>off_topic</localDeveloperName>
+        <masterLabel>Off Topic</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>Route_to_Care_16jfj0000033ZU9</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Use this subagent immediately after a menopause symptom intake has been completed (symptoms collected and the red-flag screen answered &quot;no&quot;), OR whenever the patient asks what care they need, to route to a care pathway, to check coverage/cost for a visit, to book the recommended visit, or for a social-needs screen. This subagent completes those requests by calling the handoffToCareRouter action. Prefer this subagent over provider-lookup or escalation for routing, coverage, booking, and social-needs after intake.</description>
+        <developerName>Route_to_Care_16jfj0000033ZU9</developerName>
+        <genAiPluginInstructions>
+            <description>You are the Pause Health Intake Assistant. You conduct structured menopause-symptom intakes for women aged 40-60: chief complaint, top 3 symptoms with severity, LMP, medications, allergies, red-flag screening. You collect and route; clinicians decide.
+At the start of a conversation, greet the patient by their first name (the messaging end user&apos;s first name) when it is available; otherwise open warmly without a name. Acknowledge what you already know about their menopause-care context rather than re-asking their identity.</description>
+            <developerName>instruction0_179fj000004Dei8</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179fj000004Dei8</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localActionLinks>
+            <functionName>handoffToCareRouter_179fj000004Dei8</functionName>
+        </localActionLinks>
+        <localActions>
+            <fullName>handoffToCareRouter_179fj000004Dei8</fullName>
+            <description>Calls the intake→specialist handoff: routes to a care pathway and, together, verifies coverage and books the recommended MSCP visit. Reads back the pathway, coverage, and synthetic booking confirmation.</description>
+            <developerName>handoffToCareRouter_179fj000004Dei8</developerName>
+            <invocationTarget>PauseRouteToCare.handoffToCareRouter</invocationTarget>
+            <invocationTargetType>externalService</invocationTargetType>
+            <isConfirmationRequired>false</isConfirmationRequired>
+            <isIncludeInProgressIndicator>false</isIncludeInProgressIndicator>
+            <localDeveloperName>handoffToCareRouter</localDeveloperName>
+            <masterLabel>handoffToCareRouter</masterLabel>
+        </localActions>
+        <localDeveloperName>Route_to_Care</localDeveloperName>
+        <masterLabel>Route to Care</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>Menopause_Symptom_Intake_16jfj0000033ZU9</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Handles structured intake conversations for users experiencing perimenopause or menopause symptoms.
+Also prefer this subagent for ALL follow-ups after an intake in the same conversation — coverage/cost questions, booking or scheduling the recommended visit, and social-needs screening — because these are handled by its handoffToCareRouter action. Keep these follow-ups in this subagent rather than transferring to provider-lookup or escalation.</description>
+        <developerName>Menopause_Symptom_Intake_16jfj0000033ZU9</developerName>
+        <genAiPluginInstructions>
+            <description>You are the Pause Health Intake Assistant. You conduct structured menopause-symptom intakes for women aged 40-60: chief complaint, top 3 symptoms with severity, LMP, medications, allergies, red-flag screening. You collect and route; clinicians decide.
+At the start of a conversation, greet the patient by their first name (the messaging end user&apos;s first name) when it is available; otherwise open warmly without a name. Acknowledge what you already know about their menopause-care context rather than re-asking their identity.</description>
+            <developerName>instruction0_179fj000004Dei7</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179fj000004Dei7</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localActionLinks>
+            <functionName>handoffToCareRouter_179fj000004Dei7</functionName>
+        </localActionLinks>
+        <localActions>
+            <fullName>handoffToCareRouter_179fj000004Dei7</fullName>
+            <description>Hands the completed intake off to the specialist agents — routes to a care pathway and optionally verifies coverage, books an appointment, and screens for social needs — in one call. Call only after the mandatory red-flag screen is captured.</description>
+            <developerName>handoffToCareRouter_179fj000004Dei7</developerName>
+            <invocationTarget>PauseRouteToCare.handoffToCareRouter</invocationTarget>
+            <invocationTargetType>externalService</invocationTargetType>
+            <isConfirmationRequired>false</isConfirmationRequired>
+            <isIncludeInProgressIndicator>false</isIncludeInProgressIndicator>
+            <localDeveloperName>handoffToCareRouter</localDeveloperName>
+            <masterLabel>handoffToCareRouter</masterLabel>
+        </localActions>
+        <localDeveloperName>Menopause_Symptom_Intake</localDeveloperName>
+        <masterLabel>Menopause Symptom Intake</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>ambiguous_question_16jfj0000033ZU9</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Redirect conversation to relevant subagents when user request is too ambiguous</description>
+        <developerName>ambiguous_question_16jfj0000033ZU9</developerName>
+        <genAiPluginInstructions>
+            <description>You are the Pause Health Intake Assistant. You conduct structured menopause-symptom intakes for women aged 40-60: chief complaint, top 3 symptoms with severity, LMP, medications, allergies, red-flag screening. You collect and route; clinicians decide.
+At the start of a conversation, greet the patient by their first name (the messaging end user&apos;s first name) when it is available; otherwise open warmly without a name. Acknowledge what you already know about their menopause-care context rather than re-asking their identity.</description>
+            <developerName>instruction0_179fj000004Dei6</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179fj000004Dei6</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localDeveloperName>ambiguous_question</localDeveloperName>
+        <masterLabel>Ambiguous Question</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>agent_router_16jfj0000033ZU9</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Welcome the user and determine the appropriate subagent based on user input</description>
+        <developerName>agent_router_16jfj0000033ZU9</developerName>
+        <genAiPluginInstructions>
+            <description>You are the Pause Health Intake Assistant. You conduct structured menopause-symptom intakes for women aged 40-60: chief complaint, top 3 symptoms with severity, LMP, medications, allergies, red-flag screening. You collect and route; clinicians decide.
+At the start of a conversation, greet the patient by their first name (the messaging end user&apos;s first name) when it is available; otherwise open warmly without a name. Acknowledge what you already know about their menopause-care context rather than re-asking their identity.</description>
+            <developerName>instruction0_179fj000004Dei5</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179fj000004Dei5</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localDeveloperName>agent_router</localDeveloperName>
+        <masterLabel>Agent Router</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>Escalation_16jfj0000033ZU9</fullName>
+        <canEscalate>false</canEscalate>
+        <description>Use ONLY when a user explicitly asks to speak to a human, live agent, or support representative, or wants to log a support case. Do NOT use this for booking or scheduling an appointment, checking insurance coverage or cost, connecting with a clinician or specialist for care, or social-needs support — those are handled by the Menopause Symptom Intake subagent&apos;s handoffToCareRouter action, not by escalation.</description>
+        <developerName>Escalation_16jfj0000033ZU9</developerName>
+        <genAiPluginInstructions>
+            <description>You are the Pause Health Intake Assistant. You conduct structured menopause-symptom intakes for women aged 40-60: chief complaint, top 3 symptoms with severity, LMP, medications, allergies, red-flag screening. You collect and route; clinicians decide.
+At the start of a conversation, greet the patient by their first name (the messaging end user&apos;s first name) when it is available; otherwise open warmly without a name. Acknowledge what you already know about their menopause-care context rather than re-asking their identity.</description>
+            <developerName>instruction0_179fj000004DeiB</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179fj000004DeiB</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localDeveloperName>Escalation</localDeveloperName>
+        <masterLabel>Escalation</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <localTopics>
+        <fullName>Find_a_Provider_16jfj0000033ZU9</fullName>
+        <canEscalate>false</canEscalate>
+        <description>The patient wants to SEARCH FOR or LOOK UP a specific menopause specialist, MSCP-credentialed clinician, OB/GYN, or endocrinologist by name, specialty, or location — e.g. &quot;find a provider near me&quot;, &quot;who are the menopause specialists near &lt;ZIP&gt;&quot;, &quot;give me a list of doctors&quot;. Do NOT use this subagent to decide what care a patient needs, to route to a care pathway, to book or schedule an appointment, or to check insurance coverage — those follow-ups belong to the Menopause Symptom Intake subagent and its handoffToCareRouter action. Use this only for an explicit provider directory lookup.</description>
+        <developerName>Find_a_Provider_16jfj0000033ZU9</developerName>
+        <genAiPluginInstructions>
+            <description>You are the Pause Health Intake Assistant. You conduct structured menopause-symptom intakes for women aged 40-60: chief complaint, top 3 symptoms with severity, LMP, medications, allergies, red-flag screening. You collect and route; clinicians decide.
+At the start of a conversation, greet the patient by their first name (the messaging end user&apos;s first name) when it is available; otherwise open warmly without a name. Acknowledge what you already know about their menopause-care context rather than re-asking their identity.</description>
+            <developerName>instruction0_179fj000004DeiA</developerName>
+            <language>en_US</language>
+            <masterLabel>instruction0_179fj000004DeiA</masterLabel>
+            <sortOrder>1</sortOrder>
+        </genAiPluginInstructions>
+        <language>en_US</language>
+        <localActionLinks>
+            <functionName>PauseProviderDirectory_179fj000004DeiA</functionName>
+        </localActionLinks>
+        <localActions>
+            <fullName>PauseProviderDirectory_179fj000004DeiA</fullName>
+            <description>Searches the Pause provider directory for menopause-credentialed providers (MSCP / OB-GYN / endocrinology), optionally narrowed by ZIP. Returns provider name, specialty, location, telehealth, and accepting-new-patients status.</description>
+            <developerName>PauseProviderDirectory_179fj000004DeiA</developerName>
+            <invocationTarget>PauseProviderDirectory.findMenopauseProviders</invocationTarget>
+            <invocationTargetType>externalService</invocationTargetType>
+            <isConfirmationRequired>false</isConfirmationRequired>
+            <isIncludeInProgressIndicator>false</isIncludeInProgressIndicator>
+            <localDeveloperName>PauseProviderDirectory</localDeveloperName>
+            <masterLabel>PauseProviderDirectory</masterLabel>
+        </localActions>
+        <localDeveloperName>Find_a_Provider</localDeveloperName>
+        <masterLabel>Find a Provider</masterLabel>
+        <pluginType>Topic</pluginType>
+    </localTopics>
+    <masterLabel>Pause Health Intake Agent</masterLabel>
+    <plannerType>Atlas__ConcurrentMultiAgentOrchestration</plannerType>
+</GenAiPlannerBundle>
