@@ -163,7 +163,7 @@ const controls: ControlRow[] = [
     today: {
       status: "prototype",
       detail: (
-        "Reports accepted at security@pause-health.ai. The /.well-known/security.txt advertises the inbox per RFC 9116. The codebase is open at github.com/hucmaggie/pause-health.ai. GitHub Private Vulnerability Reporting is planned in the Now horizon of /roadmap (one-click toggle in repo Settings → Security; required for the 'Report a vulnerability' button to appear on the Security tab)."
+        "Reports accepted at info@pause-health.ai. The /.well-known/security.txt advertises the inbox per RFC 9116. The codebase is open at github.com/hucmaggie/pause-health.ai. GitHub Private Vulnerability Reporting is planned in the Now horizon of /roadmap (one-click toggle in repo Settings → Security; required for the 'Report a vulnerability' button to appear on the Security tab)."
       )
     },
     designed: {
@@ -234,7 +234,7 @@ export default function SecurityPage() {
           </li>
           <li>
             <span>Security inbox</span>
-            <strong>security@pause-health.ai</strong>
+            <strong>info@pause-health.ai</strong>
           </li>
         </ul>
       </section>
@@ -342,15 +342,15 @@ export default function SecurityPage() {
       <section className="card" style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Reporting a vulnerability</p>
         <h2 style={{ fontSize: "clamp(1.2rem, 2vw, 1.5rem)", marginBottom: "0.5rem" }}>
-          Found something? Email security@pause-health.ai.
+          Found something? Email info@pause-health.ai.
         </h2>
         <p style={{ color: "var(--muted)", maxWidth: "72ch" }}>
           We accept good-faith vulnerability reports at{" "}
           <a
-            href="mailto:security@pause-health.ai"
+            href="mailto:info@pause-health.ai"
             style={{ color: "var(--brand)" }}
           >
-            security@pause-health.ai
+            info@pause-health.ai
           </a>
           . The{" "}
           <a

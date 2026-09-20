@@ -222,7 +222,7 @@ export default function ResearchPage() {
           </li>
           <li>
             <span>Research contact</span>
-            <strong>research@pause-health.ai</strong>
+            <strong>info@pause-health.ai</strong>
           </li>
         </ul>
       </section>
@@ -365,10 +365,10 @@ export default function ResearchPage() {
           . For clinical-advisory inquiries, validation collaborations,
           or pre-registration discussions, email{" "}
           <a
-            href="mailto:research@pause-health.ai"
+            href="mailto:info@pause-health.ai"
             style={{ color: "var(--brand)" }}
           >
-            research@pause-health.ai
+            info@pause-health.ai
           </a>
           .
         </p>

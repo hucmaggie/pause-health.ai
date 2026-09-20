@@ -113,7 +113,7 @@ export default function CareersPage() {
           </li>
           <li>
             <span>Hiring inbox</span>
-            <strong>careers@pause-health.ai</strong>
+            <strong>info@pause-health.ai</strong>
           </li>
         </ul>
         <div className="hero-actions" style={{ marginTop: "1.25rem" }}>
@@ -215,8 +215,8 @@ export default function CareersPage() {
           <a href={careersInquiryHref} className="btn btn-primary">
             Start a conversation →
           </a>
-          <a href="mailto:careers@pause-health.ai" className="btn btn-secondary">
-            careers@pause-health.ai
+          <a href="mailto:info@pause-health.ai" className="btn btn-secondary">
+            info@pause-health.ai
           </a>
         </div>
       </section>

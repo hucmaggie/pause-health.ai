@@ -18,7 +18,7 @@ export const metadata = pageMetadata({
  * landing here can now copy approved boilerplate, download
  * brand assets directly, see recent milestones (pilled so they
  * can tell shipped from planned), grab the founder bio +
- * headshot, and reach press@pause-health.ai with a clear
+ * headshot, and reach info@pause-health.ai with a clear
  * response-time expectation.
  *
  * Honesty principles mirrored from /about: milestones are split
@@ -172,17 +172,17 @@ export default function PressPage() {
           accurately: pre-approved boilerplate, downloadable brand
           assets, the founder bio and headshot, and a fast inbox at{" "}
           <a
-            href="mailto:press@pause-health.ai"
+            href="mailto:info@pause-health.ai"
             style={{ color: "var(--brand)" }}
           >
-            press@pause-health.ai
+            info@pause-health.ai
           </a>
           .
         </p>
         <ul className="metric-list">
           <li>
             <span>Media contact</span>
-            <strong>press@pause-health.ai</strong>
+            <strong>info@pause-health.ai</strong>
           </li>
           <li>
             <span>Response time</span>
@@ -404,10 +404,10 @@ export default function PressPage() {
             >
               For interview requests, please contact{" "}
               <a
-                href="mailto:press@pause-health.ai"
+                href="mailto:info@pause-health.ai"
                 style={{ color: "var(--brand)" }}
               >
-                press@pause-health.ai
+                info@pause-health.ai
               </a>
               {" · "}
               <a
@@ -432,10 +432,10 @@ export default function PressPage() {
           wordmark or recompose the icon. If you need a different format
           (SVG, EPS), email{" "}
           <a
-            href="mailto:press@pause-health.ai"
+            href="mailto:info@pause-health.ai"
             style={{ color: "var(--brand)" }}
           >
-            press@pause-health.ai
+            info@pause-health.ai
           </a>{" "}
           and we&apos;ll get it to you within a business day.
         </p>

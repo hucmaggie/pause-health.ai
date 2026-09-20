@@ -4,7 +4,7 @@ import { pageMetadata } from "../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Contact",
   description:
-    "Get in touch with Pause-Health.AI. Provider partnerships, investors, technical, media, or general inquiries — each persona has a dedicated inbox and a clear response-time expectation.",
+    "Get in touch with Pause-Health.AI. Provider partnerships, investors, technical, media, or general inquiries — email info@pause-health.ai with your role and topic for a clear response-time expectation.",
   path: "/contact",
   ogImage: "/brand/pause-health-og-about.png",
   ogImageAlt: "Contact Pause-Health.AI."
@@ -33,7 +33,6 @@ export const metadata = pageMetadata({
 
 type Inbox = {
   audience: string;
-  email: string;
   whatToInclude: string;
   responseTime: string;
 };
@@ -41,28 +40,24 @@ type Inbox = {
 const inboxes: Inbox[] = [
   {
     audience: "Provider partnerships",
-    email: "partners@pause-health.ai",
     whatToInclude:
       "Your organization, the clinical setting (IDN, AMC, FQHC, payer-provider), approximate menopause-care volume, and what you'd like to learn or pilot. We can usually be in a Zoom within a week.",
     responseTime: "1 business day"
   },
   {
     audience: "Investors",
-    email: "invest@pause-health.ai",
     whatToInclude:
       "Fund name, stage focus, check size range, and any thesis areas (women's health, vertical AI agents, healthcare data infrastructure) where Pause-Health.AI fits. The investor brief at /proposal is the right read-deeper.",
     responseTime: "1 business day"
   },
   {
     audience: "Media",
-    email: "press@pause-health.ai",
     whatToInclude:
       "Outlet, story angle, target publish date, and any specific quotes / data points you need. The press kit at /press has pre-approved boilerplate, brand assets, and founder bio you can use right now.",
     responseTime: "2 business days"
   },
   {
     audience: "General inquiries",
-    email: "hello@pause-health.ai",
     whatToInclude:
       "Anything that doesn't fit the inboxes above — clinicians wanting to advise, women asking about care access, students wanting to learn. We read every one.",
     responseTime: "Within 3 business days"
@@ -132,7 +127,7 @@ export default function ContactPage() {
         </div>
 
         <aside className="card">
-          <h3 style={{ marginTop: 0 }}>Or email the right inbox directly</h3>
+          <h3 style={{ marginTop: 0 }}>Or email us directly</h3>
           <p
             style={{
               color: "var(--muted)",
@@ -140,8 +135,15 @@ export default function ContactPage() {
               marginBottom: "0.75rem"
             }}
           >
-            Each inbox routes to a different drafter, so picking the right
-            one gets you a faster, better-informed reply.
+            Reach us any time at{" "}
+            <a
+              href="mailto:info@pause-health.ai"
+              style={{ color: "var(--brand)", fontWeight: 600 }}
+            >
+              info@pause-health.ai
+            </a>
+            . To get a faster, better-informed reply, tell us your role and
+            include the details for your topic below.
           </p>
           <div
             style={{
@@ -152,7 +154,7 @@ export default function ContactPage() {
           >
             {inboxes.map((inbox) => (
               <div
-                key={inbox.email}
+                key={inbox.audience}
                 style={{
                   borderTop: "1px solid var(--line)",
                   paddingTop: "0.7rem"
@@ -182,20 +184,7 @@ export default function ContactPage() {
                 </div>
                 <p
                   style={{
-                    margin: "0.2rem 0 0.3rem",
-                    fontSize: "0.92rem"
-                  }}
-                >
-                  <a
-                    href={`mailto:${inbox.email}`}
-                    style={{ color: "var(--brand)", fontWeight: 600 }}
-                  >
-                    {inbox.email}
-                  </a>
-                </p>
-                <p
-                  style={{
-                    margin: 0,
+                    margin: "0.3rem 0 0",
                     color: "var(--muted)",
                     fontSize: "0.85rem"
                   }}
