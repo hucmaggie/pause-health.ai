@@ -24,14 +24,17 @@
     </types>
     <types>
         <members>PauseBenefitsVerification</members>
+        <members>PauseMemberService</members>
         <name>ExternalServiceRegistration</name>
     </types>
     <types>
         <members>Pause_Benefits_Coverage</members>
+        <members>Pause_Member_Service</members>
         <name>Bot</name>
     </types>
     <types>
         <members>Pause_Benefits_Coverage_v1</members>
+        <members>Pause_Member_Service_v1</members>
         <name>GenAiPlannerBundle</name>
     </types>
     <version>67.0</version>
