@@ -177,12 +177,12 @@ const milestonesDone: Milestone[] = [
 
 const milestonesPlanned: Milestone[] = [
   {
-    year: "2026 H2",
+    year: "2026-2027",
     label: "Clinical advisory board formed across OB/GYN, endocrinology, primary care",
     status: "planned"
   },
   {
-    year: "2026 H2",
+    year: "2026-2027",
     label: "First design-partner provider organizations onboarded",
     status: "planned"
   },
@@ -306,8 +306,9 @@ export default function AboutPage() {
             </p>
             <p style={{ marginBottom: "0.5rem" }}>
               Maggie leads product, vision, and provider partnerships at
-              Pause-Health.AI. She brings 25+ years across enterprise
-              software, with the last decade spent in solution-engineering
+              Pause-Health.AI. She brings strong and deep professional
+              experience across enterprise software, with the last decade
+              spent in solution-engineering
               and enterprise-architecture roles at the platform companies
               this prototype talks to every day &mdash; currently
               Principal, Agentic Builder &mdash; TMT Agentic Builders &amp;
@@ -359,11 +360,11 @@ export default function AboutPage() {
               style={{ marginTop: "0.45rem" }}
             >
               Verify it&apos;s the right profile: the LinkedIn headline
-              reads &ldquo;Executive Tech Leader | Solution Engineer /
-              Architect | AI &amp; Digital Strategy | Enterprise Architect
-              | Technical Evangelist | Ex- VMware + MuleSoft / Salesforce
-              + Red Hat | USC Marshall | UC Berkeley HaaS&rdquo; and
-              lists Irvine, California as the location.
+              reads &ldquo;Executive Tech Leader | Agentic Builder |
+              Solution Architect | AI &amp; Digital Strategy | Technical
+              Evangelist | USC Marshall | UC Berkeley HaaS |
+              Pause-Health.AI&rdquo; and lists Irvine, California as the
+              location.
             </p>
           </div>
         </article>
