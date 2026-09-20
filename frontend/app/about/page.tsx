@@ -177,12 +177,12 @@ const milestonesDone: Milestone[] = [
 
 const milestonesPlanned: Milestone[] = [
   {
-    year: "2026-2027",
+    year: "2026 - 2027",
     label: "Clinical advisory board formed across OB/GYN, endocrinology, primary care",
     status: "planned"
   },
   {
-    year: "2026-2027",
+    year: "2026 - 2027",
     label: "First design-partner provider organizations onboarded",
     status: "planned"
   },
