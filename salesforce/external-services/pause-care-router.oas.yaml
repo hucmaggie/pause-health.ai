@@ -1,0 +1,132 @@
+openapi: 3.0.0
+info:
+  title: Pause Care Router
+  version: "1.0.0"
+  description: >
+    Agentforce-facing slice of the Pause Care Router agent. Registered in
+    Salesforce as an External Service so an Agentforce agent can recommend the
+    appropriate menopause care pathway for a structured intake, with rationale
+    and red-flag handling.
+
+    Backed by the public, no-auth GET
+    https://pause-health.ai/api/agentforce/care-router, a thin REST alias over
+    the A2A Care Router that uses the DETERMINISTIC scripted routing engine (no
+    live Claude dependency) and the SAME Agent Fabric governance gate: the
+    mandatory red-flag screen must be completed (a missing screen is blocked),
+    the model is allow-listed, and every decision carries a rationale.
+
+    Advisory only: this recommends a pathway with rationale; it does NOT
+    diagnose, prescribe, or commit any clinical action — a clinician decides.
+    Provider recommendations and booking are handled by the provider-directory
+    and appointment-scheduling agents, not here.
+
+servers:
+  - url: https://pause-health.ai
+
+paths:
+  /api/agentforce/care-router:
+    get:
+      operationId: routeCarePathway
+      summary: Recommend a menopause care pathway for an intake
+      description: >
+        Given a structured intake (primary symptom, severity, cycle status, and
+        the MANDATORY red-flag screen), returns the recommended care pathway, its
+        acuity, human-readable rationale, and any triggered red flags. If the
+        red-flag screen is missing, the governance gate blocks the call — the
+        agent must ask the red-flag question first.
+      parameters:
+        - name: primarySymptom
+          in: query
+          required: false
+          description: "Primary symptom cluster, e.g. vasomotor, sleep, mood, cognition, gsm, bleeding."
+          schema:
+            type: string
+        - name: severity
+          in: query
+          required: false
+          description: "mild | moderate | severe."
+          schema:
+            type: string
+        - name: redFlagsAcknowledged
+          in: query
+          required: true
+          description: >
+            The MANDATORY red-flag screen result — yes / no / none. Required: the
+            router refuses to route without it. Ask the patient the red-flag
+            question and pass their answer.
+          schema:
+            type: string
+        - name: cycleStatus
+          in: query
+          required: false
+          description: "e.g. perimenopause, postmenopause, unknown."
+          schema:
+            type: string
+        - name: ageBand
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: patientZip
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: patientInsurance
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: >
+            Routing decision. NOTE: when the governance gate blocks the call (e.g.
+            no red-flag screen), the body is the blocked shape (blocked=true,
+            decision, violations) instead of the pathway fields — the agent should
+            complete the red-flag screen and retry, not invent a pathway.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pathway:
+                    type: string
+                    description: "self-care-tracking | mscp-virtual-visit | mscp-in-person | urgent-gynecology | behavioral-health-handoff | ed-referral"
+                  pathwayLabel:
+                    type: string
+                  acuity:
+                    type: string
+                    description: "self-care | routine | expedited | urgent | emergent"
+                  rationale:
+                    type: array
+                    description: Human-readable reasons for the recommendation (never empty).
+                    items:
+                      type: string
+                  redFlagsTriggered:
+                    type: array
+                    items:
+                      type: string
+                  recommendedTargetResponse:
+                    type: string
+                    description: Suggested next-step message framing for the patient.
+                  modelProvider:
+                    type: string
+                    description: "Provenance of the decision engine (pause-scripted for this alias)."
+                  synthetic:
+                    type: boolean
+                    description: Always true — advisory synthetic recommendation.
+                  blocked:
+                    type: boolean
+                    description: Present and true only when the governance gate blocked the call.
+                  decision:
+                    type: string
+                    description: "block, when the governance gate refused the call."
+                  violations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        policyId:
+                          type: string
+                        reason:
+                          type: string
