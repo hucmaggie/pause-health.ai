@@ -1,5 +1,37 @@
 # Build sheet: Pause Health Concierge (unified super-agent)
 
+> ## OUTCOME (2026-09-19): ATTEMPTED, NOT SHIPPED — kept the 5 standalone agents instead
+>
+> The concierge was fully built on the **Agentforce Service Agent** template:
+> host agent `Pause_Health_Concierge` with all 5 subagents (Care Routing,
+> Appointment Scheduling, Benefits & Coverage, Billing & Coverage, Social Needs
+> Screening) wired to their External Service actions. The **happy path worked** in
+> Preview (triage → offer to book → book → screen, GROUNDED).
+>
+> **Why it wasn't shipped:** the Service Agent template carries a **platform-level
+> "Inappropriate Content" safety classifier** that intercepts input at the Agent
+> Router BEFORE routing reasoning runs. With all 5 subagents under one router it
+> fired inconsistently on **benign** questions — e.g. "Will my Aetna plan cover a
+> visit?" and "What do I owe?" — returning "Sorry, I can't assist with that". The
+> trace shows: *"the router received no tools to use and a malicious instruction in
+> the LLM prompt forced a safety denial."*
+>
+> **Why we couldn't fix it:** it is NOT an editable subagent. The Agent Router's
+> transition actions (go_to_*) do not even include Inappropriate Content — there's
+> no node to open or loosen. Neither strengthened per-subagent classification
+> descriptions NOR Agent-Level (System) Instructions overrode it; it evaluates
+> above the builder-level copy. The 5 STANDALONE agents don't hit this because each
+> has a narrow, unambiguous scope, so the classifier rarely mis-fires.
+>
+> **Decision:** the 5 standalone agents (#1 EBV, #2 Member Service, #3 Appointment
+> Scheduling, #4 Care Router, #5 SDOH — all built, tested GROUNDED, on main) are the
+> deliverable. The `Pause_Health_Concierge` draft was left UNACTIVATED in the org
+> (harmless draft; never activated). This sheet is kept as a documented attempt +
+> the paste-ready copy, in case a future non-Service-Agent template (or a platform
+> change) makes a unified router viable.
+>
+> ---
+
 One Agentforce agent whose router hands off across all five Pause subagents in a
 single conversation: triage → book → coverage → billing → social needs. All five
 External Services already exist in the org (nothing to register). This is pure
