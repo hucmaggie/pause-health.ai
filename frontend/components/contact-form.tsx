@@ -192,12 +192,30 @@ export function ContactForm({ defaultSubject = "", defaultMessage = "" }: Contac
             name="message"
             required
             rows={6}
+            minLength={10}
             maxLength={5000}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             disabled={status === "submitting"}
             placeholder="A few sentences about what you're hoping to discuss."
+            aria-describedby="contact-message-help"
           />
+          <span
+            id="contact-message-help"
+            style={{
+              display: "block",
+              marginTop: "0.3rem",
+              fontSize: "0.8rem",
+              color:
+                message.trim().length > 0 && message.trim().length < 10
+                  ? "var(--brand)"
+                  : "var(--muted)"
+            }}
+          >
+            {message.trim().length > 0 && message.trim().length < 10
+              ? `Please write a bit more — at least 10 characters (${message.trim().length}/10).`
+              : "Please share at least a full sentence (10+ characters) so we can route your message."}
+          </span>
         </label>
 
         <div className="hp-field" aria-hidden="true">

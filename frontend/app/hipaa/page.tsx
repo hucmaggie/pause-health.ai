@@ -194,7 +194,7 @@ export default function HipaaPage() {
           </li>
           <li>
             <span>Privacy Officer contact</span>
-            <strong>privacy@pause-health.ai</strong>
+            <strong>info@pause-health.ai</strong>
           </li>
         </ul>
       </section>
@@ -303,10 +303,10 @@ export default function HipaaPage() {
         <p style={{ color: "var(--muted)", maxWidth: "70ch", margin: 0 }}>
           Email{" "}
           <a
-            href="mailto:privacy@pause-health.ai"
+            href="mailto:info@pause-health.ai"
             style={{ color: "var(--brand)" }}
           >
-            privacy@pause-health.ai
+            info@pause-health.ai
           </a>{" "}
           with privacy / HIPAA inquiries. We aim to respond within 2
           business days; compliance reviews from prospective design

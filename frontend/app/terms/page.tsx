@@ -203,7 +203,7 @@ export default function TermsPage() {
           </li>
           <li>
             <span>Legal contact</span>
-            <strong>legal@pause-health.ai</strong>
+            <strong>info@pause-health.ai</strong>
           </li>
         </ul>
       </section>
@@ -297,10 +297,10 @@ export default function TermsPage() {
           inquiries about the source code, or any other legal
           questions, email{" "}
           <a
-            href="mailto:legal@pause-health.ai"
+            href="mailto:info@pause-health.ai"
             style={{ color: "var(--brand)" }}
           >
-            legal@pause-health.ai
+            info@pause-health.ai
           </a>
           . Procurement reviews from prospective design partners are
           welcome — flag the inquiry as such and we&apos;ll route to

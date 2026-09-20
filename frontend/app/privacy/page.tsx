@@ -190,7 +190,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <span>Privacy contact</span>
-            <strong>privacy@pause-health.ai</strong>
+            <strong>info@pause-health.ai</strong>
           </li>
         </ul>
       </section>
@@ -312,10 +312,10 @@ export default function PrivacyPage() {
         <p style={{ color: "var(--muted)", maxWidth: "72ch", margin: 0 }}>
           Email{" "}
           <a
-            href="mailto:privacy@pause-health.ai"
+            href="mailto:info@pause-health.ai"
             style={{ color: "var(--brand)" }}
           >
-            privacy@pause-health.ai
+            info@pause-health.ai
           </a>
           . To unsubscribe from the newsletter, use the unsubscribe
           link in the email itself (the configured provider handles
