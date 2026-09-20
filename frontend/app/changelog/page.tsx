@@ -2899,8 +2899,8 @@ export default function ChangelogPage() {
           key={week.range}
           aria-label={week.range}
           style={{
-            marginBottom: "2.2rem",
-            paddingBottom: "1.6rem",
+            marginBottom: "2.6rem",
+            paddingBottom: "1.8rem",
             borderBottom: "1px solid var(--surface-3)"
           }}
         >
@@ -2932,7 +2932,7 @@ export default function ChangelogPage() {
             </p>
           </header>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
             {week.entries.map((entry) => (
               <article
                 key={entry.title}
@@ -2949,26 +2949,41 @@ export default function ChangelogPage() {
                     marginBottom: "0.4rem"
                   }}
                 >
-                  <h3 style={{ margin: 0, fontSize: "1.05rem", lineHeight: 1.35 }}>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", lineHeight: 1.4 }}>
                     {entry.title}
                   </h3>
                   <StatusPill status={entry.status} />
                 </div>
-                <p
-                  style={{
-                    margin: "0.3rem 0 0.75rem",
-                    color: "var(--muted)",
-                    lineHeight: 1.55,
-                    fontSize: "0.92rem"
-                  }}
-                >
-                  {entry.summary}
-                </p>
+                {/* The full narrative is long and dense — collapse it behind a
+                    native disclosure so the page scans as a title + status +
+                    commits list, with the prose one click away. Text unchanged. */}
+                <details style={{ margin: "0.35rem 0 0.75rem" }}>
+                  <summary
+                    style={{
+                      cursor: "pointer",
+                      color: "var(--brand)",
+                      fontSize: "0.82rem",
+                      fontWeight: 600
+                    }}
+                  >
+                    Details
+                  </summary>
+                  <p
+                    style={{
+                      margin: "0.5rem 0 0",
+                      color: "var(--muted)",
+                      lineHeight: 1.6,
+                      fontSize: "0.92rem"
+                    }}
+                  >
+                    {entry.summary}
+                  </p>
+                </details>
                 <div
                   style={{
                     display: "flex",
                     flexWrap: "wrap",
-                    gap: "0.4rem",
+                    gap: "0.45rem",
                     fontSize: "0.78rem"
                   }}
                 >
