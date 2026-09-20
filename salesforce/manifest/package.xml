@@ -25,18 +25,21 @@
     <types>
         <members>PauseBenefitsVerification</members>
         <members>PauseMemberService</members>
+        <members>PauseAppointmentScheduling</members>
         <members>PauseCareRouter</members>
         <name>ExternalServiceRegistration</name>
     </types>
     <types>
         <members>Pause_Benefits_Coverage</members>
         <members>Pause_Member_Service</members>
+        <members>Pause_Appointment_Scheduling</members>
         <members>Pause_Care_Router</members>
         <name>Bot</name>
     </types>
     <types>
         <members>Pause_Benefits_Coverage_v1</members>
         <members>Pause_Member_Service_v1</members>
+        <members>Pause_Appointment_Scheduling_v1</members>
         <members>Pause_Care_Router_v1</members>
         <name>GenAiPlannerBundle</name>
     </types>
