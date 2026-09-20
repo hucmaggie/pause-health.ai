@@ -1,0 +1,56 @@
+{
+  "required" : [ ],
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "screener" : {
+      "title" : "Screener",
+      "description" : "Validated screener id. Defaults to ahc-hrsn (the only allow-listed screener).",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "housing" : {
+      "title" : "Housing",
+      "description" : "Housing domain responses — 2 comma-separated integers (living-situation code, quality-problem count). >=1 on either screens positive.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "food" : {
+      "title" : "Food",
+      "description" : "Food domain responses — 2 comma-separated integers (worried, ran-out). >=1 on either screens positive.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "transportation" : {
+      "title" : "Transportation",
+      "description" : "Transportation domain — 1 integer. >=1 screens positive.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "utilities" : {
+      "title" : "Utilities",
+      "description" : "Utilities domain — 1 integer. >=1 screens positive.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "safety" : {
+      "title" : "Safety",
+      "description" : "Interpersonal-safety HITS — 4 comma-separated integers (1-5 each). Total >10 screens positive and raises a red flag.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "patientConsent" : {
+      "title" : "Patient Consent",
+      "description" : "Set to true if the patient consented to a community-resource referral. Required before a referral is drafted for any positive domain.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}

@@ -27,6 +27,7 @@
         <members>PauseMemberService</members>
         <members>PauseAppointmentScheduling</members>
         <members>PauseCareRouter</members>
+        <members>PauseSdohScreening</members>
         <name>ExternalServiceRegistration</name>
     </types>
     <types>
@@ -34,6 +35,7 @@
         <members>Pause_Member_Service</members>
         <members>Pause_Appointment_Scheduling</members>
         <members>Pause_Care_Router</members>
+        <members>Pause_SDOH_Screening</members>
         <name>Bot</name>
     </types>
     <types>
@@ -41,6 +43,7 @@
         <members>Pause_Member_Service_v1</members>
         <members>Pause_Appointment_Scheduling_v1</members>
         <members>Pause_Care_Router_v1</members>
+        <members>Pause_SDOH_Screening_v1</members>
         <name>GenAiPlannerBundle</name>
     </types>
     <version>67.0</version>
