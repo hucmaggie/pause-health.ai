@@ -1,0 +1,96 @@
+{
+  "name": "Pause Care Router · Claude Sonnet 4.5",
+  "description": "Pause Care Router · Claude Sonnet 4.5 — a governed Pause fabric agent (anthropic-claude, A2A). Governance tier: clinical-decision. Enforces 7 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/care-router",
+  "provider": {
+    "organization": "Anthropic + Pause-Health.ai",
+    "url": "https://pause-health.ai"
+  },
+  "version": "0.1.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "clinical-pathway-routing-6-pathways",
+      "name": "Clinical pathway routing (6 pathways)",
+      "description": "Clinical pathway routing (6 pathways)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "red-flag-escalation-logic",
+      "name": "Red-flag escalation logic",
+      "description": "Red-flag escalation logic",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "premature-ovarian-insufficiency-rule-40-with-men",
+      "name": "Premature ovarian insufficiency rule (<40 with menopause ...",
+      "description": "Premature ovarian insufficiency rule (<40 with menopause symptoms)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "returns-rationale-provenance-with-every-decision",
+      "name": "Returns rationale + provenance with every decision",
+      "description": "Returns rationale + provenance with every decision",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "care-router-claude",
+    "kind": "anthropic-claude",
+    "governanceTier": "clinical-decision",
+    "status": "prototype",
+    "policies": [
+      "policy.intake.red-flag-mandatory",
+      "policy.audit.hipaa-log-every-turn",
+      "policy.model.anthropic-claude-sonnet-allowlisted",
+      "policy.clinical.no-prescribing",
+      "policy.clinical.rationale-required",
+      "policy.fallback.deterministic-on-api-failure",
+      "policy.data360.consent-required-before-grounding"
+    ]
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "name": "Quality-Measure Attribution Agent",
+  "description": "Quality-Measure Attribution Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/quality-attribution",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "attributes-each-patient-to-a-provider-clinic-vbc",
+      "name": "Attributes each patient to a provider / clinic / VBC cont...",
+      "description": "Attributes each patient to a provider / clinic / VBC contract under a defined methodology (plurality-of-visits, PCP-of-record, prospective Medicare Advantage, contract-defined window) and rolls up per-provider counts so downstream HEDIS scoring lands on the correct denominator — a care-coordination / quality-accountability agent, distinct from the HEDIS Quality agent (which computes the rates) and the Care Team / Credentialing agents",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "attribution-is-deterministic-a-pure-function-of-",
+      "name": "Attribution is DETERMINISTIC — a pure function of the vis...",
+      "description": "Attribution is DETERMINISTIC — a pure function of the visit history + contract terms + caller-provided asOfDate (no randomness, no clock; timestamps and windows are accepted as data); the same context always yields the same attribution + rollup, and every tie is broken by the documented tie-break chain",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-attribution-must-trace-to-a-defined-method",
+      "name": "Every attribution must trace to a defined methodology (pl...",
+      "description": "Every attribution must trace to a defined methodology (plurality-of-visits / pcp-of-record / prospective-medicare-advantage / contract-defined-window) AND a defined VBC contract on the illustrative catalog — a bespoke / off-catalog methodology or contract is blocked at the Agent Fabric governance boundary (policy.attribution.methodology-catalog-sourced), so the agent cannot fabricate a 'we-just-guessed' attribution rule",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-attribution-must-honor-the-vbc-contract-s-",
+      "name": "Every attribution must honor the VBC contract's explicit ...",
+      "description": "Every attribution must honor the VBC contract's explicit exclusion terms (age band, network status, exclusion codes) — an attribution that keeps a patient the contract EXCLUDES in the numerator/denominator is blocked (policy.attribution.no-conflicting-contract-terms), so a contract's scorecard is not polluted with patients the contract never covered",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-tie-break-must-be-a-documented-determinist",
+      "name": "Every tie-break must be a documented, deterministic rule ...",
+      "description": "Every tie-break must be a documented, deterministic rule (most-recent-visit-wins, provider-ref-lexical-ascending) — an undocumented / opaque / coin-flip tie-break is blocked (policy.attribution.tie-break-documented); this turns tie-break resolution from a gameable non-determinism into a fabric-verifiable invariant",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-methodology-",
+      "name": "Runs against ILLUSTRATIVE synthetic methodology + contrac...",
+      "description": "Runs against ILLUSTRATIVE synthetic methodology + contract + tie-break catalogs — clearly labeled; NOT CMS Shared Savings Program attribution, an ACO REACH prospective assignment, an NCQA HEDIS attribution appendix, or a real payer's VBC contract terms",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "quality-attribution-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.attribution.methodology-catalog-sourced",
+      "policy.attribution.no-conflicting-contract-terms",
+      "policy.attribution.tie-break-documented"
+    ]
+  }
+}

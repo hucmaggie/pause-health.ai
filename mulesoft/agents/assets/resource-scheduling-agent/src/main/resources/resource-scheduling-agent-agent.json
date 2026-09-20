@@ -1,0 +1,107 @@
+{
+  "name": "Resource-Block Scheduling / Max-Value Non-Overlapping Selection Agent",
+  "description": "Resource-Block Scheduling / Max-Value Non-Overlapping Selection Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/resource-scheduling",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-single-shared-scarce-resource-an-infusio",
+      "name": "Takes a single shared scarce resource (an infusion chair,...",
+      "description": "Takes a single shared scarce resource (an infusion chair, an OR block, a specialist's slot ladder, an imaging machine) and a batch of competing requests for it — each a time window with a priority weight (clinical value / acuity) — and selects the maximum-total-weight set of non-overlapping requests the resource can honor, reporting the rest as contended (disposition all-scheduled / contended). A deterministic care-coordination capacity-optimization agent; it COMPLEMENTS the Scheduling Conflict agent (which maximizes the COUNT of double-booking-free appointments) and the Caseload Balancing agent (which bin-packs patients across care managers) — this picks the max-VALUE non-overlapping set for one contended resource",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-selection-is-deterministic-a-pure-function-o",
+      "name": "The selection is DETERMINISTIC — a pure function of the r...",
+      "description": "The selection is DETERMINISTIC — a pure function of the request's own requests (time is data: windows are plain numbers, no real clock; not a greedy interval selection, a bin-packing, a knapsack, a Dijkstra shortest path, a majority vote, a trie longest-prefix match, a regression, a CUSUM, a k-way merge, a stable matching, a great-circle distance, a union-find, a percentile, or a checksum but WEIGHTED INTERVAL SCHEDULING via DYNAMIC PROGRAMMING — sort by end, compute p(i) the latest non-overlapping earlier request, fill dp[i] = max(dp[i-1], weight_i + dp[p(i)]), and backtrack for the max-weight compatible subset); the same requests always yield the same schedule",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-selection-must-be-sourced-feasible-every-sel",
+      "name": "The selection must be sourced + feasible — every selected...",
+      "description": "The selection must be sourced + feasible — every selected id a submitted request (no fabricated block, none double-counted), the selected windows pairwise non-overlapping (the resource is never double-booked), the reported totalWeight equal to the sum of the selected weights, the counts adding up, and the disposition following; a fabricated block or a double-booked resource is blocked at the Agent Fabric governance boundary (policy.block-schedule.selection-sourced, the sourced + feasibility gate); and the selection must be optimal — re-running the weighted-interval DP over the requests must reproduce the reported totalWeight + disposition; a sub-optimal schedule that leaves clinical value unbooked is blocked (policy.block-schedule.schedule-optimal, the load-bearing correctness gate). Mirrors the Care Routing Agent's path-sourced + route-optimal posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-selects-and-recommends-it-never-books-",
+      "name": "The agent SELECTS and RECOMMENDS — it NEVER books, bumps,...",
+      "description": "The agent SELECTS and RECOMMENDS — it NEVER books, bumps, or confirms a block (each is a scheduling action that must be authorized) on its own; a schedule that auto-books or is not review-gated is blocked (policy.block-schedule.no-autonomous-booking), and every schedule is confirmed by a scheduler. Mirrors the Scheduling Conflict Agent's no-autonomous-booking and the Caseload Balancing Agent's no-autonomous-assignment posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-resource-req",
+      "name": "Runs against ILLUSTRATIVE synthetic resource + requests —...",
+      "description": "Runs against ILLUSTRATIVE synthetic resource + requests — clearly labeled; NOT a certified scheduling / capacity system (real resource scheduling uses provider availability calendars, appointment-type durations, buffer / turnover times, room / equipment constraints, and staffing ratios). PHI-bearing — each request references the patient being scheduled",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "resource-scheduling-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.block-schedule.selection-sourced",
+      "policy.block-schedule.schedule-optimal",
+      "policy.block-schedule.no-autonomous-booking"
+    ]
+  }
+}

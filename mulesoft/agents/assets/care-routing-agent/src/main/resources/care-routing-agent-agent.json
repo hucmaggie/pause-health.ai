@@ -1,0 +1,107 @@
+{
+  "name": "Agentforce Care-Transition Routing (Least-Burden Path)",
+  "description": "Agentforce Care-Transition Routing (Least-Burden Path) — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/care-routing",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "given-a-patient-s-current-care-setting-a-goal-se",
+      "name": "Given a patient's current care setting, a goal setting, a...",
+      "description": "Given a patient's current care setting, a goal setting, and a directed graph of permitted transitions each carrying a non-negative burden weight (wait days + travel + cost proxy + risk), finds the minimum-total-burden path from start to goal (route-found) or reports the goal unreachable (no-route) — reporting the path, the total burden, the hop count, and the disposition. A deterministic care-transition-planning agent; it COMPLEMENTS the Care Pathway agent (which topologically orders one protocol's steps), the Transitions of Care agent (medication reconciliation), and the Schedule Conflict agent (double-booking guard) — this finds the least-burden path through a weighted graph of care settings",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-route-is-deterministic-a-pure-function-of-th",
+      "name": "The route is DETERMINISTIC — a pure function of the graph...",
+      "description": "The route is DETERMINISTIC — a pure function of the graph's own edges + weights (no randomness, no clock; not a regression, a knapsack, a CUSUM, a k-way merge, a recursive boolean tree, a stable matching, a geospatial distance, a checksum, a union-find, a percentile, a largest-remainder apportionment, an edit distance, an interval selection, a set-difference, a hash chain, a topological sort, or a BFS hop-count but DIJKSTRA'S WEIGHTED SHORTEST PATH — the minimum-total-weight path over non-negative edge weights); the same graph always yields the same route",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-reported-path-must-be-sourced-it-must-start-",
+      "name": "The reported path must be sourced — it must start at the ...",
+      "description": "The reported path must be sourced — it must start at the start, end at the goal, every consecutive pair must be a submitted edge (no fabricated transition), and the totalCost must equal the sum of those edges' weights; a fabricated edge or malformed path is blocked at the Agent Fabric governance boundary (policy.route.path-sourced, the sourced + well-formedness gate); and the route must be optimal — recomputing Dijkstra over the edges must reproduce the reported minimum total burden, the reachable flag, and the disposition; a sub-optimal route or a false 'unreachable' is blocked (policy.route.route-optimal, the load-bearing correctness gate). Mirrors the Claim Lifecycle Agent's states-sourced + transition-consistent posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-routes-on-paper-it-never-initiates-the",
+      "name": "The agent ROUTES on paper — it NEVER initiates the transi...",
+      "description": "The agent ROUTES on paper — it NEVER initiates the transition, books the setting, or moves the patient (each is a care-delivery action that must be authorized) on its own; a route that auto-routes or is not review-gated is blocked (policy.route.no-autonomous-routing), and every route is confirmed by a care lead. Mirrors the Care Gap Agent's human-review posture and the Outreach Agent's no-autonomous-schedule",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-settings-tra",
+      "name": "Runs against ILLUSTRATIVE synthetic settings + transition...",
+      "description": "Runs against ILLUSTRATIVE synthetic settings + transitions — clearly labeled; NOT a certified care-transition / discharge-planning system (real transition planning weighs clinical appropriateness, bed availability, payer authorization, patient preference, and caregiver capacity — not a single scalar burden per edge). PHI-bearing — the route is a patient's care plan",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "care-routing-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.route.path-sourced",
+      "policy.route.route-optimal",
+      "policy.route.no-autonomous-routing"
+    ]
+  }
+}

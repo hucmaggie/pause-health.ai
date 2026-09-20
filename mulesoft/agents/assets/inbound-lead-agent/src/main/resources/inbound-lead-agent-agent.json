@@ -1,0 +1,92 @@
+{
+  "name": "Agentforce Inbound Lead Generation · Site & Chat",
+  "description": "Agentforce Inbound Lead Generation · Site & Chat — a governed Pause fabric agent (agentforce, A2A). Governance tier: patient-acquisition. Enforces 3 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/inbound-lead",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "captures-inbound-interest-from-the-marketing-sit",
+      "name": "Captures inbound interest from the marketing site, Agentf...",
+      "description": "Captures inbound interest from the marketing site, Agentforce web chat, and content/symptom-check forms",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-acquisition"
+      ]
+    },
+    {
+      "id": "runs-a-first-pass-icp-screen-age-band-symptom-si",
+      "name": "Runs a first-pass ICP screen (age band, symptom signals, ...",
+      "description": "Runs a first-pass ICP screen (age band, symptom signals, geography / insurance fit) and scores initial readiness",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-acquisition"
+      ]
+    },
+    {
+      "id": "creates-an-opt-in-consented-lead-in-data-360-wit",
+      "name": "Creates an opt-in-consented lead in Data 360 with acquisi...",
+      "description": "Creates an opt-in-consented lead in Data 360 with acquisition-source attribution, resolved against existing patients/prospects to avoid duplicates",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-acquisition"
+      ]
+    },
+    {
+      "id": "hands-the-captured-lead-to-the-qualification-age",
+      "name": "Hands the captured lead to the Qualification agent for th...",
+      "description": "Hands the captured lead to the Qualification agent for the authoritative qualified/disqualified call — over Google A2A",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-acquisition"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "inbound-lead-agent",
+    "kind": "agentforce",
+    "governanceTier": "patient-acquisition",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.lead.explicit-optin-and-source-required",
+      "policy.lead.identity-resolution-before-create"
+    ]
+  }
+}

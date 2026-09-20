@@ -1,0 +1,120 @@
+{
+  "name": "Agentforce Referral Management · Specialist Referrals (Health Cloud)",
+  "description": "Agentforce Referral Management · Specialist Referrals (Health Cloud) — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 3 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/referral-management",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "triages-and-routes-referrals-to-the-adjacent-spe",
+      "name": "Triages and routes referrals to the adjacent specialists ...",
+      "description": "Triages and routes referrals to the adjacent specialists menopause commonly touches — cardiology / CVD risk, endocrinology, bone health, pelvic-floor PT, and behavioral health — from intake + Care Router routing signals — the Salesforce 'Agentforce for Health' Referrals ('Create Referral') analog",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "generalizes-the-care-router-s-behavioral-health-",
+      "name": "GENERALIZES the Care Router's behavioral-health-handoff i...",
+      "description": "GENERALIZES the Care Router's behavioral-health-handoff into a full outbound-referral node: what the router expresses as one handoff pathway, this agent expresses as a catalog of cosign-gated referral drafts across the menopause care neighborhood",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "triage-is-deterministic-a-pure-function-of-the-a",
+      "name": "Triage is DETERMINISTIC (a pure function of the age/cycle...",
+      "description": "Triage is DETERMINISTIC (a pure function of the age/cycle/symptom/severity/red-flag context + risk flags; no randomness, no clock) — the same context always yields the same recommended referral(s)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-recommended-referral-references-a-defined-",
+      "name": "Every recommended referral references a defined specialty...",
+      "description": "Every recommended referral references a defined specialty-catalog id AND carries a documented reason — never a fabricated or reasonless referral; enforced at the Agent Fabric governance boundary",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "can-only-draft-it-may-draft-and-triage-an-outbou",
+      "name": "CAN ONLY DRAFT: it may draft and triage an outbound refer...",
+      "description": "CAN ONLY DRAFT: it may draft and triage an outbound referral but must NEVER send it without a clinician's sign-off — a referral asserted as sent without a clinician cosign is blocked at the Agent Fabric governance boundary (policy.referral.clinician-cosign)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-specialties-",
+      "name": "Runs against ILLUSTRATIVE synthetic specialties + triage ...",
+      "description": "Runs against ILLUSTRATIVE synthetic specialties + triage rules — clearly labeled; NOT a certified clinical referral engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "referral-management-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.clinical.rationale-required",
+      "policy.referral.clinician-cosign"
+    ]
+  }
+}

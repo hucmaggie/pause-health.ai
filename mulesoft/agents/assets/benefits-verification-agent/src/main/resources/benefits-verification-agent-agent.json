@@ -1,0 +1,106 @@
+{
+  "name": "Agentforce Benefits & Coverage Verification · Eligibility (EBV)",
+  "description": "Agentforce Benefits & Coverage Verification · Eligibility (EBV) — a governed Pause fabric agent (agentforce, A2A). Governance tier: benefits-verification. Enforces 3 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/benefits-verification",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "verifies-a-patient-s-insurance-eligibility-benef",
+      "name": "Verifies a patient's insurance eligibility & benefits for...",
+      "description": "Verifies a patient's insurance eligibility & benefits for a menopause specialist (MSCP) visit — the Salesforce 'Agentforce for Health — Eligibility & Benefit Verification' analog",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    },
+    {
+      "id": "returns-a-structured-coverage-result-plan-status",
+      "name": "Returns a structured coverage result: plan status (active...",
+      "description": "Returns a structured coverage result: plan status (active/inactive), in/out-of-network, deductible + amount met, coinsurance/copay, and an estimated visit cost + patient out-of-pocket",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    },
+    {
+      "id": "runs-a-deterministic-synthetic-ebv-round-trip-mo",
+      "name": "Runs a DETERMINISTIC synthetic EBV round-trip (mock payer...",
+      "description": "Runs a DETERMINISTIC synthetic EBV round-trip (mock payer/clearinghouse 270/271) — clearly labeled synthetic; not a real EDI transaction or FHIR eligibility call",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    },
+    {
+      "id": "every-returned-coverage-result-must-trace-to-a-m",
+      "name": "Every returned coverage result must trace to a (mock) pay...",
+      "description": "Every returned coverage result must trace to a (mock) payer/clearinghouse EBV response — the agent may not fabricate coverage without a source",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    },
+    {
+      "id": "feeds-the-eligibility-summary-into-the-intake-ca",
+      "name": "Feeds the eligibility summary into the intake → Care Rout...",
+      "description": "Feeds the eligibility summary into the intake → Care Router spine so a real coverage check can precede routing",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "benefits-verification-agent",
+    "kind": "agentforce",
+    "governanceTier": "benefits-verification",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.benefits.eligibility-source-integrity",
+      "policy.data360.consent-required-before-grounding"
+    ]
+  }
+}

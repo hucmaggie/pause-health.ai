@@ -1,0 +1,121 @@
+{
+  "name": "Discharge & Transitions of Care Agent",
+  "description": "Discharge & Transitions of Care Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/transitions-of-care",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "assembles-the-post-encounter-transitions-of-care",
+      "name": "Assembles the post-encounter transitions-of-care package ...",
+      "description": "Assembles the post-encounter transitions-of-care package for a menopause/midlife patient after a hospitalization / ED visit — medication reconciliation, scheduled follow-up (or awaiting-schedule handoff), encounter-reason red-flag warning signs, teach-back checklist, and PCP handoff summary — a care-coordination agent, distinct from the Care Plan, Medication Adherence, and Referral Management agents",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-package-is-deterministic-a-pure-function-of-",
+      "name": "The package is DETERMINISTIC — a pure function of the pat...",
+      "description": "The package is DETERMINISTIC — a pure function of the patient context + discharge date + provided medication lists (no randomness, no clock; timestamps are accepted as data); the same context always yields the same reconciliation + red-flag list + teach-back checklist + PCP summary, with a stable, documented reconciliation ordering (sorted by medication id)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-medication-on-the-reconciliation-pre-admit",
+      "name": "Every medication on the reconciliation (pre-admit or disc...",
+      "description": "Every medication on the reconciliation (pre-admit or discharge) must cite an approved medication source (pre-admit-verified, discharge-order, patient-verified, ehr-scanned-with-provenance) — a verbal / ad-hoc / undocumented source is blocked at the Agent Fabric governance boundary (policy.toc.reconciliation-source-integrity), so the agent cannot let a fabricated medication slip into the reconciliation",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-never-autonomously-commits-a-medicatio",
+      "name": "The agent NEVER autonomously commits a medication change ...",
+      "description": "The agent NEVER autonomously commits a medication change — every add / remove / dose-change is a clinician sign-off gated proposal, and an autonomous change is blocked (policy.toc.no-autonomous-medication-change); mirrors the Medication Adherence Agent's no-autonomous-refill, the ACP Agent's no-autonomous-directive-change, and the Prior Authorization Agent's no-autonomous-submission posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "a-follow-up-must-be-a-scheduled-slot-slotstart-p",
+      "name": "A follow-up must be a SCHEDULED slot (slotStart + provide...",
+      "description": "A follow-up must be a SCHEDULED slot (slotStart + providerRef + modality), not a text recommendation — 'recommended' follow-ups that never get booked are the classic 30-day-readmission failure mode this guard closes (policy.toc.follow-up-scheduled-not-recommended); the safe interim answer when no slot is available is state:'awaiting-schedule' with a handoff to the Appointment Scheduling agent",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-encounter-ca",
+      "name": "Runs against ILLUSTRATIVE synthetic encounter categories,...",
+      "description": "Runs against ILLUSTRATIVE synthetic encounter categories, red-flag catalog, follow-up window, approved-source labels, and teach-back items — clearly labeled; NOT a certified TOC schema, a real ADT / discharge system, or a clinical guideline registry",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "transitions-of-care-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.toc.reconciliation-source-integrity",
+      "policy.toc.no-autonomous-medication-change",
+      "policy.toc.follow-up-scheduled-not-recommended"
+    ]
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "name": "Pause Patient Education & Health Coaching · Claude Sonnet 4.5",
+  "description": "Pause Patient Education & Health Coaching · Claude Sonnet 4.5 — a governed Pause fabric agent (anthropic-claude, A2A). Governance tier: patient-engagement. Enforces 5 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/patient-education",
+  "provider": {
+    "organization": "Anthropic + Pause-Health.ai",
+    "url": "https://pause-health.ai"
+  },
+  "version": "0.1.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "delivers-personalized-evidence-sourced-menopause",
+      "name": "Delivers personalized, evidence-sourced menopause/midlife...",
+      "description": "Delivers personalized, evidence-sourced menopause/midlife health education + lifestyle coaching (bone health, cardiovascular risk, sleep hygiene, vasomotor self-management, mood/stress, nutrition, physical activity) — a patient-engagement agent distinct from the clinician-authored Care Plan and the refill-focused Medication Adherence agents",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    },
+    {
+      "id": "module-selection-is-deterministic-a-pure-functio",
+      "name": "Module SELECTION is DETERMINISTIC (a pure function of the...",
+      "description": "Module SELECTION is DETERMINISTIC (a pure function of the intake symptoms/severity + upstream care-plan focus areas + detected care gaps; no randomness, no clock) — the same context always yields the same curriculum",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    },
+    {
+      "id": "every-education-module-references-a-defined-evid",
+      "name": "Every education module references a defined evidence-sour...",
+      "description": "Every education module references a defined evidence-sourced catalog id AND carries a (synthetic) source label — never a fabricated topic; enforced at the Agent Fabric governance boundary (policy.education.evidence-sourced)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    },
+    {
+      "id": "writes-a-warm-motivational-coaching-message-with",
+      "name": "Writes a warm, motivational coaching message with live An...",
+      "description": "Writes a warm, motivational coaching message with live Anthropic Claude — the FOURTH live-Claude agent — falling back to a DETERMINISTIC scripted message (with a recorded fallbackReason) when ANTHROPIC_API_KEY is unset or the API call fails",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    },
+    {
+      "id": "stays-strictly-within-general-education-scope-ne",
+      "name": "Stays strictly within general education scope — never a d...",
+      "description": "Stays strictly within general education scope — never a diagnosis, medication dose, or individualized medical advice (policy.education.no-medical-advice) — and any coaching push is consent-gated + human-approval-gated (policy.education.consent-before-outreach). Runs against ILLUSTRATIVE synthetic education modules + source labels — clearly labeled; NOT a certified patient-education engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "patient-education-agent",
+    "kind": "anthropic-claude",
+    "governanceTier": "patient-engagement",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.education.evidence-sourced",
+      "policy.education.no-medical-advice",
+      "policy.education.consent-before-outreach",
+      "policy.model.anthropic-claude-sonnet-allowlisted"
+    ]
+  }
+}

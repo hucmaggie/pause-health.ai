@@ -1,0 +1,107 @@
+{
+  "name": "Immunization Forecasting (ACIP) Agent",
+  "description": "Immunization Forecasting (ACIP) Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: clinical-decision. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/immunization",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "forecasts-a-patient-s-vaccines-against-an-acip-s",
+      "name": "Forecasts a patient's vaccines against an ACIP-style sche...",
+      "description": "Forecasts a patient's vaccines against an ACIP-style schedule (up-to-date / due / overdue / contraindicated / not-indicated) — computes age from the birth date + asOfDate, then per schedule rule (influenza, Tdap booster, zoster/RZV at 50+, pneumococcal at 65+, COVID-19) applies age-eligibility, dose-series / booster-interval logic, and recorded contraindications, citing the governing schedule rule + the next-due date. A deterministic clinical-decision agent; distinct from the Care Gap Closure, Lab Result, Care Plan, and Care Router agents",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "the-forecast-is-deterministic-a-pure-function-of",
+      "name": "The forecast is DETERMINISTIC — a pure function of the re...",
+      "description": "The forecast is DETERMINISTIC — a pure function of the request + its own asOfDate + the schedule catalog (no randomness, no clock); the same patient always yields the same forecast + cited rules + next-due dates",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "every-forecast-entry-must-cite-a-recorded-acip-s",
+      "name": "Every forecast entry must cite a recorded ACIP schedule r...",
+      "description": "Every forecast entry must cite a recorded ACIP schedule rule — an ad-hoc / un-sourced recommendation is blocked at the Agent Fabric governance boundary (policy.immunization.schedule-sourced); and a vaccine the patient is contraindicated for is NEVER recommended — it is withheld and flagged, and a recommended contraindicated vaccine is blocked (policy.immunization.contraindication-honored, the load-bearing safety gate). Mirrors the Lab Result Agent's reference-range-sourced + critical-value-notified posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "a-due-overdue-vaccine-is-a-recommendation-requir",
+      "name": "A due / overdue vaccine is a RECOMMENDATION requiring a c...",
+      "description": "A due / overdue vaccine is a RECOMMENDATION requiring a clinician order — the agent never administers, orders, or records a vaccine autonomously; a determination with due / overdue vaccines that does not require a clinician order is blocked (policy.immunization.no-autonomous-administration). Mirrors the Lab Result Agent's no-autonomous-clinical-action and the Balance Billing Agent's no-autonomous-balance-bill posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-acip-styl",
+      "name": "Runs against an ILLUSTRATIVE synthetic ACIP-style schedul...",
+      "description": "Runs against an ILLUSTRATIVE synthetic ACIP-style schedule + age-eligibility + dose intervals — clearly labeled; NOT a certified immunization forecaster (a real forecast uses the current ACIP recommendations, the CDC immunization schedules, and the patient's full clinical context)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "immunization-agent",
+    "kind": "agentforce",
+    "governanceTier": "clinical-decision",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.immunization.schedule-sourced",
+      "policy.immunization.contraindication-honored",
+      "policy.immunization.no-autonomous-administration"
+    ]
+  }
+}

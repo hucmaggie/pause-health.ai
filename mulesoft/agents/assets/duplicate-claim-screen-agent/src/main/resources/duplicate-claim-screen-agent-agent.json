@@ -1,0 +1,107 @@
+{
+  "name": "Duplicate-Claim Pre-Screen / Bloom-Filter Membership Test Agent",
+  "description": "Duplicate-Claim Pre-Screen / Bloom-Filter Membership Test Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/duplicate-claim-screen",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "given-a-set-of-already-processed-claim-ids-and-a",
+      "name": "Given a set of already-processed claim ids and a batch of...",
+      "description": "Given a set of already-processed claim ids and a batch of incoming claim ids plus a Bloom config (bit size m + hash count k), builds a Bloom filter over the processed ids and screens each incoming id as definitely-new (provably never processed) or possibly-duplicate (route to the authoritative exact check), reporting the per-id verdicts, the tallies, the set-bit count, and the estimated false-positive rate (disposition all-clear / possible-duplicates). A deterministic payer-operations claims pre-screen; it COMPLEMENTS the Enrollment Reconciliation agent (an exact set-difference) — this is a fast probabilistic pre-filter before the exact check",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-screen-is-deterministic-a-pure-function-of-t",
+      "name": "The screen is DETERMINISTIC — a pure function of the requ...",
+      "description": "The screen is DETERMINISTIC — a pure function of the request's own ids + config with a fixed seeded hash (time is data: the ids are plain data, no real clock; not a keyed set-difference, a majority vote, a k-way merge, a hash chain, a checksum, or a trie but BLOOM-FILTER MEMBERSHIP — a probabilistic set-membership structure with a one-sided no-false-negative guarantee); the same request always yields the same screen",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-filter-must-be-sourced-self-consistent-the-r",
+      "name": "The filter must be sourced + self-consistent — the report...",
+      "description": "The filter must be sourced + self-consistent — the reported bit array the exact insert of the processed ids, the set-bit count honest, each verdict consistent with the array; a fabricated bit, a mis-tallied count, or a contradicting verdict is blocked at the Agent Fabric governance boundary (policy.dupscreen.filter-sourced, the sourced + self-consistency gate); and membership must be exact with NO FALSE NEGATIVE — re-building the filter must reproduce every verdict and never report a known duplicate as definitely-new, and the false-positive-rate estimate must match (1 - e^(-k*n/m))^k; a mislabeled verdict is blocked (policy.dupscreen.membership-exact, the load-bearing correctness gate). Mirrors the Contact Rate Limit Agent's replay-sourced + throttle-exact posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-agent-pre-screens-and-recommends-a-possibly-",
+      "name": "The agent PRE-SCREENS and RECOMMENDS — a possibly-duplica...",
+      "description": "The agent PRE-SCREENS and RECOMMENDS — a possibly-duplicate is a ROUTING SIGNAL to the exact check, NEVER a denial; it never rejects, denies, or pays a claim on its own; a screen that auto-rejects or is not review-gated is blocked (policy.dupscreen.no-autonomous-reject), and every screen is confirmed by a claims adjudicator. Mirrors the Contact Rate Limit Agent's no-autonomous-send and the Referral Throughput Agent's no-autonomous-route posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-ids-clearly-",
+      "name": "Runs against ILLUSTRATIVE synthetic ids — clearly labeled...",
+      "description": "Runs against ILLUSTRATIVE synthetic ids — clearly labeled; NOT a certified claims-dedup / payment-integrity system (real duplicate-claim detection weighs the full claim key — member, provider, DOS, procedure, units — adjustment / void logic, and an authoritative claims store — not a bare Bloom pre-screen over illustrative ids). PHI-adjacent — claim ids, so a screen is on the HIPAA audit path",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "duplicate-claim-screen-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.dupscreen.filter-sourced",
+      "policy.dupscreen.membership-exact",
+      "policy.dupscreen.no-autonomous-reject"
+    ]
+  }
+}

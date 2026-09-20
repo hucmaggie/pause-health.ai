@@ -1,0 +1,93 @@
+{
+  "name": "Agentforce Qualification · Lead Scoring & Routing",
+  "description": "Agentforce Qualification · Lead Scoring & Routing — a governed Pause fabric agent (agentforce, A2A). Governance tier: lead-qualification. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/qualification",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "applies-a-consistent-qualification-rubric-menopa",
+      "name": "Applies a consistent qualification rubric (menopause-care...",
+      "description": "Applies a consistent qualification rubric (menopause-care fit + eligibility + expressed intent/readiness) to inbound and outbound leads alike",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "lead-qualification"
+      ]
+    },
+    {
+      "id": "produces-a-qualified-disqualified-decision-with-",
+      "name": "Produces a qualified / disqualified decision with human-r...",
+      "description": "Produces a qualified / disqualified decision with human-readable rationale on every lead",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "lead-qualification"
+      ]
+    },
+    {
+      "id": "routes-qualified-and-ready-leads-to-patient-inta",
+      "name": "Routes qualified-and-ready leads to Patient Intake and qu...",
+      "description": "Routes qualified-and-ready leads to Patient Intake and qualified-but-warming leads into the Prospecting & Nurture cadence, over Google A2A",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "lead-qualification"
+      ]
+    },
+    {
+      "id": "excludes-protected-class-attributes-from-qualifi",
+      "name": "Excludes protected-class attributes from qualification cr...",
+      "description": "Excludes protected-class attributes from qualification criteria; disqualifications are logged for human review",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "lead-qualification"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "qualification-agent",
+    "kind": "agentforce",
+    "governanceTier": "lead-qualification",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.qualification.rationale-required",
+      "policy.qualification.no-protected-class-criteria",
+      "policy.qualification.human-review-on-disqualify"
+    ]
+  }
+}

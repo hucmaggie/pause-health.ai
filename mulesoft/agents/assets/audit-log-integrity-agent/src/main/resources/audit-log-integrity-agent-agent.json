@@ -1,0 +1,107 @@
+{
+  "name": "Audit Log Integrity (Tamper-Evidence) Agent",
+  "description": "Audit Log Integrity (Tamper-Evidence) Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/audit-log-integrity",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "the-tamper-evidence-layer-of-the-data-substrate-",
+      "name": "The tamper-evidence layer of the data substrate — verifie...",
+      "description": "The tamper-evidence layer of the data substrate — verifies that an audit trail is intact by recomputing its hash chain and checking its sequence numbers for gaps, deciding whether the log is verified (hash chain intact AND sequence complete), complementing (not duplicating) the Consent agent (whether a patient may be contacted / data used), the De-Identification agent (whether a dataset is no longer PHI), the Minimum Necessary agent (how much PHI a purpose may see), the Master Patient Index (identity/dedup), the Break-the-Glass agent (emergency PHI access), and the Data Retention agent (records disposition)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "verification-is-deterministic-a-pure-function-of",
+      "name": "Verification is DETERMINISTIC — a pure function of the lo...",
+      "description": "Verification is DETERMINISTIC — a pure function of the log's entries (no randomness, no clock); the same log always yields the same verified / hash-chain / sequence result",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "a-log-may-be-marked-verified-only-if-its-hash-ch",
+      "name": "A log may be marked verified only if its hash chain is in...",
+      "description": "A log may be marked verified only if its hash chain is intact — asserting a verified log over a broken chain hides tampering and is blocked at the Agent Fabric governance boundary (policy.auditlog.hash-chain-verified); and only if its sequence is complete — asserting a verified log with a sequence gap hides a deleted entry and is blocked (policy.auditlog.sequence-complete, the load-bearing completeness gate). Mirrors the Minimum Necessary Agent's minimum-necessary-scoped posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-agent-verifies-and-flags-it-never-deletes-re",
+      "name": "The agent VERIFIES and FLAGS — it NEVER deletes, rewrites...",
+      "description": "The agent VERIFIES and FLAGS — it NEVER deletes, rewrites, or repairs an audit entry (that would destroy evidence); a determination that claims it repaired / mutated the log is blocked (policy.auditlog.no-autonomous-redaction), and a broken log is flagged for human forensic review. Mirrors the Data Retention Agent's no-autonomous-purge and the Minimum Necessary Agent's no-autonomous-over-disclosure posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-non-crypt",
+      "name": "Runs against an ILLUSTRATIVE synthetic NON-cryptographic ...",
+      "description": "Runs against an ILLUSTRATIVE synthetic NON-cryptographic FNV-1a hash chain — clearly labeled; NOT a certified tamper-evidence system (a real control uses a cryptographic hash such as SHA-256, append-only / WORM storage, and signed checkpoints)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "audit-log-integrity-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.auditlog.hash-chain-verified",
+      "policy.auditlog.sequence-complete",
+      "policy.auditlog.no-autonomous-redaction"
+    ]
+  }
+}

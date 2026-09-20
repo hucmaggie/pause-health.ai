@@ -1,0 +1,109 @@
+{
+  "name": "Agentforce Medication Adherence · HRT/SSRI Refill & Adherence (Health Cloud)",
+  "description": "Agentforce Medication Adherence · HRT/SSRI Refill & Adherence (Health Cloud) — a governed Pause fabric agent (agentforce, A2A). Governance tier: patient-engagement. Enforces 6 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/medication-adherence",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "tracks-menopause-medication-adherence-refill-tim",
+      "name": "Tracks menopause-medication adherence + refill timing — t...",
+      "description": "Tracks menopause-medication adherence + refill timing — transdermal/oral HRT (estradiol, oral progesterone) and an SSRI/SNRI for vasomotor symptoms / mood (paroxetine, venlafaxine) — the Salesforce 'Agentforce for Health' / Health Cloud MedicationRequest + MedicationTherapyReview analog",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    },
+    {
+      "id": "detection-is-deterministic-a-pure-function-of-an",
+      "name": "Detection is DETERMINISTIC (a pure function of an explici...",
+      "description": "Detection is DETERMINISTIC (a pure function of an explicit as-of date + per-medication days-supply and last-fill; no randomness, no clock) — the same inputs always yield the same good / at-risk / lapsed adherence status and refill-due call",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    },
+    {
+      "id": "drafts-consent-and-quiet-hours-aware-refill-adhe",
+      "name": "Drafts consent- and quiet-hours-aware refill/adherence nu...",
+      "description": "Drafts consent- and quiet-hours-aware refill/adherence nudges for each medication due or off-track (human-approval-gated, never auto-sent) and hands them to the Engagement Agent for delivery",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    },
+    {
+      "id": "can-only-nudge-it-may-draft-a-refill-adherence-r",
+      "name": "CAN ONLY NUDGE: it may draft a refill/adherence reminder ...",
+      "description": "CAN ONLY NUDGE: it may draft a refill/adherence reminder but must NEVER autonomously submit or order a refill — a refill without human approval is blocked at the Agent Fabric governance boundary",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    },
+    {
+      "id": "flags-adherence-drop-off-a-lapsed-medication-to-",
+      "name": "Flags adherence drop-off (a lapsed medication) to the car...",
+      "description": "Flags adherence drop-off (a lapsed medication) to the care team, and runs against ILLUSTRATIVE synthetic medications + refill intervals — clearly labeled; NOT a certified pharmacy / e-prescribing system",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-engagement"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "medication-adherence-agent",
+    "kind": "agentforce",
+    "governanceTier": "patient-engagement",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.medication.no-autonomous-refill",
+      "policy.clinical.no-prescribing",
+      "policy.marketing.consent-to-contact-required",
+      "policy.marketing.human-approval-before-send",
+      "policy.engagement.quiet-hours-and-channel-preference"
+    ]
+  }
+}

@@ -1,0 +1,121 @@
+{
+  "name": "Provider Contracting & VBC Terms Agent",
+  "description": "Provider Contracting & VBC Terms Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: commercial-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/provider-contracting",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "classifies-a-provider-network-contract-fee-for-s",
+      "name": "Classifies a provider-network contract (fee-for-service, ...",
+      "description": "Classifies a provider-network contract (fee-for-service, capitation, shared-savings, bundled-payment, MA-value-based, commercial-VBC), computes the VBC quality-gate + spend-benchmark drift for a caller-provided reporting period against a catalog methodology, and classifies as in-good-standing / benchmark-drift-review / draft-term-change / blocked-non-catalog-contract with a specific reason code",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "contracting-is-deterministic-a-pure-function-of-",
+      "name": "Contracting is DETERMINISTIC — a pure function of the req...",
+      "description": "Contracting is DETERMINISTIC — a pure function of the request + catalog + caller-provided reporting-period (no randomness, no clock); the same context always yields the same decision + benchmark drift + quality-gate outcome + reason code, with a documented decision precedence (blocked-non-catalog-contract > draft-term-change > benchmark-drift-review > in-good-standing) and stable rule-id ordering",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "every-classified-contract-must-trace-to-the-cont",
+      "name": "Every classified contract must trace to the CONTRACT_TYPE...",
+      "description": "Every classified contract must trace to the CONTRACT_TYPES + BENCHMARK_METHODOLOGIES catalog with applied rules from CONTRACTING_RULES — an off-catalog / bespoke payment model is blocked at the Agent Fabric governance boundary (policy.contracting.contract-type-catalog-sourced), so the agent cannot invent a 'we-made-up-a-payment-model' contract",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "the-agent-never-autonomously-commits-a-contract-",
+      "name": "The agent NEVER autonomously commits a contract-term chan...",
+      "description": "The agent NEVER autonomously commits a contract-term change (rate, quality-gate threshold, benchmark formula, network status) — every draft-term-change decision is DRAFTED for account-owner cosign, and any autonomous commit is blocked (policy.contracting.no-autonomous-term-change); a contract-term change is legally consequential under state insurance code, provider-contract law, and CMS Medicare Advantage. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the UR Agent's no-autonomous-denial, the Formulary Agent's no-autonomous-override, and the Account Management Agent's human-owner-before-contract-change posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "every-vbc-contract-s-quality-gate-threshold-spen",
+      "name": "Every VBC contract's quality-gate threshold + spend-drift...",
+      "description": "Every VBC contract's quality-gate threshold + spend-drift tolerance must trace to a defined BENCHMARK_METHODOLOGIES entry — a bespoke / opaque / 'we-picked-a-number' benchmark is blocked (policy.contracting.benchmark-methodology-catalog-sourced), because an opaque benchmark polluts every downstream shared-savings / bonus / clawback calculation",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-contract-typ",
+      "name": "Runs against ILLUSTRATIVE synthetic contract-type catalog...",
+      "description": "Runs against ILLUSTRATIVE synthetic contract-type catalog + methodology catalog + rules + reason codes — clearly labeled; NOT Salesforce Health Cloud Provider Network Management, Optum Contract Manager, an actual payer's contract-lifecycle system, or a certified VBC benchmarking engine. Because it operates on business-side contract terms rather than patient PHI, this agent lives on the commercial-operations plane (NOT patient-care)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "provider-contracting-agent",
+    "kind": "agentforce",
+    "governanceTier": "commercial-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.commercial.no-phi-in-commercial-plane",
+      "policy.contracting.contract-type-catalog-sourced",
+      "policy.contracting.no-autonomous-term-change",
+      "policy.contracting.benchmark-methodology-catalog-sourced"
+    ]
+  }
+}

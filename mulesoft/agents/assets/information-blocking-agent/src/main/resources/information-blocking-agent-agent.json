@@ -1,0 +1,107 @@
+{
+  "name": "Information Blocking (Cures Act / 45 CFR Part 171) Agent",
+  "description": "Information Blocking (Cures Act / 45 CFR Part 171) Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/information-blocking",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "the-information-blocking-layer-of-the-data-subst",
+      "name": "The information-blocking layer of the data substrate — gi...",
+      "description": "The information-blocking layer of the data substrate — given a practice review, checks the claimed 45 CFR Part 171 exception against the recorded catalog and verifies every required condition is satisfied, then decides the disposition (not-information-blocking-no-interference / not-information-blocking-exception-met / potential-information-blocking-needs-review). It is the ENFORCEMENT FLIP-SIDE of the HIPAA patient-rights trilogy (Right of Access §164.524, Amendment §164.526, Accounting of Disclosures §164.528 — the RIGHT to get / fix / audit your record): the Cures Act rule prohibits a provider, health-IT developer, or HIE/HIN from INTERFERING with EHI access, exchange, or use unless a recorded exception fully applies",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-determination-is-deterministic-a-pure-functi",
+      "name": "The determination is DETERMINISTIC — a pure function of t...",
+      "description": "The determination is DETERMINISTIC — a pure function of the request's own fields (no randomness, no clock, and — unlike the recent agents — no date math and no dollar waterfall; it is a conditions-satisfaction classifier); the same practice review always yields the same exception analysis + disposition",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "every-claimed-exception-must-trace-to-the-record",
+      "name": "Every claimed exception must trace to the recorded 45 CFR...",
+      "description": "Every claimed exception must trace to the recorded 45 CFR Part 171 catalog — an off-catalog exception is not a lawful basis to interfere with EHI and is blocked at the Agent Fabric governance boundary (policy.information-blocking.exception-sourced); and an exception may be reported as MET only when EVERY required condition is satisfied — an overstated exception that skipped a condition is blocked (policy.information-blocking.determination-not-overstated, the load-bearing correctness gate). Mirrors the Right of Access Agent's ground-sourced and the OIG Exclusion Agent's match-not-overstated posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-agent-adjudicates-it-never-withholds-ehi-whi",
+      "name": "The agent ADJUDICATES — it NEVER withholds EHI (which cou...",
+      "description": "The agent ADJUDICATES — it NEVER withholds EHI (which could itself be information blocking, or delay urgent care) or force-releases EHI (which could breach privacy) on its own; a determination that auto-blocks / auto-releases EHI or is not review-gated is blocked (policy.information-blocking.no-autonomous-block-or-release), and every determination is a recommendation requiring a compliance officer to confirm and act. Mirrors the OIG Exclusion Agent's no-autonomous-block-or-clear and the Right of Access Agent's no-autonomous-denial-or-release posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-exception",
+      "name": "Runs against an ILLUSTRATIVE synthetic exception catalog ...",
+      "description": "Runs against an ILLUSTRATIVE synthetic exception catalog + condition sets — clearly labeled; NOT certified information-blocking compliance counsel (real analysis is governed by the 21st Century Cures Act and 45 CFR Part 171 — the full text of the eight exceptions and every sub-condition — the ONC / ASTP rules, and OIG enforcement / disincentives)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "information-blocking-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.information-blocking.exception-sourced",
+      "policy.information-blocking.determination-not-overstated",
+      "policy.information-blocking.no-autonomous-block-or-release"
+    ]
+  }
+}

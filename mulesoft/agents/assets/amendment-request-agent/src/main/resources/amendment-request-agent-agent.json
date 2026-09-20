@@ -1,0 +1,107 @@
+{
+  "name": "Amendment / Correction (HIPAA §164.526) Agent",
+  "description": "Amendment / Correction (HIPAA §164.526) Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/amendment-request",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "the-amendment-correction-layer-of-the-data-subst",
+      "name": "The amendment / correction layer of the data substrate — ...",
+      "description": "The amendment / correction layer of the data substrate — given a patient's §164.526 amendment request, computes the response deadline (60 days, + 30 with the single extension), derives which statutory denial ground (if any) applies against the recorded catalog (not-originator / not-in-designated-record-set / not-available-for-access / accurate-and-complete), and decides the disposition (recommend-accept / recommend-deny with statement-of-disagreement rights). CAPSTONES the HIPAA patient-rights trilogy alongside the Right of Access agent (§164.524 — GET a copy) and the Accounting of Disclosures agent (§164.528 — WHO it was disclosed to) — this answers the §164.526 right to FIX the record, and BY WHEN",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-determination-is-deterministic-a-pure-functi",
+      "name": "The determination is DETERMINISTIC — a pure function of t...",
+      "description": "The determination is DETERMINISTIC — a pure function of the request's own fields (no randomness, no clock — dates taken as data); the deadline is the request date + 60 (or + 90 with the extension), and the same request always yields the same deadline + ground + disposition",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "every-denial-must-trace-to-the-recorded-164-526-",
+      "name": "Every denial must trace to the recorded §164.526 ground c...",
+      "description": "Every denial must trace to the recorded §164.526 ground catalog — an off-catalog ground is not a lawful basis to refuse a patient's amendment and is blocked at the Agent Fabric governance boundary (policy.amendment.ground-sourced); and the response deadline must equal the request date + 60/90 days — a guessed / mis-stated deadline is blocked (policy.amendment.deadline-computed, the load-bearing correctness gate). Mirrors the Right of Access Agent's ground-sourced and deadline-computed posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-agent-adjudicates-it-never-amends-the-record",
+      "name": "The agent ADJUDICATES — it NEVER amends the record (a dat...",
+      "description": "The agent ADJUDICATES — it NEVER amends the record (a data write to the medical record that ripples to every downstream holder) or issues a denial (a legal act with statement-of-disagreement rights) on its own; a determination that auto-amends / auto-denies or is not review-gated is blocked (policy.amendment.no-autonomous-write-or-denial), and every determination is a recommendation requiring a records / privacy officer to act on or review. Mirrors the Right of Access Agent's no-autonomous-denial-or-release and the Minimum Necessary Agent's no-autonomous-over-disclosure posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-denial-gr",
+      "name": "Runs against an ILLUSTRATIVE synthetic denial-ground cata...",
+      "description": "Runs against an ILLUSTRATIVE synthetic denial-ground catalog + 60/90-day math — clearly labeled; NOT a certified HIM system (real amendment is governed by HIPAA §164.526 — the full denial grounds, the written-denial + statement-of-disagreement + rebuttal process, and the duty to notify other holders of an accepted amendment — and the covered entity's Notice of Privacy Practices)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "amendment-request-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.amendment.ground-sourced",
+      "policy.amendment.deadline-computed",
+      "policy.amendment.no-autonomous-write-or-denial"
+    ]
+  }
+}

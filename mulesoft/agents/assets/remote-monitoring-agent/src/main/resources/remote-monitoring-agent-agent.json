@@ -1,0 +1,107 @@
+{
+  "name": "Remote Patient Monitoring & Symptom-Trend Tracking Agent",
+  "description": "Remote Patient Monitoring & Symptom-Trend Tracking Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/remote-monitoring",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "ingests-longitudinal-time-series-menopause-midli",
+      "name": "Ingests longitudinal (time-series) menopause/midlife symp...",
+      "description": "Ingests longitudinal (time-series) menopause/midlife symptom + vital readings — self-reported or from wearables/devices (hot-flash frequency, sleep duration, mood score, resting heart rate, weight) — the 'Agentforce for Health' remote-patient-monitoring analog",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "trend-detection-is-deterministic-a-pure-function",
+      "name": "Trend detection is DETERMINISTIC (a pure function of the ...",
+      "description": "Trend detection is DETERMINISTIC (a pure function of the readings' own timestamps + values against per-metric bands; no randomness, no clock) — it compares a recent window against a baseline window to classify each metric improving / stable / worsening, and applies a (synthetic) red-flag threshold to the most-recent value",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-reading-must-trace-to-a-device-self-report",
+      "name": "Every reading must trace to a device/self-report source A...",
+      "description": "Every reading must trace to a device/self-report source AND a defined monitored metric — a fabricated / off-source reading is blocked at the Agent Fabric governance boundary (policy.rpm.reading-source-integrity)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "worsening-red-flag-trends-are-routed-to-a-human-",
+      "name": "Worsening / red-flag trends are ROUTED to a human clinici...",
+      "description": "Worsening / red-flag trends are ROUTED to a human clinician for review (routedTo:'clinician-review'), each citing the metric + rule that triggered it — the agent NEVER takes an autonomous clinical action (policy.rpm.no-autonomous-escalation), and longitudinal monitoring is consent-gated (policy.rpm.consent-to-monitor)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-metrics-thre",
+      "name": "Runs against ILLUSTRATIVE synthetic metrics + thresholds ...",
+      "description": "Runs against ILLUSTRATIVE synthetic metrics + thresholds — clearly labeled; NOT a certified remote-monitoring device",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "remote-monitoring-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.rpm.reading-source-integrity",
+      "policy.rpm.no-autonomous-escalation",
+      "policy.rpm.consent-to-monitor"
+    ]
+  }
+}

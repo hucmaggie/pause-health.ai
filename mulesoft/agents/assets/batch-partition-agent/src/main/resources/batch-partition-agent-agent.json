@@ -1,0 +1,107 @@
+{
+  "name": "Chart Review Batch Partitioning / Linear Partition (Binary-Search-on-Answer) Agent",
+  "description": "Chart Review Batch Partitioning / Linear Partition (Binary-Search-on-Answer) Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/batch-partition",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-chronologically-priority-ordered-clinica",
+      "name": "Takes a chronologically / priority-ordered clinical revie...",
+      "description": "Takes a chronologically / priority-ordered clinical review worklist — each item carrying an effort weight (estimated review minutes / complexity points) — and a reviewer count k, then splits it into k contiguous batches (order preserved) that minimize the busiest reviewer's load, reporting the batch boundaries, each batch load, and the minimal achievable peak load (disposition divisible / item-bound). A deterministic care-coordination partitioning agent; it COMPLEMENTS the Caseload Balancing agent (which greedily bin-packs unordered members into capacity-bounded panels) — this splits an ORDERED worklist into contiguous batches, provably minimizing the peak",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-partition-is-deterministic-a-pure-function-o",
+      "name": "The partition is DETERMINISTIC — a pure function of the r...",
+      "description": "The partition is DETERMINISTIC — a pure function of the request's own items + reviewer count (time is data: the weights are plain numbers, no real clock; not a worst-fit-decreasing bin-packing, a Kadane max-subarray, a Huffman code, an LCS diff, an EDF schedule, a Dijkstra path, a knapsack, a stable matching, an interval selection, or a union-find but the LINEAR PARTITION PROBLEM — binary search on the minimal peak load with a monotonic greedy feasibility test, reconstructed by an order-preserving DP); the same request always yields the same partition",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-partition-must-be-sourced-self-consistent-th",
+      "name": "The partition must be sourced + self-consistent — the bat...",
+      "description": "The partition must be sourced + self-consistent — the batches, concatenated in order, reproducing EXACTLY the submitted items (same labels, weights, and sequence — nothing dropped / added / reordered / split), exactly batchCount non-empty contiguous batches, each batch load equal to the sum of its items' weights, the reported maxBatchLoad the largest batch load, maxItemWeight and totalWeight honest, and the disposition following; a fabricated batch, a reordered cover, or an overstated load is blocked at the Agent Fabric governance boundary (policy.batchpartition.partition-sourced, the sourced + self-consistency gate); and the partition must be optimal — re-running the linear-partition solver must reproduce the reported maxBatchLoad; a sub-optimal split that overloads one reviewer is blocked (policy.batchpartition.load-optimal, the load-bearing correctness gate). Mirrors the Huffman Agent's code-sourced + code-optimal posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-partitions-and-recommends-it-never-ass",
+      "name": "The agent PARTITIONS and RECOMMENDS — it NEVER assigns a ...",
+      "description": "The agent PARTITIONS and RECOMMENDS — it NEVER assigns a named reviewer to a batch or dispatches the worklist (each is a staffing action that must be authorized) on its own; a partition that auto-assigns or is not review-gated is blocked (policy.batchpartition.no-autonomous-assign), and every partition is confirmed by a supervisor. Mirrors the Huffman Agent's no-autonomous-deploy and the SLA Worklist Agent's no-autonomous-dispatch posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-worklists-cl",
+      "name": "Runs against ILLUSTRATIVE synthetic worklists — clearly l...",
+      "description": "Runs against ILLUSTRATIVE synthetic worklists — clearly labeled; NOT a certified staffing / workforce-management system (real reviewer scheduling weighs skills, certifications, shift rules, breaks, and fatigue — not a bare contiguous split by an effort number). PHI-adjacent — the item labels reference charts / encounters, so a partition is on the HIPAA audit path",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "batch-partition-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.batchpartition.partition-sourced",
+      "policy.batchpartition.load-optimal",
+      "policy.batchpartition.no-autonomous-assign"
+    ]
+  }
+}

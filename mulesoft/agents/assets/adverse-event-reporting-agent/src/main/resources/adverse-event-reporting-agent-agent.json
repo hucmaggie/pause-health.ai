@@ -1,0 +1,121 @@
+{
+  "name": "Adverse Event Reporting Agent",
+  "description": "Adverse Event Reporting Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/adverse-event-reporting",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "classifies-each-reported-adverse-event-drug-adr-",
+      "name": "Classifies each reported adverse event (drug ADR, vaccine...",
+      "description": "Classifies each reported adverse event (drug ADR, vaccine reaction, device malfunction, medication error, therapeutic failure) into the FDA MedWatch (3500 / 3500A) or VAERS channel, computes the 21-CFR-314.80 seriousness tier (non-serious / serious / life-threatening / death), verifies reporter identity attestation, and classifies as draft-medwatch / draft-vaers / blocked-non-catalog-event / blocked-reporter-unverified with a specific reason code",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "classification-is-deterministic-a-pure-function-",
+      "name": "Classification is DETERMINISTIC — a pure function of the ...",
+      "description": "Classification is DETERMINISTIC — a pure function of the request + catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same decision + channel + seriousness + primary reason, with a documented decision precedence (blocked-reporter-unverified > blocked-non-catalog-event > draft-medwatch / draft-vaers) and stable rule-id ordering",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-draft-must-trace-to-the-adverse-event-type",
+      "name": "Every draft must trace to the ADVERSE_EVENT_TYPES + SERIO...",
+      "description": "Every draft must trace to the ADVERSE_EVENT_TYPES + SERIOUSNESS_TIERS + ADVERSE_EVENT_RULES + ADVERSE_EVENT_REASON_CODES catalog — an off-catalog event type or made-up severity is blocked at the Agent Fabric governance boundary (policy.adverse-event.event-catalog-sourced), because a bespoke event doesn't map to an FDA channel and poisons pharmacovigilance signal",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-never-autonomously-submits-a-medwatch-",
+      "name": "The agent NEVER autonomously submits a MedWatch or VAERS ...",
+      "description": "The agent NEVER autonomously submits a MedWatch or VAERS report to the FDA — every draft decision is DRAFTED for regulatory-team cosign, and any autonomous submission is blocked (policy.adverse-event.no-autonomous-submission); FDA submissions are legally consequential under 21 CFR 314.80 (mandatory reporting) with sponsor / manufacturer / clinician liability. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the UR Agent's no-autonomous-denial, the Trial Payments Agent's no-autonomous-irb-deviation, and the HEDIS Agent's no-autonomous-submission posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "reporter-identity-must-be-attested-name-credenti",
+      "name": "Reporter identity must be attested (name / credentials / ...",
+      "description": "Reporter identity must be attested (name / credentials / contact) — an anonymous or unverified reporter is not admissible under FDA reporting requirements and is blocked (policy.adverse-event.reporter-verified). The safe answer when unverified is decision:'blocked-reporter-unverified' routed to blocked-hold",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-event-type-c",
+      "name": "Runs against ILLUSTRATIVE synthetic event-type catalog + ...",
+      "description": "Runs against ILLUSTRATIVE synthetic event-type catalog + seriousness tiers + rules + reason codes — clearly labeled; NOT FDA MedWatch, VAERS, EudraVigilance, an actual sponsor's pharmacovigilance database, or a certified 21 CFR 314.80 submission pipeline",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "adverse-event-reporting-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.adverse-event.event-catalog-sourced",
+      "policy.adverse-event.no-autonomous-submission",
+      "policy.adverse-event.reporter-verified"
+    ]
+  }
+}

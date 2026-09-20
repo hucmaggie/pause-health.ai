@@ -1,0 +1,121 @@
+{
+  "name": "Claims Adjudication Assistant Agent",
+  "description": "Claims Adjudication Assistant Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/claims-adjudication",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "applies-payer-specific-first-pass-claim-edits-nc",
+      "name": "Applies payer-specific first-pass claim edits (NCCI-PTP u...",
+      "description": "Applies payer-specific first-pass claim edits (NCCI-PTP unbundling, LCD/NCD coverage, benefit-limit exhaustion, prior-auth missing, duplicate submission, out-of-network, timely-filing) and classifies each claim as clean-pay / pend-clinical-review / pend-adjudicator-review / deny-drafted with a specific catalog reason code — a first-pass payer-side adjudicator, distinct from Prior Auth (pre-service), Member Service (billing self-service), and Grievance & Appeals (post-denial intake)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "adjudication-is-deterministic-a-pure-function-of",
+      "name": "Adjudication is DETERMINISTIC — a pure function of the cl...",
+      "description": "Adjudication is DETERMINISTIC — a pure function of the claim + member benefits + edit catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same decision + applied edits + reason code, with a documented decision precedence (deny > pend-clinical > pend-adjudicator > clean-pay) and stable edit-id ordering",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "every-applied-edit-must-trace-to-the-defined-cla",
+      "name": "Every applied edit must trace to the defined CLAIM_EDIT_C...",
+      "description": "Every applied edit must trace to the defined CLAIM_EDIT_CATALOG — an off-catalog / fabricated edit is blocked at the Agent Fabric governance boundary (policy.claims.edit-catalog-sourced), so the agent cannot invent a bespoke 'you owe us more' edit",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-agent-never-autonomously-finalizes-a-denial-",
+      "name": "The agent NEVER autonomously finalizes a denial — every d...",
+      "description": "The agent NEVER autonomously finalizes a denial — every denial is DRAFTED for adjudicator cosign (requiresAdjudicatorCosign:true, cosigned:false), and any autonomous denial is blocked (policy.claims.no-autonomous-denial); denial letters are legally consequential under CMS / ERISA / state insurance code and must have a human sign-off. Mirrors the PA Agent's no-autonomous-submission, the HEDIS Agent's no-autonomous-submission, and the CCM Agent's no-autonomous-billing posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "every-non-clean-pay-decision-must-cite-a-specifi",
+      "name": "Every non-clean-pay decision must cite a specific catalog...",
+      "description": "Every non-clean-pay decision must cite a specific catalog reason code (CLAIM_REASON_CODE_CATALOG — illustrative CO-97 / CO-50 / CO-96 / CO-119 / CO-197 / CO-18 / CO-242 / CO-29 style) — a denial or pend without a stated reason code is blocked (policy.claims.reason-code-integrity); under Section 1557 / state insurance code / CMS, a denial notice must state the specific reason",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-edit-catalog",
+      "name": "Runs against ILLUSTRATIVE synthetic edit catalog + reason...",
+      "description": "Runs against ILLUSTRATIVE synthetic edit catalog + reason-code catalog + benefit-rule shape — clearly labeled; NOT CMS X12 837 claim spec, an NCCI PTP edit table, an LCD/NCD medical-necessity registry, or a real payer's benefit configuration",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "claims-adjudication-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.claims.edit-catalog-sourced",
+      "policy.claims.no-autonomous-denial",
+      "policy.claims.reason-code-integrity"
+    ]
+  }
+}

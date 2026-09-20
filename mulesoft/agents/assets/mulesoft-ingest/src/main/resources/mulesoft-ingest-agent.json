@@ -1,0 +1,94 @@
+{
+  "name": "MuleSoft Process API · pause-ingest-process-api",
+  "description": "MuleSoft Process API · pause-ingest-process-api — a governed Pause fabric agent (mulesoft-process, REST). Governance tier: integration. Enforces 5 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://anypoint.example.com/pause-ingest/v1",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "validates-open-mhealth-payloads",
+      "name": "Validates Open mHealth payloads",
+      "description": "Validates Open mHealth payloads",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "integration"
+      ]
+    },
+    {
+      "id": "transforms-omh-fhir-r5-via-dataweave",
+      "name": "Transforms OMH -> FHIR R5 via DataWeave",
+      "description": "Transforms OMH -> FHIR R5 via DataWeave",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "integration"
+      ]
+    },
+    {
+      "id": "posts-to-jupyterhealth-exchange",
+      "name": "POSTs to JupyterHealth Exchange",
+      "description": "POSTs to JupyterHealth Exchange",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "integration"
+      ]
+    },
+    {
+      "id": "triggers-dbdp-feature-compute",
+      "name": "Triggers DBDP feature compute",
+      "description": "Triggers DBDP feature compute",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "integration"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "mulesoft-ingest",
+    "kind": "mulesoft-process",
+    "governanceTier": "integration",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.phi.bearer-token-required-in-prod",
+      "policy.audit.return-mulesoft-correlation-id",
+      "policy.network.mtls-required",
+      "policy.data.fhir-r5-only"
+    ]
+  }
+}

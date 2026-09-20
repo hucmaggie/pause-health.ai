@@ -1,0 +1,107 @@
+{
+  "name": "Claim Lifecycle / Status-Transition Guard Agent",
+  "description": "Claim Lifecycle / Status-Transition Guard Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/claim-lifecycle",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-claim-s-current-status-plus-a-requested-",
+      "name": "Takes a claim's current status plus a requested next stat...",
+      "description": "Takes a claim's current status plus a requested next status and, against a claim-status state machine, decides whether the transition is a legal single step (transition-allowed), whether the requested status is reachable at all and by what shortest path (transition-illegal-but-reachable), or whether it can never follow the current status (transition-unreachable). A deterministic payer-operations agent; it COMPLEMENTS the Claims Adjudication Assistant (per-claim edits), the Coordination of Benefits (payer order), the Overpayment Recovery (post-payment clawback), the Timely Filing (was it filed in time), and the Subrogation (third-party liability) agents — this validates one narrow, purely STRUCTURAL question: is this STATUS TRANSITION legal, and if not, is the target even reachable",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-finding-is-deterministic-a-pure-function-of-",
+      "name": "The finding is DETERMINISTIC — a pure function of the req...",
+      "description": "The finding is DETERMINISTIC — a pure function of the request's own statuses + state machine (no randomness, no clock; not an edit distance, an interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, a dollar waterfall, a pairwise KB lookup, an exact identity match, or a hash chain but FINITE-STATE-MACHINE TRANSITION VALIDATION — a transition-table lookup plus a breadth-first search over the state graph for reachability + the shortest legal path); the same input always yields the same finding",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "every-status-named-in-the-finding-in-the-allowed",
+      "name": "Every status named in the finding — in the allowed-next s...",
+      "description": "Every status named in the finding — in the allowed-next set and in the shortest path — must be a defined state of the state machine, and every shortest-path step must be a real transition; a fabricated lifecycle state or an invented legal move is blocked at the Agent Fabric governance boundary (policy.claim.states-sourced, the sourced gate); and the transition logic must be exact — recomputing the transition table + BFS must reproduce the reported direct-edge flag, reachability flag, allowed-next set, shortest-path length + endpoints, and disposition; a wrong direct-edge flag (which would wave through an illegal transition that skips adjudication), a wrong reachability / path, or a bad disposition is blocked (policy.claim.transition-consistent, the load-bearing correctness gate). Mirrors the Care Pathway Agent's steps-sourced + sequence-valid posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-agent-validates-it-never-advances-the-claim-",
+      "name": "The agent VALIDATES — it NEVER advances the claim to the ...",
+      "description": "The agent VALIDATES — it NEVER advances the claim to the next status, posts a payment, or finalizes a denial (each is a payer action that must be authorized) on its own; a finding that auto-advances or is not review-gated is blocked (policy.claim.no-autonomous-advance), and every finding is a recommendation requiring an adjuster to confirm the transition. Mirrors the Timely Filing Agent's no-autonomous-write-off and the Overpayment Recovery Agent's no-autonomous-clawback posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-claim-sta",
+      "name": "Runs against an ILLUSTRATIVE synthetic claim-status state...",
+      "description": "Runs against an ILLUSTRATIVE synthetic claim-status state machine — clearly labeled; NOT a certified claims-processing system (real claim-status management uses the X12 277 claim-status category / status codes, the payer's adjudication system, and the plan's business rules). PHI-bearing — the claim references a patient",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "claim-lifecycle-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.claim.states-sourced",
+      "policy.claim.transition-consistent",
+      "policy.claim.no-autonomous-advance"
+    ]
+  }
+}

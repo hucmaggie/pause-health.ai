@@ -1,0 +1,106 @@
+{
+  "name": "Source-of-Truth Consensus / Golden-Record Field Reconciliation Agent",
+  "description": "Source-of-Truth Consensus / Golden-Record Field Reconciliation Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 3 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/source-consensus",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-single-logical-field-whose-value-is-repo",
+      "name": "Takes a single logical field whose value is reported by s...",
+      "description": "Takes a single logical field whose value is reported by several source systems (an EHR feed, a claims feed, a credentialing feed, an HIE feed) and decides whether those votes have a strict majority — a consensus value more than half the sources agree on — reporting the winner, its count, and per-source agreement (consensus), or honestly reporting no-consensus when no value carries a strict majority. A deterministic data-substrate master-data agent; it COMPLEMENTS the Enrollment Reconciliation agent (roster diff), the Master-Patient-Index agent (record identity matching), and the Timeline Merge agent (chronological event merge) — this reconciles ONE field's conflicting source values into a golden-record value",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-reconciliation-is-deterministic-a-pure-funct",
+      "name": "The reconciliation is DETERMINISTIC — a pure function of ...",
+      "description": "The reconciliation is DETERMINISTIC — a pure function of the request's own votes (no randomness, no clock; not a regression, a knapsack, a CUSUM, a k-way merge, a recursive boolean tree, a stable matching, a geospatial distance, a checksum, a union-find, a percentile, a largest-remainder apportionment, an edit distance, an interval selection, a hash chain, a topological sort, a BFS hop-count, a Dijkstra shortest path, a keyed set-difference, or a weighted identity match but the BOYER–MOORE MAJORITY VOTE — the linear-time strict-majority election); the same votes always yield the same determination",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-per-source-attribution-must-be-sourced-every",
+      "name": "The per-source attribution must be sourced — every agreem...",
+      "description": "The per-source attribution must be sourced — every agreement must trace to a submitted vote (same sourceId + value; no fabricated source), every submitted vote must be attributed exactly once (none dropped, none double-listed), and the total must equal the number of votes; a fabricated or dropped source is blocked at the Agent Fabric governance boundary (policy.consensus.votes-sourced, the sourced + completeness gate); and the consensus must recompute — re-running the Boyer–Moore majority vote over the votes must reproduce the reported candidate, its count, the has-consensus flag, the disposition, and every real source's agreement flag; a wrong winner or a false consensus is blocked (policy.consensus.consensus-consistent, the load-bearing correctness gate). Mirrors the Timeline Merge Agent's events-sourced + merge-consistent posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-agent-reconciles-on-paper-it-never-writes-th",
+      "name": "The agent RECONCILES on paper — it NEVER writes the conse...",
+      "description": "The agent RECONCILES on paper — it NEVER writes the consensus value to the golden record / master data, overwrites a source system, or promotes a value to system-of-record (each is a data-integrity action that must be authorized) on its own; a reconciliation that auto-writes or is not review-gated is blocked (policy.consensus.no-autonomous-write), and every reconciliation is confirmed by a data steward. Mirrors the Timeline Merge Agent's no-autonomous-merge and the Enrollment Reconciliation Agent's no-autonomous-change posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-fields-sourc",
+      "name": "Runs against ILLUSTRATIVE synthetic fields + sources + va...",
+      "description": "Runs against ILLUSTRATIVE synthetic fields + sources + values — clearly labeled; NOT a certified master-data-management / golden-record system (real MDM weights sources by trust and recency, resolves value semantics, and survives field-by-field with lineage — not a bare majority of raw string votes). DELIBERATELY NOT PHI-bearing — a golden-record reference attribute, not patient health information",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "source-consensus-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.consensus.votes-sourced",
+      "policy.consensus.consensus-consistent",
+      "policy.consensus.no-autonomous-write"
+    ]
+  }
+}

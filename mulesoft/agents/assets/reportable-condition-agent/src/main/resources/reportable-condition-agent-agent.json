@@ -1,0 +1,107 @@
+{
+  "name": "Reportable / Notifiable Condition Case Classification Agent",
+  "description": "Reportable / Notifiable Condition Case Classification Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/reportable-condition",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-patient-case-s-structured-facts-plus-a-p",
+      "name": "Takes a patient case's structured facts plus a public-hea...",
+      "description": "Takes a patient case's structured facts plus a public-health case definition (an ordered list of classifications — confirmed / probable / suspect — each a nested boolean criteria tree of all-of / any-of / not over leaf predicates) and DETERMINISTICALLY classifies the case — reporting the selected classification, whether it is reportable, each classification's met flag, the referenced facts, and the reason. A deterministic care-coordination / compliance agent; it COMPLEMENTS the Adverse-Event Reporting agent (which DRAFTS a MedWatch / VAERS report for a drug / vaccine event), the Utilization Review agent (medical-necessity criteria for a service), and the Lab Result agent (a single analyte vs a reference range) — this classifies a case against a nested public-health CASE DEFINITION",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-classification-is-deterministic-a-pure-funct",
+      "name": "The classification is DETERMINISTIC — a pure function of ...",
+      "description": "The classification is DETERMINISTIC — a pure function of the request's own facts + definition (no randomness, no clock; not a stable matching, a geospatial distance, a checksum, a union-find, a percentile, an identity match, a largest-remainder apportionment, an FSM transition, an edit distance, an interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, or a hash chain but RECURSIVE BOOLEAN EXPRESSION-TREE EVALUATION — the recursive walk of a nested all-of / any-of / not tree over the case's facts, with a documented classification precedence); the same case always yields the same classification",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-criterion-must-be-sourced-each-leaf-predic",
+      "name": "Every criterion must be sourced — each leaf predicate mus...",
+      "description": "Every criterion must be sourced — each leaf predicate must reference a SUBMITTED fact (no fabricated criterion inventing a requirement the definition never stated), the reported classification results must be exactly the definition's classifications in order, and the referenced-fact set must match the definition's actual leaves; a fabricated criterion / mis-enumerated definition is blocked at the Agent Fabric governance boundary (policy.reportable.facts-sourced, the sourced + completeness gate); and the classification must recompute — re-evaluating each criteria tree from the facts must reproduce each met flag, the selected classification, and the reportable flag; a mis-evaluated tree (an over- or under-reported condition) is blocked (policy.reportable.classification-consistent, the load-bearing correctness gate). Mirrors the PCP Matching Agent's matching-stable + matching-sourced posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-classifies-it-never-reports-the-case-t",
+      "name": "The agent CLASSIFIES — it NEVER reports the case to a pub...",
+      "description": "The agent CLASSIFIES — it NEVER reports the case to a public-health authority (a consequential legal action that must be authorized) on its own; a classification that auto-reports or is not review-gated is blocked (policy.reportable.no-autonomous-report), and every classification is confirmed by an epidemiologist / infection-preventionist. Mirrors the Adverse-Event Reporting Agent's human-review posture and the HEDIS Agent's no-autonomous-submission posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-condition",
+      "name": "Runs against an ILLUSTRATIVE synthetic condition + case d...",
+      "description": "Runs against an ILLUSTRATIVE synthetic condition + case definition + facts — clearly labeled; NOT a certified surveillance / case-reporting system (real notifiable-condition reporting uses the jurisdiction's official CSTE / CDC case definitions, eCR / eICR electronic case reporting, and an epidemiologist's judgment). PHI-bearing — the case is a patient's clinical data",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "reportable-condition-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.reportable.facts-sourced",
+      "policy.reportable.classification-consistent",
+      "policy.reportable.no-autonomous-report"
+    ]
+  }
+}

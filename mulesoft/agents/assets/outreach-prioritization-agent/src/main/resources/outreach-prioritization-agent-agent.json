@@ -1,0 +1,107 @@
+{
+  "name": "Care-Management Capacity Allocation / Outreach Prioritization Agent",
+  "description": "Care-Management Capacity Allocation / Outreach Prioritization Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/outreach-prioritization",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "given-a-care-team-s-fixed-capacity-outreach-hour",
+      "name": "Given a care team's fixed capacity (outreach hours this c...",
+      "description": "Given a care team's fixed capacity (outreach hours this cycle) and a set of candidate proactive interventions (each with an hours cost and a projected benefit), selects the subset that maximizes total projected benefit within the capacity budget and defers (never denies) the rest — reporting the selected + deferred sets, the total cost / benefit, the remaining capacity, and the disposition (all-scheduled / some-deferred). A deterministic care-management capacity-planning agent; it COMPLEMENTS the Caseload Balancing agent (which bin-packs a whole panel across managers), the Population Health agent (which ranks a panel by risk), and the Care Gap agent (which acts on a measure gap) — this selects a max-benefit subset of interventions under a capacity budget",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-allocation-is-deterministic-a-pure-function-",
+      "name": "The allocation is DETERMINISTIC — a pure function of the ...",
+      "description": "The allocation is DETERMINISTIC — a pure function of the request's own candidates + capacity (no randomness, no clock; not a CUSUM, a k-way merge, a recursive boolean tree, a stable matching, a geospatial distance, a checksum, a union-find, a percentile, a largest-remainder apportionment, an FSM transition, an edit distance, an interval selection, a bin-packing, a topological sort, a set-difference, or a hash chain but the 0/1 KNAPSACK via dynamic programming — the capacity-constrained maximum-value-subset optimization); the same request always yields the same plan",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-selection-must-be-sourced-each-selected-an",
+      "name": "Every selection must be sourced — each selected AND defer...",
+      "description": "Every selection must be sourced — each selected AND deferred intervention must trace to a SUBMITTED candidate (same id + cost + benefit; no fabricated intervention), every candidate must appear exactly once across selected ∪ deferred (none dropped, none double-counted), and the tallies must add up; a fabricated or dropped intervention is blocked at the Agent Fabric governance boundary (policy.outreach.selections-sourced, the sourced + completeness gate); and the allocation must be optimal + feasible — recomputing the knapsack DP over the candidates + capacity must reproduce the reported maximum benefit, and the selection must fit the capacity and equal the DP optimum; a sub-optimal or over-capacity allocation is blocked (policy.outreach.allocation-optimal, the load-bearing correctness gate). Mirrors the Caseload Balancing Agent's assignment-complete + capacity-respected posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-prioritizes-it-never-launches-the-outr",
+      "name": "The agent PRIORITIZES — it NEVER launches the outreach, c...",
+      "description": "The agent PRIORITIZES — it NEVER launches the outreach, commits the plan, or books the interventions (each is a care-delivery action that must be authorized) on its own; an allocation that auto-schedules or is not review-gated is blocked (policy.outreach.no-autonomous-schedule), and every allocation is confirmed by a care lead, with deferred interventions deferred to a later cycle, never denied. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Care Gap Agent's human-review posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-intervention",
+      "name": "Runs against ILLUSTRATIVE synthetic interventions — clear...",
+      "description": "Runs against ILLUSTRATIVE synthetic interventions — clearly labeled; NOT a certified care-management / capacity-planning system (real capacity planning weighs clinical urgency, member consent, staffing mix, regulatory timeliness, and equity — not a single benefit score under one hours budget; a deferred intervention is deferred, never denied). PHI-bearing — the interventions reference patients",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "outreach-prioritization-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.outreach.selections-sourced",
+      "policy.outreach.allocation-optimal",
+      "policy.outreach.no-autonomous-schedule"
+    ]
+  }
+}

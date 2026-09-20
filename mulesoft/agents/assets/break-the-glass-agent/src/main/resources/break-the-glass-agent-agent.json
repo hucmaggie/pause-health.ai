@@ -1,0 +1,107 @@
+{
+  "name": "Break-the-Glass / Emergency Access Governance Agent",
+  "description": "Break-the-Glass / Emergency Access Governance Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/break-the-glass",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "the-emergency-access-governance-layer-of-the-dat",
+      "name": "The emergency-access governance layer of the data substra...",
+      "description": "The emergency-access governance layer of the data substrate — governs break-the-glass override access to PHI, complementing (not duplicating) the Consent & Preferences Management agent (consent scopes) and the Master Patient Index (identity/dedup)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "access-decisions-are-deterministic-a-pure-functi",
+      "name": "Access decisions are DETERMINISTIC — a pure function of t...",
+      "description": "Access decisions are DETERMINISTIC — a pure function of the request + its own atTime (no randomness, no clock); a grant is ALWAYS time-boxed (an expiry derived from atTime + the purpose's duration) and minimum-necessary (the purpose's scoped field set — never the full chart), and the same request always yields the same grant/deny + scope + expiry + audit id",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "no-emergency-access-without-a-recorded-non-empty",
+      "name": "No emergency access without a recorded, non-empty clinica...",
+      "description": "No emergency access without a recorded, non-empty clinical justification — an asserted-but-unjustified grant is blocked at the Agent Fabric governance boundary (policy.btg.justification-required)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "every-grant-is-minimum-necessary-time-boxed-a-st",
+      "name": "Every grant is minimum-necessary + time-boxed — a standin...",
+      "description": "Every grant is minimum-necessary + time-boxed — a standing / full-record / non-expiring grant is blocked (policy.btg.minimum-necessary-time-boxed); and every emergency access must emit a mandatory audit event AND be flagged for post-access review — un-audited access is blocked (policy.btg.mandatory-audit-review)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-purpose-c",
+      "name": "Runs against an ILLUSTRATIVE synthetic purpose catalog + ...",
+      "description": "Runs against an ILLUSTRATIVE synthetic purpose catalog + minimum-necessary scopes + access durations + audit ids — clearly labeled; NOT a certified break-the-glass / emergency-access system",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "break-the-glass-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.btg.justification-required",
+      "policy.btg.minimum-necessary-time-boxed",
+      "policy.btg.mandatory-audit-review"
+    ]
+  }
+}

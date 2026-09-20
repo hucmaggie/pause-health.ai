@@ -1,0 +1,107 @@
+{
+  "name": "Master Patient Index / Identity Resolution Agent",
+  "description": "Master Patient Index / Identity Resolution Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/master-patient-index",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "the-identity-dedup-layer-of-the-data-substrate-r",
+      "name": "The identity/dedup layer of the data substrate — resolves...",
+      "description": "The identity/dedup layer of the data substrate — resolves a patient's identity across source systems by scoring an INCOMING record against a set of CANDIDATE records, complementing (not duplicating) Data 360 grounding, the Consent & Preferences Management agent, and the MuleSoft ingest process",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "matching-is-deterministic-and-transparent-a-pure",
+      "name": "Matching is DETERMINISTIC and TRANSPARENT — a pure, addit...",
+      "description": "Matching is DETERMINISTIC and TRANSPARENT — a pure, additive/weighted function of a defined demographic feature set (name, DOB, member/MRN identifier, address, phone, administrative sex), each with a documented weight; the same incoming + candidates always yield the same scores + classifications + recommendation (stable, documented candidateId tie-break; no randomness, no clock)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "every-match-decision-is-explainable-by-citing-it",
+      "name": "Every match decision is EXPLAINABLE by citing its matched...",
+      "description": "Every match decision is EXPLAINABLE by citing its matched features and traces to the defined match-feature spec — an opaque / off-spec / black-box match is blocked at the Agent Fabric governance boundary (policy.mpi.transparent-matching)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "a-merge-below-the-auto-match-threshold-is-never-",
+      "name": "A merge below the auto-match threshold is NEVER performed...",
+      "description": "A merge below the auto-match threshold is NEVER performed autonomously — it is a manual-review recommendation requiring a human steward (policy.mpi.no-autonomous-merge); and the matching feature set may NOT use a protected-class attribute (race, ethnicity, religion, etc.) — a fairness / responsible-AI requirement (policy.mpi.no-protected-class-matching)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-match-featur",
+      "name": "Runs against ILLUSTRATIVE synthetic match features + weig...",
+      "description": "Runs against ILLUSTRATIVE synthetic match features + weights + thresholds and synthetic/de-identified patient records — clearly labeled; NOT a certified enterprise master-patient-index (EMPI) algorithm",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "master-patient-index-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.mpi.transparent-matching",
+      "policy.mpi.no-autonomous-merge",
+      "policy.mpi.no-protected-class-matching"
+    ]
+  }
+}

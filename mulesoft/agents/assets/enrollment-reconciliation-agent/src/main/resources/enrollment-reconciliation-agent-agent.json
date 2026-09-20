@@ -1,0 +1,107 @@
+{
+  "name": "Eligibility & Enrollment (834) Reconciliation Agent",
+  "description": "Eligibility & Enrollment (834) Reconciliation Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/enrollment-reconciliation",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "compares-a-group-s-source-of-truth-enrollment-ro",
+      "name": "Compares a group's source-of-truth enrollment roster (the...",
+      "description": "Compares a group's source-of-truth enrollment roster (the employer / HR feed) against the carrier's current roster and produces the reconciliation actions — enroll (in source only), terminate (in carrier only), update (in both with a differing field, listing the deltas), no-change (identical) — that bring the carrier into agreement. A deterministic payer-operations agent; distinct from the Claims Adjudication agent (the allowed amount), the Member Cost-Share agent (splitting a claim), the Coordination of Benefits, MLR Rebate, and OIG Exclusion agents — this reconciles WHO is enrolled, the membership roster itself, between the employer and the carrier",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-reconciliation-is-deterministic-a-pure-funct",
+      "name": "The reconciliation is DETERMINISTIC — a pure function of ...",
+      "description": "The reconciliation is DETERMINISTIC — a pure function of the two rosters (no randomness, no clock; not a dollar waterfall, an identity match, or a ratio but a KEYED SET-DIFFERENCE + a FIELD-LEVEL COMPARISON over the union of member ids); the same two rosters always yield the same actions",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-reconciliation-must-account-for-every-member",
+      "name": "The reconciliation must account for every member EXACTLY ...",
+      "description": "The reconciliation must account for every member EXACTLY once — the per-kind counts must sum to the number of actions, the total-members count must equal the number of actions, and no member may appear twice; a reconciliation that drops, duplicates, or miscounts a member (a terminated employee who keeps coverage, or a new hire who never gets enrolled) is blocked at the Agent Fabric governance boundary (policy.enrollment.reconciliation-complete, the load-bearing correctness gate); and every action must be sourced — every UPDATE must carry at least one genuinely-differing field and every NO-CHANGE / ENROLL / TERMINATE must carry none, so a fabricated discrepancy is blocked (policy.enrollment.actions-sourced). Mirrors the MLR Rebate Agent's allocation-consistent and the OIG Exclusion Agent's match-not-overstated posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-reconciliation-is-a-recommendation-the-agent",
+      "name": "The reconciliation is a RECOMMENDATION — the agent NEVER ...",
+      "description": "The reconciliation is a RECOMMENDATION — the agent NEVER applies an enrollment change to the system of record (enrolling / terminating / updating a member is a coverage decision that must be authorized); a determination that auto-applies, or is not review-gated, is blocked (policy.enrollment.no-autonomous-change), and every action is confirmed + posted by a benefits administrator. Mirrors the Member Cost-Share Agent's no-autonomous-member-charge and the MLR Rebate Agent's no-autonomous-disbursement posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-rosters-comp",
+      "name": "Runs against ILLUSTRATIVE synthetic rosters + compared fi...",
+      "description": "Runs against ILLUSTRATIVE synthetic rosters + compared fields — clearly labeled; NOT a certified 834 / enrollment system (real reconciliation uses the full X12 834 transaction set, effective-dating / retroactivity rules, dependent / COBRA / qualifying-event handling, and the carrier's eligibility system). PHI-bearing — the rosters reference members and their coverage",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "enrollment-reconciliation-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.enrollment.reconciliation-complete",
+      "policy.enrollment.actions-sourced",
+      "policy.enrollment.no-autonomous-change"
+    ]
+  }
+}

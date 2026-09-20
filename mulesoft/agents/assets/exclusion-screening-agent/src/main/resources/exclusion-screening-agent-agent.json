@@ -1,0 +1,106 @@
+{
+  "name": "OIG Exclusion / Sanctions Screening Agent",
+  "description": "OIG Exclusion / Sanctions Screening Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 3 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/exclusion-screening",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "screens-a-party-a-provider-vendor-employee-again",
+      "name": "Screens a party (a provider / vendor / employee) against ...",
+      "description": "Screens a party (a provider / vendor / employee) against the OIG List of Excluded Individuals / Entities (LEIE) before a plan pays or contracts with them — required because the Social Security Act §1128 / §1128A(a)(6) and 42 CFR §1001 prohibit federal-program payment for items or services furnished, ordered, or prescribed by an OIG-excluded party. Given a screening request (a party reference and the party's identifiers — last name, first name, and optionally an NPI and a date of birth), it computes a match STRENGTH grounded in which identifiers actually matched (no-match / possible / probable / confirmed) and a recommended disposition. Companion to the Provider Credentialing (whether a provider is QUALIFIED), Claims Adjudication (the allowed amount), and FWA Detection (fraud) agents — this screens a party's IDENTITY against the exclusion list to prevent an improper PAYMENT",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-match-is-deterministic-a-pure-function-of-th",
+      "name": "The match is DETERMINISTIC — a pure function of the reque...",
+      "description": "The match is DETERMINISTIC — a pure function of the request's own fields + the catalog (no randomness, no clock); a confirmed match requires an NPI match OR a full-name AND date-of-birth match, a full-name match with no DOB / NPI is probable, and a last-name coincidence the first name / DOB doesn't corroborate is possible — so the same party always yields the same match strength",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "a-reported-match-must-trace-to-a-recorded-leie-r",
+      "name": "A reported match must trace to a recorded LEIE record — a...",
+      "description": "A reported match must trace to a recorded LEIE record — a match asserted without a sourced exclusion record is blocked at the Agent Fabric governance boundary (policy.exclusion.match-record-sourced); and the reported match strength must never exceed what the identifier signals support — a name coincidence dressed up as a confirmed exclusion is blocked (policy.exclusion.match-not-overstated, the load-bearing correctness gate). Mirrors the Right of Access Agent's ground-sourced and the Member Cost-Share Agent's math-consistent posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-screening-is-a-recommendation-the-agent-neve",
+      "name": "The screening is a RECOMMENDATION — the agent NEVER auton...",
+      "description": "The screening is a RECOMMENDATION — the agent NEVER autonomously blocks a payment (which denies a legitimate provider income) or clears a party (which risks paying a sanctioned party); a determination that auto-blocks / auto-clears, or that is not review-gated, is blocked (policy.exclusion.no-autonomous-block-or-clear), and a compliance officer confirms the identity and acts. Mirrors the Advance Beneficiary Notice Agent's no-autonomous-beneficiary-liability and the Member Cost-Share Agent's no-autonomous-member-charge posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "deliberately-not-phi-bearing-it-screens-a-provid",
+      "name": "Deliberately NOT PHI-bearing — it screens a provider / ve...",
+      "description": "Deliberately NOT PHI-bearing — it screens a provider / vendor's identity against a public exclusion list, not a patient's health information, so it is NOT on the HIPAA-audit policy. Runs against an ILLUSTRATIVE synthetic LEIE catalog + match rules (no fuzzy / phonetic matching, no monthly LEIE reload, no SAM.gov / state Medicaid exclusion lists, no reinstatement handling) — clearly labeled; NOT a certified exclusion-screening system (real screening is governed by the OIG LEIE, the OIG Special Advisory Bulletin on the effect of exclusion, and the payer's screening policy)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "exclusion-screening-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.exclusion.match-record-sourced",
+      "policy.exclusion.match-not-overstated",
+      "policy.exclusion.no-autonomous-block-or-clear"
+    ]
+  }
+}

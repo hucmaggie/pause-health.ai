@@ -1,0 +1,107 @@
+{
+  "name": "Controlled Substance / PDMP Safety Check Agent",
+  "description": "Controlled Substance / PDMP Safety Check Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: clinical-decision. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/controlled-substance",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "screens-a-proposed-controlled-substance-prescrip",
+      "name": "Screens a proposed controlled-substance prescription agai...",
+      "description": "Screens a proposed controlled-substance prescription against the patient's PDMP history for a prescriber / pharmacy — sums the total opioid MME/day (proposed + concurrent), flags a concurrent opioid+benzodiazepine combination and multi-prescriber / multi-pharmacy patterns, compares the total against the guideline's caution (50) and high-risk (90) MME/day thresholds, and classifies the risk (low / elevated / high). A deterministic clinical-decision agent; distinct from the Formulary & DUR Review, Medication Adherence, Prior Authorization, and Immunization agents — this screens the TOTAL controlled-substance burden across ALL prescribers",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "the-risk-finding-is-deterministic-a-pure-functio",
+      "name": "The risk finding is DETERMINISTIC — a pure function of th...",
+      "description": "The risk finding is DETERMINISTIC — a pure function of the request's data + the cited guideline (no randomness, no clock); the total MME/day is the sum of the proposed opioid contribution + the concurrent opioid MME/day, and the same request always yields the same total + risk + disposition",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "every-risk-threshold-must-cite-a-recorded-guidel",
+      "name": "Every risk threshold must cite a recorded guideline — an ...",
+      "description": "Every risk threshold must cite a recorded guideline — an ad-hoc / un-sourced threshold is blocked at the Agent Fabric governance boundary (policy.controlledsubstance.guideline-sourced); and the total MME/day must equal the computed proposed + concurrent sum — a guessed / hidden dose is blocked (policy.controlledsubstance.mme-computed, the load-bearing correctness gate). Mirrors the Immunization Agent's schedule-sourced and the Timely Filing Agent's deadline-computed posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "a-controlled-substance-risk-finding-is-a-recomme",
+      "name": "A controlled-substance risk finding is a RECOMMENDATION r...",
+      "description": "A controlled-substance risk finding is a RECOMMENDATION requiring prescriber review — the agent never autonomously approves, denies, dispenses, or writes the prescription; a determination that auto-decides, or reports an elevated / high-risk finding without requiring review, is blocked (policy.controlledsubstance.no-autonomous-prescribing-decision). Mirrors the Immunization Agent's no-autonomous-administration and the Lab Result Agent's no-autonomous-clinical-action posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-mme-thres",
+      "name": "Runs against an ILLUSTRATIVE synthetic MME threshold cata...",
+      "description": "Runs against an ILLUSTRATIVE synthetic MME threshold catalog + drug classes + MME/day figures — clearly labeled; NOT a certified PDMP or clinical decision support (real monitoring uses the state PDMP, the CDC MME conversion factors, the CDC 2022 opioid-prescribing guideline, and the prescriber's clinical judgment)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "controlled-substance-agent",
+    "kind": "agentforce",
+    "governanceTier": "clinical-decision",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.controlledsubstance.guideline-sourced",
+      "policy.controlledsubstance.mme-computed",
+      "policy.controlledsubstance.no-autonomous-prescribing-decision"
+    ]
+  }
+}

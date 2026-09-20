@@ -1,0 +1,106 @@
+{
+  "name": "Agentforce Commercial KPI Trend & Projection",
+  "description": "Agentforce Commercial KPI Trend & Projection — a governed Pause fabric agent (agentforce, A2A). Governance tier: commercial-operations. Enforces 3 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/kpi-trend",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "given-a-time-ordered-series-of-a-business-metric",
+      "name": "Given a time-ordered series of a business metric (monthly...",
+      "description": "Given a time-ordered series of a business metric (monthly provider-org adoption, active enrolled patients, ARR, bookings), fits an ordinary least-squares linear-regression line, reports slope + intercept + R² (goodness of fit), classifies the trend (rising / flat / declining) against a documented flat tolerance, and projects the metric to a future horizon. A deterministic commercial-analytics agent; it COMPLEMENTS the Pipeline Management agent (which rolls up CRM opportunity records into a forecast) and the Account Management agent (which health-scores signed accounts) — this fits a least-squares trend line to a KPI series and projects it",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "the-fit-is-deterministic-a-pure-function-of-the-",
+      "name": "The fit is DETERMINISTIC — a pure function of the observa...",
+      "description": "The fit is DETERMINISTIC — a pure function of the observations' own indices + values + the parameters (no randomness, no clock; not a knapsack, a CUSUM, a k-way merge, a recursive boolean tree, a stable matching, a geospatial distance, a checksum, a union-find, a percentile, a largest-remainder apportionment, an FSM transition, an edit distance, an interval selection, a topological sort, a set-difference, a hash chain, or a forecast rollup but ORDINARY LEAST-SQUARES LINEAR REGRESSION — the closed-form best-fit line + projection); the same series always yields the same line",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "every-fitted-point-must-be-sourced-each-must-tra",
+      "name": "Every fitted point must be sourced — each must trace to a...",
+      "description": "Every fitted point must be sourced — each must trace to a SUBMITTED observation (same index + value; no fabricated point), every observation must appear exactly once (none dropped, none double-plotted), and the fit parameters must be present; a fabricated or dropped point is blocked at the Agent Fabric governance boundary (policy.kpi.series-sourced, the sourced + completeness gate); and the fit must recompute — re-running the least-squares regression over the observations must reproduce the reported slope, intercept, R², trend, projection, and every point's fitted value + residual; a mis-fit line or a fabricated projection is blocked (policy.kpi.fit-consistent, the load-bearing correctness gate). Mirrors the Quality Shift Agent's observations-sourced + cusum-consistent posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "the-agent-projects-it-never-commits-the-projecti",
+      "name": "The agent PROJECTS — it NEVER commits the projection as a...",
+      "description": "The agent PROJECTS — it NEVER commits the projection as an official forecast, adjusts a quota / target, or notifies finance (each is a consequential commercial action that must be authorized) on its own; a projection that auto-commits or is not review-gated is blocked (policy.kpi.no-autonomous-commit), and every projection is confirmed by a revenue analyst. Mirrors the Pipeline Management Agent's human-owner and the Account Management Agent's never-commit-a-contract posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "operates-only-on-the-commercial-crm-plane-no-pat",
+      "name": "Operates ONLY on the commercial CRM plane — NO patient PH...",
+      "description": "Operates ONLY on the commercial CRM plane — NO patient PHI, NOT on the HIPAA-audit policy; the metrics are ILLUSTRATIVE aggregate business figures, clearly labeled — NOT a certified forecasting / FP&A system (real commercial forecasting weighs seasonality, pipeline mix, cohort dynamics, macro conditions, and human judgment — not a single straight line through past points)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "kpi-trend-agent",
+    "kind": "agentforce",
+    "governanceTier": "commercial-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.kpi.series-sourced",
+      "policy.kpi.fit-consistent",
+      "policy.kpi.no-autonomous-commit"
+    ]
+  }
+}

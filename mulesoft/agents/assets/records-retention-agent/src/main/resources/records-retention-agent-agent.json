@@ -1,0 +1,107 @@
+{
+  "name": "Data Retention & Records Lifecycle Management Agent",
+  "description": "Data Retention & Records Lifecycle Management Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/records-retention",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "the-records-disposition-layer-of-the-data-substr",
+      "name": "The records-disposition layer of the data substrate — man...",
+      "description": "The records-disposition layer of the data substrate — manages the lifecycle of records against retention schedules and legal holds, complementing (not duplicating) the Consent & Preferences Management agent (consent scopes), the Master Patient Index (identity/dedup), and the Break-the-Glass agent (emergency PHI access)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "dispositions-are-deterministic-a-pure-function-o",
+      "name": "Dispositions are DETERMINISTIC — a pure function of the r...",
+      "description": "Dispositions are DETERMINISTIC — a pure function of the record's dates + the request's own atTime (no randomness, no clock); the retention expiry is derived from the record dates + the schedule period, and the same record always yields the same recommendation (retain / eligible-for-purge / hold) + cited rule + expiry",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "a-legal-hold-always-overrides-a-purge-a-record-u",
+      "name": "A legal hold ALWAYS overrides a purge — a record under an...",
+      "description": "A legal hold ALWAYS overrides a purge — a record under an active legal hold is retained on hold and is never marked eligible-for-purge; a purge asserted while under a hold is blocked at the Agent Fabric governance boundary (policy.retention.legal-hold-overrides-purge)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "every-disposition-must-cite-a-recorded-retention",
+      "name": "Every disposition must cite a recorded retention schedule...",
+      "description": "Every disposition must cite a recorded retention schedule — an ad-hoc / un-sourced disposition is blocked (policy.retention.schedule-sourced); and a destructive purge is never executed autonomously — an eligible-for-purge is a RECOMMENDATION requiring human approval, and an autonomous / unapproved purge is blocked (policy.retention.no-autonomous-purge)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-retention-sc",
+      "name": "Runs against ILLUSTRATIVE synthetic retention schedules +...",
+      "description": "Runs against ILLUSTRATIVE synthetic retention schedules + periods + rule ids — clearly labeled; NOT a certified records-management system (real retention is jurisdiction-specific and legally reviewed)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "records-retention-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.retention.legal-hold-overrides-purge",
+      "policy.retention.schedule-sourced",
+      "policy.retention.no-autonomous-purge"
+    ]
+  }
+}

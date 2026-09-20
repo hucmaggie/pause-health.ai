@@ -1,0 +1,107 @@
+{
+  "name": "Primary Care Provider (PCP) Assignment / Member–Provider Matching Agent",
+  "description": "Primary Care Provider (PCP) Assignment / Member–Provider Matching Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/pcp-matching",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-panel-of-unassigned-members-each-with-a-",
+      "name": "Takes a panel of unassigned members (each with a ranked l...",
+      "description": "Takes a panel of unassigned members (each with a ranked list of preferred primary care providers) plus a set of providers (each with a panel capacity and a ranked list of acceptable members) and produces a STABLE assignment of members to providers — reporting each member's assigned provider + preference rank, the provider loads, the matched / unmatched tallies, and the disposition (all-matched / partial-match). A deterministic care-coordination agent; it COMPLEMENTS the Caseload Balancing agent (which BIN-PACKS a panel across managers' capacity to balance load, no preferences), the Care Team & Case Management agent (the team around ONE patient), and the Population Health agent (prioritizing a panel) — this produces a STABLE two-sided matching of members to PCPs",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-matching-is-deterministic-a-pure-function-of",
+      "name": "The matching is DETERMINISTIC — a pure function of the re...",
+      "description": "The matching is DETERMINISTIC — a pure function of the request's own preferences + capacities (no randomness, no clock; not a geospatial distance, a checksum, a union-find, a percentile, an identity match, a largest-remainder apportionment, an FSM transition, an edit distance, an interval selection, a bin-packing, a sliding-window count, an interval merge, a topological sort, a set-difference, or a hash chain but TWO-SIDED STABLE MATCHING — the member-proposing Gale–Shapley deferred-acceptance algorithm producing the member-optimal stable matching); the same panel always yields the same matching",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-assignment-must-be-built-from-the-submitte",
+      "name": "Every assignment must be built from the submitted panel —...",
+      "description": "Every assignment must be built from the submitted panel — one assignment per submitted member (all present, none dropped or invented), every assigned provider a submitted one, and the provider loads echoing the submitted capacities + actual counts; a phantom member / provider is blocked at the Agent Fabric governance boundary (policy.pcp.matching-sourced, the sourced + completeness gate); and the matching must be stable — recomputing the Gale–Shapley deferred acceptance from the preferences + capacities must reproduce the assignment + each member's rank, no provider may be over capacity, and there must be NO blocking pair; an unstable / mis-recomputed matching is blocked (policy.pcp.matching-stable, the load-bearing correctness gate). Mirrors the Network Adequacy Agent's distances-consistent + providers-sourced posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-proposes-a-matching-it-never-commits-a",
+      "name": "The agent PROPOSES a matching — it NEVER commits an assig...",
+      "description": "The agent PROPOSES a matching — it NEVER commits an assignment, reassigns a patient, or overrides a provider's panel (each is a care-ownership decision that must be authorized) on its own; a matching that auto-assigns or is not review-gated is blocked (policy.pcp.no-autonomous-assignment), and every matching is confirmed by a care-coordination lead. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Care Team Agent's no-autonomous-assignment posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-members-prov",
+      "name": "Runs against ILLUSTRATIVE synthetic members + providers +...",
+      "description": "Runs against ILLUSTRATIVE synthetic members + providers + preferences + capacities — clearly labeled; NOT a certified panel-management system (real PCP assignment also weighs geography, language, continuity of care, plan-network rules, and member choice, and runs against a live attribution system). PHI-bearing — the members are patients",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "pcp-matching-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.pcp.matching-sourced",
+      "policy.pcp.matching-stable",
+      "policy.pcp.no-autonomous-assignment"
+    ]
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "name": "Advance Beneficiary Notice (Medicare ABN) Agent",
+  "description": "Advance Beneficiary Notice (Medicare ABN) Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: benefits-verification. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/advance-beneficiary-notice",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "decides-for-a-medicare-service-likely-to-be-deni",
+      "name": "Decides, for a Medicare service likely to be denied as no...",
+      "description": "Decides, for a Medicare service likely to be denied as not-reasonable-and-necessary (or statutorily excluded), whether a signed pre-service ABN (Form CMS-R-131) is required, whether the beneficiary may be billed, and which CMS liability modifier applies (GA / GZ / GY) — assessing coverage from the cited rule, computing whether a valid pre-service ABN is on file, and deciding the disposition (proceed-covered / issue-abn-before-service / bill-beneficiary-with-abn / notify-statutory-exclusion). Companion to the Good Faith Estimate (NSA self-pay estimate), Balance Billing (NSA surprise-bill prohibition), Benefits & Coverage Verification (plan eligibility), and Financial Assistance (501(r) charity care) agents — this decides one narrow Medicare ABN question",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    },
+    {
+      "id": "the-determination-is-deterministic-a-pure-functi",
+      "name": "The determination is DETERMINISTIC — a pure function of t...",
+      "description": "The determination is DETERMINISTIC — a pure function of the request's own fields + the cited coverage rule (no randomness, no clock); the same service always yields the same coverage assessment + ABN requirement + modifier + disposition",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    },
+    {
+      "id": "every-non-coverage-decision-must-cite-a-recorded",
+      "name": "Every non-coverage decision must cite a recorded Medicare...",
+      "description": "Every non-coverage decision must cite a recorded Medicare coverage rule — an ad-hoc / un-sourced rule is blocked at the Agent Fabric governance boundary (policy.abn.coverage-rule-sourced); and a likely-non-covered service must require a signed pre-service ABN — a determination that marks it as needing no ABN is blocked (policy.abn.abn-required-when-noncovered, the load-bearing completeness gate). Mirrors the Good Faith Estimate Agent's charge-master-sourced + expected-items-complete posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    },
+    {
+      "id": "patient-financial-liability-is-never-assigned-au",
+      "name": "Patient financial liability is NEVER assigned autonomousl...",
+      "description": "Patient financial liability is NEVER assigned autonomously — the beneficiary may be billed for a non-covered service ONLY with a valid pre-service ABN (the GA modifier), otherwise the PROVIDER is liable (the GZ modifier), and every liability decision requires human review; a determination that bills the beneficiary without a valid ABN, or auto-assigns liability, is blocked (policy.abn.no-autonomous-beneficiary-liability). Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Timely Filing Agent's no-autonomous-write-off posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-medicare-cov",
+      "name": "Runs against ILLUSTRATIVE synthetic Medicare coverage rul...",
+      "description": "Runs against ILLUSTRATIVE synthetic Medicare coverage rules + categories + modifier logic — clearly labeled; NOT a certified Medicare coverage engine (real ABN decisions are governed by the Medicare NCD/LCD, the Social Security Act §1862(a), the CMS Medicare Claims Processing Manual Ch. 30, and Form CMS-R-131)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "advance-beneficiary-notice-agent",
+    "kind": "agentforce",
+    "governanceTier": "benefits-verification",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.abn.coverage-rule-sourced",
+      "policy.abn.abn-required-when-noncovered",
+      "policy.abn.no-autonomous-beneficiary-liability"
+    ]
+  }
+}

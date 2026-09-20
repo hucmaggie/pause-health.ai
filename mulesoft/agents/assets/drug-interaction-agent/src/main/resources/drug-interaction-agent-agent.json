@@ -1,0 +1,107 @@
+{
+  "name": "Drug–Drug Interaction (DDI) Safety Check Agent",
+  "description": "Drug–Drug Interaction (DDI) Safety Check Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: clinical-decision. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/drug-interaction",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "screens-a-proposed-new-drug-against-the-patient-",
+      "name": "Screens a proposed / new drug against the patient's activ...",
+      "description": "Screens a proposed / new drug against the patient's active medication list — pairs the proposed drug with each active medication, looks up every recorded interaction in the knowledge base, ranks them by severity (contraindicated / major / moderate / minor), reports the overall severity + mechanism + management, and decides the disposition (no-interaction-detected / monitor / review-recommended / review-required / do-not-coadminister-needs-review). A deterministic clinical-decision agent; distinct from the Controlled Substance / PDMP agent (the TOTAL controlled-substance MME burden), the Formulary & DUR Review, Medication Adherence, Prior Authorization, and Immunization agents — this screens whether a NEW drug INTERACTS with what the patient already takes",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "the-finding-is-deterministic-a-pure-function-of-",
+      "name": "The finding is DETERMINISTIC — a pure function of the req...",
+      "description": "The finding is DETERMINISTIC — a pure function of the request's data (no randomness, no clock; no date math and no dollar waterfall — it is a pairwise knowledge-base lookup + severity ranking); the same proposed drug + active list always yields the same interactions + overall severity + disposition",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "every-reported-interaction-must-trace-to-the-rec",
+      "name": "Every reported interaction must trace to the recorded kno...",
+      "description": "Every reported interaction must trace to the recorded knowledge base with a matching pair + severity — a fabricated / off-catalog interaction is blocked at the Agent Fabric governance boundary (policy.ddi.interaction-sourced); and the overall severity must equal the highest cataloged severity among the detected interactions — an inflated (alert fatigue, wrongful cancellation) or suppressed (hidden contraindication) severity is blocked (policy.ddi.severity-consistent, the load-bearing correctness gate). Mirrors the Controlled Substance Agent's guideline-sourced and the Member Cost-Share Agent's math-consistent posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "the-agent-screens-it-never-holds-cancels-the-ord",
+      "name": "The agent SCREENS — it NEVER holds / cancels the order (w...",
+      "description": "The agent SCREENS — it NEVER holds / cancels the order (which could deny needed therapy) or overrides the alert (which could push through a contraindicated combination) on its own; a determination that auto-holds / auto-overrides or is not review-gated is blocked (policy.ddi.no-autonomous-hold-or-override), and every finding is a recommendation requiring a pharmacist / prescriber to act on or review. Mirrors the Controlled Substance Agent's no-autonomous-prescribing-decision and the Lab Result Agent's no-autonomous-clinical-action posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-interacti",
+      "name": "Runs against an ILLUSTRATIVE synthetic interaction knowle...",
+      "description": "Runs against an ILLUSTRATIVE synthetic interaction knowledge base + severity assignments — clearly labeled; NOT a certified clinical decision support system (real interaction checking uses a maintained compendium, normalized drug vocabularies like RxNorm, dose / route / timing context, patient-specific factors, and the pharmacist's / prescriber's clinical judgment)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "clinical-decision"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "drug-interaction-agent",
+    "kind": "agentforce",
+    "governanceTier": "clinical-decision",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.ddi.interaction-sourced",
+      "policy.ddi.severity-consistent",
+      "policy.ddi.no-autonomous-hold-or-override"
+    ]
+  }
+}

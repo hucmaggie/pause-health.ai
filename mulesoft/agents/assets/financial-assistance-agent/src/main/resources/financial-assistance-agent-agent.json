@@ -1,0 +1,107 @@
+{
+  "name": "Patient Financial Assistance & Charity Care Agent",
+  "description": "Patient Financial Assistance & Charity Care Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: benefits-verification. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/financial-assistance",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "screens-a-self-pay-underinsured-patient-for-hosp",
+      "name": "Screens a self-pay / underinsured patient for hospital fi...",
+      "description": "Screens a self-pay / underinsured patient for hospital financial assistance (charity care) under an IRS 501(r) FAP — computes the household's income as a percentage of the Federal Poverty Level, cites the governing FAP tier, and classifies as full-charity / partial-charity / not-eligible with a discount percentage. A sibling to the Benefits & Coverage Verification / EBV agent on the patient-access tier: EBV verifies what the plan covers; this screens the patient-responsibility remainder for charity care",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    },
+    {
+      "id": "screening-is-deterministic-a-pure-function-of-th",
+      "name": "Screening is DETERMINISTIC — a pure function of the house...",
+      "description": "Screening is DETERMINISTIC — a pure function of the household size + income + FPL year + the request's own flags (no randomness, no clock); the FPL percentage is derived from the household size's FPL base, and the same household always yields the same tier + discount + eligibility",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    },
+    {
+      "id": "an-extraordinary-collection-action-eca-collectio",
+      "name": "An extraordinary collection action (ECA — collections, cr...",
+      "description": "An extraordinary collection action (ECA — collections, credit reporting, a lien) may NEVER proceed before financial-assistance screening is complete — an ECA asserted before screening is blocked at the Agent Fabric governance boundary (policy.finassist.no-eca-before-screening), because IRS 501(r)(6) requires reasonable efforts to determine FAP eligibility before any ECA. Mirrors the Data Retention Agent's legal-hold-overrides-purge — a legal precondition bounds the action",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    },
+    {
+      "id": "every-determination-must-cite-a-recorded-fap-tie",
+      "name": "Every determination must cite a recorded FAP tier or a pr...",
+      "description": "Every determination must cite a recorded FAP tier or a presumptive-eligibility reason — an ad-hoc / un-sourced eligibility decision is blocked (policy.finassist.fap-schedule-sourced); and a denial of charity care is never autonomous — a not-eligible determination is a RECOMMENDATION requiring human review with written notice + appeal rights (501(r)(4)), and an autonomous denial is blocked (policy.finassist.no-autonomous-denial). Mirrors the Overpayment & Recovery Agent's reason-catalog-sourced + no-autonomous-clawback posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-fap-tier-sch",
+      "name": "Runs against ILLUSTRATIVE synthetic FAP tier schedule + d...",
+      "description": "Runs against ILLUSTRATIVE synthetic FAP tier schedule + discount percentages + FPL table + presumptive-eligibility reasons — clearly labeled; NOT a certified financial-assistance system (real hospital FAPs are governed by IRS 501(r) / 26 CFR 1.501(r), the HHS Federal Poverty Guidelines, and each hospital's Board-approved FAP + state charity-care law)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "benefits-verification"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "financial-assistance-agent",
+    "kind": "agentforce",
+    "governanceTier": "benefits-verification",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.finassist.no-eca-before-screening",
+      "policy.finassist.fap-schedule-sourced",
+      "policy.finassist.no-autonomous-denial"
+    ]
+  }
+}

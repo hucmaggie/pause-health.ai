@@ -1,0 +1,107 @@
+{
+  "name": "Agentforce Assessment Agent · Validated Instruments",
+  "description": "Agentforce Assessment Agent · Validated Instruments — a governed Pause fabric agent (agentforce, A2A). Governance tier: patient-facing. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/assessment",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "administers-and-deterministically-scores-validat",
+      "name": "Administers and deterministically scores validated menopa...",
+      "description": "Administers and deterministically scores validated menopause & mental-health instruments (MRS, Greene Climacteric Scale, PHQ-9, ISI) — real cutoff-based math, no LLM",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "returns-per-instrument-subscores-a-total-and-a-s",
+      "name": "Returns per-instrument subscores, a total, and a severity...",
+      "description": "Returns per-instrument subscores, a total, and a severity band normalized onto IntakeRecord's mild/moderate/severe vocabulary",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "screens-red-flag-items-e-g-phq-9-item-9-self-har",
+      "name": "Screens red-flag items (e.g. PHQ-9 item 9 self-harm ideat...",
+      "description": "Screens red-flag items (e.g. PHQ-9 item 9 self-harm ideation) and escalates them explicitly",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "feeds-the-scored-severity-into-intakerecord-seve",
+      "name": "Feeds the scored severity into IntakeRecord.severity so t...",
+      "description": "Feeds the scored severity into IntakeRecord.severity so the Care Router decision is backed by a validated instrument rather than a self-report",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "refuses-to-administer-or-score-any-instrument-ou",
+      "name": "Refuses to administer or score any instrument outside the...",
+      "description": "Refuses to administer or score any instrument outside the validated allow-list",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "assessment-agent",
+    "kind": "agentforce",
+    "governanceTier": "patient-facing",
+    "status": "prototype",
+    "policies": [
+      "policy.phi.no-free-text-pii",
+      "policy.intake.red-flag-mandatory",
+      "policy.audit.hipaa-log-every-turn",
+      "policy.assessment.validated-instrument-only"
+    ]
+  }
+}

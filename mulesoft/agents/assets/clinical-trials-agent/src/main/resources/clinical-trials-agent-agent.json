@@ -1,0 +1,107 @@
+{
+  "name": "Clinical Trials & Research Matching Agent",
+  "description": "Clinical Trials & Research Matching Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/clinical-trials",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "matches-a-single-menopause-midlife-patient-again",
+      "name": "Matches a SINGLE menopause/midlife patient against a synt...",
+      "description": "Matches a SINGLE menopause/midlife patient against a synthetic research-study catalog using STRUCTURED eligibility criteria (age band, symptom profile, comorbidities, geography, prior therapy, HRT status, postmenopausal status) — the 'Agentforce for Health' clinical-trials / research-matching analog, distinct from the population-health, care-gap, remote-monitoring, referral, and education agents",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "eligibility-matching-is-deterministic-a-pure-fun",
+      "name": "Eligibility matching is DETERMINISTIC — a pure function o...",
+      "description": "Eligibility matching is DETERMINISTIC — a pure function of the patient context against each study's DEFINED criteria (no randomness, no clock); the same context always yields the same matches + ranking with a stable, documented tie-break (eligible first, then match score, then studyId)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-eligibility-determination-traces-to-a-defi",
+      "name": "Every eligibility determination traces to a defined study...",
+      "description": "Every eligibility determination traces to a defined study criterion — a fabricated / ad-hoc / off-catalog eligibility is blocked at the Agent Fabric governance boundary (policy.trials.eligibility-criteria-sourced)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "trial-outreach-is-research-consent-gated-it-defe",
+      "name": "Trial outreach is RESEARCH-CONSENT-GATED — it defers to t...",
+      "description": "Trial outreach is RESEARCH-CONSENT-GATED — it defers to the patient's `research` consent scope (the Consent & Preferences Management agent's, withheld by default) and drafts an active outreach only when research consent is present, otherwise it withholds outreach (policy.trials.research-consent-required); and it NEVER enrolls a patient autonomously — enrollment requires informed consent + a human (policy.trials.no-autonomous-enrollment)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-study-cat",
+      "name": "Runs against an ILLUSTRATIVE synthetic study catalog — st...",
+      "description": "Runs against an ILLUSTRATIVE synthetic study catalog — studies, sponsors, criteria, and patient references clearly labeled; NOT real studies, real sponsors, or a certified trial-eligibility engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "clinical-trials-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.trials.eligibility-criteria-sourced",
+      "policy.trials.research-consent-required",
+      "policy.trials.no-autonomous-enrollment"
+    ]
+  }
+}

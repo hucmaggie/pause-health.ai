@@ -1,0 +1,106 @@
+{
+  "name": "Commercial Peak-Window / Maximum Contiguous Net-Gain Detection Agent",
+  "description": "Commercial Peak-Window / Maximum Contiguous Net-Gain Detection Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: commercial-operations. Enforces 3 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/peak-window",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "given-a-time-ordered-series-of-a-business-metric",
+      "name": "Given a time-ordered series of a business metric's signed...",
+      "description": "Given a time-ordered series of a business metric's signed per-period net change (net-new ARR, net enrolled patients, net revenue delta), finds the single maximum-sum contiguous window — the strongest sustained net-gain stretch — reporting its start / end period, summed net gain, and length, or honestly reporting no positive window when every contiguous stretch nets a loss (disposition positive-window / no-positive-window). A deterministic commercial-analytics agent; it COMPLEMENTS the KPI Trend agent (which fits a least-squares trend line and projects it) and the Pipeline Management agent (which rolls up CRM opportunity records) — this finds the peak contiguous net-gain window",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "the-detection-is-deterministic-a-pure-function-o",
+      "name": "The detection is DETERMINISTIC — a pure function of the s...",
+      "description": "The detection is DETERMINISTIC — a pure function of the series' own values (no randomness, no clock; not a least-squares regression, a CUSUM, a sliding-window count, a window-vs-baseline, a knapsack, a weighted-interval schedule, a Dijkstra path, a majority vote, a trie match, a k-way merge, a percentile, a union-find, or a checksum but KADANE'S MAXIMUM-SUBARRAY — the running-sum scan that finds the max-sum contiguous window in O(n)); the same series always yields the same window",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "the-window-must-be-sourced-self-honest-a-real-co",
+      "name": "The window must be sourced + self-honest — a real contigu...",
+      "description": "The window must be sourced + self-honest — a real contiguous sub-range of the submitted series (0 <= start <= end < n), the reported length matching (end − start + 1), and the reported windowSum equal to the actual sum over that range, with hasPositiveWindow / disposition following the sign; a fabricated / out-of-range window or an overstated sum is blocked at the Agent Fabric governance boundary (policy.peak-window.window-sourced, the sourced + self-honesty gate); and the window must be optimal — re-running Kadane's maximum-subarray must reproduce the reported windowSum + disposition; a sub-optimal window that under-reports the true peak run is blocked (policy.peak-window.window-optimal, the load-bearing correctness gate). Mirrors the Care Routing Agent's path-sourced + route-optimal posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "the-agent-detects-and-recommends-it-never-commit",
+      "name": "The agent DETECTS and RECOMMENDS — it NEVER commits the f...",
+      "description": "The agent DETECTS and RECOMMENDS — it NEVER commits the finding as an official metric, adjusts a quota / target, or notifies finance (each is a consequential commercial action that must be authorized) on its own; a finding that auto-actions or is not review-gated is blocked (policy.peak-window.no-autonomous-action), and every window is confirmed by a revenue analyst. Mirrors the KPI Trend Agent's no-autonomous-commit and the Provider Benchmarking Agent's no-autonomous-tiering posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "operates-only-on-the-commercial-crm-plane-no-pat",
+      "name": "Operates ONLY on the commercial CRM plane — NO patient PH...",
+      "description": "Operates ONLY on the commercial CRM plane — NO patient PHI, NOT on the HIPAA-audit policy; the series are ILLUSTRATIVE aggregate business figures, clearly labeled — NOT a certified analytics / FP&A system (real commercial analytics weighs seasonality, cohort dynamics, pipeline mix, macro conditions, and human judgment — not a bare maximum-subarray over a handful of periods)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "peak-window-agent",
+    "kind": "agentforce",
+    "governanceTier": "commercial-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.peak-window.window-sourced",
+      "policy.peak-window.window-optimal",
+      "policy.peak-window.no-autonomous-action"
+    ]
+  }
+}

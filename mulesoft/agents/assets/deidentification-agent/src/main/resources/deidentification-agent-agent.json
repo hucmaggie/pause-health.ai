@@ -1,0 +1,107 @@
+{
+  "name": "De-Identification & Safe Harbor Agent",
+  "description": "De-Identification & Safe Harbor Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/deidentification",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "the-de-identification-layer-of-the-data-substrat",
+      "name": "The de-identification layer of the data substrate — scree...",
+      "description": "The de-identification layer of the data substrate — screens a dataset's fields against the eighteen HIPAA Safe Harbor identifier categories (45 CFR 164.514(b)(2)) and decides whether the dataset qualifies as de-identified, complementing (not duplicating) the Consent & Preferences Management agent (consent scopes), the Master Patient Index (identity/dedup), the Break-the-Glass agent (emergency PHI access), the Data Retention agent (records disposition), and the Data-Sharing / TEFCA agent (interoperability exchange)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "determinations-are-deterministic-a-pure-function",
+      "name": "Determinations are DETERMINISTIC — a pure function of the...",
+      "description": "Determinations are DETERMINISTIC — a pure function of the dataset's fields + the category catalog (no randomness, no clock); the same dataset always yields the same de-identification decision + remaining identifier categories + release flag",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "a-de-identification-determination-must-screen-al",
+      "name": "A de-identification determination must screen ALL eightee...",
+      "description": "A de-identification determination must screen ALL eighteen Safe Harbor categories — an incomplete screen that skips a category is blocked at the Agent Fabric governance boundary (policy.deid.all-categories-screened); and it must cite a recognized method — Safe Harbor or a qualified Expert Determination with a cited reference — an ad-hoc / un-cited de-identification is blocked (policy.deid.method-cited). Mirrors the Good Faith Estimate Agent's expected-items-complete and the Data Retention Agent's schedule-sourced posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "a-re-identifiable-dataset-is-never-released-as-d",
+      "name": "A re-identifiable dataset is NEVER released as de-identif...",
+      "description": "A re-identifiable dataset is NEVER released as de-identified — a dataset that still contains a remaining identifier (a retained identifier, or a generalization that does not satisfy Safe Harbor) marked de-identified / release-approved is blocked (policy.deid.no-release-of-reidentifiable); a not-de-identified dataset is a completed determination requiring human review under a data use agreement. Mirrors the Balance Billing Agent's no-autonomous-balance-bill and the Master Patient Index Agent's no-autonomous-merge posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-safe-harb",
+      "name": "Runs against an ILLUSTRATIVE synthetic Safe Harbor catego...",
+      "description": "Runs against an ILLUSTRATIVE synthetic Safe Harbor category catalog + generalization rules — clearly labeled; NOT a certified de-identification engine (a real determination applies the full Safe Harbor method including the actual-knowledge clause, or a qualified statistician's Expert Determination under 45 CFR 164.514(b))",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "deidentification-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.deid.all-categories-screened",
+      "policy.deid.method-cited",
+      "policy.deid.no-release-of-reidentifiable"
+    ]
+  }
+}

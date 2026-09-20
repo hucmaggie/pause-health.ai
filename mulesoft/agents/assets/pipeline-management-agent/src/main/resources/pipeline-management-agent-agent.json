@@ -1,0 +1,91 @@
+{
+  "name": "Agentforce Pipeline Management · Provider-Org Deals",
+  "description": "Agentforce Pipeline Management · Provider-Org Deals — a governed Pause fabric agent (agentforce, A2A). Governance tier: commercial-operations. Enforces 2 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "salesforce://agentforce/pause-pipeline@v1",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "manages-the-b2b-opportunity-pipeline-for-provide",
+      "name": "Manages the B2B opportunity pipeline for provider-organiz...",
+      "description": "Manages the B2B opportunity pipeline for provider-organization, health-system, and employer deals in Sales Cloud",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "tracks-stage-progression-deal-health-and-next-be",
+      "name": "Tracks stage progression, deal health, and next-best-acti...",
+      "description": "Tracks stage progression, deal health, and next-best-action; flags stalled or at-risk opportunities",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "rolls-up-committed-best-case-pipeline-forecasts-",
+      "name": "Rolls up committed / best-case / pipeline forecasts — eve...",
+      "description": "Rolls up committed / best-case / pipeline forecasts — every figure traces back to CRM opportunity records, never fabricated",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    },
+    {
+      "id": "operates-only-on-the-commercial-crm-plane-has-no",
+      "name": "Operates only on the commercial CRM plane; has no access ...",
+      "description": "Operates only on the commercial CRM plane; has no access to patient PHI or the clinical plane",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "commercial-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "pipeline-management-agent",
+    "kind": "agentforce",
+    "governanceTier": "commercial-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.commercial.no-phi-in-commercial-plane",
+      "policy.commercial.forecast-integrity"
+    ]
+  }
+}

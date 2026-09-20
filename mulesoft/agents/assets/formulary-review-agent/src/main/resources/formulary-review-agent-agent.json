@@ -1,0 +1,121 @@
+{
+  "name": "Formulary & Drug Utilization Review Agent",
+  "description": "Formulary & Drug Utilization Review Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/formulary-review",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "reviews-a-proposed-medication-against-the-payer-",
+      "name": "Reviews a proposed medication against the payer's formula...",
+      "description": "Reviews a proposed medication against the payer's formulary — tier lookup, step-therapy sequencing, quantity limits, drug-drug interactions — and classifies as preferred-approved / pend-step-therapy / pend-quantity-limit / pend-interaction-review / pend-non-formulary with routing to a clinician (or pharmacist for interactions). Companion to the Prior Auth (broader UM), Medication Adherence (nudge-only refill), and Claims Adjudication (post-service) agents",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "review-is-deterministic-a-pure-function-of-the-r",
+      "name": "Review is DETERMINISTIC — a pure function of the request ...",
+      "description": "Review is DETERMINISTIC — a pure function of the request + patient's prior-therapy + current-medication list + payer formulary catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same decision + applied rules + reason code, with a documented precedence (pend-non-formulary > pend-step-therapy > pend-interaction-review > pend-quantity-limit > preferred-approved)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "every-proposed-drug-applied-rule-reason-code-mus",
+      "name": "Every proposed drug + applied rule + reason code must tra...",
+      "description": "Every proposed drug + applied rule + reason code must trace to the defined catalogs (FORMULARY_DRUG_CATALOG, FORMULARY_RULE_CATALOG, FORMULARY_REASON_CODE_CATALOG) — a fabricated drug or 'we-just-said-no' rule is blocked at the Agent Fabric governance boundary (policy.formulary.catalog-sourced)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "step-therapy-must-be-honored-when-the-plan-requi",
+      "name": "Step therapy must be HONORED — when the plan requires a d...",
+      "description": "Step therapy must be HONORED — when the plan requires a documented trial of a preferred agent, the agent verifies documented prior-therapy is on file before returning preferred-approved; approving on undocumented / self-reported history is blocked (policy.formulary.step-therapy-honored), a common payer-audit finding",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-agent-never-autonomously-overrides-a-formula",
+      "name": "The agent NEVER autonomously overrides a formulary except...",
+      "description": "The agent NEVER autonomously overrides a formulary exception — every non-preferred decision is DRAFTED for clinician cosign (requiresClinicianCosign:true, cosigned:false), and any autonomous override is blocked (policy.formulary.no-autonomous-override); formulary exceptions are legally consequential (Medicare Advantage Chapter 6 + Part D require a documented rationale from a prescriber). Mirrors the Claims Adjudication Agent's no-autonomous-denial, the PA Agent's no-autonomous-submission, and the CCM Agent's no-autonomous-billing posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-drug-catalog",
+      "name": "Runs against ILLUSTRATIVE synthetic drug catalog + rule c...",
+      "description": "Runs against ILLUSTRATIVE synthetic drug catalog + rule catalog + reason-code catalog + step-therapy chains + interaction pairs — clearly labeled; NOT Medi-Span, First Databank, RxNorm, an actual payer's formulary file, or a certified DUR engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "formulary-review-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.formulary.catalog-sourced",
+      "policy.formulary.step-therapy-honored",
+      "policy.formulary.no-autonomous-override"
+    ]
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "name": "Right of Access (HIPAA §164.524) Agent",
+  "description": "Right of Access (HIPAA §164.524) Agent — a governed Pause fabric agent (mulesoft-process, A2A). Governance tier: data-plane. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/right-of-access",
+  "provider": {
+    "organization": "MuleSoft Anypoint",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "the-right-of-access-layer-of-the-data-substrate-",
+      "name": "The right-of-access layer of the data substrate — given a...",
+      "description": "The right-of-access layer of the data substrate — given a patient's access request, confirms the PHI is in a designated record set, computes the §164.524 response deadline (30 days, + 30 with the single extension), classifies any cited denial ground (unreviewable / reviewable) against the recorded exception catalog, and decides the disposition (grant-in-full / deny-unreviewable / deny-reviewable-needs-review / not-accessible-outside-record-set). Complements (not duplicates) the Accounting of Disclosures agent (WHO the PHI was disclosed to, §164.528), the Consent agent (whether a patient may be contacted / data used), the Minimum Necessary agent (how much PHI a purpose may see), and the Audit Log Integrity agent (whether the audit TRAIL is tamper-evident) — this answers the patient's §164.524 RIGHT to GET a copy of their own record, and BY WHEN",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-determination-is-deterministic-a-pure-functi",
+      "name": "The determination is DETERMINISTIC — a pure function of t...",
+      "description": "The determination is DETERMINISTIC — a pure function of the request's own fields (no randomness, no clock — dates taken as data); the deadline is the request date + 30 (or + 60 with the extension), and the same request always yields the same deadline + classification + disposition",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "every-cited-denial-ground-must-trace-to-the-reco",
+      "name": "Every cited denial ground must trace to the recorded §164...",
+      "description": "Every cited denial ground must trace to the recorded §164.524 exception catalog — an off-catalog ground is not a lawful basis to withhold a patient's own record and is blocked at the Agent Fabric governance boundary (policy.access.ground-sourced); and the response deadline must equal the request date + 30/60 days — a guessed / mis-stated deadline is blocked (policy.access.deadline-computed, the load-bearing correctness gate). Mirrors the Accounting of Disclosures Agent's purpose-category-sourced and the Timely Filing Agent's deadline-computed posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "the-agent-adjudicates-it-never-releases-the-reco",
+      "name": "The agent ADJUDICATES — it NEVER releases the record (a p...",
+      "description": "The agent ADJUDICATES — it NEVER releases the record (a privacy risk) or issues a denial (a legal act with appeal rights) on its own; a determination that auto-releases the record or is not review-gated is blocked (policy.access.no-autonomous-denial-or-release), and every determination is a recommendation requiring a records / privacy officer to fulfill or review. Mirrors the Accounting of Disclosures Agent's no-autonomous-suppression and the Minimum Necessary Agent's no-autonomous-over-disclosure posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-exception",
+      "name": "Runs against an ILLUSTRATIVE synthetic exception catalog ...",
+      "description": "Runs against an ILLUSTRATIVE synthetic exception catalog + 30/60-day math — clearly labeled; NOT a certified release-of-information system (real access is governed by HIPAA §164.524 — the full set of grounds for denial, the reviewable-denial review process, the fee limits, and the designated-record-set definition — the HITECH electronic-copy rules, and the covered entity's Notice of Privacy Practices)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "data-plane"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "right-of-access-agent",
+    "kind": "mulesoft-process",
+    "governanceTier": "data-plane",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.access.ground-sourced",
+      "policy.access.deadline-computed",
+      "policy.access.no-autonomous-denial-or-release"
+    ]
+  }
+}

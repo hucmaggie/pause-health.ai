@@ -1,0 +1,107 @@
+{
+  "name": "Agentforce Prospecting & Nurture Agent · Menopause Outreach",
+  "description": "Agentforce Prospecting & Nurture Agent · Menopause Outreach — a governed Pause fabric agent (agentforce, A2A). Governance tier: patient-acquisition. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/prospecting",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.1.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "consumes-data-360-population-segments-as-prospec",
+      "name": "Consumes Data 360 population segments as prospect audienc...",
+      "description": "Consumes Data 360 population segments as prospect audiences (e.g., the 40-60 vasomotor-burden cohort)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-acquisition"
+      ]
+    },
+    {
+      "id": "scores-and-warms-leads-across-a-multi-touch-nurt",
+      "name": "Scores and warms leads across a multi-touch nurture caden...",
+      "description": "Scores and warms leads across a multi-touch nurture cadence, advancing only prospects who engage",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-acquisition"
+      ]
+    },
+    {
+      "id": "drafts-consent-aware-outreach-and-nurture-touche",
+      "name": "Drafts consent-aware outreach and nurture touches (email ...",
+      "description": "Drafts consent-aware outreach and nurture touches (email / SMS) via Marketing Cloud for human review — never sends autonomously",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-acquisition"
+      ]
+    },
+    {
+      "id": "suppresses-prospects-without-contact-consent-and",
+      "name": "Suppresses prospects without contact consent, and drops a...",
+      "description": "Suppresses prospects without contact consent, and drops anyone from active sequences the moment they convert or opt out",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-acquisition"
+      ]
+    },
+    {
+      "id": "hands-a-sufficiently-warmed-prospect-onward-for-",
+      "name": "Hands a sufficiently-warmed prospect onward for qualifica...",
+      "description": "Hands a sufficiently-warmed prospect onward for qualification and intake via Google A2A",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-acquisition"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "prospecting-agent",
+    "kind": "agentforce",
+    "governanceTier": "patient-acquisition",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.marketing.consent-to-contact-required",
+      "policy.marketing.human-approval-before-send",
+      "policy.marketing.nurture-cadence-cap"
+    ]
+  }
+}

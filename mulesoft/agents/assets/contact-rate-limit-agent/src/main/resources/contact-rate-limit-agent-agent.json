@@ -1,0 +1,107 @@
+{
+  "name": "Member Contact Rate Limiting / Token-Bucket Throttle Agent",
+  "description": "Member Contact Rate Limiting / Token-Bucket Throttle Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/contact-rate-limit",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-chronologically-ordered-sequence-of-outb",
+      "name": "Takes a chronologically-ordered sequence of outbound cont...",
+      "description": "Takes a chronologically-ordered sequence of outbound contact attempts to a member and a token-bucket config (burst capacity + refill per hour) and replays them through a token bucket to permit or throttle each (disposition within-limits / throttled), reporting the per-attempt decisions, the permitted/throttled tallies, and the final token level. A deterministic care-coordination contact-governance agent; it COMPLEMENTS the Outreach Prioritization agent (which selects WHICH members to contact) — this caps HOW OFTEN one member may be contacted over time",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-plan-is-deterministic-a-pure-function-of-the",
+      "name": "The plan is DETERMINISTIC — a pure function of the reques...",
+      "description": "The plan is DETERMINISTIC — a pure function of the request's own config + timestamps (time is data: the timestamps are plain numbers, no real clock; not a knapsack, a sliding-window count, an EDF schedule, a max-flow, a minimum spanning tree, a Dijkstra path, or an interval selection but TOKEN-BUCKET RATE LIMITING — a continuously-refilling token reservoir with a burst cap); the same request always yields the same plan",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-replay-must-be-sourced-self-consistent-the-d",
+      "name": "The replay must be sourced + self-consistent — the decisi...",
+      "description": "The replay must be sourced + self-consistent — the decisions cover exactly the submitted attempts (same ids + timestamps, in non-decreasing time order — none dropped / added / reordered), the permitted/throttled tallies match, attemptCount honest, and the disposition following; a fabricated attempt, a reordered replay, or a miscounted tally is blocked at the Agent Fabric governance boundary (policy.contactrate.replay-sourced, the sourced + self-consistency gate); and the throttle must be policy-exact — re-running the token-bucket simulation must reproduce every permit/throttle decision and the final token level; an over- or under-throttled decision is blocked (policy.contactrate.throttle-exact, the load-bearing correctness gate). Mirrors the Referral Throughput Agent's flow-sourced + throughput-optimal posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-plans-and-recommends-it-never-sends-a-",
+      "name": "The agent PLANS and RECOMMENDS — it NEVER sends a permitt...",
+      "description": "The agent PLANS and RECOMMENDS — it NEVER sends a permitted contact or suppresses a throttled one (each is a member-communication action that must be authorized) on its own; a plan that auto-sends or is not review-gated is blocked (policy.contactrate.no-autonomous-send), and every plan is confirmed by an outreach coordinator. Mirrors the Referral Throughput Agent's no-autonomous-route and the Batch Partition Agent's no-autonomous-assign posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-attempts-cle",
+      "name": "Runs against ILLUSTRATIVE synthetic attempts — clearly la...",
+      "description": "Runs against ILLUSTRATIVE synthetic attempts — clearly labeled; NOT a certified communications-compliance system (real member-contact governance weighs TCPA / CAN-SPAM consent, quiet hours, channel-specific caps, member preferences, and campaign suppression lists — not a bare token bucket over illustrative timestamps). PHI-adjacent — the attempts reference member contacts, so a plan is on the HIPAA audit path",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "contact-rate-limit-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.contactrate.replay-sourced",
+      "policy.contactrate.throttle-exact",
+      "policy.contactrate.no-autonomous-send"
+    ]
+  }
+}

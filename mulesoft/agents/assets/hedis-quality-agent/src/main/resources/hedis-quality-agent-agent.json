@@ -1,0 +1,107 @@
+{
+  "name": "HEDIS & Quality Reporting Agent",
+  "description": "HEDIS & Quality Reporting Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/hedis-quality",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "rolls-up-per-patient-signals-across-a-panel-into",
+      "name": "Rolls up per-patient signals across a panel into HEDIS qu...",
+      "description": "Rolls up per-patient signals across a panel into HEDIS quality measure compliance (numerator, denominator, exclusions, rate) with a per-measure gap list — a panel-level quality-reporting agent distinct from the single-patient Care Gap Closure agent and the panel-level Population Health risk-stratification agent",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "quality-reporting-is-deterministic-a-pure-functi",
+      "name": "Quality reporting is DETERMINISTIC — a pure function of t...",
+      "description": "Quality reporting is DETERMINISTIC — a pure function of the panel signals + the caller-provided `asOfPeriod` accepted as data (no randomness, no clock); the same panel + period always yields the same rates + gap lists, with a stable, documented denominator narrowing per measure",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-scored-measure-must-trace-to-the-defined-h",
+      "name": "Every scored measure must trace to the defined HEDIS meas...",
+      "description": "Every scored measure must trace to the defined HEDIS measure catalog — an off-catalog / fabricated measure is blocked at the Agent Fabric governance boundary (policy.hedis.measure-catalog-sourced), and every applied denominator exclusion must trace to a defined catalog exclusion on that measure — an ad-hoc / unlisted exclusion is blocked (policy.hedis.exclusion-integrity), so a rate cannot be quietly inflated by shrinking the denominator",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "submission-is-human-approved-the-agent-may-only-",
+      "name": "Submission is HUMAN-APPROVED — the agent may only assembl...",
+      "description": "Submission is HUMAN-APPROVED — the agent may only assemble a submission package ready for human quality-team review, never submit autonomously to a payer / CMS / quality registry (policy.hedis.no-autonomous-submission); mirrors the Prior Authorization Agent's clinician-gated draft, the Population Health Agent's no-autonomous-care-decision, and the Clinical Trials Agent's no-autonomous-enrollment posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-an-illustrative-synthetic-hedis-mea",
+      "name": "Runs against an ILLUSTRATIVE synthetic HEDIS measure cata...",
+      "description": "Runs against an ILLUSTRATIVE synthetic HEDIS measure catalog + exclusion lists — measures, thresholds, and specs clearly labeled; NOT NCQA-certified specifications, real value sets, or a certified HEDIS engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "hedis-quality-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.hedis.measure-catalog-sourced",
+      "policy.hedis.exclusion-integrity",
+      "policy.hedis.no-autonomous-submission"
+    ]
+  }
+}

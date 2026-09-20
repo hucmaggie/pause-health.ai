@@ -1,0 +1,107 @@
+{
+  "name": "Language Access & Health Equity Agent",
+  "description": "Language Access & Health Equity Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: whole-person-care. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/language-access",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "ensures-lep-patients-can-understand-their-care-d",
+      "name": "Ensures LEP patients can understand their care — determin...",
+      "description": "Ensures LEP patients can understand their care — determines the PREFERRED LANGUAGE (deferring to the Consent & Preferences Management agent's preferred-language preference), decides whether a qualified medical interpreter is needed and of which modality (in-person / video / phone), checks approved in-language materials, and flags equity / access gaps — a health-equity / access agent distinct from the SDOH, consent, and clinical agents",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    },
+    {
+      "id": "language-access-planning-is-deterministic-a-pure",
+      "name": "Language-access planning is DETERMINISTIC — a pure functi...",
+      "description": "Language-access planning is DETERMINISTIC — a pure function of the patient's structured context against the supported-language + approved-materials catalogs (no randomness, no clock); the same context always yields the same assessment (with a stable, documented equity-gap ordering)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    },
+    {
+      "id": "clinical-interpretation-uses-a-qualified-medical",
+      "name": "Clinical interpretation uses a QUALIFIED medical interpre...",
+      "description": "Clinical interpretation uses a QUALIFIED medical interpreter only — an untrained / ad-hoc / family interpreter (or machine translation) for clinical communication is blocked at the Agent Fabric governance boundary (policy.langaccess.qualified-interpreter-only); when no qualified interpreter is available the agent escalates to a human coordinator (a safe output), it never substitutes an unqualified option",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    },
+    {
+      "id": "in-language-materials-must-trace-to-the-approved",
+      "name": "In-language materials must trace to the approved translat...",
+      "description": "In-language materials must trace to the approved translated-materials catalog — an unverified / ad-hoc translation presented as official is blocked (policy.langaccess.translated-material-source-integrity); and machine / auto translation may never be used for clinical consent or clinical decision communication (policy.langaccess.no-machine-translation-for-consent)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-supported-la",
+      "name": "Runs against ILLUSTRATIVE synthetic supported-language, i...",
+      "description": "Runs against ILLUSTRATIVE synthetic supported-language, interpreter-availability, and approved-materials catalogs — languages, availability, materials, and translation provenance clearly labeled; NOT a certified language-access system",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "whole-person-care"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "language-access-agent",
+    "kind": "agentforce",
+    "governanceTier": "whole-person-care",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.langaccess.qualified-interpreter-only",
+      "policy.langaccess.translated-material-source-integrity",
+      "policy.langaccess.no-machine-translation-for-consent"
+    ]
+  }
+}

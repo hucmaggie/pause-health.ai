@@ -1,0 +1,106 @@
+{
+  "name": "Agentforce Member Service · Billing & Coverage (Patient Service)",
+  "description": "Agentforce Member Service · Billing & Coverage (Patient Service) — a governed Pause fabric agent (agentforce, A2A). Governance tier: patient-facing. Enforces 3 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/member-service",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "answers-a-member-s-billing-coverage-self-service",
+      "name": "Answers a member's BILLING & COVERAGE self-service questi...",
+      "description": "Answers a member's BILLING & COVERAGE self-service questions — claim status, copay / patient responsibility, outstanding balance, and EOB explanation — the Salesforce 'Agentforce for Health' Claims & Coverage / patient-service analog",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "grounds-every-answer-on-deterministic-synthetic-",
+      "name": "Grounds every answer on DETERMINISTIC synthetic claim/EOB...",
+      "description": "Grounds every answer on DETERMINISTIC synthetic claim/EOB records (hashed member/claim keys → realistic billed/allowed/plan-paid/patient-responsibility figures across submitted / adjudicated / paid / denied statuses; no randomness, no clock) — clearly labeled synthetic; not a real claims / 835-ERA remittance or FHIR ExplanationOfBenefit",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "every-billing-claim-answer-must-trace-to-a-speci",
+      "name": "Every billing/claim answer must trace to a specific synth...",
+      "description": "Every billing/claim answer must trace to a specific synthetic claim/EOB record (a cited-claims block) — the agent may not fabricate claim data; enforced at the Agent Fabric governance boundary (policy.billing.claim-data-sourced)",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "routes-out-of-scope-requests-clinical-prescripti",
+      "name": "Routes out-of-scope requests (clinical, prescription, or ...",
+      "description": "Routes out-of-scope requests (clinical, prescription, or scheduling questions) to a human member-services specialist with a PII-safe billing context bundle — scoped to billing/coverage self-service so it stays distinct from the Engagement Agent",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    },
+    {
+      "id": "captures-no-free-text-pii-structured-claim-refer",
+      "name": "Captures no free-text PII (structured, claim-referenced a...",
+      "description": "Captures no free-text PII (structured, claim-referenced answers only) and every turn is HIPAA-audited",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "patient-facing"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "member-service-agent",
+    "kind": "agentforce",
+    "governanceTier": "patient-facing",
+    "status": "prototype",
+    "policies": [
+      "policy.phi.no-free-text-pii",
+      "policy.audit.hipaa-log-every-turn",
+      "policy.billing.claim-data-sourced"
+    ]
+  }
+}

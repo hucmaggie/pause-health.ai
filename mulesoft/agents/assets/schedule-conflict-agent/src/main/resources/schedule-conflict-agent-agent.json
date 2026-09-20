@@ -1,0 +1,107 @@
+{
+  "name": "Scheduling Conflict / Double-Booking Guard Agent",
+  "description": "Scheduling Conflict / Double-Booking Guard Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: care-coordination. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/schedule-conflict",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "takes-a-resource-a-provider-s-clinic-day-an-infu",
+      "name": "Takes a resource (a provider's clinic day, an infusion ch...",
+      "description": "Takes a resource (a provider's clinic day, an infusion chair, an imaging machine) and a batch of requested appointment intervals (each a start/end time for a patient) and computes the maximum conflict-free schedule that fits without double-booking, waitlisting the requests that collide. A deterministic care-coordination agent; it COMPLEMENTS the Appointment Scheduling agent (which BOOKS a SINGLE slot and never double-books THAT slot) — this validates a WHOLE BATCH for a resource and produces the conflict-free schedule + the waitlist",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-schedule-is-deterministic-a-pure-function-of",
+      "name": "The schedule is DETERMINISTIC — a pure function of the re...",
+      "description": "The schedule is DETERMINISTIC — a pure function of the request's own intervals (time is data: ISO strings or epoch-ms, no real clock; not a bin-packing, a sliding-window count, an interval MERGE, a topological sort, a set-difference, a dollar waterfall, an identity match, or a hash chain but GREEDY INTERVAL SELECTION — the classic activity-selection algorithm, sort by earliest finish and admit each interval that doesn't overlap the last admitted, provably maximizing the number of non-overlapping appointments); the same batch always yields the same schedule",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "every-scheduled-waitlisted-appointment-must-trac",
+      "name": "Every scheduled / waitlisted appointment must trace to a ...",
+      "description": "Every scheduled / waitlisted appointment must trace to a submitted request (same id, member, start, end) and every request must be accounted for exactly once across the scheduled and conflict sets — a fabricated appointment, a dropped patient, or a double-count is blocked at the Agent Fabric governance boundary (policy.schedule.intervals-sourced, the sourced + completeness gate); and the schedule must be conflict-free — the scheduled appointments must be pairwise NON-overlapping (no double-booking), every waitlisted appointment must genuinely overlap the scheduled one it names, and the counts must add up; a double-booked resource or a request waitlisted while it actually fit is blocked (policy.schedule.conflict-free, the load-bearing correctness gate). Mirrors the Caseload Balancing Agent's assignment-complete + capacity-respected posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "the-agent-recommends-it-never-books-cancels-or-b",
+      "name": "The agent RECOMMENDS — it NEVER books, cancels, or bumps ...",
+      "description": "The agent RECOMMENDS — it NEVER books, cancels, or bumps an appointment (each is a scheduling action that must be authorized) on its own; a schedule that auto-books or is not review-gated is blocked (policy.schedule.no-autonomous-booking), and every schedule is a recommendation requiring a scheduler to confirm. Mirrors the Caseload Balancing Agent's no-autonomous-assignment and the Appointment Scheduling Agent's governance posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-resource-int",
+      "name": "Runs against ILLUSTRATIVE synthetic resource + intervals ...",
+      "description": "Runs against ILLUSTRATIVE synthetic resource + intervals — clearly labeled; NOT a certified scheduling system (real scheduling uses provider availability calendars, appointment-type durations, buffer / turnover times, and room / equipment constraints). PHI-bearing — the requests reference the patients being scheduled",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "care-coordination"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "schedule-conflict-agent",
+    "kind": "agentforce",
+    "governanceTier": "care-coordination",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.schedule.intervals-sourced",
+      "policy.schedule.conflict-free",
+      "policy.schedule.no-autonomous-booking"
+    ]
+  }
+}

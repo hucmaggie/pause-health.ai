@@ -1,0 +1,121 @@
+{
+  "name": "Fraud, Waste & Abuse Detection Agent",
+  "description": "Fraud, Waste & Abuse Detection Agent — a governed Pause fabric agent (agentforce, A2A). Governance tier: payer-operations. Enforces 4 Pause Agent Fabric policies. Prototype agent card — synthetic data, no real PHI.",
+  "url": "https://pause-health.ai/api/agents/fwa-detection",
+  "provider": {
+    "organization": "Salesforce",
+    "url": "https://pause-health.ai"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text",
+    "data"
+  ],
+  "defaultOutputModes": [
+    "text",
+    "data"
+  ],
+  "skills": [
+    {
+      "id": "screens-claims-prior-auths-against-a-defined-fwa",
+      "name": "Screens claims / prior-auths against a defined FWA patter...",
+      "description": "Screens claims / prior-auths against a defined FWA pattern catalog (unbundling, upcoding, duplicate billing, quantity outliers, impossible-day billing, phantom services), classifies each hit by severity, and routes to the SIU for HUMAN review. Distinct from the Claims Adjudication Assistant (mechanical edits with immediate deny) — this is about pattern-level suspicion that needs investigation, not routine catalog edits",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "screening-is-deterministic-a-pure-function-of-th",
+      "name": "Screening is DETERMINISTIC — a pure function of the claim...",
+      "description": "Screening is DETERMINISTIC — a pure function of the claim + provider peer-baseline + pattern catalog + caller-provided asOfDate (no randomness, no clock); the same context always yields the same flags + primary pattern + severity, with a documented precedence (high > medium > low; lexical tie-break by pattern-id) and stable flag ordering",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "every-applied-fwa-flag-must-trace-to-the-defined",
+      "name": "Every applied FWA flag must trace to the defined FWA_PATT...",
+      "description": "Every applied FWA flag must trace to the defined FWA_PATTERNS catalog — a fabricated 'we-just-don't-like-this-provider' flag or a category-of-one pattern is blocked at the Agent Fabric governance boundary (policy.fwa.pattern-catalog-sourced), so the agent cannot raise arbitrary suspicion",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-agent-never-autonomously-denies-a-claim-open",
+      "name": "The agent NEVER autonomously denies a claim, opens an inv...",
+      "description": "The agent NEVER autonomously denies a claim, opens an investigation, or freezes payment — every report is requiresSiuReview:true (when flagged) / investigationOpened:false / paymentFrozen:false, and any autonomous action is blocked (policy.fwa.no-autonomous-denial); denying a claim on unproven suspicion is a Section 1557 / state insurance code / due-process failure. Mirrors the Claims Adjudication Agent's no-autonomous-denial, the PA Agent's no-autonomous-submission, and the CCM Agent's no-autonomous-billing posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "the-pattern-detection-engine-may-not-use-protect",
+      "name": "The pattern-detection engine may NOT use protected-class ...",
+      "description": "The pattern-detection engine may NOT use protected-class attributes (race, ethnicity, religion, national origin, disability, gender identity, sexual orientation, marital status) or provider-demographic proxies as detection factors — a factor list including any of those is blocked (policy.fwa.no-protected-class-factors), a documented compliance failure in real payer FWA systems. Mirrors the Population Health Agent's no-protected-class-factors posture",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    },
+    {
+      "id": "runs-against-illustrative-synthetic-pattern-cata",
+      "name": "Runs against ILLUSTRATIVE synthetic pattern catalog + pee...",
+      "description": "Runs against ILLUSTRATIVE synthetic pattern catalog + peer baselines + severity thresholds — clearly labeled; NOT SAS Detection and Investigation, LexisNexis Provider Insight, an actual payer SIU rule set, or a certified fraud-detection engine",
+      "inputModes": [
+        "data"
+      ],
+      "outputModes": [
+        "data"
+      ],
+      "tags": [
+        "payer-operations"
+      ]
+    }
+  ],
+  "pauseGovernance": {
+    "fabricRegisteredAs": "fwa-detection-agent",
+    "kind": "agentforce",
+    "governanceTier": "payer-operations",
+    "status": "prototype",
+    "policies": [
+      "policy.audit.hipaa-log-every-turn",
+      "policy.fwa.pattern-catalog-sourced",
+      "policy.fwa.no-autonomous-denial",
+      "policy.fwa.no-protected-class-factors"
+    ]
+  }
+}
