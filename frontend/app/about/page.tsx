@@ -17,7 +17,7 @@ const FOUNDER_PERSON_JSON_LD = {
   "@type": "Person",
   "@id": "https://www.linkedin.com/in/hucmaggie/",
   name: "Maggie C. Hu",
-  jobTitle: "Founder | CEO | CTO",
+  jobTitle: "Founder",
   image: "https://pause-health.ai/team/maggie-c-hu.jpg",
   url: "https://pause-health.ai/about",
   worksFor: {
@@ -287,7 +287,7 @@ export default function AboutPage() {
         <article className="card founder-card" style={{ marginTop: "0.6rem" }}>
           <Image
             src="/team/maggie-c-hu.jpg"
-            alt="Portrait of Maggie C. Hu, Founder | CEO | CTO of Pause-Health.AI."
+            alt="Portrait of Maggie C. Hu, Founder of Pause-Health.AI."
             width={200}
             height={200}
             sizes="(max-width: 600px) 160px, 200px"
@@ -302,7 +302,7 @@ export default function AboutPage() {
                 marginBottom: "0.6rem"
               }}
             >
-              Founder | CEO | CTO
+              Founder
             </p>
             <p style={{ marginBottom: "0.5rem" }}>
               Maggie leads product, vision, and provider partnerships at
