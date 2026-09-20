@@ -28,6 +28,64 @@ type ChangelogWeek = {
 
 const weeks: ChangelogWeek[] = [
   {
+    range: "Week of September 13, 2026",
+    headline: "The fabric meets Salesforce — five Pause agents go live in Agentforce, and all 110 land in Anypoint Exchange",
+    intro:
+      "This week the Agent Fabric stopped being a pure in-repo A2A construct and became discoverable across the MuleSoft + Salesforce stack. All 110 fabric agents were published to Anypoint Exchange as native type=agent assets (A2A v0.3 cards) via the Exchange Experience API — the fabric is now a browsable Agents & Tools catalog in the org. And five patient-facing agents were rebuilt as real, native Salesforce Agentforce agents: Benefits & Coverage Verification, Member Service (billing & claims), Appointment Scheduling, Care Router (symptom triage), and SDOH Screening (social needs). Each speaks to its fabric endpoint through a thin flat REST alias that reuses the same deterministic lib + the same Agent Fabric governance gate, registered as a Salesforce External Service and wired into an Agentforce subagent + action — so the Agentforce agent and the A2A agent can never diverge. Every one was tested GROUNDED in Agent Builder, including the load-bearing clinical-safety flows (Care Router's mandatory red-flag screen → urgent escalation; SDOH's positive interpersonal-safety screen → 988/911 human-social-worker escalation and consent-before-referral gate). A unified 'concierge' super-agent was attempted and honestly set aside — the Service Agent template's platform safety classifier intercepts benign coverage/billing questions at the router and isn't editable, so the five narrow standalone agents remain the reliable surface. Also this week: the site rebranded to Pause-Health.AI to match the new LinkedIn company page, and 143 pre-existing TypeScript errors were cleared so the frontend typechecks clean.",
+    entries: [
+      {
+        title:
+          "Agentforce: brought five Pause fabric agents into Salesforce Agentforce as native agents — Benefits & Coverage Verification, Member Service (billing & claims), Appointment Scheduling, Care Router (symptom triage with a mandatory red-flag screen), and SDOH Screening (social needs with 988/911 safety escalation + consent-before-referral) — each backed by a flat REST alias over its A2A fabric endpoint that reuses the same deterministic lib and governance gate, registered as a Salesforce External Service and wired into an Agentforce subagent + action, all five tested GROUNDED in Agent Builder and captured to the repo as deployable Bot + GenAiPlannerBundle metadata",
+        summary:
+          "The five patient-facing fabric agents (EBV, Member Service, Appointment Scheduling, Care Router, SDOH Screening) now run as real native Agentforce agents in the trailsignup org, not just mocked A2A endpoints. The pattern per agent: a thin flat REST alias (frontend/app/api/agentforce/<agent>/route.ts) wraps the A2A tasks/send endpoint — Agentforce External Services can't map an A2A JSON-RPC envelope, so the alias exposes a plain GET that reuses the SAME deterministic lib function (verifyCoverage / answerBillingQuestion / bookAppointment / scriptedRoute / screenSocialNeeds) and the SAME Agent Fabric governance gate, returning the flat result or a {blocked, violations} shape. Each alias ships to prod on Vercel, is registered in Salesforce as an External Service (PauseBenefitsVerification / PauseMemberService / PauseAppointmentScheduling / PauseCareRouter / PauseSdohScreening) against the existing Pause_Provider_API no-auth Named Credential, and is wired into one Agentforce subagent + action authored in Agent Builder. All five were tested GROUNDED in Preview: EBV returns in/out-of-network coverage + patient-responsibility and blocks on missing consent; Member Service answers claim/balance questions and routes out-of-scope requests to a human; Appointment Scheduling books against a synthetic provider calendar and blocks a double-book / out-of-availability slot; Care Router enforces a MANDATORY red-flag screen before routing (a missing screen hard-blocks on policy.intake.red-flag-mandatory) and escalates a positive red flag to urgent care + 911/ER; SDOH runs the CMS AHC-HRSN screen, surfaces a positive interpersonal-safety screen as a mandatory 988/911 human-social-worker escalation, and gates a community-resource referral behind explicit patient consent (blocked → asks → consents → proceeds). Two clinical agents required a routing workaround: the Service Agent template's Inappropriate Content guardrail intercepts sensitive symptom language, so the classification descriptions name those symptoms as legitimate clinical content and the reasoning asks single yes/no safety questions the patient answers without restating trigger terms. Each agent was retrieved from the org and committed as deploy-clean source (Bot + BotVersion + GenAiPlannerBundle with its localActions), and salesforce/manifest/package.xml now registers all five External Services + Bots + GenAiPlannerBundles — deployable to a fresh org via ./deploy.sh. Per-agent runbooks (salesforce/AGENTFORCE_*_RUNBOOK.md) capture the exact wiring + paste-ready reasoning copy. The backing fabric agents remain deterministic (no Claude) and synthetic/clearly-labeled — not real EDI / FHIR / booking / screening systems.",
+        commits: [
+          { sha: "81cb213", label: "EBV Agentforce agent: alias + OAS + runbook (16); fixes 143 pre-existing tsc errors" },
+          { sha: "7313189", label: "EBV Agentforce agent: captured metadata + subagent-terminology runbook (18)" },
+          { sha: "0b5da57", label: "Member Service (Billing & Coverage) Agentforce agent: alias + OAS + runbook (21)" },
+          { sha: "d414eb6", label: "Capture the live Member Service Agentforce agent as source-of-truth (24)" },
+          { sha: "9e7c96b", label: "Appointment Scheduling (MSCP) Agentforce agent: alias + OAS + runbook (25)" },
+          { sha: "ce9273b", label: "Capture the live Appointment Scheduling Agentforce agent as source-of-truth (27)" },
+          { sha: "a279dbd", label: "Care Router Agentforce agent: alias + OAS + runbook (26)" },
+          { sha: "ca0c706", label: "Capture the live Care Router Agentforce agent as source-of-truth (28)" },
+          { sha: "f27e869", label: "SDOH Screening Agentforce agent: alias + OAS + runbook (29)" },
+          { sha: "9b74bb7", label: "Capture the live SDOH Screening Agentforce agent — completes the 5-agent set (30)" }
+        ],
+        status: "shipped"
+      },
+      {
+        title:
+          "Anypoint Exchange: published all 110 fabric agents as native type=agent assets (A2A v0.3 cards) via the Exchange Experience API, with dry-run-first tooling — the fabric is now a browsable Agents & Tools catalog in the org",
+        summary:
+          "All 110 fabric agents are registered in Anypoint Exchange as native type=agent assets (classifier a2a-card), published via the Exchange Experience API (POST .../assets with type=agent + files.json=the A2A card) — verified against the live org, which is the path that yields a real Agent-typed asset (the Maven jar PUT used for the spec assets yields type=unknown and is deliberately not used). The tooling under mulesoft/agents/ is dry-run by default: a deterministic offline snapshot of listAgents() drives a generator that writes one A2A card per agent, and a publisher that validates every asset and prints the exact publish plan with zero network calls unless run with --live CONFIRM=yes (plus a --probe read-only creds check and a --limit=N staged batch). Registration makes the agents discoverable in Exchange's Agents & Tools view; a scoping doc (VISUALIZER_RUNTIME_SCOPE.md) records the honest finding that Anypoint Agent Visualizer needs live Omni-Gateway runtime traffic — not just Exchange registration — to render a graph, so the Visualizer stays empty until a real runtime is stood up. Synthetic prototype cards; no real PHI.",
+        commits: [
+          { sha: "bf4c9f8", label: "Exchange agent-asset tooling (110 fabric agents published as type=agent) (31)" }
+        ],
+        status: "shipped"
+      },
+      {
+        title:
+          "Agentforce: attempted a unified 'Pause Health Concierge' super-agent (one router across all five subagents) — fully built and its happy path worked, but honestly set aside because the Service Agent template's platform Inappropriate Content classifier intercepts benign coverage/billing questions at the router and isn't editable; the five narrow standalone agents remain the reliable surface",
+        summary:
+          "A unified concierge was built on the Agentforce Service Agent template — one host agent (Pause_Health_Concierge) whose router hands off across all five subagents (Care Routing, Appointment Scheduling, Benefits & Coverage, Billing & Coverage, Social Needs Screening) in a single conversation. The happy path worked GROUNDED in Preview (triage → offer to book → book → screen). But the template carries a platform-level Inappropriate Content safety classifier that evaluates at the Agent Router BEFORE routing reasoning runs, and with all five subagents under one router it fired inconsistently on benign questions — 'Will my Aetna plan cover a visit?', 'what do I owe' — returning a refusal. It is not an editable subagent (the router has no transition to it, there's no node to open), and neither strengthened per-subagent classification descriptions nor Agent-Level (System) Instructions overrode it. Decision: keep the five standalone agents (each narrow-scoped, so the classifier rarely mis-fires) as the deliverable; the concierge draft was left unactivated. The attempt + the paste-ready build copy + the reasons are documented in salesforce/AGENTFORCE_CONCIERGE_BUILD_SHEET.md for a possible future retry on a different template.",
+        commits: [
+          { sha: "c67303e", label: "Concierge build sheet + outcome (attempted, kept 5 standalone) (32)" }
+        ],
+        status: "shipped"
+      },
+      {
+        title:
+          "Brand + site: rebranded to Pause-Health.AI to match the new LinkedIn company page (new logo assets + wordmark casing across the site), added the company LinkedIn reference to the Organization JSON-LD and press page, fixed the press About-card layout, and cleared 143 pre-existing TypeScript errors so the frontend typechecks clean",
+        summary:
+          "Housekeeping alongside the integration work: the site rebranded from Pause-Health.ai to Pause-Health.AI to match the new LinkedIn company page (linkedin.com/company/pause-health.ai) — new optimized brand PNGs + wordmark casing across ~40 files, the company LinkedIn added to the Organization JSON-LD sameAs and a visible Follow link on the press page, and a press About-card width fix so it no longer reads as half-empty. Separately, 143 pre-existing TypeScript errors (chiefly test fixtures missing a required A2AMessage timestamp field, plus a handful of real type mismatches) were fixed so tsc --noEmit is clean and the frontend suite (4,616 tests) stays green — clearing the way for the Agentforce alias routes to ship on a green typecheck.",
+        commits: [
+          { sha: "b393978", label: "Update brand to match LinkedIn: new logo assets + Pause-Health.AI wordmark (22)" },
+          { sha: "34e2f3e", label: "Add the company LinkedIn page reference (19)" }
+        ],
+        status: "shipped"
+      }
+    ]
+  },
+  {
     range: "Week of September 6, 2026",
     headline: "The Agent Fabric crosses 100 — a run of deterministic classical-algorithm agents, each a genuinely new computation pattern",
     intro:
@@ -2759,7 +2817,7 @@ export default function ChangelogPage() {
               fontWeight: 600
             }}
           >
-            175 total commits since May 24, 2026
+            189 total commits since May 24, 2026
           </span>
           <a
             href={GITHUB_REPO + "/commits/main"}
