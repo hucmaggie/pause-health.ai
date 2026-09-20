@@ -64,7 +64,7 @@ const targetOutcomes = [
     value: "+34%",
     label: "Patient satisfaction lift",
     detail:
-      "Pilot target with design-partner provider organizations vs. care-as-usual baseline. (Design-partner program kicks off 2026 H2.)"
+      "Pilot target with design-partner provider organizations vs. care-as-usual baseline. (Design-partner program kicks off 2026 - 2027.)"
   },
   {
     value: "Time-to-MSCP",
@@ -453,7 +453,7 @@ export default function FullProposalPage() {
           Calculated Insights grounding live in production, and a MuleSoft
           Experience API contract verifiable from any{" "}
           <code>curl</code> against <a href="/api/mulesoft/providers">/api/mulesoft/providers</a>.
-          Provider organizations onboard in 2026 H2.
+          Provider organizations onboard in 2026 - 2027.
         </>
       }
       showSectionNav={false}

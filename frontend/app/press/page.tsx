@@ -85,12 +85,12 @@ const milestonesDone: Milestone[] = [
 
 const milestonesPlanned: Milestone[] = [
   {
-    year: "2026 H2",
+    year: "2026 - 2027",
     label: "Clinical advisory board formed across OB/GYN, endocrinology, primary care",
     status: "planned"
   },
   {
-    year: "2026 H2",
+    year: "2026 - 2027",
     label: "First design-partner provider organizations onboarded",
     status: "planned"
   },
@@ -238,7 +238,7 @@ export default function PressPage() {
             github.com/hucmaggie/pause-health.ai
           </a>
           . The company is actively recruiting design-partner provider
-          organizations for 2026 H2 pilots.
+          organizations for 2026 - 2027 pilots.
         </p>
       </section>
 
