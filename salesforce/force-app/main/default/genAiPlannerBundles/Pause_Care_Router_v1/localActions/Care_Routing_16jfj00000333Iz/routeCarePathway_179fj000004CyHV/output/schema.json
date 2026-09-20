@@ -1,0 +1,30 @@
+{
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "200" : {
+      "title" : "200",
+      "description" : "Routing decision. NOTE: when the governance gate blocks the call (e.g. no red-flag screen), the body is the blocked shape (blocked=true, decision, violations) instead of the pathway fields — the agent should complete the red-flag screen and retry, not invent a pathway.",
+      "lightning:type" : "@apexClassType/ExternalService__c__PauseCareRouter_routeCarePathway_OUT_200",
+      "lightning:isPII" : false,
+      "copilotAction:isDisplayable" : true,
+      "copilotAction:isUsedByPlanner" : true
+    },
+    "responseCode" : {
+      "title" : "Response Code",
+      "description" : "response code",
+      "lightning:type" : "lightning__integerType",
+      "lightning:isPII" : false,
+      "copilotAction:isDisplayable" : false,
+      "copilotAction:isUsedByPlanner" : true
+    },
+    "defaultExc" : {
+      "title" : "Default Exception",
+      "description" : "Default response",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isDisplayable" : false,
+      "copilotAction:isUsedByPlanner" : true
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}

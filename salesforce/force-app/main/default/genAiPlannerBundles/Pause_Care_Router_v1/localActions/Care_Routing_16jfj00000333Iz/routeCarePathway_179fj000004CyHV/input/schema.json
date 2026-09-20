@@ -1,0 +1,56 @@
+{
+  "required" : [ "redFlagsAcknowledged" ],
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "primarySymptom" : {
+      "title" : "Primary Symptom",
+      "description" : "Primary symptom cluster, e.g. vasomotor, sleep, mood, cognition, gsm, bleeding.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "severity" : {
+      "title" : "Severity",
+      "description" : "mild | moderate | severe.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "redFlagsAcknowledged" : {
+      "title" : "Red Flags Acknowledged",
+      "description" : "The MANDATORY red-flag screen result — yes / no / none. Required: the router refuses to route without it. Ask the patient the red-flag question and pass their answer.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "cycleStatus" : {
+      "title" : "Cycle Status",
+      "description" : "e.g. perimenopause, postmenopause, unknown.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "ageBand" : {
+      "title" : "Age Band",
+      "description" : "Age Band",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "patientZip" : {
+      "title" : "Patient Zip",
+      "description" : "Patient Zip",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "patientInsurance" : {
+      "title" : "Patient Insurance",
+      "description" : "Patient Insurance",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}
