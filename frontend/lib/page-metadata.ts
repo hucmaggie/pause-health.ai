@@ -16,8 +16,8 @@ export function pageMetadata({
   ogImage = "/brand/pause-health-og.png",
   ogImageAlt
 }: PageMetaInput): Metadata {
-  const fullTitle = `${title} | Pause-Health.ai`;
-  const altText = ogImageAlt ?? `${title} — Pause-Health.ai`;
+  const fullTitle = `${title} | Pause-Health.AI`;
+  const altText = ogImageAlt ?? `${title} — Pause-Health.AI`;
 
   // Pin OG / Twitter images to the canonical site URL so cards rendered
   // by Twitter/LinkedIn/Slack from a preview URL still fetch the image

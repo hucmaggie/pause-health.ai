@@ -5,17 +5,17 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Competition",
   description:
-    "Competitive landscape across DTC menopause brands, employer benefits, and clinical AI — and where Pause-Health.ai differentiates. Capability matrix tags every Pause claim with today/planned status.",
+    "Competitive landscape across DTC menopause brands, employer benefits, and clinical AI — and where Pause-Health.AI differentiates. Capability matrix tags every Pause claim with today/planned status.",
   path: "/proposal/competition",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "Competition — Pause-Health.ai investor brief."
+  ogImageAlt: "Competition — Pause-Health.AI investor brief."
 });
 
 /**
  * Competition brief — Arc A polish pass.
  *
  * The biggest credibility risk on this page was a capability matrix
- * that read "Yes" all the way down the Pause-Health.ai column —
+ * that read "Yes" all the way down the Pause-Health.AI column —
  * which an experienced clinical-AI investor would immediately deflate
  * for a pre-revenue prototype. Three things changed:
  *
@@ -240,7 +240,7 @@ export default function CompetitionPage() {
     <ProposalShell
       eyebrow="Investor Brief · Part 2"
       title="Competition: the landscape and where we win"
-      subtitle="The menopause space is crowded on the patient side and empty on the provider side. Pause-Health.ai claims the provider/payer category before incumbents can pivot in. Every claim about our own capability carries a today/planned pill so you can read plan-vs-reality at a glance."
+      subtitle="The menopause space is crowded on the patient side and empty on the provider side. Pause-Health.AI claims the provider/payer category before incumbents can pivot in. Every claim about our own capability carries a today/planned pill so you can read plan-vs-reality at a glance."
     >
       <section>
         <p className="eyebrow">Landscape</p>
@@ -299,7 +299,7 @@ export default function CompetitionPage() {
             <thead>
               <tr>
                 <th>Capability</th>
-                <th>Pause-Health.ai</th>
+                <th>Pause-Health.AI</th>
                 <th>DTC menopause</th>
                 <th>Employer benefits</th>
                 <th>EHR clinical AI</th>

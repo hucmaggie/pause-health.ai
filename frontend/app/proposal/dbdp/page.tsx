@@ -5,10 +5,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · DBDP Feature Engineering",
   description:
-    "How Pause-Health.ai uses the Digital Biomarker Discovery Pipeline (DBDP) to turn raw wearable signals into clinical-grade menopause features. Today: FLIRT + DBDP HRV math integrated in pause_ingest with closed-form unit tests; persistence into JupyterHealth Exchange is Phase 2.",
+    "How Pause-Health.AI uses the Digital Biomarker Discovery Pipeline (DBDP) to turn raw wearable signals into clinical-grade menopause features. Today: FLIRT + DBDP HRV math integrated in pause_ingest with closed-form unit tests; persistence into JupyterHealth Exchange is Phase 2.",
   path: "/proposal/dbdp",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "DBDP feature engineering — Pause-Health.ai investor brief."
+  ogImageAlt: "DBDP feature engineering — Pause-Health.AI investor brief."
 });
 
 /**
@@ -280,7 +280,7 @@ export default function DbdpIntegrationPage() {
     <ProposalShell
       eyebrow="Investor brief · DBDP feature engineering"
       title="From raw wearables to clinical menopause features"
-      subtitle="Pause-Health.ai composes with the Digital Biomarker Discovery Pipeline (Duke University) for clinically grounded feature engineering from wearable signals. Today the FLIRT and DBDP HRV math is integrated in pause_ingest with 20 passing unit tests including a closed-form RMSSD correctness check; persistence back into JupyterHealth Exchange as derivedFrom FHIR Observations is Phase 2."
+      subtitle="Pause-Health.AI composes with the Digital Biomarker Discovery Pipeline (Duke University) for clinically grounded feature engineering from wearable signals. Today the FLIRT and DBDP HRV math is integrated in pause_ingest with 20 passing unit tests including a closed-form RMSSD correctness check; persistence back into JupyterHealth Exchange as derivedFrom FHIR Observations is Phase 2."
     >
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Why DBDP, why now</p>

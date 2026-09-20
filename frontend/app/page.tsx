@@ -125,7 +125,7 @@ export default function HomePage() {
   return (
     <main className="container">
       <section className="hero">
-        <p className="eyebrow">Pause-Health.ai · Premium FemTech Intelligence</p>
+        <p className="eyebrow">Pause-Health.AI · Premium FemTech Intelligence</p>
         <h1>Elevating menopause care with precision, empathy, and clinical AI</h1>
         <p>
           Pause gives care teams a refined decision layer for perimenopause

@@ -776,7 +776,7 @@ function OutcomeTargetsSection() {
               fontSize: "0.88rem"
             }}
           >
-            What we&apos;re building Pause-Health.ai to deliver. These
+            What we&apos;re building Pause-Health.AI to deliver. These
             are program targets, not live KPIs — they will be measured
             against the deployed cohort during pilot.
           </p>

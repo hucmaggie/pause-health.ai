@@ -1309,7 +1309,7 @@ export default function AgentFabricConsole() {
   return (
     <DemoShell
       title="Multi-agent control plane"
-      subtitle="A live view of every Pause-Health.ai agent registered on a (mocked) MuleSoft Agent Fabric, grouped by governance plane. The patient/clinical and payer & plan operations planes are PHI-bearing (on the HIPAA audit policy); the commercial plane is strictly PHI-separated; the platform plane is the shared data + integration substrate. A handful of agents call live Claude with a deterministic fallback; every A2A handoff and tool call lands here as a trace span so you can govern, monitor, and audit the system in one place. For the full agent-by-agent narrative, see the Investor Brief."
+      subtitle="A live view of every Pause-Health.AI agent registered on a (mocked) MuleSoft Agent Fabric, grouped by governance plane. The patient/clinical and payer & plan operations planes are PHI-bearing (on the HIPAA audit policy); the commercial plane is strictly PHI-separated; the platform plane is the shared data + integration substrate. A handful of agents call live Claude with a deterministic fallback; every A2A handoff and tool call lands here as a trace span so you can govern, monitor, and audit the system in one place. For the full agent-by-agent narrative, see the Investor Brief."
       eyebrow="Prototype · Agent Fabric Console"
       backHref="/demo/intake"
       backLabel="← Back to Intake"

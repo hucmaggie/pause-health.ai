@@ -6,10 +6,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Agentforce Voice",
   description:
-    "How Pause-Health.ai is wiring voice intake on Salesforce Agentforce Voice (GA Oct 2025) — the prototype-side seam ships today; full activation gates on Agentforce Contact Center licensing + a CCaaS partner.",
+    "How Pause-Health.AI is wiring voice intake on Salesforce Agentforce Voice (GA Oct 2025) — the prototype-side seam ships today; full activation gates on Agentforce Contact Center licensing + a CCaaS partner.",
   path: "/proposal/agentforce-voice",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "Agentforce Voice — Pause-Health.ai activation plan."
+  ogImageAlt: "Agentforce Voice — Pause-Health.AI activation plan."
 });
 
 /**

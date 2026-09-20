@@ -5,10 +5,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Provider Graph",
   description:
-    "How Pause-Health.ai builds a defensible menopause provider graph. Phase 2 shipped: 2,015 NPPES-derived providers, distance-aware ranking from Census ZCTA centroids, board-certification signals, three-state license-sanction filters (CA/NY/TX, 1,720 dropped at build), synthetic-but-real-shaped insurance acceptance, and a /provider browseable UI. Closed-loop outcomes scoring (Phase 3) activates with referral volume.",
+    "How Pause-Health.AI builds a defensible menopause provider graph. Phase 2 shipped: 2,015 NPPES-derived providers, distance-aware ranking from Census ZCTA centroids, board-certification signals, three-state license-sanction filters (CA/NY/TX, 1,720 dropped at build), synthetic-but-real-shaped insurance acceptance, and a /provider browseable UI. Closed-loop outcomes scoring (Phase 3) activates with referral volume.",
   path: "/proposal/provider-graph",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "Provider graph strategy — Pause-Health.ai investor brief."
+  ogImageAlt: "Provider graph strategy — Pause-Health.AI investor brief."
 });
 
 /**

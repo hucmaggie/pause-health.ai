@@ -4,10 +4,10 @@ import { StatusPill, type StatusPillStatus } from "../../components/status-pill"
 export const metadata = pageMetadata({
   title: "HIPAA Notice",
   description:
-    "How Pause-Health.ai will operate as a HIPAA Business Associate once design-partner relationships are in force, and the BAA / Security Rule posture we're engineering toward. The prototype handles no PHI today.",
+    "How Pause-Health.AI will operate as a HIPAA Business Associate once design-partner relationships are in force, and the BAA / Security Rule posture we're engineering toward. The prototype handles no PHI today.",
   path: "/hipaa",
   ogImage: "/brand/pause-health-og-about.png",
-  ogImageAlt: "HIPAA Notice — Pause-Health.ai."
+  ogImageAlt: "HIPAA Notice — Pause-Health.AI."
 });
 
 /**
@@ -16,7 +16,7 @@ export const metadata = pageMetadata({
  * Polished in the journey-fabric pass to remove two false
  * present-tense claims from the previous StubPage:
  *
- *   - "Pause-Health.ai operates as a Business Associate to
+ *   - "Pause-Health.AI operates as a Business Associate to
  *     provider organizations under HIPAA" -- there are no
  *     provider organizations and no BA relationships today.
  *   - "BAA Executed with each provider partner" -- zero BAAs
@@ -42,12 +42,12 @@ const baAreas: BaItem[] = [
     today: {
       status: "future",
       detail:
-        "Pause-Health.ai is NOT a Business Associate today. No Covered Entity has executed a BAA with us, and we do not access, store, or transmit any patient PHI in the prototype."
+        "Pause-Health.AI is NOT a Business Associate today. No Covered Entity has executed a BAA with us, and we do not access, store, or transmit any patient PHI in the prototype."
     },
     designed: {
       status: "planned",
       detail:
-        "Once a provider organization (Covered Entity) executes a BAA, Pause-Health.ai will operate as their Business Associate for the menopause-triage workflows described in /proposal."
+        "Once a provider organization (Covered Entity) executes a BAA, Pause-Health.AI will operate as their Business Associate for the menopause-triage workflows described in /proposal."
     }
   },
   {
@@ -138,7 +138,7 @@ const baAreas: BaItem[] = [
     designed: {
       status: "designed",
       detail:
-        "Pause-Health.ai will support the Covered Entity in fulfilling patient rights of access, amendment, accounting of disclosures, and restriction requests via documented APIs and runbooks."
+        "Pause-Health.AI will support the Covered Entity in fulfilling patient rights of access, amendment, accounting of disclosures, and restriction requests via documented APIs and runbooks."
     }
   }
 ];
@@ -150,7 +150,7 @@ export default function HipaaPage() {
         <p className="eyebrow">HIPAA Notice</p>
         <h1>HIPAA practices, pilled honestly.</h1>
         <p>
-          Pause-Health.ai is a prototype-in-the-open today: we are NOT
+          Pause-Health.AI is a prototype-in-the-open today: we are NOT
           yet a Business Associate to any Covered Entity, no BAA is in
           force, and the prototype handles no PHI. This page lays out
           the HIPAA framework the production stack is designed to

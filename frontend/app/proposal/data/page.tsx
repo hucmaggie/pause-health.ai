@@ -5,10 +5,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Data Inventory & Strategy",
   description:
-    "Available menopause datasets, our data strategy, and the proprietary data moats Pause-Health.ai is accruing. Each row labels whether the data is wired in prototype, partially live (shape live, values still synthetic / partner-feed-shape), or planned for design-partner-stage integration. Includes the 2,015-row NPPES-derived provider directory with three-state license-sanction filtering live today.",
+    "Available menopause datasets, our data strategy, and the proprietary data moats Pause-Health.AI is accruing. Each row labels whether the data is wired in prototype, partially live (shape live, values still synthetic / partner-feed-shape), or planned for design-partner-stage integration. Includes the 2,015-row NPPES-derived provider directory with three-state license-sanction filtering live today.",
   path: "/proposal/data",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "Data inventory and strategy — Pause-Health.ai investor brief."
+  ogImageAlt: "Data inventory and strategy — Pause-Health.AI investor brief."
 });
 
 /**

@@ -7,7 +7,7 @@ type StubPageProps = {
   children?: ReactNode;
 };
 
-export function StubPage({ eyebrow = "Pause-Health.ai", title, intro, children }: StubPageProps) {
+export function StubPage({ eyebrow = "Pause-Health.AI", title, intro, children }: StubPageProps) {
   return (
     <main className="container">
       <section className="hero">

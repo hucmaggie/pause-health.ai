@@ -35,7 +35,7 @@ type RoutingArtifact = {
 };
 
 /**
- * Pause-Health.ai Intake Assistant — scripted fallback.
+ * Pause-Health.AI Intake Assistant — scripted fallback.
  *
  * Mirrors the Salesforce Agentforce Service Agent conversational pattern
  * (greeting → guided questions → live structured-field capture → handoff

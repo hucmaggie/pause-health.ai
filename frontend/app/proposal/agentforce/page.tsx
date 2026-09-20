@@ -5,10 +5,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Agentforce Intake",
   description:
-    "Why Pause-Health.ai runs patient intake on Salesforce Agentforce + Service Cloud. Includes the environment table that explains when the live demo runs the real agent vs the scripted fallback.",
+    "Why Pause-Health.AI runs patient intake on Salesforce Agentforce + Service Cloud. Includes the environment table that explains when the live demo runs the real agent vs the scripted fallback.",
   path: "/proposal/agentforce",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "Agentforce intake strategy — Pause-Health.ai investor brief."
+  ogImageAlt: "Agentforce intake strategy — Pause-Health.AI investor brief."
 });
 
 /**
@@ -244,7 +244,7 @@ export default function AgentforcePage() {
     <ProposalShell
       eyebrow="Investor brief · Agentforce intake"
       title="Patient intake on Salesforce Agentforce + Service Cloud"
-      subtitle="Pause-Health.ai's patient intake is built to run on Agentforce Service Agent inside Salesforce — the substrate that most US health systems and payers already operate. The public prototype defaults to a scripted Pause-branded fallback; the live Agentforce agent activates when the four NEXT_PUBLIC_AGENTFORCE_* env vars are set in Vercel. See the environment table below for what each deployment actually serves."
+      subtitle="Pause-Health.AI's patient intake is built to run on Agentforce Service Agent inside Salesforce — the substrate that most US health systems and payers already operate. The public prototype defaults to a scripted Pause-branded fallback; the live Agentforce agent activates when the four NEXT_PUBLIC_AGENTFORCE_* env vars are set in Vercel. See the environment table below for what each deployment actually serves."
     >
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Why Agentforce</p>

@@ -4,10 +4,10 @@ import { StatusPill } from "../../components/status-pill";
 export const metadata = pageMetadata({
   title: "Careers",
   description:
-    "Open founding roles at Pause-Health.ai. Three core seats (CMO, Head of AI, Head of Clinical Design) plus an always-open path for exceptional engineers and clinicians.",
+    "Open founding roles at Pause-Health.AI. Three core seats (CMO, Head of AI, Head of Clinical Design) plus an always-open path for exceptional engineers and clinicians.",
   path: "/careers",
   ogImage: "/brand/pause-health-og-about.png",
-  ogImageAlt: "Careers at Pause-Health.ai."
+  ogImageAlt: "Careers at Pause-Health.AI."
 });
 
 /**
@@ -74,7 +74,7 @@ const roles: Role[] = [
 const careersInquiryHref = `/contact?subject=${encodeURIComponent(
   "Careers inquiry"
 )}&message=${encodeURIComponent(
-  "Hi — I'd love to learn more about working at Pause-Health.ai.\n\nA bit about me:\n- Role I'm interested in:\n- Relevant experience:\n- Links (LinkedIn / portfolio):"
+  "Hi — I'd love to learn more about working at Pause-Health.AI.\n\nA bit about me:\n- Role I'm interested in:\n- Relevant experience:\n- Links (LinkedIn / portfolio):"
 )}`;
 
 export default function CareersPage() {
@@ -84,7 +84,7 @@ export default function CareersPage() {
         <p className="eyebrow">Careers</p>
         <h1>Help us redefine midlife women&apos;s health.</h1>
         <p>
-          Pause-Health.ai is a team of one (the founder) actively
+          Pause-Health.AI is a team of one (the founder) actively
           hiring the three founding seats that round out the core
           team. We&apos;re looking for clinicians, AI builders, and
           designers who want their work to meaningfully change

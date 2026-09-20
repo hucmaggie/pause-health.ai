@@ -4,10 +4,10 @@ import { StatusPill, type StatusPillStatus } from "../../components/status-pill"
 export const metadata = pageMetadata({
   title: "Terms",
   description:
-    "Terms of use for the public Pause-Health.ai prototype and marketing site. Full Terms of Service for the production product will be published prior to general availability.",
+    "Terms of use for the public Pause-Health.AI prototype and marketing site. Full Terms of Service for the production product will be published prior to general availability.",
   path: "/terms",
   ogImage: "/brand/pause-health-og-about.png",
-  ogImageAlt: "Terms of use — Pause-Health.ai."
+  ogImageAlt: "Terms of use — Pause-Health.AI."
 });
 
 /**
@@ -59,7 +59,7 @@ const todayTerms: TermsItem[] = [
   {
     area: "Acceptable use",
     detail:
-      "You may browse, share, and reference the public site, the demo flow, and the open-source code. You may not (a) attempt to extract PHI (there is none to extract; this is a safeguard), (b) attempt to deceive the embedded Agentforce agent into clinical advice that would harm a real person, or (c) impersonate Pause-Health.ai or its founder in materials derived from the brand assets.",
+      "You may browse, share, and reference the public site, the demo flow, and the open-source code. You may not (a) attempt to extract PHI (there is none to extract; this is a safeguard), (b) attempt to deceive the embedded Agentforce agent into clinical advice that would harm a real person, or (c) impersonate Pause-Health.AI or its founder in materials derived from the brand assets.",
     status: "shipped"
   },
   {
@@ -77,7 +77,7 @@ const todayTerms: TermsItem[] = [
   {
     area: "Trademark + brand",
     detail:
-      "The Pause-Health.ai wordmark and icon are trademarks of Pause-Health.ai and are NOT licensed under Apache 2.0 (the source-code license, above). Per Apache 2.0 Section 6, the license grants no permission to use Pause-Health.ai's trade names or marks except as required for describing the origin of the Work. The press kit at /press provides assets for editorial use; please don't recompose the wordmark or imply endorsement / partnership without prior written agreement.",
+      "The Pause-Health.AI wordmark and icon are trademarks of Pause-Health.AI and are NOT licensed under Apache 2.0 (the source-code license, above). Per Apache 2.0 Section 6, the license grants no permission to use Pause-Health.AI's trade names or marks except as required for describing the origin of the Work. The press kit at /press provides assets for editorial use; please don't recompose the wordmark or imply endorsement / partnership without prior written agreement.",
     status: "shipped"
   },
   {
@@ -122,7 +122,7 @@ const designedTerms: TermsItem[] = [
   {
     area: "Acceptable-use policy (production)",
     detail:
-      "Covers the production product: customer responsibility for clinical decisions made with Pause-Health.ai outputs, prohibitions on using the platform outside the menopause-care scope contracted for, audit-log access for the customer's Compliance team.",
+      "Covers the production product: customer responsibility for clinical decisions made with Pause-Health.AI outputs, prohibitions on using the platform outside the menopause-care scope contracted for, audit-log access for the customer's Compliance team.",
     status: "designed"
   },
   {
@@ -258,7 +258,7 @@ export default function TermsPage() {
           <StatusPill status="planned" label="Pre-GA · not yet binding" />
         </header>
         <p style={{ color: "var(--muted)", maxWidth: "70ch", marginBottom: "0.75rem" }}>
-          The shape of the production ToS once Pause-Health.ai is
+          The shape of the production ToS once Pause-Health.AI is
           generally available to design-partner provider
           organizations. This is a preview, not a legal contract —
           the binding ToS will be published before any production

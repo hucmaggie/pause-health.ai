@@ -5,7 +5,7 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Salesforce Data 360",
   description:
-    "How Pause-Health.ai grounds its Care Router agent in a Salesforce Data 360 federated patient view. Phase 1 (real Salesforce Health Cloud SOQL + identity resolution) and Phase 2 (Data Cloud Calculated Insights — HRV z-score, vasomotor burden, sleep disruption) are both LIVE in production on trailsignup. Phase 2-bis swaps the demo-cohort seeded CIs for real JHE/DBDP wearable math; Phase 3 federates the customer's EHR-of-record.",
+    "How Pause-Health.AI grounds its Care Router agent in a Salesforce Data 360 federated patient view. Phase 1 (real Salesforce Health Cloud SOQL + identity resolution) and Phase 2 (Data Cloud Calculated Insights — HRV z-score, vasomotor burden, sleep disruption) are both LIVE in production on trailsignup. Phase 2-bis swaps the demo-cohort seeded CIs for real JHE/DBDP wearable math; Phase 3 federates the customer's EHR-of-record.",
   path: "/proposal/data-360",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Pause × Salesforce Data 360 — investor brief."
@@ -347,7 +347,7 @@ export default function Data360Page() {
     <ProposalShell
       eyebrow="Investor brief · Salesforce Data 360"
       title="Unified patient memory, federated in place"
-      subtitle="Pause-Health.ai's Care Router is grounded on real Salesforce Health Cloud objects today via OAuth Client Credentials, with identity resolution against real seeded Contacts (Phase 1). Phase 2 — Data Cloud Calculated Insights (HRV z-score, vasomotor burden, sleep disruption) — is LIVE on the trailsignup tenant; the endpoint reports 'Phase 2: SOQL (Health Cloud) + Data Cloud Calculated Insights' on every routing call. Phase 2-bis swaps the demo-cohort seeded CIs for real JHE FHIR + DBDP wearable math through the same client + token flow; Phase 3 onboards the customer's EHR-of-record. The Care Router interface doesn't change across phases."
+      subtitle="Pause-Health.AI's Care Router is grounded on real Salesforce Health Cloud objects today via OAuth Client Credentials, with identity resolution against real seeded Contacts (Phase 1). Phase 2 — Data Cloud Calculated Insights (HRV z-score, vasomotor burden, sleep disruption) — is LIVE on the trailsignup tenant; the endpoint reports 'Phase 2: SOQL (Health Cloud) + Data Cloud Calculated Insights' on every routing call. Phase 2-bis swaps the demo-cohort seeded CIs for real JHE FHIR + DBDP wearable math through the same client + token flow; Phase 3 onboards the customer's EHR-of-record. The Care Router interface doesn't change across phases."
     >
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">Why Data 360</p>

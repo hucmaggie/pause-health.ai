@@ -5,10 +5,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · JupyterHealth Integration",
   description:
-    "How Pause-Health.ai composes with JupyterHealth — open FHIR substrate, wearable normalization, and a customer-controlled deployment posture. Today: two JupyterHealth packages (omh-shim + jupyterhealth-client) integrated and tested in pause_ingest; full deployment is design-stage.",
+    "How Pause-Health.AI composes with JupyterHealth — open FHIR substrate, wearable normalization, and a customer-controlled deployment posture. Today: two JupyterHealth packages (omh-shim + jupyterhealth-client) integrated and tested in pause_ingest; full deployment is design-stage.",
   path: "/proposal/integration",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "JupyterHealth integration — Pause-Health.ai investor brief."
+  ogImageAlt: "JupyterHealth integration — Pause-Health.AI investor brief."
 });
 
 /**
@@ -258,7 +258,7 @@ export default function IntegrationPage() {
     <ProposalShell
       eyebrow="Investor Brief · Part 2"
       title="JupyterHealth Integration: open substrate, menopause-specific layer"
-      subtitle="Pause-Health.ai is designed as the menopause intelligence layer on top of JupyterHealth's open FHIR R5 substrate. Today two of the five JupyterHealth packages (omh-shim + jupyterhealth-client) are integrated and unit-tested in the Python ingest worker; the JHE server itself, the SMART-on-FHIR Epic launch, and the Helm-chart deployment are design-stage. The architectural punchline — JHE stores the data and runs consent, Pause does the reasoning — is the target end state, anchored against the Phase 0 baseline below."
+      subtitle="Pause-Health.AI is designed as the menopause intelligence layer on top of JupyterHealth's open FHIR R5 substrate. Today two of the five JupyterHealth packages (omh-shim + jupyterhealth-client) are integrated and unit-tested in the Python ingest worker; the JHE server itself, the SMART-on-FHIR Epic launch, and the Helm-chart deployment are design-stage. The architectural punchline — JHE stores the data and runs consent, Pause does the reasoning — is the target end state, anchored against the Phase 0 baseline below."
     >
       <section>
         <p className="eyebrow">What we adopt · status-pilled</p>

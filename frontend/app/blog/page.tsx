@@ -4,10 +4,10 @@ import { StatusPill } from "../../components/status-pill";
 export const metadata = pageMetadata({
   title: "Blog",
   description:
-    "Stories from the frontier of menopause care. Planned editorial roadmap for Pause-Health.ai — clinical evidence, AI model design, provider workflows, and the lived experience of women in midlife.",
+    "Stories from the frontier of menopause care. Planned editorial roadmap for Pause-Health.AI — clinical evidence, AI model design, provider workflows, and the lived experience of women in midlife.",
   path: "/blog",
   ogImage: "/brand/pause-health-og-about.png",
-  ogImageAlt: "Pause-Health.ai blog — stories from the frontier of menopause care."
+  ogImageAlt: "Pause-Health.AI blog — stories from the frontier of menopause care."
 });
 
 /**
@@ -65,7 +65,7 @@ const pillars: EssayPillar[] = [
   {
     pillar: "AI architecture",
     blurb:
-      "How Pause-Health.ai is actually built — Care Router policy, multi-agent fabric, Data 360 grounding, MCP tools. Public source code, public design choices.",
+      "How Pause-Health.AI is actually built — Care Router policy, multi-agent fabric, Data 360 grounding, MCP tools. Public source code, public design choices.",
     essays: [
       {
         title: "What 'grounding' actually means in a clinical agent",

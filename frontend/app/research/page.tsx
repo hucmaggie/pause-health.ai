@@ -4,10 +4,10 @@ import { StatusPill, type StatusPillStatus } from "../../components/status-pill"
 export const metadata = pageMetadata({
   title: "Clinical Research",
   description:
-    "How Pause-Health.ai's clinical foundations are grounded today (referenced guidelines, hypothesis-led care policy) and the validation + bias-monitoring program planned alongside design-partner deployments.",
+    "How Pause-Health.AI's clinical foundations are grounded today (referenced guidelines, hypothesis-led care policy) and the validation + bias-monitoring program planned alongside design-partner deployments.",
   path: "/research",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "Clinical research at Pause-Health.ai — referenced guidelines and validation roadmap."
+  ogImageAlt: "Clinical research at Pause-Health.AI — referenced guidelines and validation roadmap."
 });
 
 /**
@@ -139,7 +139,7 @@ const publicationPlan: Publication[] = [
   {
     label: "Methodology paper",
     detail:
-      "Pause-Health.ai Care Router policy, grounding architecture, and validation protocol — preprint posted at the start of the validation phase so peers can critique the design before results land.",
+      "Pause-Health.AI Care Router policy, grounding architecture, and validation protocol — preprint posted at the start of the validation phase so peers can critique the design before results land.",
     status: "planned"
   },
   {
@@ -169,7 +169,7 @@ export default function ResearchPage() {
         <p className="eyebrow">Clinical research</p>
         <h1>Evidence-grounded menopause intelligence — pilled honestly.</h1>
         <p>
-          Pause-Health.ai&apos;s clinical foundations sit in three
+          Pause-Health.AI&apos;s clinical foundations sit in three
           layers: peer-reviewed menopause-care guidelines we already
           cite in code (factual), a validation and bias-monitoring
           program designed against those guidelines (planned,

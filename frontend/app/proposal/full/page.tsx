@@ -8,10 +8,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Full Proposal",
   description:
-    "The complete Pause-Health.ai investor brief — market thesis, target outcomes, technology foundation, business model, 24-month objectives, and the architecture deep-dives. Phase 2 is shipped: 2,015-provider directory with distance ranking + state license-sanction filters + synthetic-shaped insurance, Salesforce Data Cloud Calculated Insights live in production, MuleSoft CloudHub 2.0 worker live through iteration 8 (Phase-2 contract DataWeave deployed), MCP server published on stdio + Streamable HTTP with the Care Router operating as MCP host, and the Headless 360 conformance plane (PKCE External Client App + Platform Event egress + Agentforce Voice seam) wired and dormant pending customer-org provisioning.",
+    "The complete Pause-Health.AI investor brief — market thesis, target outcomes, technology foundation, business model, 24-month objectives, and the architecture deep-dives. Phase 2 is shipped: 2,015-provider directory with distance ranking + state license-sanction filters + synthetic-shaped insurance, Salesforce Data Cloud Calculated Insights live in production, MuleSoft CloudHub 2.0 worker live through iteration 8 (Phase-2 contract DataWeave deployed), MCP server published on stdio + Streamable HTTP with the Care Router operating as MCP host, and the Headless 360 conformance plane (PKCE External Client App + Platform Event egress + Agentforce Voice seam) wired and dormant pending customer-org provisioning.",
   path: "/proposal/full",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "Full investor proposal — Pause-Health.ai."
+  ogImageAlt: "Full investor proposal — Pause-Health.AI."
 });
 
 const heroMetrics: Array<{
@@ -42,7 +42,7 @@ const heroMetrics: Array<{
     value: "~$1,685",
     label: "Avoidable spend / patient",
     detail:
-      "Estimate of waste per patient from delayed dx + over-utilization, derived from menopause-care cost-of-care literature. Illustrative -- this is a published-research-derived figure, not a Pause-Health.ai measurement.",
+      "Estimate of waste per patient from delayed dx + over-utilization, derived from menopause-care cost-of-care literature. Illustrative -- this is a published-research-derived figure, not a Pause-Health.AI measurement.",
     tone: "research"
   }
 ];
@@ -440,11 +440,11 @@ const strategyDeepDives = [
 export default function FullProposalPage() {
   return (
     <ProposalShell
-      eyebrow="Full investor proposal · Pause-Health.ai"
+      eyebrow="Full investor proposal · Pause-Health.AI"
       title="Menopause Clinical Decision Support"
       subtitle={
         <>
-          Pause-Health.ai is designed to help clinicians diagnose and treat
+          Pause-Health.AI is designed to help clinicians diagnose and treat
           menopause-related symptoms faster and more accurately by combining
           patient history, wearable signals, and AI guidance inside normal
           clinical workflows — EHR-native, never a sidecar. The prototype is
@@ -484,7 +484,7 @@ export default function FullProposalPage() {
           training or decision support.
         </p>
         <p className="proposal-lede">
-          Pause-Health.ai is designed to close that gap. The product supports
+          Pause-Health.AI is designed to close that gap. The product supports
           providers at the point of care with clear risk scoring, treatment
           suggestions, and workflow-ready guidance. The goal is better outcomes
           for patients and measurable operational value for health systems and
@@ -506,7 +506,7 @@ export default function FullProposalPage() {
       </section>
 
       <section style={{ marginTop: "2rem" }}>
-        <p className="eyebrow">What Pause-Health.ai provides</p>
+        <p className="eyebrow">What Pause-Health.AI provides</p>
         <h2 className="proposal-section-title">Six capabilities, each verifiable in the live prototype</h2>
         <div className="card-grid" style={{ marginTop: "0.8rem" }}>
           {whatPauseProvides.map((c) => (
@@ -539,7 +539,7 @@ export default function FullProposalPage() {
             fontSize: "0.95rem"
           }}
         >
-          Pause-Health.ai composes six substrates the customer&apos;s data
+          Pause-Health.AI composes six substrates the customer&apos;s data
           team already trusts. Architecture briefs link out to each.
         </p>
         <div className="card-grid">
@@ -588,7 +588,7 @@ export default function FullProposalPage() {
         >
           The ACV / PMPM ranges below are target ranges derived from
           comparable provider-vendor pricing benchmarks, not booked
-          revenue. Pause-Health.ai is pre-design-partner; final
+          revenue. Pause-Health.AI is pre-design-partner; final
           pricing lands with the first executed MSAs.
         </p>
         <div className="table-wrap" style={{ marginTop: "0.6rem" }}>

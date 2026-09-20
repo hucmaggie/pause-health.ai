@@ -5,10 +5,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Technology Choices",
   description:
-    "Technical architecture, AI approach, evaluation framework, and safety stance powering Pause-Health.ai. Each stack layer is tagged with current status so plan-vs-reality is legible at a glance, and each cross-links to the architecture brief that owns it.",
+    "Technical architecture, AI approach, evaluation framework, and safety stance powering Pause-Health.AI. Each stack layer is tagged with current status so plan-vs-reality is legible at a glance, and each cross-links to the architecture brief that owns it.",
   path: "/proposal/technology",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "Technology choices — Pause-Health.ai investor brief."
+  ogImageAlt: "Technology choices — Pause-Health.AI investor brief."
 });
 
 /**

@@ -12,10 +12,10 @@ export const dynamic = "force-dynamic";
 export const metadata = pageMetadata({
   title: "Investor Brief · MuleSoft Integration",
   description:
-    "MuleSoft Anypoint integration plane for Pause-Health.ai. Iterations 1–7 shipped (CloudHub 2.0 worker live, Flex Gateway enforcing JWT + rate limiting, OAS 3.0 spec on Exchange). Phase 3 has nine shared Exchange assets: pause-omh-to-fhir-library (consumed live), five per-wearable System-API specs covering pull (Oura, Whoop, Garmin) and upload (HealthKit, Empatica) patterns, two infrastructure specs (JHE, DBDP), and the Process-tier spec. Full three-tier architecture activates with first design partner.",
+    "MuleSoft Anypoint integration plane for Pause-Health.AI. Iterations 1–7 shipped (CloudHub 2.0 worker live, Flex Gateway enforcing JWT + rate limiting, OAS 3.0 spec on Exchange). Phase 3 has nine shared Exchange assets: pause-omh-to-fhir-library (consumed live), five per-wearable System-API specs covering pull (Oura, Whoop, Garmin) and upload (HealthKit, Empatica) patterns, two infrastructure specs (JHE, DBDP), and the Process-tier spec. Full three-tier architecture activates with first design partner.",
   path: "/proposal/mulesoft",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "MuleSoft integration strategy — Pause-Health.ai investor brief."
+  ogImageAlt: "MuleSoft integration strategy — Pause-Health.AI investor brief."
 });
 
 /**
@@ -277,7 +277,7 @@ export default function MulesoftPage() {
     <ProposalShell
       eyebrow="Investor brief · MuleSoft integration"
       title="Integration plane on the substrate our buyers already operate"
-      subtitle="Pause-Health.ai's integration with JupyterHealth, DBDP wearable features, Agentforce, and consumer wearables is designed to run through MuleSoft Anypoint — the connectivity platform most US health systems and large payers already license. Today a Mule app is live on CloudHub 2.0 with Flex Gateway enforcing JWT validation and rate limiting; the full three-tier architecture activates with the first design partner."
+      subtitle="Pause-Health.AI's integration with JupyterHealth, DBDP wearable features, Agentforce, and consumer wearables is designed to run through MuleSoft Anypoint — the connectivity platform most US health systems and large payers already license. Today a Mule app is live on CloudHub 2.0 with Flex Gateway enforcing JWT validation and rate limiting; the full three-tier architecture activates with the first design partner."
     >
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">API-Led Connectivity, applied to menopause</p>

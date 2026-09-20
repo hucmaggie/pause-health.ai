@@ -4,10 +4,10 @@ import { StatusPill, type StatusPillStatus } from "../../components/status-pill"
 export const metadata = pageMetadata({
   title: "Security & Compliance",
   description:
-    "Pause-Health.ai's security and compliance posture today (prototype-in-the-open, no PHI handled) vs. what the production stack is engineered toward (HIPAA + HITRUST + SOC 2 Type II, BAA-backed provider partnerships).",
+    "Pause-Health.AI's security and compliance posture today (prototype-in-the-open, no PHI handled) vs. what the production stack is engineered toward (HIPAA + HITRUST + SOC 2 Type II, BAA-backed provider partnerships).",
   path: "/security",
   ogImage: "/brand/pause-health-og-about.png",
-  ogImageAlt: "Security & Compliance posture — Pause-Health.ai."
+  ogImageAlt: "Security & Compliance posture — Pause-Health.AI."
 });
 
 /**
@@ -181,7 +181,7 @@ export default function SecurityPage() {
         <p className="eyebrow">Security &amp; Compliance</p>
         <h1>Built for clinical trust — pilled honestly.</h1>
         <p>
-          Pause-Health.ai is a prototype-in-the-open today: no PHI is
+          Pause-Health.AI is a prototype-in-the-open today: no PHI is
           processed by the public demo, no BAAs are in force, and the
           formal certifications health systems will eventually require
           (SOC 2 Type II, HITRUST CSF) are planned milestones rather

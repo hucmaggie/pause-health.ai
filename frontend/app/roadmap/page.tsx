@@ -4,10 +4,10 @@ import { StatusPill, type StatusPillStatus } from "../../components/status-pill"
 export const metadata = pageMetadata({
   title: "Roadmap",
   description:
-    "What's next for Pause-Health.ai. Now / Next / Later horizons drawn from the 30+ designed / planned / future items already pilled across the site. Each item links back to the page that describes it in detail.",
+    "What's next for Pause-Health.AI. Now / Next / Later horizons drawn from the 30+ designed / planned / future items already pilled across the site. Each item links back to the page that describes it in detail.",
   path: "/roadmap",
   ogImage: "/brand/pause-health-og-about.png",
-  ogImageAlt: "Pause-Health.ai roadmap — Now, Next, Later."
+  ogImageAlt: "Pause-Health.AI roadmap — Now, Next, Later."
 });
 
 type RoadmapItem = {
@@ -145,7 +145,7 @@ const horizons: RoadmapHorizon[] = [
       {
         title: "Business Associate posture + BAA execution",
         detail:
-          "Pause-Health.ai is NOT a Business Associate today (we handle no PHI). The full BAA template, permitted-use scope, and breach-notification protocol are designed and ready for execution before any Covered Entity grants PHI access.",
+          "Pause-Health.AI is NOT a Business Associate today (we handle no PHI). The full BAA template, permitted-use scope, and breach-notification protocol are designed and ready for execution before any Covered Entity grants PHI access.",
         status: "planned",
         source: { href: "/hipaa", label: "/hipaa" }
       },
