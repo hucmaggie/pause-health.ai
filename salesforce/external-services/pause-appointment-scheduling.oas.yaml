@@ -1,0 +1,130 @@
+openapi: 3.0.0
+info:
+  title: Pause Appointment Scheduling
+  version: "1.0.0"
+  description: >
+    Agentforce-facing slice of the Pause Appointment Scheduling agent. Registered
+    in Salesforce as an External Service so an Agentforce agent can book (or
+    reschedule) the menopause-specialist (MSCP) visit the Care Router recommends,
+    honoring the requested modality against a deterministic synthetic provider
+    calendar.
+
+    Backed by the public, no-auth GET
+    https://pause-health.ai/api/agentforce/appointment-scheduling, a thin REST
+    alias over the A2A scheduling agent that runs the SAME deterministic booking
+    and the SAME Agent Fabric governance gate (no double-book; honor the
+    provider's published availability). Synthetic: the ServiceAppointment id is a
+    mock, NOT a real Salesforce record.
+
+    Lean schema by design: External Services maps only the declared fields into
+    the agent's action output variables.
+
+servers:
+  - url: https://pause-health.ai
+
+paths:
+  /api/agentforce/appointment-scheduling:
+    get:
+      operationId: bookAppointment
+      summary: Book or reschedule an MSCP visit
+      description: >
+        Books the recommended provider visit for the requested modality, returning
+        a structured booking: a synthetic ServiceAppointment id, the confirmed slot
+        start/end, modality, provider, and status (booked / rescheduled). If the
+        governance gate blocks the request (slot not free, or outside the provider's
+        published availability), the body is the blocked shape instead.
+      parameters:
+        - name: providerId
+          in: query
+          required: true
+          description: >
+            The provider to book with — e.g. the NPI the Care Router recommended.
+          schema:
+            type: string
+        - name: modality
+          in: query
+          required: false
+          description: "Visit modality: telehealth (default) or in-person."
+          schema:
+            type: string
+        - name: providerName
+          in: query
+          required: false
+          description: Human-readable provider name (display only).
+          schema:
+            type: string
+        - name: requestedDate
+          in: query
+          required: false
+          description: Preferred date (YYYY-MM-DD). Omit to take the earliest available slot.
+          schema:
+            type: string
+        - name: requestedSlotStart
+          in: query
+          required: false
+          description: Exact slot start to target (ISO-ish local), when the patient picked one.
+          schema:
+            type: string
+        - name: intent
+          in: query
+          required: false
+          description: "book (default) or reschedule."
+          schema:
+            type: string
+      responses:
+        "200":
+          description: >
+            Booking result. NOTE: when the Agent Fabric governance gate blocks the
+            call (slot not free / outside published availability), the body is the
+            blocked shape (blocked=true, decision, violations) instead of the
+            booking fields — the agent should tell the patient it couldn't book and
+            why, and offer an alternative, not invent a confirmation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  serviceAppointmentId:
+                    type: string
+                    description: Synthetic Salesforce ServiceAppointment id (mock, not a real record).
+                  providerId:
+                    type: string
+                  providerName:
+                    type: string
+                  modality:
+                    type: string
+                    description: "telehealth | in-person"
+                  slotStart:
+                    type: string
+                    description: Confirmed slot start (ISO-ish local).
+                  slotEnd:
+                    type: string
+                  durationMinutes:
+                    type: integer
+                  status:
+                    type: string
+                    description: "booked | rescheduled"
+                  serviceType:
+                    type: string
+                  bookingReference:
+                    type: string
+                    description: Synthetic booking reference the patient can quote.
+                  synthetic:
+                    type: boolean
+                    description: Always true — labels the booking as synthetic.
+                  blocked:
+                    type: boolean
+                    description: Present and true only when the governance gate blocked the call.
+                  decision:
+                    type: string
+                    description: "block, when the governance gate refused the call."
+                  violations:
+                    type: array
+                    description: The governance policies that blocked the call.
+                    items:
+                      type: object
+                      properties:
+                        policyId:
+                          type: string
+                        reason:
+                          type: string
