@@ -1,0 +1,49 @@
+{
+  "required" : [ "providerId" ],
+  "unevaluatedProperties" : false,
+  "properties" : {
+    "providerId" : {
+      "title" : "Provider Id",
+      "description" : "The provider to book with — e.g. the NPI the Care Router recommended.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "modality" : {
+      "title" : "Modality",
+      "description" : "Visit modality: telehealth (default) or in-person.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "providerName" : {
+      "title" : "Provider Name",
+      "description" : "Human-readable provider name (display only).",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "requestedDate" : {
+      "title" : "Requested Date",
+      "description" : "Preferred date (YYYY-MM-DD). Omit to take the earliest available slot.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "requestedSlotStart" : {
+      "title" : "Requested Slot Start",
+      "description" : "Exact slot start to target (ISO-ish local), when the patient picked one.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    },
+    "intent" : {
+      "title" : "Intent",
+      "description" : "book (default) or reschedule.",
+      "lightning:type" : "lightning__textType",
+      "lightning:isPII" : false,
+      "copilotAction:isUserInput" : false
+    }
+  },
+  "lightning:type" : "lightning__objectType"
+}
