@@ -1,0 +1,152 @@
+openapi: 3.0.0
+info:
+  title: Pause SDOH Screening
+  version: "1.0.0"
+  description: >
+    Agentforce-facing slice of the Pause SDOH Screening agent. Registered in
+    Salesforce as an External Service so an Agentforce agent can screen a patient
+    for health-related social needs using the CMS Accountable Health Communities
+    (AHC-HRSN) core-domain tool: housing, food, transportation, utilities, and
+    interpersonal safety.
+
+    Backed by the public, no-auth GET
+    https://pause-health.ai/api/agentforce/sdoh-screening, a thin REST alias over
+    the A2A screening agent that runs the SAME deterministic rule-based screen and
+    the SAME Agent Fabric governance gate: only validated screeners are allowed, a
+    community-resource referral requires explicit patient consent, and no
+    free-text PII crosses the boundary. Advisory only; a positive interpersonal-
+    safety screen (redFlags) is a MANDATORY escalation to a human social worker.
+
+    Per-domain responses are passed as comma-separated integer vectors, one query
+    param per domain, with these item counts: housing 2, food 2, transportation 1,
+    utilities 1, safety 4 (HITS 1-5 Likert per item; total >10 screens positive).
+
+servers:
+  - url: https://pause-health.ai
+
+paths:
+  /api/agentforce/sdoh-screening:
+    get:
+      operationId: screenSocialNeeds
+      summary: Screen for health-related social needs (AHC-HRSN)
+      description: >
+        Runs the AHC-HRSN social-needs screen over the supplied per-domain coded
+        responses and returns the positive domains, their count, any interpersonal-
+        safety red flag, and a non-clinical interpretation. If the governance gate
+        blocks (unvalidated screener, or a positive screen without referral
+        consent), the body is the blocked shape instead.
+      parameters:
+        - name: screener
+          in: query
+          required: false
+          description: "Validated screener id. Defaults to ahc-hrsn (the only allow-listed screener)."
+          schema:
+            type: string
+        - name: housing
+          in: query
+          required: false
+          description: "Housing domain responses — 2 comma-separated integers (living-situation code, quality-problem count). >=1 on either screens positive."
+          schema:
+            type: string
+        - name: food
+          in: query
+          required: false
+          description: "Food domain responses — 2 comma-separated integers (worried, ran-out). >=1 on either screens positive."
+          schema:
+            type: string
+        - name: transportation
+          in: query
+          required: false
+          description: "Transportation domain — 1 integer. >=1 screens positive."
+          schema:
+            type: string
+        - name: utilities
+          in: query
+          required: false
+          description: "Utilities domain — 1 integer. >=1 screens positive."
+          schema:
+            type: string
+        - name: safety
+          in: query
+          required: false
+          description: "Interpersonal-safety HITS — 4 comma-separated integers (1-5 each). Total >10 screens positive and raises a red flag."
+          schema:
+            type: string
+        - name: patientConsent
+          in: query
+          required: false
+          description: "Set to true if the patient consented to a community-resource referral. Required before a referral is drafted for any positive domain."
+          schema:
+            type: string
+      responses:
+        "200":
+          description: >
+            Screening result. NOTE: when the governance gate blocks the call
+            (unvalidated screener / positive screen without consent), the body is
+            the blocked shape (blocked=true, decision, violations) instead of the
+            result fields — the agent should explain it can't proceed and why (e.g.
+            ask for referral consent), not invent a result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  screener:
+                    type: string
+                  screenerName:
+                    type: string
+                  positiveDomains:
+                    type: array
+                    description: Domain ids that screened positive (a social need identified).
+                    items:
+                      type: string
+                  positiveDomainCount:
+                    type: integer
+                  redFlags:
+                    type: array
+                    description: >
+                      Interpersonal-safety red flag(s) — a MANDATORY escalation to a
+                      human social worker. Present when the safety screen is positive.
+                    items:
+                      type: object
+                      properties:
+                        domain:
+                          type: string
+                        code:
+                          type: string
+                        description:
+                          type: string
+                  interpretation:
+                    type: string
+                    description: One-line non-clinical interpretation of the screen.
+                  domains:
+                    type: array
+                    description: Per-domain results (id, label, positive, non-clinical detail).
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        label:
+                          type: string
+                        positive:
+                          type: boolean
+                        detail:
+                          type: string
+                  synthetic:
+                    type: boolean
+                    description: Always true — advisory synthetic screen.
+                  blocked:
+                    type: boolean
+                    description: Present and true only when the governance gate blocked the call.
+                  decision:
+                    type: string
+                  violations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        policyId:
+                          type: string
+                        reason:
+                          type: string
