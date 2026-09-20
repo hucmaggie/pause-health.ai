@@ -105,10 +105,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Prototype · Intake Dashboard",
   description:
-    "See how Pause-Health.ai prioritizes incoming menopause-care signals from EHR and wearable sources, with an Agentforce Service Agent guiding patient intake.",
+    "See how Pause-Health.AI prioritizes incoming menopause-care signals from EHR and wearable sources, with an Agentforce Service Agent guiding patient intake.",
   path: "/demo/intake",
   ogImage: "/brand/pause-health-og-prototype.png",
-  ogImageAlt: "Pause-Health.ai prototype preview — intake to analytics."
+  ogImageAlt: "Pause-Health.AI prototype preview — intake to analytics."
 });
 
 export default function IntakeDemoPage() {

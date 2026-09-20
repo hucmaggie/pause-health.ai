@@ -6,10 +6,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · The Menopause Society",
   description:
-    "How Pause-Health.ai composes with The Menopause Society and the MSCP credential — referral, partnership, and a defensible provider graph.",
+    "How Pause-Health.AI composes with The Menopause Society and the MSCP credential — referral, partnership, and a defensible provider graph.",
   path: "/proposal/menopause-society",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "The Menopause Society integration — Pause-Health.ai investor brief."
+  ogImageAlt: "The Menopause Society integration — Pause-Health.AI investor brief."
 });
 
 /**
@@ -145,7 +145,7 @@ const guardrails: Array<{
     label: "We never scrape or republish their directory",
     status: "prototype",
     detail:
-      "The Menopause Society explicitly prohibits unauthorized use of the Find a Menopause Practitioner directory. Pause-Health.ai links patients to the directory on menopause.org; we do not fetch, parse, cache, or embed it. The mscpDirectoryUrl helper builds deep links only — never makes a server-side request to the portal."
+      "The Menopause Society explicitly prohibits unauthorized use of the Find a Menopause Practitioner directory. Pause-Health.AI links patients to the directory on menopause.org; we do not fetch, parse, cache, or embed it. The mscpDirectoryUrl helper builds deep links only — never makes a server-side request to the portal."
   },
   {
     label: "We never claim affiliation we have not earned",
@@ -291,7 +291,7 @@ export default function MenopauseSocietyPage() {
     <ProposalShell
       eyebrow="Investor brief · The Menopause Society"
       title="Composing with The Menopause Society, on their terms"
-      subtitle="The MSCP credential is the closest thing the field has to a quality signal for menopause care — ~4,100 practitioners worldwide as of early 2026, nearly tripled from 2021. Pause-Health.ai's strategy: serve MSCPs, route patients to MSCPs (wired in prototype today), and earn the partnership over 6–12 months."
+      subtitle="The MSCP credential is the closest thing the field has to a quality signal for menopause care — ~4,100 practitioners worldwide as of early 2026, nearly tripled from 2021. Pause-Health.AI's strategy: serve MSCPs, route patients to MSCPs (wired in prototype today), and earn the partnership over 6–12 months."
     >
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">The landscape, as it actually is</p>

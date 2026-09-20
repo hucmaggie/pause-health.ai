@@ -5,10 +5,10 @@ import { pageMetadata } from "../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief",
   description:
-    "Pause-Health.ai investor brief — premium menopause intelligence for modern provider organizations. Two arcs: the investment thesis (strategy + market), and the architecture story (how Pause actually works), with per-card links into the live prototype.",
+    "Pause-Health.AI investor brief — premium menopause intelligence for modern provider organizations. Two arcs: the investment thesis (strategy + market), and the architecture story (how Pause actually works), with per-card links into the live prototype.",
   path: "/proposal",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "Pause-Health.ai investor brief — provider-first menopause AI."
+  ogImageAlt: "Pause-Health.AI investor brief — provider-first menopause AI."
 });
 
 /**
@@ -18,7 +18,7 @@ export const metadata = pageMetadata({
  * with its own card grid. Arc A is the investment thesis (strategy,
  * market, customers, competition, evaluation). Arc B is the
  * architecture story (the substrates, agents, and policies that
- * make Pause-Health.ai actually work) -- this arc is also the
+ * make Pause-Health.AI actually work) -- this arc is also the
  * gold-standard half of the deck, with proto-vs-prod tables, live
  * API CTAs, and source-badged honesty across every page.
  *
@@ -267,9 +267,9 @@ export default function ProposalPage() {
 
   return (
     <ProposalShell
-      eyebrow="Investor brief · Pause-Health.ai"
+      eyebrow="Investor brief · Pause-Health.AI"
       title="Premium menopause intelligence for modern provider organizations"
-      subtitle="Pause-Health.ai transforms fragmented menopause care into an elegant, measurable, and clinically explainable workflow built for provider excellence — EHR-native, never a sidecar."
+      subtitle="Pause-Health.AI transforms fragmented menopause care into an elegant, measurable, and clinically explainable workflow built for provider excellence — EHR-native, never a sidecar."
       backHref="/"
       backLabel="Back to Landing"
       heroExtra={heroExtra}
@@ -289,7 +289,7 @@ export default function ProposalPage() {
             maxWidth: "65ch"
           }}
         >
-          Why Pause-Health.ai, why now, who buys, what the competitive
+          Why Pause-Health.AI, why now, who buys, what the competitive
           landscape looks like, and how we will evaluate ourselves —
           each brief plan-vs-status-tagged so an investor can read
           intent and current reality side by side.

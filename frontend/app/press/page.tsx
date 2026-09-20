@@ -5,10 +5,10 @@ import { StatusPill, type StatusPillStatus } from "../../components/status-pill"
 export const metadata = pageMetadata({
   title: "Press",
   description:
-    "Press kit for Pause-Health.ai — pre-approved boilerplate, founder bio + headshot, brand assets, recent milestones, and the press contact. For journalists, analysts, and partnership announcements.",
+    "Press kit for Pause-Health.AI — pre-approved boilerplate, founder bio + headshot, brand assets, recent milestones, and the press contact. For journalists, analysts, and partnership announcements.",
   path: "/press",
   ogImage: "/brand/pause-health-og-about.png",
-  ogImageAlt: "Press kit — Pause-Health.ai."
+  ogImageAlt: "Press kit — Pause-Health.AI."
 });
 
 /**
@@ -68,7 +68,7 @@ const mediaMentions: MediaMention[] = [
 const milestonesDone: Milestone[] = [
   {
     year: "2026",
-    label: "Pause-Health.ai founded with provider-first AI thesis",
+    label: "Pause-Health.AI founded with provider-first AI thesis",
     status: "shipped"
   },
   {
@@ -141,7 +141,7 @@ const brandAssets: BrandAsset[] = [
 ];
 
 const keyFacts: Array<{ label: string; value: string; status?: StatusPillStatus }> = [
-  { label: "Company", value: "Pause-Health.ai" },
+  { label: "Company", value: "Pause-Health.AI" },
   { label: "Founded", value: "2026" },
   { label: "Headquarters", value: "Irvine, CA" },
   { label: "Founder | CEO | CTO", value: "Maggie C. Hu" },
@@ -168,7 +168,7 @@ export default function PressPage() {
         <h1>Press inquiries and brand assets.</h1>
         <p>
           For interviews, partnership announcements, or media coverage,
-          here&apos;s everything you need to write about Pause-Health.ai
+          here&apos;s everything you need to write about Pause-Health.AI
           accurately: pre-approved boilerplate, downloadable brand
           assets, the founder bio and headshot, and a fast inbox at{" "}
           <a
@@ -211,10 +211,10 @@ export default function PressPage() {
       <section className="card" style={{ marginTop: "1.5rem", maxWidth: "80ch" }}>
         <p className="eyebrow">Boilerplate · Approved for citation</p>
         <h2 style={{ fontSize: "clamp(1.3rem, 2.2vw, 1.7rem)", marginBottom: "0.6rem" }}>
-          About Pause-Health.ai
+          About Pause-Health.AI
         </h2>
         <p style={{ color: "var(--muted)", maxWidth: "72ch", marginBottom: "0.85rem" }}>
-          Pause-Health.ai is a provider-first menopause intelligence company
+          Pause-Health.AI is a provider-first menopause intelligence company
           building the AI decision layer that care teams use to triage,
           ground, and route the 50M+ US women navigating perimenopause and
           menopause. The platform composes Salesforce Health Cloud +
@@ -226,7 +226,7 @@ export default function PressPage() {
         </p>
         <p style={{ color: "var(--muted)", maxWidth: "72ch", marginBottom: 0 }}>
           Founded in 2026 and headquartered in Irvine, California,
-          Pause-Health.ai operates as a prototype-in-the-open today:
+          Pause-Health.AI operates as a prototype-in-the-open today:
           the architecture, demo journey, and integration code are
           public at{" "}
           <a
@@ -253,7 +253,7 @@ export default function PressPage() {
         <section style={{ marginTop: "1.5rem" }}>
           <p className="eyebrow">Recent mentions</p>
           <p style={{ color: "var(--muted)", maxWidth: "65ch", marginBottom: "0.75rem" }}>
-            External coverage and partner posts about Pause-Health.ai and
+            External coverage and partner posts about Pause-Health.AI and
             menopause care. Each card links to the original post — the quotes
             here are excerpts, not the full piece.
           </p>
@@ -364,7 +364,7 @@ export default function PressPage() {
         <article className="card founder-card" style={{ marginTop: "0.6rem" }}>
           <Image
             src="/team/maggie-c-hu.jpg"
-            alt="Portrait of Maggie C. Hu, Founder | CEO | CTO of Pause-Health.ai."
+            alt="Portrait of Maggie C. Hu, Founder | CEO | CTO of Pause-Health.AI."
             width={200}
             height={200}
             sizes="(max-width: 600px) 160px, 200px"
@@ -379,17 +379,17 @@ export default function PressPage() {
                 marginBottom: "0.6rem"
               }}
             >
-              Founder | CEO | CTO, Pause-Health.ai
+              Founder | CEO | CTO, Pause-Health.AI
             </p>
             <p style={{ marginBottom: "0.5rem" }}>
-              Maggie C. Hu is the founder, CEO, and CTO of Pause-Health.ai,
+              Maggie C. Hu is the founder, CEO, and CTO of Pause-Health.AI,
               where she leads product, vision, and provider partnerships.
               Her background spans health-tech product leadership and
               applied AI, with a focus on building clinical software
               that care teams actually want to use.
             </p>
             <p style={{ marginBottom: "0.5rem", color: "var(--muted)" }}>
-              She founded Pause-Health.ai to bring the same standard of
+              She founded Pause-Health.AI to bring the same standard of
               precision, rigor, and empathy to menopause care that
               other transitions in modern medicine already enjoy. The
               company operates as a prototype-in-the-open, with its

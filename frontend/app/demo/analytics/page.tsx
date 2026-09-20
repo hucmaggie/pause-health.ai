@@ -6,10 +6,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Prototype · Outcome Analytics",
   description:
-    "Outcome metrics for the Pause-Health.ai prototype. Live operational metrics from the Pause Agent Fabric, Data 360 segment activation, Care Router pathway distribution, and clearly-labeled program targets.",
+    "Outcome metrics for the Pause-Health.AI prototype. Live operational metrics from the Pause Agent Fabric, Data 360 segment activation, Care Router pathway distribution, and clearly-labeled program targets.",
   path: "/demo/analytics",
   ogImage: "/brand/pause-health-og-prototype.png",
-  ogImageAlt: "Pause-Health.ai prototype preview — outcome analytics."
+  ogImageAlt: "Pause-Health.AI prototype preview — outcome analytics."
 });
 
 export default function AnalyticsDemoPage() {

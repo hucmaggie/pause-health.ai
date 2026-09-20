@@ -5,7 +5,7 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · MCP Server",
   description:
-    "Pause-Health.ai exposes its MuleSoft Experience APIs as Model Context Protocol (MCP) tools. The server is shipped in-repo today against mocked Experience APIs; npm publish is Phase 1.",
+    "Pause-Health.AI exposes its MuleSoft Experience APIs as Model Context Protocol (MCP) tools. The server is shipped in-repo today against mocked Experience APIs; npm publish is Phase 1.",
   path: "/proposal/mcp",
   ogImage: "/brand/pause-health-og-proposal.png",
   ogImageAlt: "Pause MCP server — investor brief."
@@ -154,7 +154,7 @@ const protoVsProd = [
   }
 ];
 
-const todayInstallBash = `# 1. Clone Pause-Health.ai
+const todayInstallBash = `# 1. Clone Pause-Health.AI
 git clone https://github.com/hucmaggie/pause-health.ai.git
 cd pause-health.ai/mcp
 
@@ -371,7 +371,7 @@ export default function McpPage() {
     <ProposalShell
       eyebrow="Investor brief · MCP server"
       title="Pause as a tool surface for every AI agent"
-      subtitle="Pause-Health.ai exposes its MuleSoft Experience APIs through a Model Context Protocol (MCP) server. Claude Desktop and Cursor connect over stdio; Salesforce Agentforce 3.0 Registry and any other HTTP-based MCP client connect over Streamable HTTP at https://pause-health.ai/api/mcp. Both transports run today off a single tool registration. Backing Experience APIs are mocked in the prototype; the npm-published stdio one-liner lands in Phase 1."
+      subtitle="Pause-Health.AI exposes its MuleSoft Experience APIs through a Model Context Protocol (MCP) server. Claude Desktop and Cursor connect over stdio; Salesforce Agentforce 3.0 Registry and any other HTTP-based MCP client connect over Streamable HTTP at https://pause-health.ai/api/mcp. Both transports run today off a single tool registration. Backing Experience APIs are mocked in the prototype; the npm-published stdio one-liner lands in Phase 1."
     >
       <section style={{ marginTop: "1.5rem" }}>
         <p className="eyebrow">The four tools</p>

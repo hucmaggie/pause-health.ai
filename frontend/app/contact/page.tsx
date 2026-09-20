@@ -4,10 +4,10 @@ import { pageMetadata } from "../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Contact",
   description:
-    "Get in touch with Pause-Health.ai. Provider partnerships, investors, technical, media, or general inquiries — each persona has a dedicated inbox and a clear response-time expectation.",
+    "Get in touch with Pause-Health.AI. Provider partnerships, investors, technical, media, or general inquiries — each persona has a dedicated inbox and a clear response-time expectation.",
   path: "/contact",
   ogImage: "/brand/pause-health-og-about.png",
-  ogImageAlt: "Contact Pause-Health.ai."
+  ogImageAlt: "Contact Pause-Health.AI."
 });
 
 /**
@@ -50,7 +50,7 @@ const inboxes: Inbox[] = [
     audience: "Investors",
     email: "invest@pause-health.ai",
     whatToInclude:
-      "Fund name, stage focus, check size range, and any thesis areas (women's health, vertical AI agents, healthcare data infrastructure) where Pause-Health.ai fits. The investor brief at /proposal is the right read-deeper.",
+      "Fund name, stage focus, check size range, and any thesis areas (women's health, vertical AI agents, healthcare data infrastructure) where Pause-Health.AI fits. The investor brief at /proposal is the right read-deeper.",
     responseTime: "1 business day"
   },
   {
@@ -257,7 +257,7 @@ export default function ContactPage() {
           Back to Home
         </a>
         <a href="/about" className="btn btn-secondary">
-          About Pause-Health.ai
+          About Pause-Health.AI
         </a>
       </section>
     </main>

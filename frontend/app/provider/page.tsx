@@ -44,7 +44,7 @@ export const metadata = pageMetadata({
   path: "/provider",
   ogImage: "/brand/pause-health-og-about.png",
   ogImageAlt:
-    "Find a menopause-certified provider — Pause-Health.ai directory."
+    "Find a menopause-certified provider — Pause-Health.AI directory."
 });
 
 /**

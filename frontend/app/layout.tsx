@@ -7,13 +7,13 @@ import { NewsletterBanner } from "../components/newsletter-banner";
 import { MobileNav } from "../components/mobile-nav";
 import { SITE_URL, absoluteUrl } from "../lib/site";
 
-const SITE_NAME = "Pause-Health.ai";
+const SITE_NAME = "Pause-Health.AI";
 const SITE_DESCRIPTION =
   "Premium menopause intelligence for modern provider organizations — explainable AI triage for women in midlife.";
 const ROOT_OG_IMAGE = absoluteUrl("/brand/pause-health-og.png");
 
 /**
- * Schema.org JSON-LD describing Pause-Health.ai as an organization.
+ * Schema.org JSON-LD describing Pause-Health.AI as an organization.
  *
  * Why not MedicalOrganization: schema.org defines MedicalOrganization
  * as "a medical organization (physical or not), such as hospital,
@@ -32,7 +32,7 @@ const ORGANIZATION_JSON_LD = {
   "@type": "Organization",
   "@id": `${SITE_URL}/#organization`,
   name: SITE_NAME,
-  legalName: "Pause-Health.ai",
+  legalName: "Pause-Health.AI",
   url: SITE_URL,
   logo: absoluteUrl("/brand/pause-health-logo.png"),
   image: ROOT_OG_IMAGE,
@@ -72,7 +72,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: SITE_NAME,
-    template: "%s | Pause-Health.ai"
+    template: "%s | Pause-Health.AI"
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
@@ -86,9 +86,9 @@ export const metadata: Metadata = {
     "FemTech",
     "midlife health"
   ],
-  authors: [{ name: "Pause-Health.ai" }],
-  creator: "Pause-Health.ai",
-  publisher: "Pause-Health.ai",
+  authors: [{ name: "Pause-Health.AI" }],
+  creator: "Pause-Health.AI",
+  publisher: "Pause-Health.AI",
   category: "health",
   alternates: {
     canonical: "/"
@@ -105,7 +105,7 @@ export const metadata: Metadata = {
         url: ROOT_OG_IMAGE,
         width: 1200,
         height: 630,
-        alt: "Pause-Health.ai — AI triage for providers serving women in midlife."
+        alt: "Pause-Health.AI — AI triage for providers serving women in midlife."
       }
     ]
   },
@@ -160,15 +160,15 @@ export default function RootLayout({
         <NewsletterBanner />
         <header className="site-header">
           <div className="container site-header-row">
-            <a href="/" className="site-logo" aria-label="Pause-Health.ai home">
+            <a href="/" className="site-logo" aria-label="Pause-Health.AI home">
               <Image
                 className="site-logo-full"
                 src="/brand/pause-health-logo-mono-transparent.png"
-                alt="Pause-Health.ai"
-                width={220}
-                height={64}
+                alt="Pause-Health.AI"
+                width={254}
+                height={44}
                 priority
-                sizes="220px"
+                sizes="254px"
               />
               <span className="site-logo-compact">
                 <Image
@@ -180,7 +180,7 @@ export default function RootLayout({
                   priority
                   sizes="48px"
                 />
-                <span className="site-logo-wordmark">Pause-Health.ai</span>
+                <span className="site-logo-wordmark">Pause-Health.AI</span>
               </span>
             </a>
             <nav className="site-nav site-nav-desktop" aria-label="Primary">
@@ -206,14 +206,14 @@ export default function RootLayout({
               <div className="site-footer-brand">
                 <Image
                   src="/brand/pause-health-icon-tight.png"
-                  alt="Pause-Health.ai"
+                  alt="Pause-Health.AI"
                   width={40}
                   height={40}
                   loading="lazy"
                   sizes="40px"
                 />
                 <div>
-                  <p className="site-footer-name">Pause-Health.ai</p>
+                  <p className="site-footer-name">Pause-Health.AI</p>
                   <p className="site-footer-tagline">
                     Premium menopause intelligence for modern provider organizations.
                   </p>
@@ -251,7 +251,7 @@ export default function RootLayout({
             </nav>
           </div>
           <div className="container site-footer-bottom">
-            <p>&copy; {new Date().getFullYear()} Pause-Health.ai. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Pause-Health.AI. All rights reserved.</p>
             <p>Built with empathy for women in midlife.</p>
           </div>
         </footer>

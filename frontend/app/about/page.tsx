@@ -23,7 +23,7 @@ const FOUNDER_PERSON_JSON_LD = {
   worksFor: {
     "@type": "Organization",
     "@id": "https://pause-health.ai/#organization",
-    name: "Pause-Health.ai"
+    name: "Pause-Health.AI"
   },
   alumniOf: [
     {
@@ -62,7 +62,7 @@ export const metadata = pageMetadata({
     "A team building the menopause intelligence layer healthcare deserves — mission, values, and how we work.",
   path: "/about",
   ogImage: "/brand/pause-health-og-about.png",
-  ogImageAlt: "About Pause-Health.ai — building the menopause intelligence layer healthcare deserves."
+  ogImageAlt: "About Pause-Health.AI — building the menopause intelligence layer healthcare deserves."
 });
 
 /**
@@ -160,7 +160,7 @@ type Milestone = {
 const milestonesDone: Milestone[] = [
   {
     year: "2026",
-    label: "Pause-Health.ai founded with provider-first AI thesis",
+    label: "Pause-Health.AI founded with provider-first AI thesis",
     status: "shipped"
   },
   {
@@ -230,7 +230,7 @@ export default function AboutPage() {
         <p className="eyebrow">About Us</p>
         <h1>Building the menopause intelligence layer healthcare deserves.</h1>
         <p>
-          Pause-Health.ai is on a mission to bring precision, empathy, and clinical rigor to the
+          Pause-Health.AI is on a mission to bring precision, empathy, and clinical rigor to the
           50M+ women in the United States navigating perimenopause and menopause. We combine deep
           clinical informatics, modern AI, and human-centered design to support care teams and the
           women they serve.
@@ -287,7 +287,7 @@ export default function AboutPage() {
         <article className="card founder-card" style={{ marginTop: "0.6rem" }}>
           <Image
             src="/team/maggie-c-hu.jpg"
-            alt="Portrait of Maggie C. Hu, Founder | CEO | CTO of Pause-Health.ai."
+            alt="Portrait of Maggie C. Hu, Founder | CEO | CTO of Pause-Health.AI."
             width={200}
             height={200}
             sizes="(max-width: 600px) 160px, 200px"
@@ -306,7 +306,7 @@ export default function AboutPage() {
             </p>
             <p style={{ marginBottom: "0.5rem" }}>
               Maggie leads product, vision, and provider partnerships at
-              Pause-Health.ai. She brings 25+ years across enterprise
+              Pause-Health.AI. She brings 25+ years across enterprise
               software, with the last decade spent in solution-engineering
               and enterprise-architecture roles at the platform companies
               this prototype talks to every day &mdash; currently
@@ -321,7 +321,7 @@ export default function AboutPage() {
               Facets / NetworX claims platform.
             </p>
             <p style={{ color: "var(--muted)" }}>
-              She founded Pause-Health.ai to bring the same standard of
+              She founded Pause-Health.AI to bring the same standard of
               precision, rigor, and empathy to menopause care that other
               transitions in modern medicine already enjoy. Currently a
               USC Marshall Executive MBA candidate (May 2027) and

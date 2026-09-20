@@ -6,10 +6,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Prototype · Patient Detail",
   description:
-    "Inside the Pause-Health.ai care detail view — Data 360 federated grounding, deterministic risk band, suggested Care Router pathway, and HRT suitability heuristic, for each demo persona.",
+    "Inside the Pause-Health.AI care detail view — Data 360 federated grounding, deterministic risk band, suggested Care Router pathway, and HRT suitability heuristic, for each demo persona.",
   path: "/demo/patient",
   ogImage: "/brand/pause-health-og-prototype.png",
-  ogImageAlt: "Pause-Health.ai prototype preview — patient detail view."
+  ogImageAlt: "Pause-Health.AI prototype preview — patient detail view."
 });
 
 export default function PatientDemoPage() {

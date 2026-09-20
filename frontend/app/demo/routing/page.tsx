@@ -11,10 +11,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Prototype · Care Routing",
   description:
-    "How Pause-Health.ai routes menopause cases. The Anthropic-backed Care Router emits one of six pathways; pick a demo persona to preview the heuristic suggestion, run the live router, and watch the multi-agent trace land in the Agent Fabric.",
+    "How Pause-Health.AI routes menopause cases. The Anthropic-backed Care Router emits one of six pathways; pick a demo persona to preview the heuristic suggestion, run the live router, and watch the multi-agent trace land in the Agent Fabric.",
   path: "/demo/routing",
   ogImage: "/brand/pause-health-og-prototype.png",
-  ogImageAlt: "Pause-Health.ai prototype preview — care routing pathways."
+  ogImageAlt: "Pause-Health.AI prototype preview — care routing pathways."
 });
 
 export default function RoutingDemoPage() {

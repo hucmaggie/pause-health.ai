@@ -5,10 +5,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Research-Design Plan",
   description:
-    "Pause-Health.ai's research-design plan and hypotheses for provider + patient discovery during the design-partner stage. Themes are literature-derived; formal interview research is the immediate next milestone.",
+    "Pause-Health.AI's research-design plan and hypotheses for provider + patient discovery during the design-partner stage. Themes are literature-derived; formal interview research is the immediate next milestone.",
   path: "/proposal/insights",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "Research design plan — Pause-Health.ai investor brief."
+  ogImageAlt: "Research design plan — Pause-Health.AI investor brief."
 });
 
 /**
@@ -178,7 +178,7 @@ export default function InsightsPage() {
     <ProposalShell
       eyebrow="Investor Brief · Part 2"
       title="Research-design plan: provider + patient discovery"
-      subtitle="Pause-Health.ai is pre-design-partner — formal interview research happens during the design-partner stage. The page below lays out the planned research, the literature-derived hypotheses that will guide it, and how product implications will be re-derived once real interview data lands."
+      subtitle="Pause-Health.AI is pre-design-partner — formal interview research happens during the design-partner stage. The page below lays out the planned research, the literature-derived hypotheses that will guide it, and how product implications will be re-derived once real interview data lands."
     >
       <section
         className="card"
@@ -193,7 +193,7 @@ export default function InsightsPage() {
         </p>
         <p style={{ margin: 0, color: "var(--text)", lineHeight: 1.6 }}>
           The themes below are <strong>literature-derived hypotheses</strong>,
-          not findings from interviews Pause-Health.ai has conducted. They
+          not findings from interviews Pause-Health.AI has conducted. They
           match published menopause-care research, MSCP practice surveys,
           and patient-experience studies, but they are presented here as
           questions we will test with real interviews — not as evidence

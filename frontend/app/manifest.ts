@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Pause-Health.ai",
+    name: "Pause-Health.AI",
     short_name: "Pause-Health",
     description:
       "Premium menopause intelligence for modern provider organizations — explainable AI triage for women in midlife.",

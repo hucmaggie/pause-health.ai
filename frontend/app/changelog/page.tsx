@@ -4,10 +4,10 @@ import { StatusPill, type StatusPillStatus } from "../../components/status-pill"
 export const metadata = pageMetadata({
   title: "Changelog",
   description:
-    "What's shipped at Pause-Health.ai. Grouped by week, with links to the underlying GitHub commits. Updated after every polish pass — the git log is part of the artifact.",
+    "What's shipped at Pause-Health.AI. Grouped by week, with links to the underlying GitHub commits. Updated after every polish pass — the git log is part of the artifact.",
   path: "/changelog",
   ogImage: "/brand/pause-health-og-about.png",
-  ogImageAlt: "Pause-Health.ai changelog — what's shipped, week by week."
+  ogImageAlt: "Pause-Health.AI changelog — what's shipped, week by week."
 });
 
 const GITHUB_REPO = "https://github.com/hucmaggie/pause-health.ai";
@@ -1922,7 +1922,7 @@ const weeks: ChangelogWeek[] = [
       {
         title: "Founder bio: richer LinkedIn affordance + Person JSON-LD on /about",
         summary:
-          "The founder card on /about had a small icon-link to LinkedIn — fine for discoverability but a thin signal for previewers (LinkedIn / Google) trying to resolve the page to a Person identity. The actual bio content didn't change (no LinkedIn-scraped claims; LinkedIn returns HTTP 999 to unauthenticated fetchers, and inventing career history would be the wrong call). What did change: (1) Added a standalone Person JSON-LD block to /about scoped to Maggie C. Hu — same shape as the founder block already in the root Organization JSON-LD at app/layout.tsx, with sameAs to LinkedIn + GitHub, so search engines and LinkedIn's own scraper can resolve the founder card to her LinkedIn identity directly from this page (not just from the org graph at /). (2) Promoted the icon-only LinkedIn link to a labeled CTA — 'Connect on LinkedIn' button with the visible handle 'linkedin.com/in/hucmaggie' alongside, brand-tinted background, hover + focus states, and rel='me author' microformat hints. (3) Added a short verification line right below the CTA so a visitor can confirm they're on the right profile ('the LinkedIn page lists Pause-Health.ai as the current company, with this site in the contact info'). On narrow phones the long handle text is hidden so the CTA + label stay legible; the verify line below names the URL out loud. 393/393 vitest tests still green; smoke unchanged at 161/161; tsc clean.",
+          "The founder card on /about had a small icon-link to LinkedIn — fine for discoverability but a thin signal for previewers (LinkedIn / Google) trying to resolve the page to a Person identity. The actual bio content didn't change (no LinkedIn-scraped claims; LinkedIn returns HTTP 999 to unauthenticated fetchers, and inventing career history would be the wrong call). What did change: (1) Added a standalone Person JSON-LD block to /about scoped to Maggie C. Hu — same shape as the founder block already in the root Organization JSON-LD at app/layout.tsx, with sameAs to LinkedIn + GitHub, so search engines and LinkedIn's own scraper can resolve the founder card to her LinkedIn identity directly from this page (not just from the org graph at /). (2) Promoted the icon-only LinkedIn link to a labeled CTA — 'Connect on LinkedIn' button with the visible handle 'linkedin.com/in/hucmaggie' alongside, brand-tinted background, hover + focus states, and rel='me author' microformat hints. (3) Added a short verification line right below the CTA so a visitor can confirm they're on the right profile ('the LinkedIn page lists Pause-Health.AI as the current company, with this site in the contact info'). On narrow phones the long handle text is hidden so the CTA + label stay legible; the verify line below names the URL out loud. 393/393 vitest tests still green; smoke unchanged at 161/161; tsc clean.",
         commits: [
           { sha: "446a2e5", label: "about: richer founder LinkedIn affordance + Person JSON-LD on /about" }
         ],
@@ -2535,7 +2535,7 @@ const weeks: ChangelogWeek[] = [
       {
         title: "Seven supporting pages reconciled with reality",
         summary:
-          "/careers, /security, /hipaa, /research, /privacy, /blog, /terms — each replaced false present-tense claims with explicit 'Today vs. Designed' tables. /security: removed 'BAAs executed' and 'SOC 2 Type II in progress' claims. /hipaa: stated outright 'Pause-Health.ai is NOT a Business Associate today.' /research: removed 'bias monitoring quarterly with clinician review' (no such program exists yet). /careers: reconciled the three founding roles (CMO, Head of AI, Head of Clinical Design) to match /about, all pilled 'future'.",
+          "/careers, /security, /hipaa, /research, /privacy, /blog, /terms — each replaced false present-tense claims with explicit 'Today vs. Designed' tables. /security: removed 'BAAs executed' and 'SOC 2 Type II in progress' claims. /hipaa: stated outright 'Pause-Health.AI is NOT a Business Associate today.' /research: removed 'bias monitoring quarterly with clinician review' (no such program exists yet). /careers: reconciled the three founding roles (CMO, Head of AI, Head of Clinical Design) to match /about, all pilled 'future'.",
         commits: [
           { sha: "b60385b", label: "careers/security/hipaa/research/privacy/blog/terms: honesty pilling" }
         ],
@@ -2649,7 +2649,7 @@ const weeks: ChangelogWeek[] = [
     range: "Week of May 24, 2026 — initial build",
     headline: "Prototype-in-the-open lands",
     intro:
-      "The first week of Pause-Health.ai work. Eleven commits stood up the marketing site, investor brief, demo surface, MuleSoft integration plane, MCP server, multi-agent control plane, Salesforce Agentforce intake, and the Data 360 grounding layer — all built on top of the legacy Northstar Shipping API repo that already had CI/CD wiring.",
+      "The first week of Pause-Health.AI work. Eleven commits stood up the marketing site, investor brief, demo surface, MuleSoft integration plane, MCP server, multi-agent control plane, Salesforce Agentforce intake, and the Data 360 grounding layer — all built on top of the legacy Northstar Shipping API repo that already had CI/CD wiring.",
     entries: [
       {
         title: "Multi-agent control plane",
@@ -2694,7 +2694,7 @@ const weeks: ChangelogWeek[] = [
         summary:
           "Initial Next.js frontend on top of the legacy Northstar repo. Full investor brief as a routed page. Mobile-friendly hamburger nav. Part 2 deep-dives. Vercel deploy + GitHub Actions for typecheck + Lighthouse nightly + CodeQL.",
         commits: [
-          { sha: "597fd63", label: "Pause-Health.ai frontend + CI/CD" },
+          { sha: "597fd63", label: "Pause-Health.AI frontend + CI/CD" },
           { sha: "6501659", label: "Part 2 deep-dives + Next routing" },
           { sha: "479837e", label: "mobile hamburger nav" }
         ],
@@ -2719,7 +2719,7 @@ export default function ChangelogPage() {
           What's shipped, week by week
         </h1>
         <p style={{ color: "var(--muted)", maxWidth: "44rem", margin: 0, lineHeight: 1.55 }}>
-          Pause-Health.ai is built in the open. The git log at{" "}
+          Pause-Health.AI is built in the open. The git log at{" "}
           <a href={GITHUB_REPO} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand)" }}>
             github.com/hucmaggie/pause-health.ai
           </a>{" "}

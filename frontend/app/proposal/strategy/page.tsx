@@ -7,10 +7,10 @@ const pillSpacing: React.CSSProperties = { marginBottom: "0.5rem" };
 export const metadata = pageMetadata({
   title: "Investor Brief · Digital Strategy",
   description:
-    "Architectural strategy, go-to-market motion, and the competitive moats that make Pause-Health.ai defensible. Each pillar tagged with current status (Designed / Wired in prototype / Shipped / Future) so investors can see plan-vs-reality at a glance.",
+    "Architectural strategy, go-to-market motion, and the competitive moats that make Pause-Health.AI defensible. Each pillar tagged with current status (Designed / Wired in prototype / Shipped / Future) so investors can see plan-vs-reality at a glance.",
   path: "/proposal/strategy",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "Digital strategy — Pause-Health.ai investor brief."
+  ogImageAlt: "Digital strategy — Pause-Health.AI investor brief."
 });
 
 /**

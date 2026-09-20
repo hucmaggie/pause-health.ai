@@ -4,10 +4,10 @@ import { StatusPill, type StatusPillStatus } from "../../components/status-pill"
 export const metadata = pageMetadata({
   title: "Privacy",
   description:
-    "What Pause-Health.ai collects on this site today (newsletter, contact form, basic analytics — never PHI), and the privacy posture engineered for the production stack pre-GA.",
+    "What Pause-Health.AI collects on this site today (newsletter, contact form, basic analytics — never PHI), and the privacy posture engineered for the production stack pre-GA.",
   path: "/privacy",
   ogImage: "/brand/pause-health-og-about.png",
-  ogImageAlt: "Privacy — Pause-Health.ai."
+  ogImageAlt: "Privacy — Pause-Health.AI."
 });
 
 /**
@@ -22,7 +22,7 @@ export const metadata = pageMetadata({
  *   1. What the prototype-in-the-open collects today, listed by
  *      surface: marketing site (newsletter signups, contact-form
  *      submissions, basic web analytics), embedded chat (via
- *      Salesforce, not Pause-Health.ai's first-party store), demo
+ *      Salesforce, not Pause-Health.AI's first-party store), demo
  *      personas (synthetic, no real PHI). Each entry maps to the
  *      actual code path that touches the data (e.g. /api/contact,
  *      /api/subscribe) so a privacy reviewer can verify.
@@ -42,7 +42,7 @@ type DataCollection = {
   whatWeCollect: string;
   whereItGoes: string;
   // Optional pill -- rows that describe purely-platform behavior
-  // (Vercel analytics, server logs) don't carry a Pause-Health.ai
+  // (Vercel analytics, server logs) don't carry a Pause-Health.AI
   // status pill because the posture is whatever the platform
   // provider's defaults are.
   status?: StatusPillStatus;
@@ -76,7 +76,7 @@ const todayCollection: DataCollection[] = [
   {
     surface: "Embedded Agentforce chat",
     whatWeCollect:
-      "Hosted by Salesforce, not by Pause-Health.ai. Messages typed into the chat go to the Salesforce-hosted Messaging Channel, governed by Salesforce's privacy terms.",
+      "Hosted by Salesforce, not by Pause-Health.AI. Messages typed into the chat go to the Salesforce-hosted Messaging Channel, governed by Salesforce's privacy terms.",
     whereItGoes:
       "Salesforce SCRT2 conversation infrastructure. The demo personas above the chat are synthetic; do NOT enter real personal health information into the prototype chat.",
     status: "prototype"
@@ -117,7 +117,7 @@ const productionAreas: Array<{
   {
     area: "Patient rights (access / amendment / deletion)",
     detail:
-      "Pause-Health.ai supports the Covered Entity in fulfilling patient rights requests via documented APIs and runbooks; requests are routed through the patient's own provider organization.",
+      "Pause-Health.AI supports the Covered Entity in fulfilling patient rights requests via documented APIs and runbooks; requests are routed through the patient's own provider organization.",
     status: "designed"
   },
   {

@@ -5,10 +5,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Customer Selection",
   description:
-    "Deep dive into ideal customer profiles for Pause-Health.ai across integrated health systems, value-based payers, and academic medical centers. Market sizing labeled as estimates; design-partner status surfaced explicitly.",
+    "Deep dive into ideal customer profiles for Pause-Health.AI across integrated health systems, value-based payers, and academic medical centers. Market sizing labeled as estimates; design-partner status surfaced explicitly.",
   path: "/proposal/customers",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "Customer selection — Pause-Health.ai investor brief."
+  ogImageAlt: "Customer selection — Pause-Health.AI investor brief."
 });
 
 /**
@@ -39,7 +39,7 @@ const designPartnerStatus = [
   {
     label: "Signed customers",
     value: "0",
-    detail: "Pause-Health.ai is pre-revenue."
+    detail: "Pause-Health.AI is pre-revenue."
   },
   {
     label: "First-target cohort",
@@ -167,7 +167,7 @@ export default function CustomersPage() {
   return (
     <ProposalShell
       eyebrow="Investor Brief · Part 2"
-      title="Customer Selection: who Pause-Health.ai sells to and why now"
+      title="Customer Selection: who Pause-Health.AI sells to and why now"
       subtitle="A focused B2B motion targeting integrated health systems, value-based payers, and academic medical centers — the three buyer archetypes that own the menopause care problem and have budget to fix it. Market sizing carries Estimate pills; design-partner status is surfaced explicitly at the top so plan-vs-reality is one read."
     >
       <section

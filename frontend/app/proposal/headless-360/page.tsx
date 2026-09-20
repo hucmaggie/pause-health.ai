@@ -5,10 +5,10 @@ import { pageMetadata } from "../../../lib/page-metadata";
 export const metadata = pageMetadata({
   title: "Investor Brief · Headless 360",
   description:
-    "How Pause-Health.ai already maps onto Salesforce's Headless 360 architecture (TDX 2026): REST + MCP + A2A under one identity. The honest audit of what's wired, what's partial, and what's still missing for full conformance.",
+    "How Pause-Health.AI already maps onto Salesforce's Headless 360 architecture (TDX 2026): REST + MCP + A2A under one identity. The honest audit of what's wired, what's partial, and what's still missing for full conformance.",
   path: "/proposal/headless-360",
   ogImage: "/brand/pause-health-og-proposal.png",
-  ogImageAlt: "Headless 360 — Pause-Health.ai conformance audit."
+  ogImageAlt: "Headless 360 — Pause-Health.AI conformance audit."
 });
 
 /**
