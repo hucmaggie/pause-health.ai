@@ -1,0 +1,16 @@
+# Root dependency set for the repo-level `pytest -q` run in CI
+# (.github/workflows/render-deploy.yml). This file exists so that
+# `pip install -r requirements.txt` from the repo root makes both Python
+# subprojects importable and runnable by pytest.
+#
+# Each subproject keeps its own authoritative dependencies in its
+# pyproject.toml; here we install them in editable mode with their `dev`
+# extras (pytest et al.). Both require Python >= 3.12 (see pyproject).
+#
+# jupyterhealth-client is capped below 0.4: v0.4.0 changed the JHE read
+# path to FHIR/R5 in a way the exchange-integration tests' in-process mock
+# server does not implement. 0.3.0 is the newest compatible release.
+jupyterhealth-client<0.4
+
+-e ./provider_ingest[dev]
+-e ./pause_ingest[dev]
