@@ -49,7 +49,7 @@ const ORGANIZATION_JSON_LD = {
     "@type": "Person",
     "@id": "https://www.linkedin.com/in/hucmaggie/",
     name: "Maggie C. Hu",
-    jobTitle: "Founder | CEO | CTO",
+    jobTitle: "Founder",
     image: absoluteUrl("/team/maggie-c-hu.jpg"),
     sameAs: ["https://www.linkedin.com/in/hucmaggie/"]
   },
