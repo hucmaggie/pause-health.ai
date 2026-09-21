@@ -117,3 +117,9 @@ registry entry (`care-router-claude`) + a trivial client calling it through the
 egress gateway — to (a) settle the v0.3↔v1.0 protocol question and (b) confirm a
 node actually renders. That de-risks the two biggest unknowns cheaply before
 scaling to 110. **Prerequisite:** confirm Agent Fabric entitlement/cost with MuleSoft.
+
+The executable, step-by-step version of that spike — with the reuse inventory
+(live CloudHub 2.0 worker, `pause-prototype-cloudhub` Connected App, business-group
+id, Omni Gateway experience), the entitlement gate, the protocol-reconciliation
+step, and the scale-to-110 path — is in
+[`docs/AGENT_VISUALIZER_SPIKE_RUNBOOK.md`](../../docs/AGENT_VISUALIZER_SPIKE_RUNBOOK.md).
