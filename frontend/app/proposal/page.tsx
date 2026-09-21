@@ -269,7 +269,7 @@ export default function ProposalPage() {
     <ProposalShell
       eyebrow="Investor brief · Pause-Health.AI"
       title="Premium menopause intelligence for modern provider organizations"
-      subtitle="Pause-Health.AI transforms fragmented menopause care into an elegant, measurable, and clinically explainable workflow built for provider excellence — EHR-native, never a sidecar."
+      subtitle="Millions of women navigate perimenopause misread, dismissed, or misdiagnosed — the average path to an accurate answer stretches ~2.5 years. Pause-Health.AI turns that fragmented journey into an elegant, measurable, and clinically explainable workflow built for provider excellence — EHR-native, never a sidecar."
       backHref="/"
       backLabel="Back to Landing"
       heroExtra={heroExtra}
