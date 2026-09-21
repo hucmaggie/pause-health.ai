@@ -229,6 +229,13 @@ export default function AboutPage() {
       <section className="hero">
         <p className="eyebrow">About Us</p>
         <h1>Building the menopause intelligence layer healthcare deserves.</h1>
+        <p style={{ fontSize: "1.05rem", lineHeight: 1.65 }}>
+          The night sweats, the brain fog, the anxiety that arrived without a
+          reason — and no one connecting the dots. For too many women in
+          midlife, perimenopause and menopause are met with dismissal or
+          misdiagnosis, and the wait for an answer can stretch for years.{" "}
+          <strong>It doesn&apos;t have to.</strong>
+        </p>
         <p>
           Pause-Health.AI is on a mission to bring precision, empathy, and clinical rigor to the
           50M+ women in the United States navigating perimenopause and menopause. We combine deep

@@ -120,6 +120,24 @@ export default function IntakeDemoPage() {
       subtitle="Patients enter through an Agentforce-driven intake assistant. Structured signals are then prioritized for women 40-60 using symptom clusters, endocrine context, and safety-first clinical markers."
     >
       <section style={{ marginBottom: "1.5rem" }}>
+        <p
+          style={{
+            margin: "0 0 1rem",
+            color: "var(--muted)",
+            fontSize: "1rem",
+            lineHeight: 1.6,
+            maxWidth: "70ch"
+          }}
+        >
+          If you&apos;re here because something feels off — the sleep, the
+          mood, the symptoms you can&apos;t quite explain —{" "}
+          <strong style={{ color: "var(--text)" }}>
+            you&apos;re not imagining it, and you&apos;re not alone.
+          </strong>{" "}
+          This intake gathers your whole story so your care team can point you
+          to the right next step sooner. Advisory and synthetic in this
+          prototype — a clinician always makes the final call.
+        </p>
         {agentforceConfig ? (
           <IntakePatientStage agentforceConfig={agentforceConfig} />
         ) : (
