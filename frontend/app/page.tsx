@@ -127,12 +127,23 @@ export default function HomePage() {
       <section className="hero">
         <p className="eyebrow">Pause-Health.AI · Premium FemTech Intelligence</p>
         <h1>Elevating menopause care with precision, empathy, and clinical AI</h1>
+        <p style={{ fontSize: "1.05rem", lineHeight: 1.65 }}>
+          Waking at 3 a.m. drenched in sweat. Losing words mid-sentence.
+          Feeling anxious for no reason you can name. Aching joints, a
+          racing heart, a body that suddenly feels unfamiliar. If that
+          sounds like you — <strong>you&apos;re not imagining it, and
+          you&apos;re not alone.</strong> Two-thirds of women are initially
+          misdiagnosed, and the average wait for an accurate answer is
+          2.5 years. Pause helps bring your whole story together — sleep,
+          mood, cycles, hot flashes — and points your care team toward the
+          right next step sooner, with every step explainable.
+        </p>
         <p>
-          Pause gives care teams a refined decision layer for perimenopause
-          and menopause: multimodal signal intake, clinically explainable
-          triage, and personalized next-step pathways designed for women in
-          midlife. Built provider-first on Salesforce Health Cloud,
-          MuleSoft, and the JupyterHealth FHIR substrate.
+          For care teams, that becomes a refined decision layer for
+          perimenopause and menopause: multimodal signal intake, clinically
+          explainable triage, and personalized next-step pathways designed
+          for women in midlife. Built provider-first on Salesforce Health
+          Cloud, MuleSoft, and the JupyterHealth FHIR substrate.
         </p>
 
         <ul className="metric-list" style={{ marginTop: "1.25rem" }}>
@@ -212,7 +223,7 @@ export default function HomePage() {
             LinkedIn
           </a>
           {" · "}
-          Founder | CEO | CTO. Reach out at{" "}
+          Founder. Reach out at{" "}
           <a href="/contact" style={{ color: "var(--brand)" }}>
             /contact
           </a>
